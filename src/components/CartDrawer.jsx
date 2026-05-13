@@ -47,6 +47,9 @@ export default function CartDrawer({
   onClear,
   onClose,
   onOpen,
+  onSubmitPreorder,
+  submitting = false,
+  submitLabel,
 }) {
   const { t } = useLanguage();
   const company = useCompany();
@@ -237,8 +240,13 @@ export default function CartDrawer({
           <div className="sheet-actions">
             <PdfButton cartItems={cartItems} customer={{ ...customer, numero: folio }} />
             <button className="secondary-button" type="button" onClick={onClear}>{t("clearPreorder")}</button>
-            <button className="secondary-button" type="button" onClick={() => window.alert(t("savedPreorder"))}>
-              {t("confirmPreorder")}
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={onSubmitPreorder || (() => window.alert(t("savedPreorder")))}
+              disabled={submitting}
+            >
+              {submitting ? "Guardando..." : (submitLabel || t("confirmPreorder"))}
             </button>
           </div>
         </footer>

@@ -10,6 +10,7 @@ import { useCompany } from "../contexts/CompanyContext";
 import BrandLogo from "./BrandLogo";
 import { supabase } from "../lib/supabaseClient";
 import { fetchClientData } from "../services/supabaseCatalog";
+import { submitClientPreorder } from "../services/preorderService";
 import { calculateProductQuotePrice, fetchLines, fetchMetalPrices } from "../services/pricingService";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
@@ -49,6 +50,7 @@ export default function ClientCatalogApp({ profile }) {
   const [selectedCode, setSelectedCode] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [status, setStatus] = useState("");
+  const [savingPreorder, setSavingPreorder] = useState(false);
 
   useEffect(() => {
     setStatus(t("loadingCatalog"));
@@ -70,6 +72,17 @@ export default function ClientCatalogApp({ profile }) {
             };
           })
         );
+        if (result.client) {
+          setCustomer((current) => ({
+            ...current,
+            name: result.client.name || "",
+            company: result.client.company || "",
+            email: result.client.email || "",
+            phone: result.client.phone || "",
+            rfc: result.client.rfc || "",
+            tipoCambio: metalPrices?.tipo_cambio || current.tipoCambio || "",
+          }));
+        }
         setStatus("");
       })
       .catch((error) => setStatus(error.message));
@@ -132,6 +145,28 @@ export default function ClientCatalogApp({ profile }) {
     setFilters(emptyFilters);
     setQuickFilters([]);
     setSelectedCode("");
+  };
+
+  const handleSubmitPreorder = async () => {
+    if (!cartItems.length) {
+      setStatus(t("addProductsBeforePdf"));
+      return;
+    }
+    if (!profile?.client_id) {
+      setStatus("Tu usuario todavia no esta ligado a un cliente. Pide al administrador revisar tu alta.");
+      return;
+    }
+    setSavingPreorder(true);
+    try {
+      await submitClientPreorder(profile, cartItems, customer);
+      setCartItems([]);
+      setIsCartOpen(false);
+      setStatus("Preorden guardada. El administrador ya puede verla en el menu Preordenes.");
+    } catch (error) {
+      setStatus(`Error al guardar preorden: ${error.message}`);
+    } finally {
+      setSavingPreorder(false);
+    }
   };
 
   return (
@@ -297,6 +332,9 @@ export default function ClientCatalogApp({ profile }) {
         onClear={() => setCartItems([])}
         onClose={() => setIsCartOpen(false)}
         onOpen={() => setIsCartOpen(true)}
+        onSubmitPreorder={handleSubmitPreorder}
+        submitting={savingPreorder}
+        submitLabel="Enviar preorden"
       />
     </div>
   );

@@ -244,21 +244,17 @@ export const setClientPriceList = async (clientId, priceListId, active) => {
 
 export const fetchClientData = async (profile) => {
   const visibleProducts = await fetchAllProducts({ visibleOnly: true });
-  const [products, priceLists] = await Promise.all([
-    { data: visibleProducts, error: null },
-    supabase.from("client_price_lists").select("price_list_id").eq("client_id", profile.client_id).eq("active", true),
-  ]);
+  const products = { data: visibleProducts, error: null };
   throwIfError(products);
-  throwIfError(priceLists);
-
-  const priceListIds = priceLists.data.map((item) => item.price_list_id);
-  const priceItems = priceListIds.length
-    ? await supabase.from("price_list_items").select("*").in("price_list_id", priceListIds)
-    : { data: [], error: null };
-  throwIfError(priceItems);
+  const client =
+    profile?.client_id
+      ? await supabase.from("clients").select("*").eq("id", profile.client_id).maybeSingle()
+      : { data: null, error: null };
+  throwIfError(client);
 
   return {
     products: products.data.map(dbProductToProduct),
-    priceItems: priceItems.data,
+    priceItems: [],
+    client: client.data,
   };
 };

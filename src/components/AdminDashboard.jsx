@@ -7,12 +7,12 @@ import PricingPanel from "./PricingPanel";
 import PreorderList from "./PreorderList";
 import { useCompany } from "../contexts/CompanyContext";
 import CatalogExportButton from "./CatalogExportButton";
-import CartDrawer from "./CartDrawer";
 import ExcelTemplateButton from "./ExcelTemplateButton";
 import FilterPanel from "./FilterPanel";
 import LanguageToggle from "./LanguageToggle";
 import ProductDetail from "./ProductDetail";
 import ProductFormModal from "./ProductFormModal";
+import PreorderEditor from "./PreorderEditor";
 import QuickFilters from "./QuickFilters";
 import UploadExcel from "./UploadExcel";
 import { sampleProducts } from "../data/sampleProducts";
@@ -35,36 +35,6 @@ import { normalizeText } from "../utils/textNormalizer";
 const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", active: true };
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
-const orderDefaults = {
-  es: { concept: "Preorden mayorista", status: "Pendiente" },
-  en: { concept: "Wholesale preorder", status: "Pending" },
-};
-
-const makeBlankCustomer = (language = "es") => ({
-  serie: "PRE",
-  numero: "",
-  name: "",
-  company: "",
-  branch: "",
-  currency: "MXN",
-  tipoCambio: "",
-  seller: "",
-  concept: orderDefaults[language]?.concept || orderDefaults.es.concept,
-  status: orderDefaults[language]?.status || orderDefaults.es.status,
-  phone: "",
-  email: "",
-  rfc: "",
-  notes: "",
-  shipToName: "",
-  shipToAddress: "",
-  shipToCity: "",
-  shipToState: "",
-  shipToZip: "",
-  shipToCountry: "",
-  shipToContact: "",
-  shipToPhone: "",
-});
-
 const tabs = ["catalog", "preorders", "clients", "prices", "company"];
 const tabKeys = {
   catalog: "catalog",
@@ -109,6 +79,26 @@ const formProductToRow = (product) => ({
   tags_busqueda: product.tagsBusqueda,
 });
 
+const productToPreorderItem = (product, quantity = 1) => {
+  const piezas = Math.max(1, Number(quantity || 1));
+  const gramosPorPieza = Number(product.pesoPromedio || 0);
+  const precioGramo = Number(product.quotePricePerGram || product.precioMinimo || 0);
+  return {
+    producto_codigo: product.codigo,
+    producto_descripcion: product.descripcion,
+    producto_metal: product.metal,
+    producto_kilataje: product.kilataje,
+    producto_linea: product.linea,
+    producto_foto_url: product.fotoUrl,
+    piezas,
+    gramos_por_pieza: gramosPorPieza,
+    gramos_total: piezas * gramosPorPieza,
+    labor_mxn: Number(product.quoteLaborPerGram || 0),
+    precio_gramo_mxn: precioGramo,
+    subtotal_mxn: piezas * gramosPorPieza * precioGramo,
+  };
+};
+
 export default function AdminDashboard() {
   const { t, language } = useLanguage();
   const company = useCompany();
@@ -126,9 +116,7 @@ export default function AdminDashboard() {
   const [filters, setFilters] = useState(emptyFilters);
   const [quickFilters, setQuickFilters] = useState([]);
   const [selectedProductCode, setSelectedProductCode] = useState("");
-  const [cartItems, setCartItems] = useState([]);
-  const [customer, setCustomer] = useState(() => makeBlankCustomer(language));
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [draftPreorder, setDraftPreorder] = useState(null);
 
   const load = async () => {
     const nextData = await fetchAdminData();
@@ -140,20 +128,6 @@ export default function AdminDashboard() {
     load().catch((error) => setStatus(error.message));
   }, []);
 
-  useEffect(() => {
-    setCustomer((current) => {
-      const allDefaults = Object.values(orderDefaults);
-      const conceptIsDefault = allDefaults.some((item) => item.concept === current.concept);
-      const statusIsDefault = allDefaults.some((item) => item.status === current.status);
-      const nextDefaults = orderDefaults[language] || orderDefaults.es;
-      return {
-        ...current,
-        concept: conceptIsDefault ? nextDefaults.concept : current.concept,
-        status: statusIsDefault ? nextDefaults.status : current.status,
-      };
-    });
-  }, [language]);
-
   const products = data?.products.length ? data.products : sampleProducts;
   const selectedClient = data?.clients.find((client) => client.id === selectedClientId);
   const selectedProduct = products.find((product) => product.codigo === selectedProductCode);
@@ -163,8 +137,6 @@ export default function AdminDashboard() {
     [products, productQuery, filters, quickFilters, searchChips]
   );
   const visibleCount = products.filter((product) => product.visibleWeb).length;
-  const preorderPieces = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();
     if (!trimmed) return;
@@ -199,17 +171,27 @@ export default function AdminDashboard() {
     data?.clientPriceLists.some((item) => item.client_id === selectedClientId && item.price_list_id === priceListId && item.active);
 
   const addToCart = (product, quantity = 1) => {
-    const amount = Math.max(1, Number(quantity || 1));
-    setCartItems((current) => {
-      const exists = current.find((item) => item.product.codigo === product.codigo);
-      if (exists) {
-        return current.map((item) =>
-          item.product.codigo === product.codigo ? { ...item, quantity: Number(item.quantity || 0) + amount } : item
-        );
-      }
-      return [...current, { product, quantity: amount }];
+    const nextItem = productToPreorderItem(product, quantity);
+    setDraftPreorder((current) => {
+      const preorder = current || { status: "pendiente", preorder_items: [] };
+      const existing = preorder.preorder_items.find((item) => item.producto_codigo === product.codigo);
+      const preorderItems = existing
+        ? preorder.preorder_items.map((item) =>
+            item.producto_codigo === product.codigo
+              ? productToPreorderItem(product, Number(item.piezas || 0) + Number(nextItem.piezas || 0))
+              : item
+          )
+        : [...preorder.preorder_items, nextItem];
+      return { ...preorder, preorder_items: preorderItems };
     });
-    setIsCartOpen(true);
+  };
+
+  const handleSaveClient = async () => {
+    await saveClient(clientForm);
+    setClientForm(blankClient);
+    await load();
+    window.alert("Cliente creado. Ahora revisa el menu de precios para confirmar labor por linea y plata fina antes de cotizar.");
+    setTab("prices");
   };
 
   const clearCatalogFilters = () => {
@@ -250,13 +232,10 @@ export default function AdminDashboard() {
           <div className="mini-summary">
             <div><span>{t("totalLabel")}</span><strong>{products.length}</strong></div>
             <div><span>{t("visible")}</span><strong>{visibleCount}</strong></div>
-            <div><span>{t("preorder")}</span><strong>{preorderPieces}</strong></div>
-            <div><span>{t("models")}</span><strong>{cartItems.length}</strong></div>
+            <div><span>{t("preorder")}</span><strong>{draftPreorder?.preorder_items?.reduce((sum, item) => sum + Number(item.piezas || 0), 0) || 0}</strong></div>
+            <div><span>{t("models")}</span><strong>{draftPreorder?.preorder_items?.length || 0}</strong></div>
           </div>
           {!data.products.length ? <p className="muted">{t("sampleProductsNotice")}</p> : null}
-          <button className="primary-button full compact-action" type="button" onClick={() => setIsCartOpen(true)}>
-            {t("openPreorder")}
-          </button>
         </section>
 
         <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
@@ -376,7 +355,7 @@ export default function AdminDashboard() {
                 <input placeholder={t("phone")} value={clientForm.phone} onChange={(event) => setClientForm({ ...clientForm, phone: event.target.value })} />
                 <input placeholder={t("rfc")} value={clientForm.rfc} onChange={(event) => setClientForm({ ...clientForm, rfc: event.target.value })} />
               </div>
-              <button className="primary-button compact-action" type="button" onClick={async () => { await saveClient(clientForm); setClientForm(blankClient); await load(); }}>
+              <button className="primary-button compact-action" type="button" onClick={handleSaveClient}>
                 {t("saveClient")}
               </button>
               <p className="muted">{t("customerAccessNote")}</p>
@@ -433,23 +412,17 @@ export default function AdminDashboard() {
         />
       ) : null}
 
-      <CartDrawer
-        isOpen={isCartOpen}
-        cartItems={cartItems}
-        customer={customer}
-        onCustomerChange={setCustomer}
-        onQuantityChange={(code, quantity) =>
-          setCartItems((items) =>
-            items.map((item) =>
-              item.product.codigo === code ? { ...item, quantity: Math.max(1, Number(quantity || 1)) } : item
-            )
-          )
-        }
-        onRemove={(code) => setCartItems((items) => items.filter((item) => item.product.codigo !== code))}
-        onClear={() => setCartItems([])}
-        onClose={() => setIsCartOpen(false)}
-        onOpen={() => setIsCartOpen(true)}
-      />
+      {draftPreorder ? (
+        <PreorderEditor
+          preorder={draftPreorder}
+          clients={data.clients}
+          onClose={() => setDraftPreorder(null)}
+          onSaved={() => {
+            setDraftPreorder(null);
+            load();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -37,7 +37,7 @@ export const savePreorder = async (preorder, items) => {
   const isNew = !preorder.id;
 
   // Limpiar campos vacíos que son UUID en Supabase
-  const clean = { ...preorder };
+  const { preorder_items, id, ...clean } = { ...preorder };
   if (!clean.client_id) clean.client_id = null;
   if (!clean.created_by) clean.created_by = null;
 
