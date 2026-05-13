@@ -1759,3 +1759,13 @@ dd {
     min-width: 850px;
   }
 }
+
+/* ── PORTAL MODAL (monta en body, fuera de cualquier contenedor) ── */
+body > div[data-portal] {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99999;
+}

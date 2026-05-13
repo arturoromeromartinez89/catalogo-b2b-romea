@@ -36,9 +36,14 @@ export const savePreorder = async (preorder, items) => {
   const totals = calcTotals(items);
   const isNew = !preorder.id;
 
+  // Limpiar campos vacíos que son UUID en Supabase
+  const clean = { ...preorder };
+  if (!clean.client_id) clean.client_id = null;
+  if (!clean.created_by) clean.created_by = null;
+
   const preorderData = {
-    ...preorder,
-    folio: preorder.folio || buildFolio(),
+    ...clean,
+    folio: clean.folio || buildFolio(),
     ...totals,
     updated_at: new Date().toISOString(),
   };
