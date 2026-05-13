@@ -405,7 +405,7 @@ export default function AdminDashboard() {
         ) : null}
 
         {tab === "prices" ? (
-          <PricingPanel clients={data.clients} />
+          <PricingPanel clients={data.clients} products={products} />
         ) : null}
         {tab === "preorders" ? (
           <PreorderList clients={data.clients} />

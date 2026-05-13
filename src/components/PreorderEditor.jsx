@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCompany } from "../contexts/CompanyContext";
-import { fetchLines, fetchMetalPrices, fetchClientMargins, calcPrecioGramo } from "../services/pricingService";
+import { fetchLines, fetchMetalPrices, fetchClientMargins, calcPrecioGramo, getSilverFinePrice } from "../services/pricingService";
 import { savePreorder, deletePreorder } from "../services/preorderService";
 import { generatePdf } from "../utils/pdfGenerator";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -88,19 +88,22 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved })
   };
 
   const precargarPrecios = () => {
-    if (!po.client_id || !lines.length) { setMsg("⚠️ Selecciona un cliente primero"); return; }
+    const plataFina = getSilverFinePrice(metalPrices);
+    if (!po.client_id) { setMsg("Selecciona un cliente primero."); return; }
+    if (!lines.length) { setMsg("No hay lineas configuradas en el menu de precios."); return; }
+    if (!plataFina) { setMsg("Captura primero el precio de metal vigente."); return; }
     setItems((prev) => prev.map((item) => {
       const line = lines.find((l) => l.codigo === item.producto_linea);
       if (!line) return item;
       const margin = margins.find((m) => m.line_codigo === item.producto_linea);
       const precio = calcPrecioGramo({
         mo_base: line.mo_base,
-        plata_fina_mxn: metalPrices.plata_fina_mxn || 0,
+        plata_fina_mxn: plataFina,
         margen_pct: margin?.margen_pct || 0,
       });
       return calcItem({ ...item, labor_mxn: precio.mo_visible, precio_gramo_mxn: precio.integrado });
     }));
-    setMsg("✓ Precios precargados");
+    setMsg("Precios calculados desde configuracion.");
   };
 
   const totals = {
@@ -245,7 +248,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved })
             <button className="secondary-button compact-action" onClick={precargarPrecios}>
               Precargar precios desde configuración
             </button>
-            {msg && <span style={{ fontSize: 13, color: msg.startsWith("✓") ? "#059669" : "#d97706" }}>{msg}</span>}
+            {msg && <span style={{ fontSize: 13, color: msg.startsWith("Error") || msg.startsWith("No hay") || msg.startsWith("Captura") || msg.startsWith("Selecciona") ? "#d97706" : "#059669" }}>{msg}</span>}
           </div>
 
           {/* Tabla de productos */}

@@ -166,9 +166,9 @@ export default function CartDrawer({
                     cartItems.map((item, index) => {
                       const product = item.product;
                       const quantity = Number(item.quantity || 0);
-                      const unitPrice = Number(product.precioMinimo || 0);
                       const grams = quantity * Number(product.pesoPromedio || 0);
-                      const amount = quantity * unitPrice;
+                      const pricePerGram = Number(product.precioMinimo || product.quotePricePerGram || 0);
+                      const amount = grams * pricePerGram;
                       return (
                         <tr key={product.codigo}>
                           <td>{index + 1}</td>
@@ -185,9 +185,9 @@ export default function CartDrawer({
                           </td>
                           <td>{formatWeight(grams)}</td>
                           <td>{product.unidadVenta || "Pza"}</td>
-                          <td>{unitPrice ? formatCurrency(unitPrice, product.monedaPrecioMin || currency) : "-"}</td>
+                          <td>{pricePerGram ? formatCurrency(pricePerGram, product.monedaPrecioMin || currency) : "-"}</td>
                           <td>0</td>
-                          <td>{unitPrice ? formatCurrency(unitPrice, product.monedaPrecioMin || currency) : "-"}</td>
+                          <td>{pricePerGram ? formatCurrency(pricePerGram, product.monedaPrecioMin || currency) : "-"}</td>
                           <td>{amount ? formatCurrency(amount, product.monedaPrecioMin || currency) : "-"}</td>
                           <td>
                             <button className="table-delete" type="button" onClick={() => onRemove(product.codigo)}>

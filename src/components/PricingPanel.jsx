@@ -1,178 +1,243 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  fetchLines, fetchMetalPrices, saveMetalPrices, saveLine,
-  fetchClientMargins, saveClientMargin, calcPrecioGramo
+  calcPrecioGramo,
+  fetchClientMargins,
+  fetchLines,
+  fetchMetalPrices,
+  getSilverFinePrice,
+  saveClientMargin,
+  saveLine,
+  saveMetalPrices,
+  syncProductLinesFromProducts,
 } from "../services/pricingService";
 
-export default function PricingPanel({ clients }) {
+export default function PricingPanel({ clients, products = [] }) {
   const [metalPrices, setMetalPrices] = useState({ kitco_usd_oz: "", tipo_cambio: "", premio_pct: 4 });
   const [lines, setLines] = useState([]);
   const [margins, setMargins] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState("");
   const [savingMetal, setSavingMetal] = useState(false);
+  const [syncingLines, setSyncingLines] = useState(false);
   const [status, setStatus] = useState("");
   const [tcOutput, setTcOutput] = useState("");
 
+  const loadPricing = async () => {
+    const [metal, nextLines] = await Promise.all([fetchMetalPrices(), fetchLines()]);
+    setMetalPrices(metal);
+    setLines(nextLines);
+  };
+
   useEffect(() => {
-    fetchMetalPrices().then(setMetalPrices);
-    fetchLines().then(setLines);
+    loadPricing().catch((error) => setStatus(`Error: ${error.message}`));
   }, []);
 
   useEffect(() => {
-    if (selectedClientId) {
-      fetchClientMargins(selectedClientId).then(setMargins);
+    if (!selectedClientId) {
+      setMargins([]);
+      return;
     }
+    fetchClientMargins(selectedClientId)
+      .then(setMargins)
+      .catch((error) => setStatus(`Error: ${error.message}`));
   }, [selectedClientId]);
 
-  const plataFina = metalPrices.plata_fina_mxn ||
-    ((Number(metalPrices.kitco_usd_oz) / 31.1035) * (1 + Number(metalPrices.premio_pct) / 100) * Number(metalPrices.tipo_cambio));
+  const plataFina = useMemo(() => getSilverFinePrice(metalPrices), [metalPrices]);
+  const tc = Number(tcOutput) || 1;
 
   const handleSaveMetal = async () => {
     setSavingMetal(true);
+    setStatus("");
     try {
       await saveMetalPrices(metalPrices);
       const updated = await fetchMetalPrices();
       setMetalPrices(updated);
-      setStatus("✓ Precios de metal guardados");
-    } catch (e) { setStatus("Error: " + e.message); }
-    finally { setSavingMetal(false); }
+      setStatus("Precios de metal guardados.");
+    } catch (error) {
+      setStatus(`Error: ${error.message}`);
+    } finally {
+      setSavingMetal(false);
+    }
+  };
+
+  const handleSyncLines = async () => {
+    setSyncingLines(true);
+    setStatus("");
+    try {
+      const updated = await syncProductLinesFromProducts(products);
+      setLines(updated);
+      setStatus(`Lineas sincronizadas: ${updated.length}. Revisa la mano de obra por linea antes de cotizar.`);
+    } catch (error) {
+      setStatus(`Error: ${error.message}`);
+    } finally {
+      setSyncingLines(false);
+    }
   };
 
   const handleSaveLine = async (line) => {
     try {
       await saveLine(line);
-      setLines((prev) => prev.map((l) => l.codigo === line.codigo ? line : l));
-      setStatus("✓ Línea guardada");
-    } catch (e) { setStatus("Error: " + e.message); }
+      setLines((current) => current.map((item) => (item.codigo === line.codigo ? { ...item, ...line } : item)));
+      setStatus("Linea guardada.");
+    } catch (error) {
+      setStatus(`Error: ${error.message}`);
+    }
   };
 
   const handleSaveMargin = async (lineCodigo, margenPct) => {
     if (!selectedClientId) return;
     try {
       await saveClientMargin(selectedClientId, lineCodigo, margenPct);
-      setMargins((prev) => {
-        const exists = prev.find((m) => m.line_codigo === lineCodigo);
-        if (exists) return prev.map((m) => m.line_codigo === lineCodigo ? { ...m, margen_pct: Number(margenPct) } : m);
-        return [...prev, { client_id: selectedClientId, line_codigo: lineCodigo, margen_pct: Number(margenPct) }];
+      setMargins((current) => {
+        const exists = current.find((item) => item.line_codigo === lineCodigo);
+        if (exists) {
+          return current.map((item) =>
+            item.line_codigo === lineCodigo ? { ...item, margen_pct: Number(margenPct || 0) } : item
+          );
+        }
+        return [...current, { client_id: selectedClientId, line_codigo: lineCodigo, margen_pct: Number(margenPct || 0) }];
       });
-      setStatus("✓ Margen guardado");
-    } catch (e) { setStatus("Error: " + e.message); }
+      setStatus("Margen guardado.");
+    } catch (error) {
+      setStatus(`Error: ${error.message}`);
+    }
   };
 
   const getMargen = (lineCodigo) =>
-    margins.find((m) => m.line_codigo === lineCodigo)?.margen_pct ?? "";
-
-  const tc = Number(tcOutput) || 1;
+    margins.find((item) => item.line_codigo === lineCodigo)?.margen_pct ?? "";
 
   return (
     <section className="admin-workspace">
+      <div className="admin-soft-panel compact-panel" style={{ marginBottom: 20 }}>
+        <h2>Menu de precios para cotizar</h2>
+        <p className="muted">
+          Regla unica: precio por gramo integrado = plata fina + mano de obra por linea + margen del cliente.
+        </p>
+        <div className="pricing-formula-box">
+          <strong>Formula:</strong>
+          <span>Subtotal de partida = piezas x gramos por pieza x precio integrado por gramo.</span>
+        </div>
+        {status ? <p className="status info">{status}</p> : null}
+      </div>
 
-      {/* ── PRECIOS DE METAL ── */}
-      <div className="admin-soft-panel compact-panel" style={{ marginBottom: 24 }}>
-        <h2>Precios de metal vigentes</h2>
-        <p className="muted" style={{ marginBottom: 12 }}>Actualiza cuando cambie el precio del mercado.</p>
-        <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+      <div className="admin-soft-panel compact-panel" style={{ marginBottom: 20 }}>
+        <h2>1. Precio de metal vigente</h2>
+        <p className="muted">Actualiza estos valores cuando cambie el mercado. El sistema calcula la plata fina MXN/g.</p>
+        <div className="form-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
           <label>
-            KITCO (USD/oz)
+            KITCO plata (USD/oz)
             <input
-              type="number" step="0.01"
-              placeholder="ej. 31.50"
+              type="number"
+              step="0.01"
+              placeholder="Ej. 31.50"
               value={metalPrices.kitco_usd_oz || ""}
-              onChange={(e) => setMetalPrices({ ...metalPrices, kitco_usd_oz: e.target.value })}
+              onChange={(event) => setMetalPrices({ ...metalPrices, kitco_usd_oz: event.target.value })}
             />
           </label>
           <label>
             Tipo de cambio (MXN/USD)
             <input
-              type="number" step="0.01"
-              placeholder="ej. 17.25"
+              type="number"
+              step="0.01"
+              placeholder="Ej. 17.25"
               value={metalPrices.tipo_cambio || ""}
-              onChange={(e) => setMetalPrices({ ...metalPrices, tipo_cambio: e.target.value })}
+              onChange={(event) => setMetalPrices({ ...metalPrices, tipo_cambio: event.target.value })}
             />
           </label>
           <label>
             Premio %
             <input
-              type="number" step="0.1"
-              placeholder="ej. 4"
+              type="number"
+              step="0.1"
+              placeholder="Ej. 4"
               value={metalPrices.premio_pct || ""}
-              onChange={(e) => setMetalPrices({ ...metalPrices, premio_pct: e.target.value })}
+              onChange={(event) => setMetalPrices({ ...metalPrices, premio_pct: event.target.value })}
             />
           </label>
         </div>
-        <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--color-background-secondary)", borderRadius: 8, display: "flex", gap: 24 }}>
-          <span>Plata fina: <strong>${plataFina.toFixed(4)} MXN/g</strong></span>
-          {Number(metalPrices.tipo_cambio) > 0 && (
-            <span>= <strong>${(plataFina / Number(metalPrices.tipo_cambio)).toFixed(4)} USD/g</strong></span>
-          )}
+        <div className="pricing-result-row">
+          <span>Plata fina calculada</span>
+          <strong>${plataFina.toFixed(4)} MXN/g</strong>
         </div>
-        {status ? <p className="status info" style={{ marginTop: 8 }}>{status}</p> : null}
-        <button className="primary-button compact-action" onClick={handleSaveMetal} disabled={savingMetal} style={{ marginTop: 12 }}>
-          {savingMetal ? "Guardando..." : "Guardar precios de metal"}
+        <button className="primary-button compact-action" type="button" onClick={handleSaveMetal} disabled={savingMetal}>
+          {savingMetal ? "Guardando..." : "Guardar precio de metal"}
         </button>
       </div>
 
-      {/* ── TABLA DE LÍNEAS Y MO ── */}
-      <div className="admin-soft-panel compact-panel" style={{ marginBottom: 24 }}>
-        <h2>Costo MO por línea</h2>
-        <p className="muted" style={{ marginBottom: 12 }}>El costo de mano de obra base en MXN/g para cada línea.</p>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+      <div className="admin-soft-panel compact-panel" style={{ marginBottom: 20 }}>
+        <div className="section-title-row">
+          <div>
+            <h2>2. Mano de obra por linea</h2>
+            <p className="muted">Cada SKU usa su campo Linea. Si no existe una linea aqui, no se podra cotizar automaticamente.</p>
+          </div>
+          <button className="secondary-button compact-action" type="button" onClick={handleSyncLines} disabled={syncingLines}>
+            {syncingLines ? "Sincronizando..." : "Crear lineas desde productos"}
+          </button>
+        </div>
+        <div className="responsive-table">
+          <table className="simple-admin-table">
             <thead>
-              <tr style={{ background: "var(--color-background-secondary)" }}>
-                <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 500 }}>Línea</th>
-                <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 500 }}>Descripción</th>
-                <th style={{ padding: "8px 12px", textAlign: "right", fontWeight: 500 }}>MO MXN/g</th>
-                <th style={{ padding: "8px 12px" }}></th>
+              <tr>
+                <th>Linea</th>
+                <th>Descripcion</th>
+                <th className="right">MO base MXN/g</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
-              {lines.map((line) => (
-                <LineRow key={line.codigo} line={line} onSave={handleSaveLine} />
-              ))}
+              {lines.length ? (
+                lines.map((line) => <LineRow key={line.codigo} line={line} onSave={handleSaveLine} />)
+              ) : (
+                <tr>
+                  <td colSpan="4" className="empty-row">
+                    No hay lineas configuradas. Presiona "Crear lineas desde productos".
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* ── MÁRGENES POR CLIENTE ── */}
       <div className="admin-soft-panel compact-panel">
-        <h2>Márgenes por cliente</h2>
-        <p className="muted" style={{ marginBottom: 12 }}>Define el % de margen por línea para cada cliente.</p>
+        <h2>3. Margen por cliente</h2>
+        <p className="muted">Selecciona un cliente y define su margen por linea. Si dejas 0%, el precio sera costo integrado sin margen.</p>
 
         <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "flex-end" }}>
           <label style={{ flex: 1 }}>
             Cliente
-            <select value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)}>
+            <select value={selectedClientId} onChange={(event) => setSelectedClientId(event.target.value)}>
               <option value="">Selecciona un cliente</option>
-              {(clients || []).map((c) => (
-                <option key={c.id} value={c.id}>{c.company || c.name} — {c.email}</option>
+              {(clients || []).map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.company || client.name} - {client.email}
+                </option>
               ))}
             </select>
           </label>
-          <label style={{ width: 160 }}>
-            Ver precios en USD (TC)
+          <label style={{ width: 180 }}>
+            Ver en USD usando TC
             <input
-              type="number" step="0.01"
-              placeholder="ej. 17.25"
+              type="number"
+              step="0.01"
+              placeholder="Ej. 17.25"
               value={tcOutput}
-              onChange={(e) => setTcOutput(e.target.value)}
+              onChange={(event) => setTcOutput(event.target.value)}
             />
           </label>
         </div>
 
         {selectedClientId ? (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <div className="responsive-table">
+            <table className="simple-admin-table">
               <thead>
-                <tr style={{ background: "var(--color-background-secondary)" }}>
-                  <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 500 }}>Línea</th>
-                  <th style={{ padding: "8px 12px", textAlign: "right", fontWeight: 500 }}>MO base</th>
-                  <th style={{ padding: "8px 12px", textAlign: "right", fontWeight: 500 }}>Margen %</th>
-                  <th style={{ padding: "8px 12px", textAlign: "right", fontWeight: 500 }}>Plata fina</th>
-                  <th style={{ padding: "8px 12px", textAlign: "right", fontWeight: 500 }}>MO cliente</th>
-                  <th style={{ padding: "8px 12px", textAlign: "right", fontWeight: 500 }}>Integrado/g</th>
-                  <th style={{ padding: "8px 12px" }}></th>
+                <tr>
+                  <th>Linea</th>
+                  <th className="right">MO base</th>
+                  <th className="right">Margen %</th>
+                  <th className="right">Plata fina</th>
+                  <th className="right">MO cliente</th>
+                  <th className="right">Precio integrado/g</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -192,7 +257,7 @@ export default function PricingPanel({ clients }) {
                       margen={margen}
                       precio={precio}
                       moneda={moneda}
-                      onSave={(v) => handleSaveMargin(line.codigo, v)}
+                      onSave={(value) => handleSaveMargin(line.codigo, value)}
                     />
                   );
                 })}
@@ -200,7 +265,7 @@ export default function PricingPanel({ clients }) {
             </table>
           </div>
         ) : (
-          <p className="muted">Selecciona un cliente para configurar sus márgenes.</p>
+          <p className="muted">Selecciona un cliente para ver o modificar sus margenes.</p>
         )}
       </div>
     </section>
@@ -210,75 +275,64 @@ export default function PricingPanel({ clients }) {
 function LineRow({ line, onSave }) {
   const [mo, setMo] = useState(line.mo_base);
   const [desc, setDesc] = useState(line.descripcion || "");
-  const dirty = Number(mo) !== Number(line.mo_base) || desc !== (line.descripcion || "");
+  const dirty = Number(mo || 0) !== Number(line.mo_base || 0) || desc !== (line.descripcion || "");
 
   return (
-    <tr style={{ borderBottom: "1px solid var(--color-border-tertiary)" }}>
-      <td style={{ padding: "6px 12px", fontWeight: 500 }}>{line.codigo}</td>
-      <td style={{ padding: "6px 12px" }}>
-        <input
-          value={desc}
-          onChange={(e) => setDesc(e.target.value)}
-          style={{ width: "100%" }}
-          placeholder="Descripción"
-        />
+    <tr>
+      <td><strong>{line.codigo}</strong></td>
+      <td>
+        <input value={desc} onChange={(event) => setDesc(event.target.value)} placeholder="Descripcion de la linea" />
       </td>
-      <td style={{ padding: "6px 12px" }}>
+      <td>
         <input
-          type="number" step="0.01"
+          type="number"
+          step="0.01"
           value={mo}
-          onChange={(e) => setMo(e.target.value)}
-          style={{ width: 90, textAlign: "right" }}
+          onChange={(event) => setMo(event.target.value)}
+          style={{ textAlign: "right" }}
         />
       </td>
-      <td style={{ padding: "6px 12px" }}>
-        {dirty && (
-          <button
-            className="primary-button compact-action"
-            onClick={() => onSave({ ...line, mo_base: Number(mo), descripcion: desc })}
-            style={{ fontSize: 12, padding: "4px 10px" }}
-          >
+      <td>
+        {dirty ? (
+          <button className="primary-button compact-action" type="button" onClick={() => onSave({ ...line, mo_base: Number(mo || 0), descripcion: desc })}>
             Guardar
           </button>
-        )}
+        ) : null}
       </td>
     </tr>
   );
 }
 
 function MarginRow({ line, margen, precio, moneda, onSave }) {
-  const [val, setVal] = useState(margen);
-  const dirty = String(val) !== String(margen);
-
-  const fmt = (n) => n > 0 ? `$${Number(n).toFixed(4)}` : "—";
+  const [value, setValue] = useState(margen);
+  const dirty = String(value) !== String(margen);
+  const money = (number) => (Number(number) > 0 ? `$${Number(number).toFixed(4)}` : "-");
 
   return (
-    <tr style={{ borderBottom: "1px solid var(--color-border-tertiary)" }}>
-      <td style={{ padding: "6px 12px", fontWeight: 500 }}>{line.codigo}</td>
-      <td style={{ padding: "6px 12px", textAlign: "right" }}>${Number(line.mo_base).toFixed(2)}</td>
-      <td style={{ padding: "6px 12px" }}>
+    <tr>
+      <td><strong>{line.codigo}</strong></td>
+      <td className="right">${Number(line.mo_base || 0).toFixed(2)}</td>
+      <td className="right">
         <input
-          type="number" step="0.1" min="0" max="99"
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          style={{ width: 70, textAlign: "right" }}
+          type="number"
+          step="0.1"
+          min="0"
+          max="99"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          style={{ maxWidth: 90, textAlign: "right" }}
           placeholder="0"
-        />
-        <span style={{ marginLeft: 4 }}>%</span>
+        /> %
       </td>
-      <td style={{ padding: "6px 12px", textAlign: "right", color: "var(--color-text-secondary)" }}>{fmt(precio.plata_fina)} {moneda}</td>
-      <td style={{ padding: "6px 12px", textAlign: "right", color: "var(--color-text-secondary)" }}>{fmt(precio.mo_visible)} {moneda}</td>
-      <td style={{ padding: "6px 12px", textAlign: "right", fontWeight: 500 }}>{fmt(precio.integrado)} {moneda}</td>
-      <td style={{ padding: "6px 12px" }}>
-        {dirty && (
-          <button
-            className="primary-button compact-action"
-            onClick={() => onSave(val)}
-            style={{ fontSize: 12, padding: "4px 10px" }}
-          >
+      <td className="right">{money(precio.plata_fina)} {moneda}</td>
+      <td className="right">{money(precio.mo_visible)} {moneda}</td>
+      <td className="right"><strong>{money(precio.integrado)} {moneda}</strong></td>
+      <td>
+        {dirty ? (
+          <button className="primary-button compact-action" type="button" onClick={() => onSave(value)}>
             Guardar
           </button>
-        )}
+        ) : null}
       </td>
     </tr>
   );

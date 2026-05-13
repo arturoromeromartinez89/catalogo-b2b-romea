@@ -10,8 +10,8 @@ import { useCompany } from "../contexts/CompanyContext";
 import BrandLogo from "./BrandLogo";
 import { supabase } from "../lib/supabaseClient";
 import { fetchClientData } from "../services/supabaseCatalog";
+import { calculateProductQuotePrice, fetchClientMargins, fetchLines, fetchMetalPrices } from "../services/pricingService";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
-import { calculateClientPrice } from "../utils/pricing";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 
@@ -51,13 +51,24 @@ export default function ClientCatalogApp({ profile }) {
 
   useEffect(() => {
     setStatus(t("loadingCatalog"));
-    fetchClientData(profile)
-      .then((result) => {
+    Promise.all([
+      fetchClientData(profile),
+      fetchLines().catch(() => []),
+      fetchMetalPrices().catch(() => ({})),
+      fetchClientMargins(profile?.client_id).catch(() => []),
+    ])
+      .then(([result, lines, metalPrices, margins]) => {
         setProducts(
-          result.products.map((product) => ({
-            ...product,
-            precioMinimo: calculateClientPrice(product, result.priceItems),
-          }))
+          result.products.map((product) => {
+            const quote = calculateProductQuotePrice(product, { lines, metalPrices, margins });
+            return {
+              ...product,
+              precioMinimo: quote.pricePerGram,
+              quotePricePerGram: quote.pricePerGram,
+              quoteLaborPerGram: quote.laborPerGram,
+              quotePricingStatus: quote.status,
+            };
+          })
         );
         setStatus("");
       })

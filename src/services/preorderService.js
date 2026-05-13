@@ -114,9 +114,12 @@ export const submitClientPreorder = async (profile, cartItems, customer) => {
     piezas: Number(item.quantity || 1),
     gramos_por_pieza: Number(item.product.pesoPromedio || 0),
     gramos_total: Number(item.product.pesoPromedio || 0) * Number(item.quantity || 1),
-    labor_mxn: 0,
-    precio_gramo_mxn: Number(item.product.precioMinimo || 0),
-    subtotal_mxn: Number(item.product.precioMinimo || 0) * Number(item.product.pesoPromedio || 0) * Number(item.quantity || 1),
+    labor_mxn: Number(item.product.quoteLaborPerGram || 0),
+    precio_gramo_mxn: Number(item.product.quotePricePerGram || item.product.precioMinimo || 0),
+    subtotal_mxn:
+      Number(item.product.quotePricePerGram || item.product.precioMinimo || 0) *
+      Number(item.product.pesoPromedio || 0) *
+      Number(item.quantity || 1),
     sort_order: idx,
   }));
 

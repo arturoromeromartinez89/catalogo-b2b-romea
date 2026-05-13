@@ -1371,6 +1371,63 @@ dd {
   padding: 7px 14px;
 }
 
+.pricing-formula-box,
+.pricing-result-row {
+  align-items: center;
+  background: var(--romea-soft);
+  border: 1px solid var(--romea-line);
+  border-radius: 10px;
+  color: var(--romea-ink);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 11px 13px;
+}
+
+.pricing-result-row {
+  justify-content: space-between;
+}
+
+.pricing-result-row strong {
+  color: var(--romea-blue);
+}
+
+.responsive-table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.simple-admin-table {
+  border-collapse: collapse;
+  min-width: 760px;
+  width: 100%;
+}
+
+.simple-admin-table th,
+.simple-admin-table td {
+  border-bottom: 1px solid var(--romea-line);
+  font-size: 13px;
+  padding: 9px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.simple-admin-table th {
+  background: var(--romea-soft);
+  color: var(--romea-blue);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.simple-admin-table .right {
+  text-align: right;
+}
+
+.simple-admin-table input {
+  min-height: 34px;
+  width: 100%;
+}
+
 @media (max-width: 900px) {
   .admin-shell,
   .admin-grid,

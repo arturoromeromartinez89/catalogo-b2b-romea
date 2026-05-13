@@ -146,10 +146,12 @@ export const calculateCartTotals = (items) =>
   items.reduce(
     (totals, item) => {
       const quantity = Number(item.quantity || 0);
+      const grams = quantity * Number(item.product.pesoPromedio || 0);
+      const pricePerGram = Number(item.product.precioMinimo || item.product.quotePricePerGram || 0);
       totals.models += 1;
       totals.pieces += quantity;
-      totals.weight += quantity * Number(item.product.pesoPromedio || 0);
-      totals.amount += quantity * Number(item.product.precioMinimo || 0);
+      totals.weight += grams;
+      totals.amount += grams * pricePerGram;
       return totals;
     },
     { models: 0, pieces: 0, weight: 0, amount: 0 }

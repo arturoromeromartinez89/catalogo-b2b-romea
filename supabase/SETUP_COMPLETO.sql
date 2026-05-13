@@ -113,6 +113,92 @@ create table if not exists public.client_price_lists (
   primary key (client_id, price_list_id)
 );
 
+create table if not exists public.company_settings (
+  id uuid primary key default gen_random_uuid(),
+  brand_name text,
+  legal_name text,
+  rfc text,
+  phone text,
+  email text,
+  city text,
+  state text,
+  country text default 'Mexico',
+  logo_url text,
+  bank_accounts jsonb default '[]'::jsonb,
+  order_instructions jsonb default '[]'::jsonb,
+  commercial_terms text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.product_lines (
+  codigo text primary key,
+  descripcion text,
+  mo_base numeric not null default 0,
+  activa boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.metal_prices (
+  id uuid primary key default gen_random_uuid(),
+  kitco_usd_oz numeric not null default 0,
+  tipo_cambio numeric not null default 0,
+  premio_pct numeric not null default 0,
+  plata_fina_mxn numeric not null default 0,
+  updated_by text,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.client_line_margins (
+  client_id uuid references public.clients(id) on delete cascade,
+  line_codigo text references public.product_lines(codigo) on delete cascade,
+  margen_pct numeric not null default 0,
+  updated_at timestamptz not null default now(),
+  primary key (client_id, line_codigo)
+);
+
+create table if not exists public.preorders (
+  id uuid primary key default gen_random_uuid(),
+  folio text unique,
+  status text not null default 'pendiente',
+  client_id uuid references public.clients(id) on delete set null,
+  created_by uuid references public.profiles(id) on delete set null,
+  cliente_nombre text,
+  cliente_empresa text,
+  cliente_email text,
+  cliente_telefono text,
+  cliente_rfc text,
+  tipo_cambio numeric default 0,
+  moneda text default 'MXN',
+  notas text,
+  total_piezas numeric default 0,
+  total_gramos numeric default 0,
+  total_mxn numeric default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.preorder_items (
+  id uuid primary key default gen_random_uuid(),
+  preorder_id uuid references public.preorders(id) on delete cascade,
+  producto_codigo text,
+  producto_descripcion text,
+  producto_metal text,
+  producto_kilataje text,
+  producto_linea text,
+  producto_foto_url text,
+  piezas numeric not null default 0,
+  gramos_por_pieza numeric not null default 0,
+  gramos_total numeric not null default 0,
+  labor_mxn numeric not null default 0,
+  precio_gramo_mxn numeric not null default 0,
+  subtotal_mxn numeric not null default 0,
+  sort_order numeric default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- Trigger: crea perfil automáticamente cuando alguien se registra
 create or replace function public.handle_new_user()
 returns trigger
@@ -145,6 +231,12 @@ alter table public.price_lists enable row level security;
 alter table public.price_list_items enable row level security;
 alter table public.client_catalogs enable row level security;
 alter table public.client_price_lists enable row level security;
+alter table public.company_settings enable row level security;
+alter table public.product_lines enable row level security;
+alter table public.metal_prices enable row level security;
+alter table public.client_line_margins enable row level security;
+alter table public.preorders enable row level security;
+alter table public.preorder_items enable row level security;
 
 -- Función helper para verificar si es admin
 create or replace function public.is_admin()
@@ -225,6 +317,54 @@ drop policy if exists "clients read own price assignments" on public.client_pric
 create policy "admins manage client price lists" on public.client_price_lists for all using (public.is_admin()) with check (public.is_admin());
 create policy "clients read own price assignments" on public.client_price_lists for select using (
   client_id in (select client_id from public.profiles where id = auth.uid())
+);
+
+drop policy if exists "admins manage company settings" on public.company_settings;
+drop policy if exists "authenticated read company settings" on public.company_settings;
+create policy "admins manage company settings" on public.company_settings for all using (public.is_admin()) with check (public.is_admin());
+create policy "authenticated read company settings" on public.company_settings for select using (auth.uid() is not null);
+
+drop policy if exists "admins manage product lines" on public.product_lines;
+drop policy if exists "authenticated read product lines" on public.product_lines;
+create policy "admins manage product lines" on public.product_lines for all using (public.is_admin()) with check (public.is_admin());
+create policy "authenticated read product lines" on public.product_lines for select using (auth.uid() is not null);
+
+drop policy if exists "admins manage metal prices" on public.metal_prices;
+drop policy if exists "authenticated read metal prices" on public.metal_prices;
+create policy "admins manage metal prices" on public.metal_prices for all using (public.is_admin()) with check (public.is_admin());
+create policy "authenticated read metal prices" on public.metal_prices for select using (auth.uid() is not null);
+
+drop policy if exists "admins manage client line margins" on public.client_line_margins;
+drop policy if exists "clients read own line margins" on public.client_line_margins;
+create policy "admins manage client line margins" on public.client_line_margins for all using (public.is_admin()) with check (public.is_admin());
+create policy "clients read own line margins" on public.client_line_margins for select using (
+  client_id in (select client_id from public.profiles where id = auth.uid())
+);
+
+drop policy if exists "admins manage preorders" on public.preorders;
+drop policy if exists "clients manage own preorders" on public.preorders;
+create policy "admins manage preorders" on public.preorders for all using (public.is_admin()) with check (public.is_admin());
+create policy "clients manage own preorders" on public.preorders for all using (
+  client_id in (select client_id from public.profiles where id = auth.uid())
+) with check (
+  client_id in (select client_id from public.profiles where id = auth.uid())
+);
+
+drop policy if exists "admins manage preorder items" on public.preorder_items;
+drop policy if exists "clients manage own preorder items" on public.preorder_items;
+create policy "admins manage preorder items" on public.preorder_items for all using (public.is_admin()) with check (public.is_admin());
+create policy "clients manage own preorder items" on public.preorder_items for all using (
+  preorder_id in (
+    select po.id from public.preorders po
+    join public.profiles p on p.client_id = po.client_id
+    where p.id = auth.uid()
+  )
+) with check (
+  preorder_id in (
+    select po.id from public.preorders po
+    join public.profiles p on p.client_id = po.client_id
+    where p.id = auth.uid()
+  )
 );
 
 -- ============================================================
