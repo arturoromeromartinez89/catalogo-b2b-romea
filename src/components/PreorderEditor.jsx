@@ -125,23 +125,24 @@ export default function PreorderEditor({ preorder: initial, clients, onClose, on
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, overflow: "auto", padding: 24 }}>
-      <div style={{ background: "var(--color-background-primary)", borderRadius: 12, maxWidth: 960, margin: "0 auto", padding: 28 }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, overflow: "auto", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "32px 16px" }}>
+      <div style={{ background: "var(--color-background-primary)", borderRadius: 12, width: "100%", maxWidth: 980, padding: 28, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
 
         {/* ── HEADER ── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, borderBottom: "1px solid var(--color-border-tertiary)", paddingBottom: 16 }}>
           <div>
-            <h2 style={{ margin: 0 }}>{isNew ? "Nueva preorden" : `Preorden ${po.folio}`}</h2>
-            <div style={{ marginTop: 6, display: "flex", gap: 8 }}>
+            <h2 style={{ margin: "0 0 10px 0", fontSize: 20 }}>{isNew ? "Nueva preorden" : `Preorden ${po.folio}`}</h2>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {Object.entries(STATUS_LABELS).map(([key, { label, color }]) => (
                 <button
                   key={key}
                   onClick={() => setPo((p) => ({ ...p, status: key }))}
                   style={{
-                    padding: "3px 10px", borderRadius: 20, fontSize: 12, cursor: "pointer",
+                    padding: "4px 12px", borderRadius: 20, fontSize: 12, cursor: "pointer",
                     border: `1px solid ${color}`,
                     background: po.status === key ? color : "transparent",
                     color: po.status === key ? "#fff" : color,
+                    fontWeight: po.status === key ? 600 : 400,
                   }}
                 >
                   {label}
@@ -149,7 +150,7 @@ export default function PreorderEditor({ preorder: initial, clients, onClose, on
               ))}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "var(--color-text-secondary)" }}>✕</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "var(--color-text-secondary)", lineHeight: 1, padding: "0 0 0 16px" }}>✕</button>
         </div>
 
         {/* ── DATOS GENERALES ── */}
