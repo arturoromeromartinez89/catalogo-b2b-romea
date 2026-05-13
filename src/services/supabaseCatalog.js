@@ -1,6 +1,48 @@
 import { supabase } from "../lib/supabaseClient";
 import { normalizeText } from "../utils/textNormalizer";
 
+const PAGE_SIZE = 1000;
+
+const firstValue = (...values) => values.find((value) => value !== undefined && value !== null);
+
+const toDbNumber = (...values) => {
+  const value = firstValue(...values, 0);
+  if (value === "") return 0;
+  const number = Number(String(value).replace(/,/g, "").trim());
+  return Number.isFinite(number) ? number : 0;
+};
+
+const toDbBoolean = (...values) => {
+  const value = firstValue(...values, true);
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  return ["1", "si", "sí", "yes", "true", "activo", "active", "alta"].includes(normalizeText(value));
+};
+
+const fetchAllProducts = async ({ visibleOnly = false } = {}) => {
+  const rows = [];
+  let from = 0;
+
+  while (true) {
+    let query = supabase
+      .from("products")
+      .select("*")
+      .order("codigo")
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (visibleOnly) query = query.eq("visible_web", true);
+
+    const result = await query;
+    throwIfError(result);
+    rows.push(...result.data);
+
+    if (result.data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+
+  return rows;
+};
+
 export const dbProductToProduct = (row) => ({
   id: row.id,
   codigo: row.codigo || "",
@@ -49,35 +91,57 @@ export const dbProductToProduct = (row) => ({
     ),
 });
 
-export const productToDb = (product) => ({
-  codigo: product.codigo,
-  modelo: product.modelo,
-  descripcion: product.descripcion,
-  metal: product.metal,
-  kilataje: product.kilataje,
-  linea: product.linea,
-  familia: product.familia,
-  grupo: product.grupo,
-  genero: product.genero,
-  acabado: product.acabado,
-  piedra: product.piedra,
-  medida: product.medida,
-  estatus: product.estatus || "Activo",
-  peso_promedio: Number(product.pesoPromedio || 0),
-  unidad_venta: product.unidadVenta,
-  clave_venta: product.claveVenta,
-  precio_minimo: Number(product.precioMinimo || 0),
-  mano_obra: Number(product.manoObra || product.laborPrice || 0),
-  moneda_precio_min: product.monedaPrecioMin || "MXN",
-  foto_url: product.fotoUrl,
-  foto_url_2: product.fotoUrl2,
-  foto_url_3: product.fotoUrl3,
-  visible_web: Boolean(product.visibleWeb),
-  orden_web: Number(product.ordenWeb || 0),
-  tags_busqueda: product.tagsBusqueda,
-  search_text: product.searchText,
-  updated_at: new Date().toISOString(),
-});
+export const productToDb = (product) => {
+  const searchText =
+    firstValue(product.searchText, product.search_text) ||
+    normalizeText(
+      [
+        product.codigo,
+        product.modelo,
+        product.descripcion,
+        product.metal,
+        product.kilataje,
+        product.linea,
+        product.familia,
+        product.grupo,
+        product.genero,
+        product.acabado,
+        product.piedra,
+        product.medida,
+        firstValue(product.tagsBusqueda, product.tags_busqueda),
+      ].join(" ")
+    );
+
+  return {
+    codigo: firstValue(product.codigo, ""),
+    modelo: firstValue(product.modelo, ""),
+    descripcion: firstValue(product.descripcion, ""),
+    metal: firstValue(product.metal, ""),
+    kilataje: firstValue(product.kilataje, ""),
+    linea: firstValue(product.linea, ""),
+    familia: firstValue(product.familia, ""),
+    grupo: firstValue(product.grupo, ""),
+    genero: firstValue(product.genero, ""),
+    acabado: firstValue(product.acabado, ""),
+    piedra: firstValue(product.piedra, ""),
+    medida: firstValue(product.medida, ""),
+    estatus: firstValue(product.estatus, "Activo"),
+    peso_promedio: toDbNumber(product.pesoPromedio, product.peso_promedio, product.average_weight),
+    unidad_venta: firstValue(product.unidadVenta, product.unidad_venta, product.sales_unit, ""),
+    clave_venta: firstValue(product.claveVenta, product.clave_venta, product.sales_key, ""),
+    precio_minimo: toDbNumber(product.precioMinimo, product.precio_minimo, product.minimum_price),
+    mano_obra: toDbNumber(product.manoObra, product.mano_obra, product.laborPrice, product.labor_price),
+    moneda_precio_min: firstValue(product.monedaPrecioMin, product.moneda_precio_min, product.minimum_price_currency, "MXN"),
+    foto_url: firstValue(product.fotoUrl, product.foto_url, product.photo_url, ""),
+    foto_url_2: firstValue(product.fotoUrl2, product.foto_url_2, product.photo_url_2, ""),
+    foto_url_3: firstValue(product.fotoUrl3, product.foto_url_3, product.photo_url_3, ""),
+    visible_web: toDbBoolean(product.visibleWeb, product.visible_web),
+    orden_web: toDbNumber(product.ordenWeb, product.orden_web, product.web_order),
+    tags_busqueda: firstValue(product.tagsBusqueda, product.tags_busqueda, product.search_tags, ""),
+    search_text: searchText,
+    updated_at: new Date().toISOString(),
+  };
+};
 
 const throwIfError = ({ error }) => {
   if (error) throw error;
@@ -93,9 +157,10 @@ export const getSessionAndProfile = async () => {
 };
 
 export const fetchAdminData = async () => {
+  const allProducts = await fetchAllProducts();
   const [products, clients, catalogs, catalogProducts, priceLists, priceItems, clientCatalogs, clientPriceLists] =
     await Promise.all([
-      supabase.from("products").select("*").order("codigo"),
+      { data: allProducts, error: null },
       supabase.from("clients").select("*").order("company"),
       supabase.from("catalogs").select("*").order("name"),
       supabase.from("catalog_products").select("*"),
@@ -178,8 +243,9 @@ export const setClientPriceList = async (clientId, priceListId, active) => {
 };
 
 export const fetchClientData = async (profile) => {
+  const visibleProducts = await fetchAllProducts({ visibleOnly: true });
   const [products, priceLists] = await Promise.all([
-    supabase.from("products").select("*").eq("visible_web", true).order("codigo"),
+    { data: visibleProducts, error: null },
     supabase.from("client_price_lists").select("price_list_id").eq("client_id", profile.client_id).eq("active", true),
   ]);
   throwIfError(products);
