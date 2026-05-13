@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import CartDrawer from "./CartDrawer";
-import Header from "./Header";
+import FilterPanel from "./FilterPanel";
+import LanguageToggle from "./LanguageToggle";
 import ProductDetail from "./ProductDetail";
-import ProductGrid from "./ProductGrid";
+import QuickFilters from "./QuickFilters";
+import AdvancedSearch from "./AdvancedSearch";
 import { useLanguage } from "../i18n/LanguageContext";
 import { supabase } from "../lib/supabaseClient";
 import { fetchClientData } from "../services/supabaseCatalog";
-import { applyFilters, emptyFilters, quickFilterDefinitions } from "../utils/filters";
+import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
 import { calculateClientPrice } from "../utils/pricing";
+import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 
 const orderDefaults = {
@@ -33,12 +36,11 @@ const makeDefaultCustomer = (language = "es") => ({
 export default function ClientCatalogApp({ profile }) {
   const { t, language } = useLanguage();
   const [products, setProducts] = useState([]);
-  const [priceItems, setPriceItems] = useState([]);
   const [cartItems, setCartItems] = useState([]);
   const [customer, setCustomer] = useState(() => makeDefaultCustomer(language));
   const [query, setQuery] = useState("");
   const [searchChips, setSearchChips] = useState([]);
-  const [filters] = useState(emptyFilters);
+  const [filters, setFilters] = useState(emptyFilters);
   const [quickFilters, setQuickFilters] = useState([]);
   const [selectedCode, setSelectedCode] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -48,7 +50,6 @@ export default function ClientCatalogApp({ profile }) {
     setStatus(t("loadingCatalog"));
     fetchClientData(profile)
       .then((result) => {
-        setPriceItems(result.priceItems);
         setProducts(
           result.products.map((product) => ({
             ...product,
@@ -74,11 +75,13 @@ export default function ClientCatalogApp({ profile }) {
     });
   }, [language]);
 
+  const filterOptions = useMemo(() => buildFilterOptions(products), [products]);
   const filteredProducts = useMemo(
     () => applyFilters(products, query, filters, quickFilters, searchChips),
     [products, query, filters, quickFilters, searchChips]
   );
   const selectedProduct = products.find((product) => product.codigo === selectedCode);
+  const preorderPieces = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();
@@ -94,7 +97,9 @@ export default function ClientCatalogApp({ profile }) {
       const exists = current.find((item) => item.product.codigo === product.codigo);
       if (exists) {
         return current.map((item) =>
-          item.product.codigo === product.codigo ? { ...item, quantity: Number(item.quantity || 0) + amount } : item
+          item.product.codigo === product.codigo
+            ? { ...item, quantity: Number(item.quantity || 0) + amount }
+            : item
         );
       }
       return [...current, { product, quantity: amount }];
@@ -102,59 +107,182 @@ export default function ClientCatalogApp({ profile }) {
     setIsCartOpen(true);
   };
 
-  const labelForQuickFilter = (filter) => filter.labels?.[language] || filter.id;
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.reload();
+  };
+
+  const clearFilters = () => {
+    setQuery("");
+    setSearchChips([]);
+    setFilters(emptyFilters);
+    setQuickFilters([]);
+    setSelectedCode("");
+  };
 
   return (
-    <div className="client-shell">
-      <main className="main-content">
-        <Header
-          query={query}
-          searchChips={searchChips}
-          products={products}
-          onQueryChange={setQuery}
-          onAddChip={(chip) => {
-            addSearchChip(chip);
-            setQuery("");
-          }}
-          onRemoveChip={(chip) => setSearchChips((current) => current.filter((item) => item !== chip))}
-          showing={filteredProducts.length}
-          total={products.length}
-          onOpenMenu={() => {}}
-          onOpenCart={() => setIsCartOpen(true)}
-        />
-        <div className="client-bar">
-          <span>{status || t("catalogAssigned")}</span>
-          <div className="quick-filter-list">
-            {quickFilterDefinitions.map((filter) => (
-              <button
-                className={`quick-filter ${quickFilters.includes(filter.id) ? "active" : ""}`}
-                key={filter.id}
-                type="button"
-                onClick={() => setQuickFilters((current) => current.includes(filter.id) ? current.filter((item) => item !== filter.id) : [...current, filter.id])}
-              >
-                {labelForQuickFilter(filter)}
-              </button>
-            ))}
+    <div className="admin-catalog-shell">
+      <aside className="admin-romea-sidebar">
+        <div className="brand-block">
+          <div className="brand-fallback">
+            <strong>ROMEA</strong>
+            <span>Cliente</span>
           </div>
-          <button className="secondary-button" type="button" onClick={() => supabase.auth.signOut()}>{t("logout")}</button>
+          <p>{t("b2bCatalog")}</p>
         </div>
-        <div className="content-area">
+
+        <section className="sidebar-section">
+          <h3>{t("productBase")}</h3>
+          <div className="mini-summary">
+            <div><span>{t("totalLabel")}</span><strong>{products.length}</strong></div>
+            <div><span>Filtrados</span><strong>{filteredProducts.length}</strong></div>
+            <div><span>{t("preorder")}</span><strong>{preorderPieces}</strong></div>
+            <div><span>{t("models")}</span><strong>{cartItems.length}</strong></div>
+          </div>
+          {status ? <p className="status info">{status}</p> : null}
+          <button
+            className="primary-button full compact-action"
+            type="button"
+            onClick={() => setIsCartOpen(true)}
+          >
+            {t("openPreorder")}
+          </button>
+        </section>
+
+        <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
+
+        <QuickFilters
+          activeFilters={quickFilters}
+          onToggle={(id) =>
+            setQuickFilters((current) =>
+              current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+            )
+          }
+          onRemove={(id) => setQuickFilters((current) => current.filter((item) => item !== id))}
+        />
+
+        <button className="secondary-button full compact-action" type="button" onClick={clearFilters}>
+          {t("clearFilters")}
+        </button>
+
+        <button
+          className="secondary-button full compact-action"
+          type="button"
+          onClick={handleSignOut}
+        >
+          {t("logout")}
+        </button>
+      </aside>
+
+      <main className="admin-catalog-main">
+        <header className="admin-catalog-header">
+          <div>
+            <p className="eyebrow">{t("brand")}</p>
+            <h1>Catálogo mayorista</h1>
+            <span>{profile?.email}</span>
+          </div>
+          <LanguageToggle />
+        </header>
+
+        <section className="admin-workspace">
+          <div className="admin-toolbar one-input">
+            <AdvancedSearch
+              value={query}
+              chips={searchChips}
+              products={products}
+              onChange={setQuery}
+              onAddChip={(chip) => {
+                addSearchChip(chip);
+                setQuery("");
+              }}
+              onRemoveChip={(chip) =>
+                setSearchChips((current) => current.filter((item) => item !== chip))
+              }
+            />
+          </div>
+
           {selectedCode ? (
-            <ProductDetail product={selectedProduct} onBack={() => setSelectedCode("")} onAdd={addToCart} />
+            <ProductDetail
+              product={selectedProduct}
+              onBack={() => setSelectedCode("")}
+              onAdd={addToCart}
+            />
+          ) : filteredProducts.length ? (
+            <div className="admin-product-grid">
+              {filteredProducts.map((product) => (
+                <article className="admin-product-card enabled" key={product.id || product.codigo}>
+                  <button
+                    className="admin-product-image"
+                    type="button"
+                    onClick={() => setSelectedCode(product.codigo)}
+                  >
+                    <img
+                      src={product.fotoUrl || buildPlaceholderUrl(t("noPhoto"))}
+                      alt={product.descripcion}
+                      onError={(event) => {
+                        event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
+                      }}
+                    />
+                  </button>
+                  <div className="admin-product-info">
+                    <strong>{product.codigo}</strong>
+                    <h3>{shortText(product.descripcion, 72)}</h3>
+                    <p>
+                      {[product.metal, product.kilataje, formatWeight(product.pesoPromedio)]
+                        .filter(Boolean)
+                        .join(" / ")}
+                    </p>
+                    <span>
+                      {product.precioMinimo
+                        ? formatCurrency(product.precioMinimo, product.monedaPrecioMin)
+                        : t("priceToConfirm")}
+                    </span>
+                  </div>
+                  <div className="admin-product-actions">
+                    <button
+                      className="secondary-button compact-action"
+                      type="button"
+                      onClick={() => setSelectedCode(product.codigo)}
+                    >
+                      {t("viewDetail")}
+                    </button>
+                    <button
+                      className="primary-button compact-action"
+                      type="button"
+                      onClick={() => addToCart(product)}
+                    >
+                      {t("addToPreorder")}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
           ) : (
-            <ProductGrid products={filteredProducts} onAdd={addToCart} onOpenDetail={setSelectedCode} />
+            <div className="empty-state">
+              <h2>{t("noProducts")}</h2>
+              <p>{t("noProductsHelp")}</p>
+            </div>
           )}
-        </div>
+        </section>
       </main>
+
       <CartDrawer
         isOpen={isCartOpen}
         cartItems={cartItems}
         customer={customer}
         onCustomerChange={setCustomer}
         onQuantityChange={(code, quantity) =>
-          setCartItems((items) => items.map((item) => item.product.codigo === code ? { ...item, quantity: Math.max(1, Number(quantity || 1)) } : item))
+          setCartItems((items) =>
+            items.map((item) =>
+              item.product.codigo === code
+                ? { ...item, quantity: Math.max(1, Number(quantity || 1)) }
+                : item
+            )
+          )
         }
-        onRemove={(code) => setCartItems((items) => items.filter((item) => item.product.codigo !== code))}
+        onRemove={(code) =>
+          setCartItems((items) => items.filter((item) => item.product.codigo !== code))
+        }
         onClear={() => setCartItems([])}
         onClose={() => setIsCartOpen(false)}
         onOpen={() => setIsCartOpen(true)}

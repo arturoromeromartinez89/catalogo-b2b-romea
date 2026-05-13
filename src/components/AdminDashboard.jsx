@@ -273,7 +273,7 @@ export default function AdminDashboard() {
           </div>
         </section>
 
-        <button className="secondary-button full compact-action" type="button" onClick={() => supabase.auth.signOut()}>
+        <button className="secondary-button full compact-action" type="button" onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }}>
           {t("logout")}
         </button>
       </aside>
