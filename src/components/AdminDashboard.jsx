@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import AdvancedSearch from "./AdvancedSearch";
 import BrandLogo from "./BrandLogo";
 import CompanySettingsPanel from "./CompanySettingsPanel";
+import PricingPanel from "./PricingPanel";
 import { useCompany } from "../contexts/CompanyContext";
 import CatalogExportButton from "./CatalogExportButton";
 import CartDrawer from "./CartDrawer";
@@ -399,40 +400,7 @@ export default function AdminDashboard() {
         ) : null}
 
         {tab === "prices" ? (
-          <section className="admin-workspace two-column-admin">
-            <div className="admin-soft-panel compact-panel">
-              <h2>{t("createPriceList")}</h2>
-              <input placeholder="Ej. Mayorista Oro Mayo" value={priceListForm.name} onChange={(event) => setPriceListForm({ ...priceListForm, name: event.target.value })} />
-              <input placeholder={t("currency")} value={priceListForm.currency} onChange={(event) => setPriceListForm({ ...priceListForm, currency: event.target.value })} />
-              <button className="primary-button compact-action" type="button" onClick={async () => { await savePriceList(priceListForm); setPriceListForm(blankPriceList); await load(); }}>
-                {t("savePriceList")}
-              </button>
-              <select value={selectedPriceListId} onChange={(event) => setSelectedPriceListId(event.target.value)}>
-                <option value="">{t("selectPriceList")}</option>
-                {data.priceLists.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </select>
-            </div>
-            <div className="admin-soft-panel compact-panel">
-              <h2>{t("pricePerGram")}</h2>
-              <div className="form-grid">
-                <input placeholder="Metal, ej. Oro" value={priceItemForm.metal} onChange={(event) => setPriceItemForm({ ...priceItemForm, metal: event.target.value })} />
-                <input placeholder="Kilataje, ej. 14K" value={priceItemForm.kilataje} onChange={(event) => setPriceItemForm({ ...priceItemForm, kilataje: event.target.value })} />
-                <input type="number" placeholder={t("pricePerGram")} value={priceItemForm.price_per_gram} onChange={(event) => setPriceItemForm({ ...priceItemForm, price_per_gram: event.target.value })} />
-                <input type="number" placeholder={t("laborExtra")} value={priceItemForm.labor_markup} onChange={(event) => setPriceItemForm({ ...priceItemForm, labor_markup: event.target.value })} />
-              </div>
-              <button className="primary-button compact-action" disabled={!selectedPriceListId} type="button" onClick={async () => { await savePriceItem({ ...priceItemForm, price_list_id: selectedPriceListId }); setPriceItemForm(blankPriceItem); await load(); }}>
-                {t("addRule")}
-              </button>
-              <div className="price-rule-list">
-                {data.priceItems.filter((item) => item.price_list_id === selectedPriceListId).map((item) => (
-                  <div className="price-rule" key={item.id}>
-                    <strong>{item.metal || t("all")} {item.kilataje}</strong>
-                    <span>${item.price_per_gram}/g · {t("laborExtra")} ${item.labor_markup}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
+          <PricingPanel clients={data.clients} />
         ) : null}
         {tab === "company" ? (
           <CompanySettingsPanel />
