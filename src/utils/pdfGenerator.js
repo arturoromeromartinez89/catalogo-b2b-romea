@@ -44,6 +44,9 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   const folio = buildFolio(customer);
   const today = new Date().toLocaleDateString(language === "en" ? "en-US" : "es-MX");
   const currency = customer.currency || "MXN";
+  const exchangeRate = Number(customer.tipoCambio || 0);
+  const useUsd = currency === "USD" && exchangeRate > 0;
+  const displayMoney = (value) => (useUsd ? Number(value || 0) / exchangeRate : Number(value || 0));
   const showGramos = opts.showGramos !== false;
 
   // ── HEADER ───────────────────────────────────────────────
@@ -101,30 +104,31 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   doc.line(page.margin, y, page.w - page.margin, y); y += 6;
 
   // ── COLUMNAS ──────────────────────────────────────────────
-  // img:14 | cod:22 | desc:58 | pzs:10 | g/pz:14 | g.tot:14 | labor:18 | $/g:18 | subtotal:22 = 190
   const C = {
     img:    page.margin,
-    cod:    page.margin + 15,
-    desc:   page.margin + 37,
-    pzs:    page.margin + 97,
-    gpz:    page.margin + 109,
-    gtot:   page.margin + 123,
-    labor:  page.margin + 137,
-    pgr:    page.margin + 155,
+    cod:    page.margin + 14,
+    desc:   page.margin + 35,
+    pzs:    page.margin + 80,
+    gpz:    page.margin + 93,
+    gtot:   page.margin + 108,
+    labor:  page.margin + 124,
+    pf:     page.margin + 141,
+    pgr:    page.margin + 158,
     sub:    page.w - page.margin,
   };
 
   // Header
   doc.setFillColor(240,244,252);
   doc.rect(page.margin, y - 2, page.col, 8, "F");
-  doc.setFontSize(6); doc.setFont("helvetica","bold"); doc.setTextColor(60,80,120);
+  doc.setFontSize(5.5); doc.setFont("helvetica","bold"); doc.setTextColor(60,80,120);
   txt(doc, t("CÓD.","CODE"),       C.cod,   y+3);
   txt(doc, t("DESCRIPCIÓN","DESC"),C.desc,  y+3);
   txt(doc, t("PZS","QTY"),         C.pzs,   y+3);
   txt(doc, t("G/PZA","G/PC"),      C.gpz,   y+3);
   txt(doc, t("G.TOTAL","G.TOTAL"), C.gtot,  y+3);
   txt(doc, t("LABOR","LABOR"),     C.labor, y+3);
-  txt(doc, t("$/G INT.","$/G INT."),C.pgr,  y+3);
+  txt(doc, t("PF","FS"),           C.pf,    y+3);
+  txt(doc, t("LAB+PF","LAB+FS"),   C.pgr,  y+3);
   txt(doc, t("SUBTOTAL","SUBTOTAL"),C.sub,  y+3, { align: "right" });
   y += 10;
 
@@ -136,8 +140,9 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     const qty = Number(item.quantity || 1);
     const gPieza = Number(item.product?.pesoPromedio || item.gramos_por_pieza || 0);
     const gTotal = Number(item.gramos_total || (gPieza * qty));
-    const labor = Number(item.labor_mxn || 0);
+    const labor = Number(item.labor_mxn || item.product?.quoteLaborPerGram || 0);
     const pGramo = Number(item.precio_gramo_mxn || item.product?.precioMinimo || 0);
+    const plataFina = Number(item.plata_fina_mxn || Math.max(0, pGramo - labor));
     const subtotal = Number(item.subtotal_mxn || (gTotal * pGramo));
     grandTotal += subtotal;
     grandGramos += gTotal;
@@ -162,15 +167,16 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     const metalLine = [item.product?.metal || item.producto_metal, item.product?.kilataje || item.producto_kilataje].filter(Boolean).join(" ");
     if (metalLine) txt(doc, metalLine, C.desc, y+14);
 
-    doc.setFontSize(7); doc.setTextColor(50,50,50);
+    doc.setFontSize(6.4); doc.setTextColor(50,50,50);
     txt(doc, String(qty),                    C.pzs,   y+9);
     txt(doc, `${gPieza.toFixed(2)}g`,        C.gpz,   y+9);
     txt(doc, `${gTotal.toFixed(2)}g`,        C.gtot,  y+9);
-    txt(doc, labor ? money(labor) : "—",     C.labor, y+9);
-    txt(doc, pGramo ? money(pGramo) : "—",  C.pgr,   y+9);
+    txt(doc, labor ? money(displayMoney(labor)) : "—", C.labor, y+9);
+    txt(doc, plataFina ? money(displayMoney(plataFina)) : "—", C.pf, y+9);
+    txt(doc, pGramo ? money(displayMoney(pGramo)) : "—", C.pgr, y+9);
 
     doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
-    txt(doc, subtotal ? money(subtotal) : "—", C.sub, y+9, { align: "right" });
+    txt(doc, subtotal ? money(displayMoney(subtotal)) : "—", C.sub, y+9, { align: "right" });
     y += rowH;
   }
 
@@ -192,9 +198,9 @@ export async function generatePdf(cartItems, customer, language = "es", company 
 
   doc.setFontSize(10);
   txt(doc, t("TOTAL ESTIMADO","ESTIMATED TOTAL"), page.margin + 80, y);
-  txt(doc, `${money(grandTotal)} ${currency}`, page.w - page.margin, y, { align: "right" });
+  txt(doc, `${money(displayMoney(grandTotal))} ${currency}`, page.w - page.margin, y, { align: "right" });
 
-  if (customer.tipoCambio && Number(customer.tipoCambio) > 0) {
+  if (!useUsd && customer.tipoCambio && Number(customer.tipoCambio) > 0) {
     y += 5;
     const usd = grandTotal / Number(customer.tipoCambio);
     doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(100,100,100);

@@ -122,24 +122,21 @@ export const saveClientMargin = async (clientId, lineCodigo, margenPct) => {
   if (error) throw error;
 };
 
-export const calcPrecioGramo = ({ mo_base, plata_fina_mxn, margen_pct, tipo_cambio_output = 1 }) => {
+export const calcPrecioGramo = ({ mo_base, plata_fina_mxn, tipo_cambio_output = 1 }) => {
   const plata = Number(plata_fina_mxn || 0);
   const mo = Number(mo_base || 0);
-  const margen = Number(margen_pct || 0) / 100;
-  const costo = mo + plata;
-  const integrado = margen > 0 && margen < 1 ? costo / (1 - margen) : costo;
-  const mo_visible = integrado - plata;
+  const integrado = mo + plata;
   const divisor = Number(tipo_cambio_output || 1) || 1;
 
   return {
     plata_fina: plata / divisor,
-    mo_visible: mo_visible / divisor,
+    mo_visible: mo / divisor,
     integrado: integrado / divisor,
-    costo,
+    costo: integrado,
   };
 };
 
-export const calculateProductQuotePrice = (product, { lines = [], metalPrices = {}, margins = [] } = {}) => {
+export const calculateProductQuotePrice = (product, { lines = [], metalPrices = {} } = {}) => {
   const line = lines.find((item) => normalizeCode(item.codigo) === normalizeCode(product.linea));
   const plataFina = getSilverFinePrice(metalPrices);
 
@@ -152,17 +149,15 @@ export const calculateProductQuotePrice = (product, { lines = [], metalPrices = 
     };
   }
 
-  const margin = margins.find((item) => normalizeCode(item.line_codigo) === normalizeCode(line.codigo));
   const price = calcPrecioGramo({
     mo_base: line.mo_base,
     plata_fina_mxn: plataFina,
-    margen_pct: margin?.margen_pct || 0,
   });
 
   return {
     pricePerGram: price.integrado,
     laborPerGram: price.mo_visible,
     silverFinePerGram: price.plata_fina,
-    status: margin ? "configured" : "no-client-margin",
+    status: "configured",
   };
 };

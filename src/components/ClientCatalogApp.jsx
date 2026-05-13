@@ -10,7 +10,7 @@ import { useCompany } from "../contexts/CompanyContext";
 import BrandLogo from "./BrandLogo";
 import { supabase } from "../lib/supabaseClient";
 import { fetchClientData } from "../services/supabaseCatalog";
-import { calculateProductQuotePrice, fetchClientMargins, fetchLines, fetchMetalPrices } from "../services/pricingService";
+import { calculateProductQuotePrice, fetchLines, fetchMetalPrices } from "../services/pricingService";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
@@ -26,6 +26,7 @@ const makeDefaultCustomer = (language = "es") => ({
   name: "",
   company: "",
   currency: "MXN",
+  tipoCambio: "",
   seller: "",
   concept: orderDefaults[language]?.concept || orderDefaults.es.concept,
   status: orderDefaults[language]?.status || orderDefaults.es.status,
@@ -55,12 +56,11 @@ export default function ClientCatalogApp({ profile }) {
       fetchClientData(profile),
       fetchLines().catch(() => []),
       fetchMetalPrices().catch(() => ({})),
-      fetchClientMargins(profile?.client_id).catch(() => []),
     ])
-      .then(([result, lines, metalPrices, margins]) => {
+      .then(([result, lines, metalPrices]) => {
         setProducts(
           result.products.map((product) => {
-            const quote = calculateProductQuotePrice(product, { lines, metalPrices, margins });
+            const quote = calculateProductQuotePrice(product, { lines, metalPrices });
             return {
               ...product,
               precioMinimo: quote.pricePerGram,

@@ -47,6 +47,7 @@ const makeBlankCustomer = (language = "es") => ({
   company: "",
   branch: "",
   currency: "MXN",
+  tipoCambio: "",
   seller: "",
   concept: orderDefaults[language]?.concept || orderDefaults.es.concept,
   status: orderDefaults[language]?.status || orderDefaults.es.status,

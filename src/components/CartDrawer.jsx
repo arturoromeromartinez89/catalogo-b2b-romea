@@ -11,6 +11,7 @@ const generalFields = [
   ["company", "company", "company"],
   ["branch", "branch", "branch"],
   ["currency", "currency", "currency"],
+  ["tipoCambio", "exchangeRate", "exchangeRate"],
   ["seller", "seller", "seller"],
   ["concept", "concept", "concept"],
   ["status", "status", "status"],
@@ -51,6 +52,8 @@ export default function CartDrawer({
   const company = useCompany();
   const totals = calculateCartTotals(cartItems);
   const currency = customer.currency || cartItems[0]?.product.monedaPrecioMin || "MXN";
+  const exchangeRate = Number(customer.tipoCambio || 0);
+  const moneyValue = (value) => currency === "USD" && exchangeRate > 0 ? Number(value || 0) / exchangeRate : Number(value || 0);
   const subtotal = totals.amount;
   const discount = 0;
   const iva = 0;
@@ -149,14 +152,17 @@ export default function CartDrawer({
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>{t("code")}</th>
-                    <th>{t("description")}</th>
+                    <th>{t("noPhoto")}</th>
+                    <th>SKU</th>
                     <th>{t("pieces")}</th>
-                    <th>{t("grams")}</th>
+                    <th>{t("description")}</th>
+                    <th>{t("unitWeight")}</th>
+                    <th>{t("totalWeight")}</th>
+                    <th>{t("laborPrice")}</th>
+                    <th>{t("fineSilver")}</th>
+                    <th>{t("integratedPrice")}</th>
                     <th>{t("unit")}</th>
-                    <th>{t("price")}</th>
                     <th>{t("discountPct")}</th>
-                    <th>{t("net")}</th>
                     <th>{t("amount")}</th>
                     <th>{t("delete")}</th>
                   </tr>
@@ -168,12 +174,20 @@ export default function CartDrawer({
                       const quantity = Number(item.quantity || 0);
                       const grams = quantity * Number(product.pesoPromedio || 0);
                       const pricePerGram = Number(product.precioMinimo || product.quotePricePerGram || 0);
+                      const laborPerGram = Number(product.quoteLaborPerGram || 0);
+                      const fineSilver = Math.max(0, pricePerGram - laborPerGram);
                       const amount = grams * pricePerGram;
                       return (
                         <tr key={product.codigo}>
                           <td>{index + 1}</td>
+                          <td>
+                            <img
+                              src={product.fotoUrl}
+                              alt={product.codigo}
+                              style={{ width: 42, height: 42, objectFit: "contain", borderRadius: 6 }}
+                            />
+                          </td>
                           <td><strong>{product.codigo}</strong></td>
-                          <td>{shortText(product.descripcion, 92)}</td>
                           <td>
                             <input
                               className="quantity-cell"
@@ -183,12 +197,15 @@ export default function CartDrawer({
                               onChange={(event) => onQuantityChange(product.codigo, event.target.value)}
                             />
                           </td>
+                          <td>{shortText(product.descripcion, 92)}</td>
+                          <td>{formatWeight(product.pesoPromedio)}</td>
                           <td>{formatWeight(grams)}</td>
+                          <td>{laborPerGram ? formatCurrency(moneyValue(laborPerGram), currency) : "-"}</td>
+                          <td>{fineSilver ? formatCurrency(moneyValue(fineSilver), currency) : "-"}</td>
+                          <td>{pricePerGram ? formatCurrency(moneyValue(pricePerGram), currency) : "-"}</td>
                           <td>{product.unidadVenta || "Pza"}</td>
-                          <td>{pricePerGram ? formatCurrency(pricePerGram, product.monedaPrecioMin || currency) : "-"}</td>
                           <td>0</td>
-                          <td>{pricePerGram ? formatCurrency(pricePerGram, product.monedaPrecioMin || currency) : "-"}</td>
-                          <td>{amount ? formatCurrency(amount, product.monedaPrecioMin || currency) : "-"}</td>
+                          <td>{amount ? formatCurrency(moneyValue(amount), currency) : "-"}</td>
                           <td>
                             <button className="table-delete" type="button" onClick={() => onRemove(product.codigo)}>
                               {t("delete")}
@@ -199,7 +216,7 @@ export default function CartDrawer({
                     })
                   ) : (
                     <tr>
-                      <td colSpan="11" className="empty-row">{t("emptyPreorder")}</td>
+                      <td colSpan="13" className="empty-row">{t("emptyPreorder")}</td>
                     </tr>
                   )}
                 </tbody>
@@ -212,10 +229,10 @@ export default function CartDrawer({
           <div className="note-totals">
             <div><span>{t("totalPieces")}</span><strong>{totals.pieces}</strong></div>
             <div><span>{t("totalGrams")}</span><strong>{formatWeight(totals.weight)}</strong></div>
-            <div><span>{t("subtotal")}</span><strong>{subtotal ? formatCurrency(subtotal, currency) : "-"}</strong></div>
-            <div><span>{t("discount")}</span><strong>{discount ? formatCurrency(discount, currency) : "-"}</strong></div>
-            <div><span>{t("iva")}</span><strong>{iva ? formatCurrency(iva, currency) : "-"}</strong></div>
-            <div><span>{t("total")}</span><strong>{total ? formatCurrency(total, currency) : "-"}</strong></div>
+            <div><span>{t("subtotal")}</span><strong>{subtotal ? formatCurrency(moneyValue(subtotal), currency) : "-"}</strong></div>
+            <div><span>{t("discount")}</span><strong>{discount ? formatCurrency(moneyValue(discount), currency) : "-"}</strong></div>
+            <div><span>{t("iva")}</span><strong>{iva ? formatCurrency(moneyValue(iva), currency) : "-"}</strong></div>
+            <div><span>{t("total")}</span><strong>{total ? formatCurrency(moneyValue(total), currency) : "-"}</strong></div>
           </div>
           <div className="sheet-actions">
             <PdfButton cartItems={cartItems} customer={{ ...customer, numero: folio }} />

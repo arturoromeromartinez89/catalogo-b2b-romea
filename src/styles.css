@@ -1428,6 +1428,167 @@ dd {
   width: 100%;
 }
 
+.quote-modal-backdrop {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.68);
+  box-sizing: border-box;
+  display: flex;
+  height: 100vh;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  width: 100vw;
+  z-index: 99999;
+}
+
+.quote-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.36);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 88vh;
+  max-width: 1180px;
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.quote-modal-header,
+.quote-modal-footer {
+  align-items: center;
+  border-bottom: 1px solid var(--romea-line);
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 14px 22px;
+}
+
+.quote-modal-footer {
+  border-bottom: 0;
+  border-top: 1px solid var(--romea-line);
+}
+
+.quote-modal-header h2 {
+  color: var(--romea-blue);
+  font-family: Georgia, "Times New Roman", serif;
+  margin: 0;
+}
+
+.quote-status-row,
+.quote-footer-actions,
+.quote-price-tools {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quote-status-row button {
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 30px;
+  padding: 5px 12px;
+}
+
+.quote-modal-body {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  overflow: auto;
+  padding: 18px 22px;
+}
+
+.quote-block {
+  background: #ffffff;
+  border: 1px solid var(--romea-line);
+  border-radius: 12px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.quote-block h3 {
+  color: var(--romea-blue);
+  font-family: Georgia, "Times New Roman", serif;
+  margin: 0;
+}
+
+.quote-price-tools label {
+  color: var(--romea-muted);
+  display: flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 8px;
+  align-items: center;
+}
+
+.quote-price-tools input {
+  min-height: 34px;
+  text-align: right;
+  width: 112px;
+}
+
+.quote-items-table {
+  min-width: 1080px;
+}
+
+.quote-items-table img {
+  border: 1px solid var(--romea-line);
+  border-radius: 6px;
+  height: 42px;
+  object-fit: contain;
+  width: 42px;
+}
+
+.quote-items-table input {
+  min-height: 32px;
+  max-width: 84px;
+  text-align: right;
+}
+
+.quote-items-table small {
+  color: var(--romea-muted);
+}
+
+.quote-totals-box {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-self: end;
+  max-width: 620px;
+  width: 100%;
+}
+
+.quote-totals-box div {
+  background: var(--romea-soft);
+  border: 1px solid var(--romea-line);
+  border-radius: 10px;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+}
+
+.quote-totals-box span {
+  color: var(--romea-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.quote-totals-box strong {
+  color: var(--romea-blue);
+}
+
+.danger-text {
+  border-color: #f0cccc;
+  color: #9f2d2d;
+}
+
 @media (max-width: 900px) {
   .admin-shell,
   .admin-grid,

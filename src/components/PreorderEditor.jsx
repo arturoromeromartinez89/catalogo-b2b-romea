@@ -1,21 +1,22 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCompany } from "../contexts/CompanyContext";
-import { fetchLines, fetchMetalPrices, fetchClientMargins, calcPrecioGramo, getSilverFinePrice } from "../services/pricingService";
+import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice } from "../services/pricingService";
 import { savePreorder, deletePreorder } from "../services/preorderService";
 import { generatePdf } from "../utils/pdfGenerator";
 import { useLanguage } from "../i18n/LanguageContext";
 
 const STATUS = {
-  pendiente:  { label: "Pendiente",   color: "#d97706" },
-  revision:   { label: "En revisión", color: "#2563eb" },
-  confirmada: { label: "Confirmada",  color: "#059669" },
-  cancelada:  { label: "Cancelada",   color: "#dc2626" },
+  pendiente: { label: "Pendiente", color: "#d97706" },
+  revision: { label: "En revision", color: "#2563eb" },
+  confirmada: { label: "Confirmada", color: "#059669" },
+  cancelada: { label: "Cancelada", color: "#dc2626" },
 };
 
-const fmt = (n) => n != null
-  ? `$${Number(n).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-  : "—";
+const fmt = (value) =>
+  Number(value || 0)
+    ? `$${Number(value || 0).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : "-";
 
 const calcItem = (item) => {
   const piezas = Number(item.piezas || 0);
@@ -26,7 +27,7 @@ const calcItem = (item) => {
 };
 
 const Field = ({ label, children }) => (
-  <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)" }}>
+  <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: "var(--color-text-secondary)" }}>
     {label}
     {children}
   </label>
@@ -38,108 +39,158 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved })
   const isNew = !initial?.id;
 
   const blank = {
-    folio: "", status: "pendiente", client_id: "",
-    cliente_nombre: "", cliente_empresa: "", cliente_email: "",
-    cliente_telefono: "", cliente_rfc: "",
-    tipo_cambio: "", moneda: "MXN", notas: "",
+    folio: "",
+    status: "pendiente",
+    client_id: "",
+    cliente_nombre: "",
+    cliente_empresa: "",
+    cliente_email: "",
+    cliente_telefono: "",
+    cliente_rfc: "",
+    tipo_cambio: "",
+    moneda: "MXN",
+    notas: "",
   };
 
   const [po, setPo] = useState({ ...blank, ...(initial || {}) });
-  const [items, setItems] = useState(
-    (initial?.preorder_items || []).map((i) => ({ ...i, _gt_manual: i.gramos_total }))
-  );
+  const [items, setItems] = useState((initial?.preorder_items || []).map((item) => ({ ...item, _gt_manual: item.gramos_total })));
   const [lines, setLines] = useState([]);
   const [metalPrices, setMetalPrices] = useState({});
-  const [margins, setMargins] = useState([]);
+  const [plataFinaMxn, setPlataFinaMxn] = useState(0);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    fetchLines().then(setLines);
-    fetchMetalPrices().then(setMetalPrices);
-    // Bloquear scroll del body
+    fetchLines().then(setLines).catch((error) => setMsg(`Error: ${error.message}`));
+    fetchMetalPrices()
+      .then((prices) => {
+        setMetalPrices(prices);
+        setPlataFinaMxn(getSilverFinePrice(prices));
+      })
+      .catch((error) => setMsg(`Error: ${error.message}`));
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, []);
 
   useEffect(() => {
-    if (po.client_id) fetchClientMargins(po.client_id).then(setMargins);
-  }, [po.client_id]);
+    const client = (clients || []).find((item) => item.id === po.client_id);
+    if (!client) return;
+    setPo((current) => ({
+      ...current,
+      cliente_nombre: client.name || "",
+      cliente_empresa: client.company || "",
+      cliente_email: client.email || "",
+      cliente_telefono: client.phone || "",
+      cliente_rfc: client.rfc || "",
+    }));
+  }, [po.client_id, clients]);
 
-  const set = (key) => (e) => setPo((p) => ({ ...p, [key]: e.target.value }));
+  const exchangeRate = Number(po.tipo_cambio || metalPrices.tipo_cambio || 0);
+  const useUsd = po.moneda === "USD" && exchangeRate > 0;
+  const moneyLabel = useUsd ? "USD" : "MXN";
+  const toDisplayMoney = (value) => (useUsd ? Number(value || 0) / exchangeRate : Number(value || 0));
+  const fromDisplayMoney = (value) => (useUsd ? Number(value || 0) * exchangeRate : Number(value || 0));
+  const set = (key) => (event) => setPo((current) => ({ ...current, [key]: event.target.value }));
+  const inp = { width: "100%", boxSizing: "border-box" };
 
-  const setItem = (idx, key, val) => {
-    setItems((prev) => {
-      const next = [...prev];
-      next[idx] = calcItem({ ...next[idx], [key]: val });
+  const recalcWithPrice = (item, laborMxn = item.labor_mxn, silverMxn = plataFinaMxn) =>
+    calcItem({ ...item, labor_mxn: Number(laborMxn || 0), precio_gramo_mxn: Number(laborMxn || 0) + Number(silverMxn || 0) });
+
+  const setItem = (idx, key, value) => {
+    setItems((current) => {
+      const next = [...current];
+      next[idx] = calcItem({ ...next[idx], [key]: value });
       return next;
     });
   };
 
-  const setGTotal = (idx, val) => {
-    setItems((prev) => {
-      const next = [...prev];
-      const item = { ...next[idx], _gt_manual: val };
-      item.gramos_total = Number(val);
-      item.subtotal_mxn = Number(val) * Number(item.precio_gramo_mxn || 0);
+  const setGTotal = (idx, value) => {
+    setItems((current) => {
+      const next = [...current];
+      const item = { ...next[idx], _gt_manual: value };
+      item.gramos_total = Number(value || 0);
+      item.subtotal_mxn = Number(value || 0) * Number(item.precio_gramo_mxn || 0);
       next[idx] = item;
       return next;
     });
   };
 
+  const setLabor = (idx, value) => {
+    setItems((current) => {
+      const next = [...current];
+      next[idx] = recalcWithPrice(next[idx], fromDisplayMoney(value), plataFinaMxn);
+      return next;
+    });
+  };
+
+  const setSilverFine = (value) => {
+    const nextSilver = fromDisplayMoney(value);
+    setPlataFinaMxn(nextSilver);
+    setItems((current) => current.map((item) => recalcWithPrice(item, item.labor_mxn, nextSilver)));
+  };
+
   const precargarPrecios = () => {
-    const plataFina = getSilverFinePrice(metalPrices);
-    if (!po.client_id) { setMsg("Selecciona un cliente primero."); return; }
+    if (!po.client_id) { setMsg("Debes seleccionar un cliente existente."); return; }
     if (!lines.length) { setMsg("No hay lineas configuradas en el menu de precios."); return; }
-    if (!plataFina) { setMsg("Captura primero el precio de metal vigente."); return; }
-    setItems((prev) => prev.map((item) => {
-      const line = lines.find((l) => l.codigo === item.producto_linea);
+    if (!plataFinaMxn) { setMsg("Captura primero el precio de plata fina."); return; }
+
+    setItems((current) => current.map((item) => {
+      const line = lines.find((lineItem) => lineItem.codigo === item.producto_linea);
       if (!line) return item;
-      const margin = margins.find((m) => m.line_codigo === item.producto_linea);
-      const precio = calcPrecioGramo({
-        mo_base: line.mo_base,
-        plata_fina_mxn: plataFina,
-        margen_pct: margin?.margen_pct || 0,
-      });
+      const precio = calcPrecioGramo({ mo_base: line.mo_base, plata_fina_mxn: plataFinaMxn });
       return calcItem({ ...item, labor_mxn: precio.mo_visible, precio_gramo_mxn: precio.integrado });
     }));
-    setMsg("Precios calculados desde configuracion.");
+    setMsg("Precios calculados por linea.");
   };
 
   const totals = {
-    piezas: items.reduce((s, i) => s + Number(i.piezas || 0), 0),
-    gramos: items.reduce((s, i) => s + Number(i.gramos_total || 0), 0),
-    mxn:    items.reduce((s, i) => s + Number(i.subtotal_mxn || 0), 0),
+    piezas: items.reduce((sum, item) => sum + Number(item.piezas || 0), 0),
+    gramos: items.reduce((sum, item) => sum + Number(item.gramos_total || 0), 0),
+    mxn: items.reduce((sum, item) => sum + Number(item.subtotal_mxn || 0), 0),
   };
-  const totalUsd = Number(po.tipo_cambio) > 0 ? totals.mxn / Number(po.tipo_cambio) : null;
 
   const handleSave = async () => {
+    if (!po.client_id) { setMsg("Debes seleccionar un cliente existente para guardar la preorden."); return; }
     setSaving(true);
     try {
       await savePreorder(po, items);
-      setMsg("✓ Guardado");
+      setMsg("Guardado.");
       onSaved?.();
-    } catch (e) { setMsg("Error: " + e.message); }
-    finally { setSaving(false); }
+    } catch (error) {
+      setMsg(`Error: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handlePdf = async () => {
+    if (!po.client_id) { setMsg("Debes seleccionar un cliente existente para generar el PDF."); return; }
     const customer = {
-      serie: "", numero: po.folio,
-      name: po.cliente_nombre, company: po.cliente_empresa,
-      email: po.cliente_email, phone: po.cliente_telefono,
-      rfc: po.cliente_rfc, tipoCambio: po.tipo_cambio, currency: po.moneda,
+      serie: "",
+      numero: po.folio,
+      name: po.cliente_nombre,
+      company: po.cliente_empresa,
+      email: po.cliente_email,
+      phone: po.cliente_telefono,
+      rfc: po.cliente_rfc,
+      tipoCambio: po.tipo_cambio || metalPrices.tipo_cambio,
+      currency: po.moneda,
     };
     const pdfItems = items.map((item) => ({
       product: {
-        codigo: item.producto_codigo, descripcion: item.producto_descripcion,
-        metal: item.producto_metal, kilataje: item.producto_kilataje,
-        fotoUrl: item.producto_foto_url, pesoPromedio: item.gramos_por_pieza,
+        codigo: item.producto_codigo,
+        descripcion: item.producto_descripcion,
+        metal: item.producto_metal,
+        kilataje: item.producto_kilataje,
+        fotoUrl: item.producto_foto_url,
+        pesoPromedio: item.gramos_por_pieza,
         precioMinimo: item.precio_gramo_mxn,
+        quoteLaborPerGram: item.labor_mxn,
       },
       quantity: item.piezas,
       gramos_total: item.gramos_total,
       labor_mxn: item.labor_mxn,
+      plata_fina_mxn: Math.max(0, Number(item.precio_gramo_mxn || 0) - Number(item.labor_mxn || 0)),
       precio_gramo_mxn: item.precio_gramo_mxn,
       subtotal_mxn: item.subtotal_mxn,
     }));
@@ -147,201 +198,150 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved })
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("¿Eliminar esta preorden?")) return;
+    if (!window.confirm("Eliminar esta preorden?")) return;
     await deletePreorder(po.id);
     onSaved?.();
   };
 
-  const inp = { width: "100%", boxSizing: "border-box" };
-
   return (
-    <div style={{
-      position: "fixed",
-      top: 0, left: 0,
-      width: "100vw", height: "100vh",
-      background: "rgba(0,0,0,0.75)",
-      zIndex: 99999,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 24,
-      boxSizing: "border-box",
-    }}>
-      <div style={{
-        background: "var(--color-background-primary)",
-        borderRadius: 12,
-        width: "100%",
-        maxWidth: 1000,
-        height: "85vh",
-        display: "flex",
-        flexDirection: "column",
-        boxShadow: "0 32px 80px rgba(0,0,0,0.5)",
-      }}>
-
-        {/* HEADER FIJO */}
-        <div style={{
-          padding: "16px 24px",
-          borderBottom: "1px solid var(--color-border-tertiary)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexShrink: 0,
-        }}>
-          <h2 style={{ margin: 0, fontSize: 18, color: "var(--color-text-primary)" }}>
-            {isNew ? "Nueva preorden" : `Preorden — ${po.folio}`}
-          </h2>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+    <div className="quote-modal-backdrop">
+      <div className="quote-modal">
+        <header className="quote-modal-header">
+          <h2>{isNew ? "Nueva preorden" : `Preorden - ${po.folio}`}</h2>
+          <div className="quote-status-row">
             {Object.entries(STATUS).map(([key, { label, color }]) => (
-              <button key={key} onClick={() => setPo((p) => ({ ...p, status: key }))} style={{
-                padding: "5px 14px", borderRadius: 20, fontSize: 12, cursor: "pointer",
-                border: `1.5px solid ${color}`,
-                background: po.status === key ? color : "transparent",
-                color: po.status === key ? "#fff" : color,
-                fontWeight: 500,
-              }}>
+              <button
+                key={key}
+                type="button"
+                onClick={() => setPo((current) => ({ ...current, status: key }))}
+                style={{
+                  border: `1.5px solid ${color}`,
+                  background: po.status === key ? color : "transparent",
+                  color: po.status === key ? "#fff" : color,
+                }}
+              >
                 {label}
               </button>
             ))}
-            <button onClick={onClose} style={{
-              marginLeft: 8, background: "none", border: "none",
-              fontSize: 22, cursor: "pointer", color: "var(--color-text-secondary)", padding: 4,
-            }}>✕</button>
+            <button className="icon-button" type="button" onClick={onClose}>x</button>
           </div>
-        </div>
+        </header>
 
-        {/* CUERPO SCROLLEABLE */}
-        <div style={{ overflow: "auto", padding: "20px 24px", flex: 1 }}>
-
-          {/* Datos del cliente */}
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 12, marginBottom: 20,
-            padding: 16, background: "var(--color-background-secondary)", borderRadius: 8,
-          }}>
-            <Field label="Cliente">
-              <select value={po.client_id} onChange={set("client_id")} style={inp}>
-                <option value="">Sin cliente</option>
-                {(clients || []).map((c) => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
-              </select>
-            </Field>
-            <Field label="Nombre"><input value={po.cliente_nombre || ""} onChange={set("cliente_nombre")} style={inp} /></Field>
-            <Field label="Empresa"><input value={po.cliente_empresa || ""} onChange={set("cliente_empresa")} style={inp} /></Field>
-            <Field label="Correo"><input value={po.cliente_email || ""} onChange={set("cliente_email")} style={inp} /></Field>
-            <Field label="Teléfono"><input value={po.cliente_telefono || ""} onChange={set("cliente_telefono")} style={inp} /></Field>
-            <Field label="RFC"><input value={po.cliente_rfc || ""} onChange={set("cliente_rfc")} style={inp} /></Field>
-            <Field label="Tipo de cambio USD">
-              <input type="number" step="0.01" placeholder="ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio")} style={inp} />
-            </Field>
-            <Field label="Moneda">
-              <select value={po.moneda} onChange={set("moneda")} style={inp}>
-                <option value="MXN">MXN</option>
-                <option value="USD">USD</option>
-              </select>
-            </Field>
-            <Field label="Notas">
-              <input value={po.notas || ""} onChange={set("notas")} style={inp} placeholder="Observaciones..." />
-            </Field>
-          </div>
-
-          {/* Precargar precios */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-            <button className="secondary-button compact-action" onClick={precargarPrecios}>
-              Precargar precios desde configuración
-            </button>
-            {msg && <span style={{ fontSize: 13, color: msg.startsWith("Error") || msg.startsWith("No hay") || msg.startsWith("Captura") || msg.startsWith("Selecciona") ? "#d97706" : "#059669" }}>{msg}</span>}
-          </div>
-
-          {/* Tabla de productos */}
-          <div style={{ overflowX: "auto", marginBottom: 16 }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-              <thead>
-                <tr style={{ background: "var(--color-background-secondary)" }}>
-                  {[["Código","left"],["Descripción / Línea","left"],["Pzs","center"],["G/Pza","center"],["G.Total","center"],["Labor/g","right"],["$/G Int.","right"],["Subtotal","right"],["","center"]].map(([h, a]) => (
-                    <th key={h} style={{ padding: "8px 10px", textAlign: a, fontWeight: 500, fontSize: 11, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>{h}</th>
+        <main className="quote-modal-body">
+          <section className="quote-block">
+            <h3>Cliente obligatorio</h3>
+            <div className="form-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+              <Field label="Cliente">
+                <select value={po.client_id} onChange={set("client_id")} style={inp}>
+                  <option value="">Selecciona cliente existente</option>
+                  {(clients || []).map((client) => (
+                    <option key={client.id} value={client.id}>{client.company || client.name}</option>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {items.length === 0 ? (
-                  <tr><td colSpan={9} style={{ padding: 24, textAlign: "center", color: "var(--color-text-secondary)", fontSize: 13 }}>
-                    Sin productos — agrega desde el catálogo usando el botón "Agregar a preorden"
-                  </td></tr>
-                ) : items.map((item, idx) => (
-                  <tr key={idx} style={{ borderBottom: "1px solid var(--color-border-tertiary)" }}>
-                    <td style={{ padding: "8px 10px", fontWeight: 600, whiteSpace: "nowrap" }}>{item.producto_codigo}</td>
-                    <td style={{ padding: "8px 10px", maxWidth: 180 }}>
-                      <div style={{ fontSize: 12 }}>{item.producto_descripcion}</div>
-                      <div style={{ fontSize: 10, color: "var(--color-text-secondary)" }}>
-                        {[item.producto_metal, item.producto_kilataje, item.producto_linea].filter(Boolean).join(" · ")}
-                      </div>
-                    </td>
-                    <td style={{ padding: "8px 6px" }}>
-                      <input type="number" min="1" value={item.piezas} onChange={(e) => setItem(idx, "piezas", Number(e.target.value))} style={{ width: 54, textAlign: "center" }} />
-                    </td>
-                    <td style={{ padding: "8px 6px" }}>
-                      <input type="number" step="0.01" value={item.gramos_por_pieza} onChange={(e) => setItem(idx, "gramos_por_pieza", Number(e.target.value))} style={{ width: 62, textAlign: "center" }} />
-                    </td>
-                    <td style={{ padding: "8px 6px" }}>
-                      <input type="number" step="0.01" value={item._gt_manual ?? item.gramos_total} onChange={(e) => setGTotal(idx, e.target.value)} style={{ width: 62, textAlign: "center" }} title="Editable manualmente" />
-                    </td>
-                    <td style={{ padding: "8px 6px" }}>
-                      <input type="number" step="0.01" value={item.labor_mxn || ""} onChange={(e) => setItem(idx, "labor_mxn", Number(e.target.value))} style={{ width: 70, textAlign: "right" }} placeholder="0.00" />
-                    </td>
-                    <td style={{ padding: "8px 6px" }}>
-                      <input type="number" step="0.0001" value={item.precio_gramo_mxn || ""} onChange={(e) => setItem(idx, "precio_gramo_mxn", Number(e.target.value))} style={{ width: 80, textAlign: "right" }} placeholder="0.00" />
-                    </td>
-                    <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 600, whiteSpace: "nowrap" }}>{fmt(item.subtotal_mxn)}</td>
-                    <td style={{ padding: "8px 6px", textAlign: "center" }}>
-                      <button onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 16 }}>✕</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Totales */}
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <div style={{ background: "var(--color-background-secondary)", borderRadius: 8, padding: "14px 20px", minWidth: 260 }}>
-              {[["Total piezas", `${totals.piezas} pz`], ["Total gramos", `${totals.gramos.toFixed(2)} g`]].map(([l, v]) => (
-                <div key={l} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-                  <span style={{ color: "var(--color-text-secondary)" }}>{l}</span><strong>{v}</strong>
-                </div>
-              ))}
-              <div style={{ borderTop: "1px solid var(--color-border-tertiary)", paddingTop: 8, marginTop: 4, display: "flex", justifyContent: "space-between", fontSize: 15 }}>
-                <span>Total MXN</span><strong>{fmt(totals.mxn)}</strong>
-              </div>
-              {totalUsd && (
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: 4, color: "var(--color-text-secondary)" }}>
-                  <span>≈ USD (TC ${po.tipo_cambio})</span><strong>{fmt(totalUsd)}</strong>
-                </div>
-              )}
+                </select>
+              </Field>
+              <Field label="Nombre"><input value={po.cliente_nombre || ""} readOnly style={inp} /></Field>
+              <Field label="Empresa"><input value={po.cliente_empresa || ""} readOnly style={inp} /></Field>
+              <Field label="Correo"><input value={po.cliente_email || ""} readOnly style={inp} /></Field>
+              <Field label="Telefono"><input value={po.cliente_telefono || ""} readOnly style={inp} /></Field>
+              <Field label="RFC"><input value={po.cliente_rfc || ""} readOnly style={inp} /></Field>
+              <Field label="Moneda">
+                <select value={po.moneda} onChange={set("moneda")} style={inp}>
+                  <option value="MXN">MXN</option>
+                  <option value="USD">USD</option>
+                </select>
+              </Field>
+              <Field label="Tipo de cambio USD">
+                <input type="number" step="0.01" placeholder="Ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio")} style={inp} />
+              </Field>
+              <Field label="Notas">
+                <input value={po.notas || ""} onChange={set("notas")} style={inp} placeholder="Observaciones" />
+              </Field>
             </div>
-          </div>
-        </div>
+          </section>
 
-        {/* FOOTER FIJO */}
-        <div style={{
-          padding: "14px 24px",
-          borderTop: "1px solid var(--color-border-tertiary)",
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          flexShrink: 0,
-        }}>
+          <section className="quote-block">
+            <div className="section-title-row">
+              <h3>Productos cotizados</h3>
+              <div className="quote-price-tools">
+                <label>
+                  Plata fina ({moneyLabel}/g)
+                  <input
+                    type="number"
+                    step="0.0001"
+                    value={toDisplayMoney(plataFinaMxn) || ""}
+                    onChange={(event) => setSilverFine(event.target.value)}
+                  />
+                </label>
+                <button className="secondary-button compact-action" type="button" onClick={precargarPrecios}>
+                  Calcular precios por linea
+                </button>
+              </div>
+            </div>
+            {msg ? <p className="status info">{msg}</p> : null}
+
+            <div className="responsive-table">
+              <table className="simple-admin-table quote-items-table">
+                <thead>
+                  <tr>
+                    <th>Foto</th>
+                    <th>SKU</th>
+                    <th className="right">Cantidad</th>
+                    <th>Descripcion</th>
+                    <th className="right">Peso unit.</th>
+                    <th className="right">Gramos totales</th>
+                    <th className="right">Labor/g {moneyLabel}</th>
+                    <th className="right">PF/g {moneyLabel}</th>
+                    <th className="right">Labor+PF {moneyLabel}</th>
+                    <th className="right">Subtotal</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.length ? items.map((item, idx) => {
+                    const fineSilver = Math.max(0, Number(item.precio_gramo_mxn || 0) - Number(item.labor_mxn || 0));
+                    return (
+                      <tr key={`${item.producto_codigo}-${idx}`}>
+                        <td>{item.producto_foto_url ? <img src={item.producto_foto_url} alt={item.producto_codigo} /> : "-"}</td>
+                        <td><strong>{item.producto_codigo}</strong></td>
+                        <td><input type="number" min="1" value={item.piezas} onChange={(event) => setItem(idx, "piezas", Number(event.target.value))} /></td>
+                        <td>
+                          <div>{item.producto_descripcion}</div>
+                          <small>{[item.producto_metal, item.producto_kilataje, item.producto_linea].filter(Boolean).join(" / ")}</small>
+                        </td>
+                        <td><input type="number" step="0.01" value={item.gramos_por_pieza} onChange={(event) => setItem(idx, "gramos_por_pieza", Number(event.target.value))} /></td>
+                        <td><input type="number" step="0.01" value={item._gt_manual ?? item.gramos_total} onChange={(event) => setGTotal(idx, event.target.value)} /></td>
+                        <td><input type="number" step="0.01" value={toDisplayMoney(item.labor_mxn) || ""} onChange={(event) => setLabor(idx, event.target.value)} /></td>
+                        <td className="right">{fmt(toDisplayMoney(fineSilver))}</td>
+                        <td className="right">{fmt(toDisplayMoney(item.precio_gramo_mxn))}</td>
+                        <td className="right"><strong>{fmt(toDisplayMoney(item.subtotal_mxn))}</strong></td>
+                        <td><button className="table-delete" type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== idx))}>x</button></td>
+                      </tr>
+                    );
+                  }) : (
+                    <tr><td colSpan="11" className="empty-row">Sin productos. Agrega productos desde el catalogo.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="quote-totals-box">
+            <div><span>Total piezas</span><strong>{totals.piezas}</strong></div>
+            <div><span>Total gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
+            <div><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totals.mxn))}</strong></div>
+          </section>
+        </main>
+
+        <footer className="quote-modal-footer">
           <div>
-            {!isNew && (
-              <button className="secondary-button compact-action" style={{ color: "#dc2626", borderColor: "#fca5a5" }} onClick={handleDelete}>
-                Eliminar preorden
-              </button>
-            )}
+            {!isNew ? <button className="secondary-button compact-action danger-text" type="button" onClick={handleDelete}>Eliminar preorden</button> : null}
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button className="secondary-button compact-action" onClick={onClose}>Cancelar</button>
-            <button className="secondary-button compact-action" onClick={handlePdf}>Generar PDF</button>
-            <button className="primary-button compact-action" onClick={handleSave} disabled={saving}>
-              {saving ? "Guardando..." : "Guardar preorden"}
-            </button>
+          <div className="quote-footer-actions">
+            <button className="secondary-button compact-action" type="button" onClick={onClose}>Cancelar</button>
+            <button className="secondary-button compact-action" type="button" onClick={handlePdf}>Generar PDF</button>
+            <button className="primary-button compact-action" type="button" onClick={handleSave} disabled={saving}>{saving ? "Guardando..." : "Guardar preorden"}</button>
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   );
