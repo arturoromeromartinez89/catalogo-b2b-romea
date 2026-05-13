@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchLines, fetchMetalPrices, fetchClientMargins, calcPrecioGramo } from "../services/pricingService";
 import { savePreorder, deletePreorder } from "../services/preorderService";
@@ -31,7 +32,7 @@ const Field = ({ label, children }) => (
   </label>
 );
 
-export default function PreorderEditor({ preorder: initial, clients, onClose, onSaved }) {
+function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved }) {
   const { language } = useLanguage();
   const company = useCompany();
   const isNew = !initial?.id;
@@ -56,6 +57,9 @@ export default function PreorderEditor({ preorder: initial, clients, onClose, on
   useEffect(() => {
     fetchLines().then(setLines);
     fetchMetalPrices().then(setMetalPrices);
+    // Bloquear scroll del body
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
   }, []);
 
   useEffect(() => {
@@ -125,12 +129,9 @@ export default function PreorderEditor({ preorder: initial, clients, onClose, on
     };
     const pdfItems = items.map((item) => ({
       product: {
-        codigo: item.producto_codigo,
-        descripcion: item.producto_descripcion,
-        metal: item.producto_metal,
-        kilataje: item.producto_kilataje,
-        fotoUrl: item.producto_foto_url,
-        pesoPromedio: item.gramos_por_pieza,
+        codigo: item.producto_codigo, descripcion: item.producto_descripcion,
+        metal: item.producto_metal, kilataje: item.producto_kilataje,
+        fotoUrl: item.producto_foto_url, pesoPromedio: item.gramos_por_pieza,
         precioMinimo: item.precio_gramo_mxn,
       },
       quantity: item.piezas,
@@ -143,40 +144,36 @@ export default function PreorderEditor({ preorder: initial, clients, onClose, on
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("¿Eliminar esta preorden? Esta acción no se puede deshacer.")) return;
+    if (!window.confirm("¿Eliminar esta preorden?")) return;
     await deletePreorder(po.id);
     onSaved?.();
   };
 
-  // Input style reutilizable
   const inp = { width: "100%", boxSizing: "border-box" };
 
   return (
-    <div
-      style={{
-        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-        background: "rgba(0,0,0,0.65)",
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-      }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
+    <div style={{
+      position: "fixed",
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: "rgba(0,0,0,0.7)",
+      zIndex: 99999,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+    }}>
       <div style={{
         background: "var(--color-background-primary)",
         borderRadius: 12,
         width: "100%",
         maxWidth: 1000,
-        maxHeight: "90vh",
+        height: "85vh",
         display: "flex",
         flexDirection: "column",
-        boxShadow: "0 24px 64px rgba(0,0,0,0.4)",
-        overflow: "hidden",
+        boxShadow: "0 32px 80px rgba(0,0,0,0.5)",
       }}>
 
-        {/* ── BARRA SUPERIOR FIJA ── */}
+        {/* HEADER FIJO */}
         <div style={{
           padding: "16px 24px",
           borderBottom: "1px solid var(--color-border-tertiary)",
@@ -184,84 +181,49 @@ export default function PreorderEditor({ preorder: initial, clients, onClose, on
           alignItems: "center",
           justifyContent: "space-between",
           flexShrink: 0,
-          background: "var(--color-background-primary)",
         }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>
-              {isNew ? "Nueva preorden" : `Preorden ${po.folio}`}
-            </h2>
-          </div>
-
-          {/* Estados */}
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <h2 style={{ margin: 0, fontSize: 18, color: "var(--color-text-primary)" }}>
+            {isNew ? "Nueva preorden" : `Preorden — ${po.folio}`}
+          </h2>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {Object.entries(STATUS).map(([key, { label, color }]) => (
-              <button
-                key={key}
-                onClick={() => setPo((p) => ({ ...p, status: key }))}
-                style={{
-                  padding: "5px 14px",
-                  borderRadius: 20,
-                  fontSize: 12,
-                  cursor: "pointer",
-                  border: `1.5px solid ${color}`,
-                  background: po.status === key ? color : "transparent",
-                  color: po.status === key ? "#fff" : color,
-                  fontWeight: 500,
-                  transition: "all 0.15s",
-                }}
-              >
+              <button key={key} onClick={() => setPo((p) => ({ ...p, status: key }))} style={{
+                padding: "5px 14px", borderRadius: 20, fontSize: 12, cursor: "pointer",
+                border: `1.5px solid ${color}`,
+                background: po.status === key ? color : "transparent",
+                color: po.status === key ? "#fff" : color,
+                fontWeight: 500,
+              }}>
                 {label}
               </button>
             ))}
-            <button
-              onClick={onClose}
-              style={{
-                marginLeft: 8,
-                background: "none", border: "none",
-                fontSize: 22, cursor: "pointer",
-                color: "var(--color-text-secondary)",
-                lineHeight: 1, padding: 4,
-              }}
-            >✕</button>
+            <button onClick={onClose} style={{
+              marginLeft: 8, background: "none", border: "none",
+              fontSize: 22, cursor: "pointer", color: "var(--color-text-secondary)", padding: 4,
+            }}>✕</button>
           </div>
         </div>
 
-        {/* ── CONTENIDO SCROLLEABLE ── */}
+        {/* CUERPO SCROLLEABLE */}
         <div style={{ overflow: "auto", padding: "20px 24px", flex: 1 }}>
 
           {/* Datos del cliente */}
           <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 12,
-            marginBottom: 20,
-            padding: 16,
-            background: "var(--color-background-secondary)",
-            borderRadius: 8,
+            display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 12, marginBottom: 20,
+            padding: 16, background: "var(--color-background-secondary)", borderRadius: 8,
           }}>
             <Field label="Cliente">
               <select value={po.client_id} onChange={set("client_id")} style={inp}>
                 <option value="">Sin cliente</option>
-                {(clients || []).map((c) => (
-                  <option key={c.id} value={c.id}>{c.company || c.name}</option>
-                ))}
+                {(clients || []).map((c) => <option key={c.id} value={c.id}>{c.company || c.name}</option>)}
               </select>
             </Field>
-            <Field label="Nombre">
-              <input value={po.cliente_nombre || ""} onChange={set("cliente_nombre")} style={inp} />
-            </Field>
-            <Field label="Empresa">
-              <input value={po.cliente_empresa || ""} onChange={set("cliente_empresa")} style={inp} />
-            </Field>
-            <Field label="Correo">
-              <input value={po.cliente_email || ""} onChange={set("cliente_email")} style={inp} />
-            </Field>
-            <Field label="Teléfono">
-              <input value={po.cliente_telefono || ""} onChange={set("cliente_telefono")} style={inp} />
-            </Field>
-            <Field label="RFC">
-              <input value={po.cliente_rfc || ""} onChange={set("cliente_rfc")} style={inp} />
-            </Field>
+            <Field label="Nombre"><input value={po.cliente_nombre || ""} onChange={set("cliente_nombre")} style={inp} /></Field>
+            <Field label="Empresa"><input value={po.cliente_empresa || ""} onChange={set("cliente_empresa")} style={inp} /></Field>
+            <Field label="Correo"><input value={po.cliente_email || ""} onChange={set("cliente_email")} style={inp} /></Field>
+            <Field label="Teléfono"><input value={po.cliente_telefono || ""} onChange={set("cliente_telefono")} style={inp} /></Field>
+            <Field label="RFC"><input value={po.cliente_rfc || ""} onChange={set("cliente_rfc")} style={inp} /></Field>
             <Field label="Tipo de cambio USD">
               <input type="number" step="0.01" placeholder="ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio")} style={inp} />
             </Field>
@@ -276,48 +238,32 @@ export default function PreorderEditor({ preorder: initial, clients, onClose, on
             </Field>
           </div>
 
-          {/* Acción precargar */}
+          {/* Precargar precios */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
             <button className="secondary-button compact-action" onClick={precargarPrecios}>
               Precargar precios desde configuración
             </button>
-            {msg && <span style={{ fontSize: 13, color: msg.startsWith("✓") ? "var(--color-text-success)" : "var(--color-text-warning)" }}>{msg}</span>}
+            {msg && <span style={{ fontSize: 13, color: msg.startsWith("✓") ? "#059669" : "#d97706" }}>{msg}</span>}
           </div>
 
           {/* Tabla de productos */}
           <div style={{ overflowX: "auto", marginBottom: 16 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
-                <tr style={{ background: "var(--color-background-secondary)", borderRadius: 8 }}>
-                  {[
-                    ["Código", "left"],
-                    ["Descripción / Línea", "left"],
-                    ["Pzs", "center"],
-                    ["G/Pza", "center"],
-                    ["G.Total", "center"],
-                    ["Labor/g", "right"],
-                    ["$/G Int.", "right"],
-                    ["Subtotal", "right"],
-                    ["", "center"],
-                  ].map(([h, align]) => (
-                    <th key={h} style={{ padding: "8px 10px", textAlign: align, fontWeight: 500, fontSize: 11, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
-                      {h}
-                    </th>
+                <tr style={{ background: "var(--color-background-secondary)" }}>
+                  {[["Código","left"],["Descripción / Línea","left"],["Pzs","center"],["G/Pza","center"],["G.Total","center"],["Labor/g","right"],["$/G Int.","right"],["Subtotal","right"],["","center"]].map(([h, a]) => (
+                    <th key={h} style={{ padding: "8px 10px", textAlign: a, fontWeight: 500, fontSize: 11, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {items.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} style={{ padding: 24, textAlign: "center", color: "var(--color-text-secondary)", fontSize: 13 }}>
-                      Sin productos. Agrega productos desde el catálogo.
-                    </td>
-                  </tr>
+                  <tr><td colSpan={9} style={{ padding: 24, textAlign: "center", color: "var(--color-text-secondary)", fontSize: 13 }}>
+                    Sin productos — agrega desde el catálogo usando el botón "Agregar a preorden"
+                  </td></tr>
                 ) : items.map((item, idx) => (
                   <tr key={idx} style={{ borderBottom: "1px solid var(--color-border-tertiary)" }}>
-                    <td style={{ padding: "8px 10px", fontWeight: 600, fontSize: 12, whiteSpace: "nowrap" }}>
-                      {item.producto_codigo}
-                    </td>
+                    <td style={{ padding: "8px 10px", fontWeight: 600, whiteSpace: "nowrap" }}>{item.producto_codigo}</td>
                     <td style={{ padding: "8px 10px", maxWidth: 180 }}>
                       <div style={{ fontSize: 12 }}>{item.producto_descripcion}</div>
                       <div style={{ fontSize: 10, color: "var(--color-text-secondary)" }}>
@@ -325,57 +271,23 @@ export default function PreorderEditor({ preorder: initial, clients, onClose, on
                       </div>
                     </td>
                     <td style={{ padding: "8px 6px" }}>
-                      <input
-                        type="number" min="1"
-                        value={item.piezas}
-                        onChange={(e) => setItem(idx, "piezas", Number(e.target.value))}
-                        style={{ width: 54, textAlign: "center" }}
-                      />
+                      <input type="number" min="1" value={item.piezas} onChange={(e) => setItem(idx, "piezas", Number(e.target.value))} style={{ width: 54, textAlign: "center" }} />
                     </td>
                     <td style={{ padding: "8px 6px" }}>
-                      <input
-                        type="number" step="0.01"
-                        value={item.gramos_por_pieza}
-                        onChange={(e) => setItem(idx, "gramos_por_pieza", Number(e.target.value))}
-                        style={{ width: 62, textAlign: "center" }}
-                      />
+                      <input type="number" step="0.01" value={item.gramos_por_pieza} onChange={(e) => setItem(idx, "gramos_por_pieza", Number(e.target.value))} style={{ width: 62, textAlign: "center" }} />
                     </td>
                     <td style={{ padding: "8px 6px" }}>
-                      <input
-                        type="number" step="0.01"
-                        value={item._gt_manual ?? item.gramos_total}
-                        onChange={(e) => setGTotal(idx, e.target.value)}
-                        style={{ width: 62, textAlign: "center", borderColor: item._gt_manual != null ? "#e8d96a" : undefined }}
-                        title="Editable manualmente"
-                      />
+                      <input type="number" step="0.01" value={item._gt_manual ?? item.gramos_total} onChange={(e) => setGTotal(idx, e.target.value)} style={{ width: 62, textAlign: "center" }} title="Editable manualmente" />
                     </td>
                     <td style={{ padding: "8px 6px" }}>
-                      <input
-                        type="number" step="0.01"
-                        value={item.labor_mxn || ""}
-                        onChange={(e) => setItem(idx, "labor_mxn", Number(e.target.value))}
-                        style={{ width: 70, textAlign: "right" }}
-                        placeholder="0.00"
-                      />
+                      <input type="number" step="0.01" value={item.labor_mxn || ""} onChange={(e) => setItem(idx, "labor_mxn", Number(e.target.value))} style={{ width: 70, textAlign: "right" }} placeholder="0.00" />
                     </td>
                     <td style={{ padding: "8px 6px" }}>
-                      <input
-                        type="number" step="0.0001"
-                        value={item.precio_gramo_mxn || ""}
-                        onChange={(e) => setItem(idx, "precio_gramo_mxn", Number(e.target.value))}
-                        style={{ width: 80, textAlign: "right" }}
-                        placeholder="0.00"
-                      />
+                      <input type="number" step="0.0001" value={item.precio_gramo_mxn || ""} onChange={(e) => setItem(idx, "precio_gramo_mxn", Number(e.target.value))} style={{ width: 80, textAlign: "right" }} placeholder="0.00" />
                     </td>
-                    <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 600, whiteSpace: "nowrap" }}>
-                      {fmt(item.subtotal_mxn)}
-                    </td>
+                    <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 600, whiteSpace: "nowrap" }}>{fmt(item.subtotal_mxn)}</td>
                     <td style={{ padding: "8px 6px", textAlign: "center" }}>
-                      <button
-                        onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 16, lineHeight: 1 }}
-                        title="Quitar"
-                      >✕</button>
+                      <button onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 16 }}>✕</button>
                     </td>
                   </tr>
                 ))}
@@ -385,51 +297,34 @@ export default function PreorderEditor({ preorder: initial, clients, onClose, on
 
           {/* Totales */}
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <div style={{
-              background: "var(--color-background-secondary)",
-              borderRadius: 8, padding: "14px 20px",
-              minWidth: 260,
-            }}>
-              {[
-                ["Total piezas", `${totals.piezas} pz`],
-                ["Total gramos", `${totals.gramos.toFixed(2)} g`],
-              ].map(([label, val]) => (
-                <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-                  <span style={{ color: "var(--color-text-secondary)" }}>{label}</span>
-                  <strong>{val}</strong>
+            <div style={{ background: "var(--color-background-secondary)", borderRadius: 8, padding: "14px 20px", minWidth: 260 }}>
+              {[["Total piezas", `${totals.piezas} pz`], ["Total gramos", `${totals.gramos.toFixed(2)} g`]].map(([l, v]) => (
+                <div key={l} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
+                  <span style={{ color: "var(--color-text-secondary)" }}>{l}</span><strong>{v}</strong>
                 </div>
               ))}
               <div style={{ borderTop: "1px solid var(--color-border-tertiary)", paddingTop: 8, marginTop: 4, display: "flex", justifyContent: "space-between", fontSize: 15 }}>
-                <span>Total MXN</span>
-                <strong>{fmt(totals.mxn)}</strong>
+                <span>Total MXN</span><strong>{fmt(totals.mxn)}</strong>
               </div>
               {totalUsd && (
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: 4, color: "var(--color-text-secondary)" }}>
-                  <span>≈ USD (TC ${po.tipo_cambio})</span>
-                  <strong>{fmt(totalUsd)}</strong>
+                  <span>≈ USD (TC ${po.tipo_cambio})</span><strong>{fmt(totalUsd)}</strong>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* ── BARRA INFERIOR FIJA ── */}
+        {/* FOOTER FIJO */}
         <div style={{
           padding: "14px 24px",
           borderTop: "1px solid var(--color-border-tertiary)",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
           flexShrink: 0,
-          background: "var(--color-background-primary)",
         }}>
           <div>
             {!isNew && (
-              <button
-                className="secondary-button compact-action"
-                style={{ color: "#dc2626", borderColor: "#fca5a5" }}
-                onClick={handleDelete}
-              >
+              <button className="secondary-button compact-action" style={{ color: "#dc2626", borderColor: "#fca5a5" }} onClick={handleDelete}>
                 Eliminar preorden
               </button>
             )}
@@ -445,4 +340,8 @@ export default function PreorderEditor({ preorder: initial, clients, onClose, on
       </div>
     </div>
   );
+}
+
+export default function PreorderEditor(props) {
+  return createPortal(<PreorderEditorContent {...props} />, document.body);
 }
