@@ -48,6 +48,7 @@ export default function CartDrawer({
   onOpen,
 }) {
   const { t } = useLanguage();
+  const company = useCompany();
   const totals = calculateCartTotals(cartItems);
   const currency = customer.currency || cartItems[0]?.product.monedaPrecioMin || "MXN";
   const subtotal = totals.amount;
