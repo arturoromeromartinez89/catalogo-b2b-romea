@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AdvancedSearch from "./AdvancedSearch";
 import BrandLogo from "./BrandLogo";
+import ImportPanel from "./ImportPanel";
 import CompanySettingsPanel from "./CompanySettingsPanel";
 import PricingPanel from "./PricingPanel";
 import PreorderList from "./PreorderList";
@@ -300,6 +301,7 @@ export default function AdminDashboard() {
 
         {tab === "catalog" ? (
           <section className="admin-workspace">
+            <ImportPanel onImported={load} />
             <div className="admin-toolbar one-input">
               <AdvancedSearch
                 value={productQuery}
