@@ -3,6 +3,7 @@ import AdvancedSearch from "./AdvancedSearch";
 import BrandLogo from "./BrandLogo";
 import CompanySettingsPanel from "./CompanySettingsPanel";
 import PricingPanel from "./PricingPanel";
+import PreorderList from "./PreorderList";
 import { useCompany } from "../contexts/CompanyContext";
 import CatalogExportButton from "./CatalogExportButton";
 import CartDrawer from "./CartDrawer";
@@ -62,15 +63,17 @@ const makeBlankCustomer = (language = "es") => ({
   shipToPhone: "",
 });
 
-const tabs = ["catalog", "clients", "prices", "company"];
+const tabs = ["catalog", "preorders", "clients", "prices", "company"];
 const tabKeys = {
   catalog: "catalog",
+  preorders: "preorders",
   clients: "clients",
   prices: "priceMenu",
   company: "company",
 };
 const titleKeys = {
   catalog: "adminCatalog",
+  preorders: "preorders",
   clients: "clients",
   prices: "priceMenu",
   company: "company",
@@ -402,6 +405,10 @@ export default function AdminDashboard() {
         {tab === "prices" ? (
           <PricingPanel clients={data.clients} />
         ) : null}
+        {tab === "preorders" ? (
+          <PreorderList clients={data.clients} />
+        ) : null}
+
         {tab === "company" ? (
           <CompanySettingsPanel />
         ) : null}

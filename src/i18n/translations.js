@@ -7,6 +7,7 @@ export const translations = {
   es: {
     brand: "ROMEA JOYERÍA",
     company: "Mi empresa",
+    preorders: "Preórdenes",
     b2bCatalog: "Catálogo B2B",
     wholesaleCatalog: "Catálogo mayorista",
     adminCatalog: "Catálogo administrador",
@@ -165,6 +166,7 @@ export const translations = {
   en: {
     brand: "ROMEA JEWELRY",
     company: "My company",
+    preorders: "Preorders",
     b2bCatalog: "B2B Catalog",
     wholesaleCatalog: "Wholesale catalog",
     adminCatalog: "Admin catalog",
