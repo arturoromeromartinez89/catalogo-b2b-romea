@@ -1,0 +1,21 @@
+{
+  "name": "catalogo-b2b",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jspdf": "^2.5.2",
+    "vite": "^6.0.7",
+    "xlsx": "^0.18.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {}
+}

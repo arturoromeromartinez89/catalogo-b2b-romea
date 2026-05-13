@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+  <rect width="640" height="640" fill="#f7f5f2"/>
+  <path d="M162 330c36-78 118-126 200-104 80 20 118 88 94 150-28 74-128 94-194 34-40-36-48-92-18-130" fill="none" stroke="#c8cdd8" stroke-width="24" stroke-linecap="round"/>
+  <rect x="246" y="282" width="154" height="48" rx="24" fill="#d8dde7" stroke="#1f335f" stroke-width="7"/>
+  <path d="M270 306h106" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+  <text x="320" y="565" text-anchor="middle" font-family="Georgia,serif" font-size="34" fill="#1f335f">PU-9910</text>
+</svg>

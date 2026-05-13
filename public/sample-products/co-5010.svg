@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+  <rect width="640" height="640" fill="#f7f5f2"/>
+  <path d="M190 156c-8 120 38 230 130 300 92-70 138-180 130-300" fill="none" stroke="#9aa4b5" stroke-width="24" stroke-linecap="round"/>
+  <rect x="256" y="408" width="128" height="42" rx="21" fill="#d8dde7" stroke="#1f335f" stroke-width="8"/>
+  <text x="320" y="565" text-anchor="middle" font-family="Georgia,serif" font-size="34" fill="#1f335f">CO-5010</text>
+</svg>

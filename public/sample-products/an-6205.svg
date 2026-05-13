@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+  <rect width="640" height="640" fill="#f7f5f2"/>
+  <circle cx="320" cy="350" r="140" fill="none" stroke="#c8a755" stroke-width="30"/>
+  <path d="M278 218h84l32 56-74 76-74-76z" fill="#eef6ff" stroke="#1f335f" stroke-width="9"/>
+  <path d="M278 218l42 132 42-132M246 274h148" stroke="#ffffff" stroke-width="5"/>
+  <text x="320" y="565" text-anchor="middle" font-family="Georgia,serif" font-size="34" fill="#1f335f">AN-6205</text>
+</svg>

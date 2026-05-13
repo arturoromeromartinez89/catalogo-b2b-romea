@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+  <rect width="640" height="640" fill="#f7f5f2"/>
+  <path d="M320 156v78" stroke="#c8cdd8" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="320" cy="310" r="104" fill="none" stroke="#d8dde7" stroke-width="26"/>
+  <path d="M320 214l60 96-60 96-60-96z" fill="#e9f2ff" stroke="#1f335f" stroke-width="10"/>
+  <circle cx="320" cy="310" r="26" fill="#ffffff"/>
+  <text x="320" y="565" text-anchor="middle" font-family="Georgia,serif" font-size="34" fill="#1f335f">DI-3301</text>
+</svg>

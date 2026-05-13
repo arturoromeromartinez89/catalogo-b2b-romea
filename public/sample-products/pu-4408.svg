@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+  <rect width="640" height="640" fill="#f7f5f2"/>
+  <path d="M155 322c46-82 126-126 216-108 78 16 120 74 114 136-8 76-98 114-174 76-58-28-86-88-58-132" fill="none" stroke="#c8cdd8" stroke-width="25" stroke-linecap="round"/>
+  <circle cx="194" cy="304" r="18" fill="#1f335f"/>
+  <circle cx="446" cy="360" r="18" fill="#1f335f"/>
+  <text x="320" y="565" text-anchor="middle" font-family="Georgia,serif" font-size="34" fill="#1f335f">PU-4408</text>
+</svg>

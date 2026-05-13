@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+  <rect width="640" height="640" fill="#f7f5f2"/>
+  <g transform="translate(200 210)">
+    <circle cx="60" cy="60" r="22" fill="#e8c25a"/>
+    <circle cx="60" cy="20" r="28" fill="#d9b44e"/>
+    <circle cx="100" cy="60" r="28" fill="#d9b44e"/>
+    <circle cx="60" cy="100" r="28" fill="#d9b44e"/>
+    <circle cx="20" cy="60" r="28" fill="#d9b44e"/>
+  </g>
+  <g transform="translate(320 210)">
+    <circle cx="60" cy="60" r="22" fill="#e8c25a"/>
+    <circle cx="60" cy="20" r="28" fill="#d9b44e"/>
+    <circle cx="100" cy="60" r="28" fill="#d9b44e"/>
+    <circle cx="60" cy="100" r="28" fill="#d9b44e"/>
+    <circle cx="20" cy="60" r="28" fill="#d9b44e"/>
+  </g>
+  <text x="320" y="565" text-anchor="middle" font-family="Georgia,serif" font-size="34" fill="#1f335f">BR-8801</text>
+</svg>
