@@ -315,14 +315,23 @@ label {
 select,
 input,
 textarea {
-  background: #ffffff;
-  border: 1px solid #d9dfeb;
+  background: #fffbea;
+  border: 1px solid #e8d96a;
   border-radius: 8px;
   color: var(--romea-ink);
   min-height: 38px;
   min-width: 0;
   padding: 8px 10px;
   width: 100%;
+}
+
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"] {
+  background: transparent;
+  border: none;
+  min-height: unset;
+  width: auto;
 }
 
 textarea {

@@ -139,7 +139,7 @@ export default function AuthGate({ children }) {
     return (
       <section className="setup-screen">
         <div className="setup-card">
-          <p className="eyebrow">ROMEA V2</p>
+          <p className="eyebrow">Catálogo B2B</p>
           <h1>{text.missingSupabase}</h1>
           <p>{text.envHelp}</p>
           <pre>VITE_SUPABASE_URL=...{"\n"}VITE_SUPABASE_ANON_KEY=...</pre>
@@ -164,7 +164,7 @@ export default function AuthGate({ children }) {
     return (
       <section className="setup-screen">
         <div className="setup-card">
-          <p className="eyebrow">ROMEA V2</p>
+          <p className="eyebrow">Catálogo B2B</p>
           <h1>{text.missingUserProfile}</h1>
           {message ? <p className="status warning">{message}</p> : null}
           <p>{text.repairHelp}</p>

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import AdvancedSearch from "./AdvancedSearch";
+import BrandLogo from "./BrandLogo";
+import CompanySettingsPanel from "./CompanySettingsPanel";
+import { useCompany } from "../contexts/CompanyContext";
 import CatalogExportButton from "./CatalogExportButton";
 import CartDrawer from "./CartDrawer";
 import ExcelTemplateButton from "./ExcelTemplateButton";
@@ -58,16 +61,18 @@ const makeBlankCustomer = (language = "es") => ({
   shipToPhone: "",
 });
 
-const tabs = ["catalog", "clients", "prices"];
+const tabs = ["catalog", "clients", "prices", "company"];
 const tabKeys = {
   catalog: "catalog",
   clients: "clients",
   prices: "priceMenu",
+  company: "company",
 };
 const titleKeys = {
   catalog: "adminCatalog",
   clients: "clients",
   prices: "priceMenu",
+  company: "company",
 };
 
 const formProductToRow = (product) => ({
@@ -100,6 +105,7 @@ const formProductToRow = (product) => ({
 
 export default function AdminDashboard() {
   const { t, language } = useLanguage();
+  const company = useCompany();
   const [tab, setTab] = useState("catalog");
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("");
@@ -216,7 +222,7 @@ export default function AdminDashboard() {
     <div className="admin-catalog-shell">
       <aside className="admin-romea-sidebar">
         <div className="brand-block">
-          <div className="brand-fallback"><strong>ROMEA</strong><span>{t("admin")}</span></div>
+          <BrandLogo />
           <p>{t("b2bCatalog")}</p>
         </div>
 
@@ -281,7 +287,7 @@ export default function AdminDashboard() {
       <main className="admin-catalog-main">
         <header className="admin-catalog-header">
           <div>
-            <p className="eyebrow">{t("brand")}</p>
+            <p className="eyebrow">{company.brand_name || "Mi Catálogo"}</p>
             <h1>{t(titleKeys[tab])}</h1>
             <span>{t("adminSubtitle")}</span>
           </div>
@@ -427,6 +433,9 @@ export default function AdminDashboard() {
               </div>
             </div>
           </section>
+        ) : null}
+        {tab === "company" ? (
+          <CompanySettingsPanel />
         ) : null}
       </main>
 

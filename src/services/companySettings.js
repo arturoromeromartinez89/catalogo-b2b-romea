@@ -1,0 +1,46 @@
+import { supabase } from "../lib/supabaseClient";
+
+export const defaultSettings = {
+  brand_name: "",
+  legal_name: "",
+  rfc: "",
+  phone: "",
+  email: "",
+  city: "",
+  state: "",
+  country: "México",
+  logo_url: "",
+  bank_accounts: [],
+  order_instructions: [],
+  commercial_terms: "",
+};
+
+export const fetchCompanySettings = async () => {
+  const { data, error } = await supabase
+    .from("company_settings")
+    .select("*")
+    .limit(1)
+    .single();
+  if (error) return defaultSettings;
+  return { ...defaultSettings, ...data };
+};
+
+export const saveCompanySettings = async (settings) => {
+  const { data: existing } = await supabase.from("company_settings").select("id").limit(1).single();
+  if (existing?.id) {
+    const { error } = await supabase.from("company_settings").update(settings).eq("id", existing.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from("company_settings").insert(settings);
+    if (error) throw error;
+  }
+};
+
+export const uploadLogo = async (file) => {
+  const ext = file.name.split(".").pop();
+  const path = `logos/logo.${ext}`;
+  const { error } = await supabase.storage.from("company-assets").upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data } = supabase.storage.from("company-assets").getPublicUrl(path);
+  return data.publicUrl;
+};

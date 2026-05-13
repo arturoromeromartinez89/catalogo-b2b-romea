@@ -6,6 +6,8 @@ import ProductDetail from "./ProductDetail";
 import QuickFilters from "./QuickFilters";
 import AdvancedSearch from "./AdvancedSearch";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useCompany } from "../contexts/CompanyContext";
+import BrandLogo from "./BrandLogo";
 import { supabase } from "../lib/supabaseClient";
 import { fetchClientData } from "../services/supabaseCatalog";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
@@ -35,6 +37,7 @@ const makeDefaultCustomer = (language = "es") => ({
 
 export default function ClientCatalogApp({ profile }) {
   const { t, language } = useLanguage();
+  const company = useCompany();
   const [products, setProducts] = useState([]);
   const [cartItems, setCartItems] = useState([]);
   const [customer, setCustomer] = useState(() => makeDefaultCustomer(language));
@@ -124,10 +127,7 @@ export default function ClientCatalogApp({ profile }) {
     <div className="admin-catalog-shell">
       <aside className="admin-romea-sidebar">
         <div className="brand-block">
-          <div className="brand-fallback">
-            <strong>ROMEA</strong>
-            <span>Cliente</span>
-          </div>
+          <BrandLogo />
           <p>{t("b2bCatalog")}</p>
         </div>
 
@@ -177,7 +177,7 @@ export default function ClientCatalogApp({ profile }) {
       <main className="admin-catalog-main">
         <header className="admin-catalog-header">
           <div>
-            <p className="eyebrow">{t("brand")}</p>
+            <p className="eyebrow">{company.brand_name || "Catálogo B2B"}</p>
             <h1>Catálogo mayorista</h1>
             <span>{profile?.email}</span>
           </div>

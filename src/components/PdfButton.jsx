@@ -1,20 +1,21 @@
-import { generatePreorderPdf } from "../utils/pdfGenerator";
+import { generatePdf } from "../utils/pdfGenerator";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useCompany } from "../contexts/CompanyContext";
 
 export default function PdfButton({ cartItems, customer }) {
   const { language, t } = useLanguage();
+  const company = useCompany();
+
   const handleClick = async () => {
     if (!cartItems.length) {
       window.alert(t("addProductsBeforePdf"));
       return;
     }
-
     if (!customer.name && !customer.company) {
-      const shouldContinue = window.confirm(t("customerWarning"));
-      if (!shouldContinue) return;
+      const ok = window.confirm(t("customerWarning"));
+      if (!ok) return;
     }
-
-    await generatePreorderPdf({ cartItems, customer, language });
+    await generatePdf(cartItems, customer, language, company);
   };
 
   return (

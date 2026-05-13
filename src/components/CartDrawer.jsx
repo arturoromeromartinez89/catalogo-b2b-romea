@@ -1,6 +1,6 @@
 import PdfButton from "./PdfButton";
-import { companyInfo } from "../config/companyInfo";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useCompany } from "../contexts/CompanyContext";
 import { calculateCartTotals } from "../utils/filters";
 import { formatCurrency, formatWeight, shortText } from "../utils/formatters";
 
@@ -82,8 +82,8 @@ export default function CartDrawer({
             <span>{t("folio")} {folio}</span>
           </div>
           <div className="sheet-brand">
-            <strong>ROMEA</strong>
-            <span>{t("brand").replace("ROMEA ", "")}</span>
+            <strong>{company?.brand_name || "Mi Catálogo"}</strong>
+            
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label={t("closePreorder")}>
             ×

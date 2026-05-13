@@ -1,413 +1,298 @@
 import jsPDF from "jspdf";
-import { companyInfo } from "../config/companyInfo";
-import { makeTranslator } from "../i18n/translations";
-import { calculateCartTotals } from "./filters";
-import { formatCurrency, formatWeight } from "./formatters";
 
-const blue = [31, 51, 95];
-const ink = [29, 36, 51];
-const muted = [105, 113, 130];
-const line = [226, 231, 240];
-const soft = [247, 248, 251];
+const loadImageAsDataUrl = (url) =>
+  new Promise((resolve) => {
+    if (!url) { resolve(null); return; }
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext("2d").drawImage(img, 0, 0);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      } catch { resolve(null); }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+
+const pt = (mm) => mm * 2.8346;
 
 const page = {
-  w: 215.9,
-  h: 279.4,
+  w: 216,
+  h: 279,
   margin: 14,
-  bottom: 252,
+  col: 188,
 };
 
-const tableColumns = (t) => [
-  { label: "#", w: 7 },
-  { label: languageSafe(t("noPhoto"), "Foto", "Photo"), w: 14, photo: true },
-  { label: t("code"), w: 18 },
-  { label: t("description"), w: 38 },
-  { label: t("pieces"), w: 12 },
-  { label: t("grams"), w: 16 },
-  { label: t("unit"), w: 12 },
-  { label: t("price"), w: 18 },
-  { label: t("discountPct"), w: 12 },
-  { label: t("net"), w: 18 },
-  { label: t("amount"), w: 23 },
-];
-
-const languageSafe = (value, es, en) => (value === "Sin foto" ? es : value === "No photo" ? en : value);
-
-const loadImageAsDataUrl = async (url) => {
-  if (!url) return null;
-  try {
-    const response = await fetch(url, { mode: "cors" });
-    if (!response.ok) return null;
-    const blob = await response.blob();
-    return await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
+const doc_text = (doc, str, x, y, opts = {}) => {
+  if (!str) return;
+  doc.text(String(str), x, y, opts);
 };
 
-const addImageSafe = (doc, image, x, y, w, h) => {
-  if (!image) return false;
-  try {
-    const type = String(image).startsWith("data:image/png") ? "PNG" : "JPEG";
-    doc.addImage(image, type, x, y, w, h, undefined, "FAST");
-    return true;
-  } catch {
-    return false;
-  }
-};
+const fieldLine = (label, value) => `${label}: ${value || "—"}`;
 
-const text = (doc, value, x, y, options = {}) => {
-  doc.text(String(value || ""), x, y, options);
-};
+export async function generatePdf(cartItems, customer, language = "es", company = {}) {
+  const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
 
-const wrapped = (doc, value, x, y, width, lineHeight = 3.8) => {
-  const lines = doc.splitTextToSize(String(value || ""), width);
-  doc.text(lines, x, y);
-  return y + lines.length * lineHeight;
-};
+  const brandName = company.brand_name || "Mi Catálogo";
+  const t = (es, en) => language === "en" ? en : es;
 
-const fieldLine = (label, value) => `${label}: ${value || "-"}`;
+  // ── HEADER ──────────────────────────────────────────────
+  const logo = await loadImageAsDataUrl(company.logo_url);
+  doc.setFillColor(31, 51, 95);
+  doc.rect(0, 0, page.w, 32, "F");
 
-const hasShipTo = (customer) =>
-  [
-    customer.shipToName,
-    customer.shipToAddress,
-    customer.shipToCity,
-    customer.shipToState,
-    customer.shipToZip,
-    customer.shipToCountry,
-    customer.shipToContact,
-    customer.shipToPhone,
-  ].some(Boolean);
-
-const makeFolio = (date, customer) => {
-  if (customer?.numero) return customer.numero;
-  const pad = (value) => String(value).padStart(2, "0");
-  return `PRE-${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`;
-};
-
-const ensureSpace = (doc, y, needed, afterNewPage) => {
-  if (y + needed <= page.bottom) return y;
-  doc.addPage();
-  return afterNewPage ? afterNewPage(18) : 18;
-};
-
-const drawTopBrand = async (doc, folio, date, t) => {
-  const logo = await loadImageAsDataUrl(companyInfo.logoPath);
-  if (!addImageSafe(doc, logo, page.margin, 11, 42, 18)) {
-    doc.setTextColor(...blue);
+  if (logo) {
+    doc.addImage(logo, "JPEG", page.margin, 4, 40, 24);
+  } else {
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    text(doc, "ROMEA", page.margin, 18);
-    doc.setFontSize(9);
-  text(doc, t("brand").replace("ROMEA ", ""), page.margin, 24);
+    doc.setTextColor(255, 255, 255);
+    doc_text(doc, brandName, page.margin, 18);
   }
 
-  doc.setTextColor(...blue);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(15);
-  text(doc, t("noteTitle"), 66, 17);
-  doc.setFontSize(10);
-  text(doc, t("brand"), 66, 24);
-
-  doc.setTextColor(...ink);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  text(doc, `${t("folio")}: ${folio}`, 154, 15);
-  text(doc, `${t("date") || "Fecha"}: ${date.toLocaleString("es-MX")}`, 154, 21);
-  doc.setDrawColor(...blue);
-  doc.setLineWidth(0.45);
-  doc.line(page.margin, 34, page.w - page.margin, 34);
-};
+  doc.setTextColor(180, 195, 220);
+  doc_text(doc, t("Catálogo B2B · Mayorista", "B2B Catalog · Wholesale"), page.margin, 27);
 
-const drawSectionTitle = (doc, title, x, y, width) => {
-  doc.setFillColor(...soft);
-  doc.setDrawColor(...line);
-  doc.roundedRect(x, y, width, 8, 1.5, 1.5, "FD");
-  doc.setTextColor(...blue);
+  // Número de preorden
+  const docNum = [customer.serie, customer.numero].filter(Boolean).join("-") || "PRE-001";
+  doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8.3);
-  text(doc, title, x + 3, y + 5.5);
-};
-
-const drawInfoBox = (doc, title, lines, x, y, width, height) => {
-  doc.setDrawColor(...line);
-  doc.roundedRect(x, y, width, height, 2, 2, "S");
-  drawSectionTitle(doc, title, x, y, width);
-  doc.setTextColor(...ink);
+  doc.setTextColor(255, 255, 255);
+  doc_text(doc, docNum, page.w - page.margin, 16, { align: "right" });
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.6);
-  let cursor = y + 14;
-  lines.forEach((lineText) => {
-    cursor = wrapped(doc, lineText, x + 3, cursor, width - 6, 3.6);
+  doc.setTextColor(180, 195, 220);
+  doc_text(doc, t("Preorden", "Preorder"), page.w - page.margin, 22, { align: "right" });
+  const today = new Date().toLocaleDateString(language === "en" ? "en-US" : "es-MX");
+  doc_text(doc, today, page.w - page.margin, 27, { align: "right" });
+
+  let y = 38;
+
+  // ── INFO PROVEEDOR ──────────────────────────────────────
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(100, 100, 100);
+  doc_text(doc, t("PROVEEDOR", "SUPPLIER"), page.margin, y);
+
+  y += 4;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(31, 51, 95);
+  doc_text(doc, brandName, page.margin, y);
+
+  y += 4;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(60, 60, 60);
+
+  const supplierLines = [
+    company.legal_name,
+    [company.city, company.state, company.country].filter(Boolean).join(", "),
+    company.rfc ? fieldLine(t("RFC", "Tax ID"), company.rfc) : null,
+    company.email ? fieldLine(t("Correo", "Email"), company.email) : null,
+    company.phone ? fieldLine(t("Tel", "Phone"), company.phone) : null,
+  ].filter(Boolean);
+
+  supplierLines.forEach((line) => {
+    doc_text(doc, line, page.margin, y);
+    y += 4;
   });
-};
 
-const drawPartyBlocks = (doc, customer, t, language) => {
-  const providerLines = [
-    companyInfo.commercialName,
-    t("wholesaleCatalog"),
-    `${companyInfo.city}, ${companyInfo.state}, ${companyInfo.country}`,
-    fieldLine(t("rfc"), companyInfo.rfc || (language === "en" ? "Configurable" : "Configurable")),
-    fieldLine(t("email"), companyInfo.email || "Configurable"),
-    fieldLine(t("phone"), companyInfo.phone || "Configurable"),
-  ];
+  // ── INFO CLIENTE ────────────────────────────────────────
+  const clientX = page.margin + 95;
+  let clientY = 38;
+
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(100, 100, 100);
+  doc_text(doc, t("CLIENTE", "CUSTOMER"), clientX, clientY);
+
+  clientY += 4;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(31, 51, 95);
+  doc_text(doc, customer.company || customer.name || t("Sin nombre", "No name"), clientX, clientY);
+
+  clientY += 4;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(60, 60, 60);
 
   const clientLines = [
-    fieldLine(t("customer"), customer.name),
-    fieldLine(t("company"), customer.company),
-    fieldLine(t("phone"), customer.phone),
-    fieldLine(t("email"), customer.email),
-    fieldLine(t("rfc"), customer.rfc),
-    fieldLine(t("notes"), customer.notes),
-  ];
+    customer.name && customer.company ? customer.name : null,
+    customer.email ? fieldLine(t("Correo", "Email"), customer.email) : null,
+    customer.phone ? fieldLine(t("Tel", "Phone"), customer.phone) : null,
+    customer.rfc ? fieldLine(t("RFC", "Tax ID"), customer.rfc) : null,
+  ].filter(Boolean);
 
-  const shipLines = hasShipTo(customer)
-    ? [
-        fieldLine(t("recipient"), customer.shipToName),
-        fieldLine(t("address"), customer.shipToAddress),
-        `${customer.shipToCity || "-"}, ${customer.shipToState || "-"} ${customer.shipToZip || ""}`.trim(),
-        fieldLine(t("country"), customer.shipToCountry),
-        fieldLine(t("contact"), customer.shipToContact),
-        fieldLine(t("phone"), customer.shipToPhone),
-      ]
-    : [language === "en" ? "Pending confirmation." : "Pendiente por confirmar."];
-
-  drawInfoBox(doc, language === "en" ? "Supplier" : "Proveedor", providerLines, 14, 40, 60, 43);
-  drawInfoBox(doc, t("customer"), clientLines, 78, 40, 60, 43);
-  drawInfoBox(doc, t("shipTo"), shipLines, 142, 40, 60, 43);
-};
-
-const drawOperationBox = (doc, customer, y, t) => {
-  const values = [
-    [t("series"), customer.serie || "PRE"],
-    [t("currency"), customer.currency || "MXN"],
-    [t("seller"), customer.seller || "-"],
-    [t("concept"), customer.concept || t("preorder")],
-    [t("status"), customer.status || "-"],
-    [t("branch"), customer.branch || "-"],
-  ];
-  doc.setDrawColor(...line);
-  doc.roundedRect(page.margin, y, 188, 17, 2, 2, "S");
-  doc.setFontSize(7.3);
-  values.forEach(([label, value], index) => {
-    const x = page.margin + 3 + index * 31;
-    doc.setTextColor(...muted);
-    doc.setFont("helvetica", "bold");
-    text(doc, label, x, y + 6);
-    doc.setTextColor(...ink);
-    doc.setFont("helvetica", "normal");
-    text(doc, String(value), x, y + 12, { maxWidth: 27 });
+  clientLines.forEach((line) => {
+    doc_text(doc, line, clientX, clientY);
+    clientY += 4;
   });
-  return y + 23;
-};
 
-const drawTableHeader = (doc, y, t) => {
-  const columns = tableColumns(t);
-  let x = page.margin;
-  doc.setFillColor(...blue);
-  doc.setTextColor(255, 255, 255);
+  y = Math.max(y, clientY) + 4;
+
+  // ── DIVISOR ─────────────────────────────────────────────
+  doc.setDrawColor(200, 210, 230);
+  doc.setLineWidth(0.3);
+  doc.line(page.margin, y, page.w - page.margin, y);
+  y += 6;
+
+  // ── TABLA DE PRODUCTOS ──────────────────────────────────
+  const cols = {
+    img: { x: page.margin, w: 18 },
+    code: { x: page.margin + 20, w: 22 },
+    desc: { x: page.margin + 44, w: 72 },
+    weight: { x: page.margin + 118, w: 18 },
+    price: { x: page.margin + 138, w: 24 },
+    qty: { x: page.margin + 164, w: 12 },
+    total: { x: page.margin + 178, w: 24 },
+  };
+
+  // Header tabla
+  doc.setFillColor(240, 244, 252);
+  doc.rect(page.margin, y - 2, page.col, 8, "F");
+  doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.7);
-  columns.forEach((column) => {
-    doc.rect(x, y, column.w, 8, "F");
-    text(doc, column.label, x + 1.2, y + 5.2);
-    x += column.w;
-  });
-  return { y: y + 8, columns };
-};
+  doc.setTextColor(60, 80, 120);
+  doc_text(doc, t("CÓD.", "CODE"), cols.code.x, y + 3);
+  doc_text(doc, t("DESCRIPCIÓN", "DESCRIPTION"), cols.desc.x, y + 3);
+  doc_text(doc, t("PESO", "WEIGHT"), cols.weight.x, y + 3);
+  doc_text(doc, t("PRECIO", "PRICE"), cols.price.x, y + 3);
+  doc_text(doc, t("CANT.", "QTY"), cols.qty.x, y + 3);
+  doc_text(doc, t("TOTAL", "TOTAL"), cols.total.x + cols.total.w, y + 3, { align: "right" });
+  y += 10;
 
-const drawProducts = async (doc, cartItems, startY, t) => {
-  let header = drawTableHeader(doc, startY, t);
-  let y = header.y;
-  let columns = header.columns;
+  let grandTotal = 0;
+  const currency = customer.currency || "MXN";
 
-  for (let index = 0; index < cartItems.length; index += 1) {
-    const item = cartItems[index];
-    const product = item.product;
-    const quantity = Number(item.quantity || 0);
-    const unitPrice = Number(product.precioMinimo || 0);
-    const amount = quantity * unitPrice;
-    const grams = quantity * Number(product.pesoPromedio || 0);
-    const descLines = doc.splitTextToSize(String(product.descripcion || "-"), columns[3].w - 3);
-    const rowHeight = Math.max(18, 6 + descLines.length * 3.7);
-    y = ensureSpace(doc, y, rowHeight, (headerY) => {
-      header = drawTableHeader(doc, headerY, t);
-      columns = header.columns;
-      return header.y;
-    });
+  for (const item of cartItems) {
+    const { product, quantity } = item;
+    const rowH = 20;
 
-    let x = page.margin;
-    doc.setDrawColor(...line);
-    doc.setTextColor(...ink);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(6.7);
-    columns.forEach((column) => {
-      doc.rect(x, y, column.w, rowHeight, "S");
-      x += column.w;
-    });
-
-    x = page.margin;
-    text(doc, String(index + 1), x + 1.5, y + 6);
-    x += columns[0].w;
-
-    const image = await loadImageAsDataUrl(product.fotoUrl);
-    if (!addImageSafe(doc, image, x + 2, y + 3, 10, 10)) {
-      doc.setTextColor(...muted);
-      text(doc, t("noPhoto"), x + 1.2, y + 7, { maxWidth: columns[1].w - 2 });
-      doc.setTextColor(...ink);
+    if (y + rowH > page.h - 40) {
+      doc.addPage();
+      y = page.margin;
     }
-    x += columns[1].w;
 
-    const values = [
-      product.codigo,
-      descLines,
-      String(quantity),
-      formatWeight(grams),
-      product.unidadVenta || "Pza",
-      unitPrice ? formatCurrency(unitPrice, product.monedaPrecioMin) : "-",
-      "0",
-      unitPrice ? formatCurrency(unitPrice, product.monedaPrecioMin) : "-",
-      amount ? formatCurrency(amount, product.monedaPrecioMin) : "-",
-    ];
+    // Línea separadora
+    doc.setDrawColor(230, 235, 245);
+    doc.setLineWidth(0.2);
+    doc.line(page.margin, y - 1, page.w - page.margin, y - 1);
 
-    values.forEach((value, valueIndex) => {
-      const width = columns[valueIndex + 2].w;
-      if (Array.isArray(value)) {
-        doc.text(value, x + 1.4, y + 5.3);
-      } else {
-        doc.text(doc.splitTextToSize(String(value || "-"), width - 2.5), x + 1.4, y + 5.3);
-      }
-      x += width;
-    });
+    // Foto
+    const imgData = await loadImageAsDataUrl(product.fotoUrl);
+    if (imgData) {
+      try { doc.addImage(imgData, "JPEG", cols.img.x, y, 16, 16); } catch {}
+    }
 
-    y += rowHeight;
-  }
+    // Datos
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(31, 51, 95);
+    doc_text(doc, product.codigo, cols.code.x, y + 5);
 
-  return y + 6;
-};
-
-const drawTotals = (doc, y, totals, currency, t) => {
-  y = ensureSpace(doc, y, 34);
-  const subtotal = totals.amount;
-  const discount = 0;
-  const iva = 0;
-  const total = subtotal - discount + iva;
-
-  doc.setDrawColor(...line);
-  doc.roundedRect(116, y, 86, 32, 2, 2, "S");
-  drawSectionTitle(doc, t("total"), 116, y, 86);
-  doc.setTextColor(...ink);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  text(doc, `${t("totalPieces")}: ${totals.pieces}`, 120, y + 14);
-  text(doc, `${t("totalGrams")}: ${formatWeight(totals.weight)}`, 158, y + 14);
-  text(doc, `${t("subtotal")}: ${subtotal ? formatCurrency(subtotal, currency) : "-"}`, 120, y + 21);
-  text(doc, `${t("discount")}: ${discount ? formatCurrency(discount, currency) : "-"}`, 158, y + 21);
-  doc.setFont("helvetica", "bold");
-  text(doc, `${t("total")}: ${total ? formatCurrency(total, currency) : "-"}`, 120, y + 28);
-  text(doc, `${t("iva")}: ${iva ? formatCurrency(iva, currency) : "-"}`, 158, y + 28);
-  return y + 39;
-};
-
-const drawConfirmation = (doc, y, language) => {
-  y = ensureSpace(doc, y, 48);
-  drawSectionTitle(doc, language === "en" ? "How to confirm this preorder" : "Cómo confirmar esta preorden", page.margin, y, 188);
-  doc.setTextColor(...ink);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  let cursor = y + 14;
-  const steps =
-    language === "en"
-      ? [
-          "Review codes and quantities.",
-          "Send this preorder to your ROMEA sales representative.",
-          "Wait for availability and final price confirmation.",
-          "Make payment or deposit.",
-          "Send proof of payment.",
-          "The order is confirmed only after ROMEA validation.",
-        ]
-      : companyInfo.orderInstructions;
-  steps.forEach((step, index) => {
-    cursor = wrapped(doc, `${index + 1}. ${step}`, page.margin + 3, cursor, 180, 4);
-  });
-  return cursor + 4;
-};
-
-const drawBanks = (doc, y, language) => {
-  y = ensureSpace(doc, y, 28);
-  drawSectionTitle(doc, language === "en" ? "Bank accounts" : "Cuentas bancarias", page.margin, y, 188);
-  doc.setTextColor(...ink);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  const configured = companyInfo.bankAccounts.filter((account) => account.accountNumber || account.clabe);
-  if (!configured.length) {
-    text(doc, language === "en" ? "Bank details pending confirmation with your sales representative." : "Datos bancarios pendientes por confirmar con su asesor comercial.", page.margin + 3, y + 14);
-    return y + 23;
-  }
-  let cursor = y + 14;
-  configured.forEach((account) => {
-    cursor = wrapped(
-      doc,
-      `${account.bank} | Titular: ${account.accountHolder} | Cuenta: ${account.accountNumber || "-"} | CLABE: ${account.clabe || "-"} | Moneda: ${account.currency || "-"}`,
-      page.margin + 3,
-      cursor,
-      180,
-      4
-    );
-  });
-  return cursor + 4;
-};
-
-const drawTerms = (doc, y, language) => {
-  y = ensureSpace(doc, y, 24);
-  drawSectionTitle(doc, language === "en" ? "Commercial terms" : "Términos comerciales", page.margin, y, 188);
-  doc.setTextColor(...ink);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  const terms =
-    language === "en"
-      ? "This preorder is not an invoice or confirmed order. Availability, prices, credit terms, delivery times and shipping are subject to confirmation by ROMEA JEWELRY."
-      : companyInfo.commercialTerms;
-  wrapped(doc, terms, page.margin + 3, y + 14, 180, 4);
-};
-
-const drawFooter = (doc, t, language) => {
-  const pages = doc.internal.getNumberOfPages();
-  for (let current = 1; current <= pages; current += 1) {
-    doc.setPage(current);
-    doc.setDrawColor(...line);
-    doc.line(page.margin, 260, page.w - page.margin, 260);
-    doc.setTextColor(...muted);
     doc.setFont("helvetica", "normal");
+    doc.setTextColor(40, 40, 40);
+    const descLines = doc.splitTextToSize(product.descripcion || "", cols.desc.w);
+    doc_text(doc, descLines.slice(0, 2), cols.desc.x, y + 5);
+
     doc.setFontSize(7);
-    text(doc, `${t("brand")} · ${language === "en" ? "Commercial preorder document" : "Documento generado como preorden comercial"}`, page.margin, 267);
-    text(doc, `${language === "en" ? "Page" : "Página"} ${current} ${language === "en" ? "of" : "de"} ${pages}`, 182, 267);
+    doc.setTextColor(100, 100, 100);
+    const metalLine = [product.metal, product.kilataje].filter(Boolean).join(" ");
+    if (metalLine) doc_text(doc, metalLine, cols.desc.x, y + 13);
+
+    const weight = product.pesoPromedio ? `${Number(product.pesoPromedio).toFixed(2)}g` : "—";
+    doc_text(doc, weight, cols.weight.x, y + 8);
+
+    const price = Number(product.precioMinimo || 0);
+    doc_text(doc, price ? `$${price.toFixed(2)}` : "—", cols.price.x, y + 8);
+
+    doc_text(doc, String(quantity), cols.qty.x, y + 8);
+
+    const lineTotal = price * Number(quantity);
+    grandTotal += lineTotal;
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(31, 51, 95);
+    doc_text(doc, lineTotal ? `$${lineTotal.toFixed(2)}` : "—", cols.total.x + cols.total.w, y + 8, { align: "right" });
+
+    y += rowH;
   }
-};
 
-export const generatePreorderPdf = async ({ cartItems, customer, language = "es" }) => {
-  const t = makeTranslator(language);
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
-  const totals = calculateCartTotals(cartItems);
-  const now = new Date();
-  const folio = makeFolio(now, customer);
-  const currency = customer.currency || cartItems[0]?.product.monedaPrecioMin || "MXN";
+  // ── TOTALES ─────────────────────────────────────────────
+  y += 4;
+  doc.setDrawColor(31, 51, 95);
+  doc.setLineWidth(0.5);
+  doc.line(page.margin + 120, y, page.w - page.margin, y);
+  y += 5;
 
-  await drawTopBrand(doc, folio, now, t);
-  drawPartyBlocks(doc, customer, t, language);
-  let y = drawOperationBox(doc, customer, 88, t);
-  y = await drawProducts(doc, cartItems, y, t);
-  y = drawTotals(doc, y, totals, currency, t);
-  y = drawConfirmation(doc, y, language);
-  y = drawBanks(doc, y, language);
-  drawTerms(doc, y, language);
-  drawFooter(doc, t, language);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(31, 51, 95);
+  doc_text(doc, t("TOTAL ESTIMADO", "ESTIMATED TOTAL"), page.margin + 120, y);
+  doc_text(doc, `$${grandTotal.toFixed(2)} ${currency}`, page.w - page.margin, y, { align: "right" });
 
-  doc.save(`${folio}.pdf`);
-};
+  y += 8;
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(120, 120, 120);
+  doc_text(doc, t("* Precios sujetos a confirmación.", "* Prices subject to confirmation."), page.margin, y);
+
+  // ── INSTRUCCIONES ────────────────────────────────────────
+  const instructions = company.order_instructions?.length
+    ? company.order_instructions
+    : [
+        t("Revisar códigos y cantidades.", "Review codes and quantities."),
+        t("Enviar esta preorden a su asesor.", "Send this preorder to your sales rep."),
+        t("Esperar confirmación de existencia y precio final.", "Wait for availability and final price confirmation."),
+        t("Realizar pago o anticipo.", "Make payment or deposit."),
+      ];
+
+  y += 8;
+  if (y + 30 > page.h - 20) { doc.addPage(); y = page.margin; }
+
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(31, 51, 95);
+  doc_text(doc, t("Instrucciones", "Instructions"), page.margin, y);
+  y += 5;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(7.5);
+  instructions.forEach((line, i) => {
+    doc_text(doc, `${i + 1}. ${line}`, page.margin, y);
+    y += 5;
+  });
+
+  // ── TÉRMINOS ─────────────────────────────────────────────
+  const terms = company.commercial_terms ||
+    t(
+      "Esta preorden no es factura ni orden confirmada. Disponibilidad, precios y tiempos de entrega están sujetos a confirmación.",
+      "This preorder is not an invoice or confirmed order. Availability, prices and delivery times are subject to confirmation."
+    );
+
+  y += 4;
+  doc.setFontSize(7);
+  doc.setTextColor(140, 140, 140);
+  const termsLines = doc.splitTextToSize(terms, page.col);
+  doc_text(doc, termsLines, page.margin, y);
+
+  // ── PIE ──────────────────────────────────────────────────
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(160, 160, 160);
+    doc_text(doc, `${brandName} · ${t("Documento generado como preorden comercial", "Commercial preorder document")}`, page.margin, page.h - 6);
+    doc_text(doc, `${i} / ${totalPages}`, page.w - page.margin, page.h - 6, { align: "right" });
+  }
+
+  doc.save(`preorden-${docNum}-${today.replace(/\//g, "-")}.pdf`);
+}
