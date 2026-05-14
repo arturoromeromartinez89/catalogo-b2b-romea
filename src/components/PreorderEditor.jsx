@@ -33,14 +33,17 @@ const Field = ({ label, children }) => (
   </label>
 );
 
-function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, pricingLocked = false }) {
+function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, pricingLocked = false, tenantId = "", profile }) {
   const { language } = useLanguage();
   const company = useCompany();
   const isNew = !initial?.id;
+  const resolvedTenantId = tenantId || initial?.tenant_id || initial?.tenantId || profile?.tenant_id || "";
 
   const blank = {
     folio: "",
     status: "pendiente",
+    tenant_id: resolvedTenantId,
+    created_by: profile?.id || "",
     client_id: "",
     cliente_nombre: "",
     cliente_empresa: "",
@@ -61,8 +64,8 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    fetchLines().then(setLines).catch((error) => setMsg(`Error: ${error.message}`));
-    fetchMetalPrices()
+    fetchLines(resolvedTenantId).then(setLines).catch((error) => setMsg(`Error: ${error.message}`));
+    fetchMetalPrices(resolvedTenantId)
       .then((prices) => {
         setMetalPrices(prices);
         setPlataFinaMxn(getSilverFinePrice(prices));
@@ -70,7 +73,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
       .catch((error) => setMsg(`Error: ${error.message}`));
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
-  }, []);
+  }, [resolvedTenantId]);
 
   useEffect(() => {
     const client = (clients || []).find((item) => item.id === po.client_id);
@@ -157,7 +160,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
     if (!po.client_id) { setMsg("Debes seleccionar un cliente existente para guardar la preorden."); return; }
     setSaving(true);
     try {
-      await savePreorder(po, items);
+      await savePreorder({ ...po, tenant_id: resolvedTenantId, created_by: po.created_by || profile?.id || null }, items);
       setMsg("Guardado.");
       onSaved?.();
     } catch (error) {

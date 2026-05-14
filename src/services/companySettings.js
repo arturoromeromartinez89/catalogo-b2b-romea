@@ -25,13 +25,15 @@ export const fetchCompanySettings = async () => {
   return { ...defaultSettings, ...data };
 };
 
-export const saveCompanySettings = async (settings) => {
+export const saveCompanySettings = async (settings, tenantId = "") => {
+  const row = { ...settings };
+  if (tenantId) row.tenant_id = tenantId;
   const { data: existing } = await supabase.from("company_settings").select("id").limit(1).single();
   if (existing?.id) {
-    const { error } = await supabase.from("company_settings").update(settings).eq("id", existing.id);
+    const { error } = await supabase.from("company_settings").update(row).eq("id", existing.id);
     if (error) throw error;
   } else {
-    const { error } = await supabase.from("company_settings").insert(settings);
+    const { error } = await supabase.from("company_settings").insert(row);
     if (error) throw error;
   }
 };

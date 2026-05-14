@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { getTenantId, withTenant } from "./tenantUtils";
 import { normalizeText } from "../utils/textNormalizer";
 
 const PAGE_SIZE = 1000;
@@ -19,7 +20,7 @@ const toDbBoolean = (...values) => {
   return ["1", "si", "sí", "yes", "true", "activo", "active", "alta"].includes(normalizeText(value));
 };
 
-const fetchAllProducts = async ({ visibleOnly = false } = {}) => {
+const fetchAllProducts = async ({ visibleOnly = false, tenantId = "" } = {}) => {
   const rows = [];
   let from = 0;
 
@@ -31,6 +32,7 @@ const fetchAllProducts = async ({ visibleOnly = false } = {}) => {
       .range(from, from + PAGE_SIZE - 1);
 
     if (visibleOnly) query = query.eq("visible_web", true);
+    query = withTenant(query, tenantId);
 
     const result = await query;
     throwIfError(result);
@@ -45,6 +47,7 @@ const fetchAllProducts = async ({ visibleOnly = false } = {}) => {
 
 export const dbProductToProduct = (row) => ({
   id: row.id,
+  tenantId: row.tenant_id || "",
   codigo: row.codigo || "",
   modelo: row.modelo || "",
   descripcion: row.descripcion || "",
@@ -91,7 +94,7 @@ export const dbProductToProduct = (row) => ({
     ),
 });
 
-export const productToDb = (product) => {
+export const productToDb = (product, tenantId = "") => {
   const searchText =
     firstValue(product.searchText, product.search_text) ||
     normalizeText(
@@ -112,7 +115,7 @@ export const productToDb = (product) => {
       ].join(" ")
     );
 
-  return {
+  const row = {
     codigo: firstValue(product.codigo, ""),
     modelo: firstValue(product.modelo, ""),
     descripcion: firstValue(product.descripcion, ""),
@@ -141,6 +144,10 @@ export const productToDb = (product) => {
     search_text: searchText,
     updated_at: new Date().toISOString(),
   };
+
+  const resolvedTenantId = tenantId || product.tenant_id || product.tenantId || "";
+  if (resolvedTenantId) row.tenant_id = resolvedTenantId;
+  return row;
 };
 
 const throwIfError = ({ error }) => {
@@ -156,15 +163,19 @@ export const getSessionAndProfile = async () => {
   return { session, profile };
 };
 
-export const fetchAdminData = async () => {
-  const allProducts = await fetchAllProducts();
+export const fetchAdminData = async (profile) => {
+  const tenantId = getTenantId(profile);
+  const allProducts = await fetchAllProducts({ tenantId });
+  const clientsQuery = withTenant(supabase.from("clients").select("*").order("company"), tenantId);
+  const catalogsQuery = withTenant(supabase.from("catalogs").select("*").order("name"), tenantId);
+  const priceListsQuery = withTenant(supabase.from("price_lists").select("*").order("name"), tenantId);
   const [products, clients, catalogs, catalogProducts, priceLists, priceItems, clientCatalogs, clientPriceLists] =
     await Promise.all([
       { data: allProducts, error: null },
-      supabase.from("clients").select("*").order("company"),
-      supabase.from("catalogs").select("*").order("name"),
+      clientsQuery,
+      catalogsQuery,
       supabase.from("catalog_products").select("*"),
-      supabase.from("price_lists").select("*").order("name"),
+      priceListsQuery,
       supabase.from("price_list_items").select("*").order("metal"),
       supabase.from("client_catalogs").select("*"),
       supabase.from("client_price_lists").select("*"),
@@ -184,8 +195,8 @@ export const fetchAdminData = async () => {
   };
 };
 
-export const upsertProducts = async (products) => {
-  const rows = products.map(productToDb);
+export const upsertProducts = async (products, tenantId = "") => {
+  const rows = products.map((product) => productToDb(product, tenantId));
   const result = await supabase.from("products").upsert(rows, { onConflict: "codigo" }).select("*");
   throwIfError(result);
   return result.data.map(dbProductToProduct);
@@ -195,21 +206,29 @@ export const deleteProduct = async (id) => {
   throwIfError(await supabase.from("products").delete().eq("id", id));
 };
 
-export const saveClient = async (client) => {
-  const result = await supabase.from("clients").upsert(client).select("*").single();
+export const saveClient = async (client, tenantId = "") => {
+  const row = { ...client };
+  if (tenantId) row.tenant_id = tenantId;
+  const result = await supabase.from("clients").upsert(row).select("*").single();
   throwIfError(result);
   if (result.data?.email) {
+    const profileUpdate = { client_id: result.data.id, role: "client" };
+    if (tenantId) profileUpdate.tenant_id = tenantId;
     await supabase
       .from("profiles")
-      .update({ client_id: result.data.id, role: "client" })
+      .update(profileUpdate)
       .eq("email", result.data.email)
-      .neq("role", "admin");
+      .neq("role", "admin")
+      .neq("role", "tenant_admin")
+      .neq("role", "superadmin");
   }
   return result.data;
 };
 
-export const saveCatalog = async (catalog) => {
-  const result = await supabase.from("catalogs").upsert(catalog).select("*").single();
+export const saveCatalog = async (catalog, tenantId = "") => {
+  const row = { ...catalog };
+  if (tenantId) row.tenant_id = tenantId;
+  const result = await supabase.from("catalogs").upsert(row).select("*").single();
   throwIfError(result);
   return result.data;
 };
@@ -222,8 +241,10 @@ export const setCatalogProduct = async (catalogId, productId, active) => {
   }
 };
 
-export const savePriceList = async (priceList) => {
-  const result = await supabase.from("price_lists").upsert(priceList).select("*").single();
+export const savePriceList = async (priceList, tenantId = "") => {
+  const row = { ...priceList };
+  if (tenantId) row.tenant_id = tenantId;
+  const result = await supabase.from("price_lists").upsert(row).select("*").single();
   throwIfError(result);
   return result.data;
 };
@@ -243,12 +264,13 @@ export const setClientPriceList = async (clientId, priceListId, active) => {
 };
 
 export const fetchClientData = async (profile) => {
-  const visibleProducts = await fetchAllProducts({ visibleOnly: true });
+  const tenantId = getTenantId(profile);
+  const visibleProducts = await fetchAllProducts({ visibleOnly: true, tenantId });
   const products = { data: visibleProducts, error: null };
   throwIfError(products);
   const client =
     profile?.client_id
-      ? await supabase.from("clients").select("*").eq("id", profile.client_id).maybeSingle()
+      ? await withTenant(supabase.from("clients").select("*").eq("id", profile.client_id), tenantId).maybeSingle()
       : { data: null, error: null };
   throwIfError(client);
 

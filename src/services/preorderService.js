@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { getTenantId, isSuperAdmin, withTenant } from "./tenantUtils";
 
 const buildFolio = () => {
   const d = new Date();
@@ -13,11 +14,14 @@ const calcTotals = (items) => ({
 });
 
 // ── ADMIN ─────────────────────────────────────────────────
-export const fetchAllPreorders = async () => {
-  const { data, error } = await supabase
+export const fetchAllPreorders = async (profile) => {
+  const tenantId = isSuperAdmin(profile) ? "" : getTenantId(profile);
+  let query = supabase
     .from("preorders")
     .select("*, preorder_items(*)")
     .order("created_at", { ascending: false });
+  query = withTenant(query, tenantId);
+  const { data, error } = await query;
   if (error) throw error;
   return data;
 };
@@ -40,6 +44,11 @@ export const savePreorder = async (preorder, items) => {
   const { preorder_items, id, ...clean } = { ...preorder };
   if (!clean.client_id) clean.client_id = null;
   if (!clean.created_by) clean.created_by = null;
+  if (!clean.tenant_id && !clean.tenantId) delete clean.tenant_id;
+  if (clean.tenantId) {
+    clean.tenant_id = clean.tenantId;
+    delete clean.tenantId;
+  }
 
   const preorderData = {
     ...clean,
@@ -136,6 +145,7 @@ export const submitClientPreorder = async (profile, cartItems, customer) => {
     tipo_cambio: Number(customer.tipoCambio || 0),
     moneda: customer.currency || "MXN",
     notas: customer.notes,
+    tenant_id: profile.tenant_id || profile.tenantId || null,
   };
 
   return savePreorder(preorder, items);

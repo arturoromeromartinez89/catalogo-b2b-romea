@@ -50,13 +50,14 @@ export default function ClientCatalogApp({ profile }) {
   const [selectedCode, setSelectedCode] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [status, setStatus] = useState("");
+  const tenantId = profile?.tenant_id || profile?.tenantId || "";
 
   useEffect(() => {
     setStatus(t("loadingCatalog"));
     Promise.all([
       fetchClientData(profile),
-      fetchLines().catch(() => []),
-      fetchMetalPrices().catch(() => ({})),
+      fetchLines(tenantId).catch(() => []),
+      fetchMetalPrices(tenantId).catch(() => ({})),
     ])
       .then(([result, lines, metalPrices]) => {
         setProducts(
@@ -149,6 +150,8 @@ export default function ClientCatalogApp({ profile }) {
 
   const cartToPreorder = () => ({
     status: "pendiente",
+    tenant_id: tenantId,
+    created_by: profile.id,
     client_id: profile.client_id,
     cliente_nombre: customer.name,
     cliente_empresa: customer.company,
@@ -328,6 +331,8 @@ export default function ClientCatalogApp({ profile }) {
         <PreorderEditor
           preorder={cartToPreorder()}
           clients={clientData ? [clientData] : []}
+          tenantId={tenantId}
+          profile={profile}
           pricingLocked
           onClose={(updatedDraft) => {
             if (updatedDraft?.preorder_items) {

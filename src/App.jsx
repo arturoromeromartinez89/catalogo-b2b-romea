@@ -10,6 +10,7 @@ import AdminDashboard from "./components/AdminDashboard";
 import ClientCatalogApp from "./components/ClientCatalogApp";
 import { LanguageProvider } from "./i18n/LanguageContext";
 import { makeTranslator } from "./i18n/translations";
+import { isAdminRole } from "./services/tenantUtils";
 import { sampleProducts } from "./data/sampleProducts";
 import { normalizeProduct, parseExcelFile, sortProducts } from "./utils/excelParser";
 import { applyFilters, buildFilterOptions, emptyFilters } from "./utils/filters";
@@ -281,7 +282,7 @@ export default function App() {
   return (
     <LanguageProvider language={language} setLanguage={setLanguage}>
     <AuthGate>
-      {({ profile }) => (profile?.role === "admin" ? <AdminDashboard /> : <ClientCatalogApp profile={profile} />)}
+      {({ profile }) => (isAdminRole(profile?.role) ? <AdminDashboard profile={profile} /> : <ClientCatalogApp profile={profile} />)}
     </AuthGate>
     </LanguageProvider>
   );

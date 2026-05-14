@@ -4,7 +4,7 @@ import { upsertProducts } from "../services/supabaseCatalog";
 
 const BATCH_SIZE = 200;
 
-export default function ImportPanel({ onImported }) {
+export default function ImportPanel({ onImported, tenantId = "" }) {
   const fileRef = useRef();
   const [step, setStep] = useState("idle");
   const [preview, setPreview] = useState(null);
@@ -39,7 +39,7 @@ export default function ImportPanel({ onImported }) {
 
       for (let index = 0; index < total; index += BATCH_SIZE) {
         const batch = productos.slice(index, index + BATCH_SIZE);
-        await upsertProducts(batch);
+        await upsertProducts(batch, tenantId);
         done += batch.length;
         setProgress(Math.round((done / total) * 100));
       }

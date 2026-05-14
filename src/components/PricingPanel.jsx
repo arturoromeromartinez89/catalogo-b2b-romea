@@ -9,7 +9,7 @@ import {
   syncProductLinesFromProducts,
 } from "../services/pricingService";
 
-export default function PricingPanel({ products = [] }) {
+export default function PricingPanel({ products = [], tenantId = "", profile }) {
   const [metalPrices, setMetalPrices] = useState({ kitco_usd_oz: "", tipo_cambio: "", premio_pct: 4 });
   const [lines, setLines] = useState([]);
   const [savingMetal, setSavingMetal] = useState(false);
@@ -18,14 +18,14 @@ export default function PricingPanel({ products = [] }) {
   const [tcOutput, setTcOutput] = useState("");
 
   const loadPricing = async () => {
-    const [metal, nextLines] = await Promise.all([fetchMetalPrices(), fetchLines()]);
+    const [metal, nextLines] = await Promise.all([fetchMetalPrices(tenantId), fetchLines(tenantId)]);
     setMetalPrices(metal);
     setLines(nextLines);
   };
 
   useEffect(() => {
     loadPricing().catch((error) => setStatus(`Error: ${error.message}`));
-  }, []);
+  }, [tenantId]);
 
   const plataFina = useMemo(() => getSilverFinePrice(metalPrices), [metalPrices]);
   const tc = Number(tcOutput) || 1;
@@ -34,8 +34,8 @@ export default function PricingPanel({ products = [] }) {
     setSavingMetal(true);
     setStatus("");
     try {
-      await saveMetalPrices(metalPrices);
-      const updated = await fetchMetalPrices();
+      await saveMetalPrices(metalPrices, profile?.email, tenantId);
+      const updated = await fetchMetalPrices(tenantId);
       setMetalPrices(updated);
       setStatus("Precio de plata fina guardado.");
     } catch (error) {
@@ -49,7 +49,7 @@ export default function PricingPanel({ products = [] }) {
     setSyncingLines(true);
     setStatus("");
     try {
-      const updated = await syncProductLinesFromProducts(products);
+      const updated = await syncProductLinesFromProducts(products, tenantId);
       setLines(updated);
       setStatus(`Lineas sincronizadas: ${updated.length}. Revisa la labor por gramo antes de cotizar.`);
     } catch (error) {
@@ -61,7 +61,7 @@ export default function PricingPanel({ products = [] }) {
 
   const handleSaveLine = async (line) => {
     try {
-      await saveLine(line);
+      await saveLine(line, tenantId);
       setLines((current) => current.map((item) => (item.codigo === line.codigo ? { ...item, ...line } : item)));
       setStatus("Labor por linea guardada.");
     } catch (error) {

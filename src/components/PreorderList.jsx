@@ -11,7 +11,7 @@ const STATUS_LABELS = {
 
 const fmt = (n) => n != null ? `$${Number(n).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
 
-export default function PreorderList({ clients }) {
+export default function PreorderList({ clients, profile }) {
   const [preorders, setPreorders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
@@ -20,13 +20,13 @@ export default function PreorderList({ clients }) {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await fetchAllPreorders();
+      const data = await fetchAllPreorders(profile);
       setPreorders(data);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [profile?.tenant_id, profile?.role]);
 
   const filtered = filter === "all" ? preorders : preorders.filter((p) => p.status === filter);
 
@@ -110,6 +110,8 @@ export default function PreorderList({ clients }) {
         <PreorderEditor
           preorder={selected}
           clients={clients}
+          tenantId={profile?.tenant_id || ""}
+          profile={profile}
           onClose={() => setSelected(null)}
           onSaved={() => { setSelected(null); load(); }}
         />

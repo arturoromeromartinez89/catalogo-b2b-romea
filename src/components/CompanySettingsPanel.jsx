@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useCompany } from "../contexts/CompanyContext";
 import { saveCompanySettings, uploadLogo } from "../services/companySettings";
 
-export default function CompanySettingsPanel() {
+export default function CompanySettingsPanel({ tenantId = "" }) {
   const company = useCompany();
   const [form, setForm] = useState({
     brand_name: company.brand_name || "",
@@ -42,7 +42,7 @@ export default function CompanySettingsPanel() {
     setSaving(true);
     setStatus("");
     try {
-      await saveCompanySettings(form);
+      await saveCompanySettings(form, tenantId);
       company.reload();
       setStatus("¡Guardado correctamente!");
     } catch (err) {

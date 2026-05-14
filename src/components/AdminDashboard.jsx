@@ -99,9 +99,10 @@ const productToPreorderItem = (product, quantity = 1) => {
   };
 };
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ profile }) {
   const { t, language } = useLanguage();
   const company = useCompany();
+  const tenantId = profile?.tenant_id || profile?.tenantId || "";
   const [tab, setTab] = useState("catalog");
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("");
@@ -120,7 +121,7 @@ export default function AdminDashboard() {
   const [isDraftOpen, setIsDraftOpen] = useState(false);
 
   const load = async () => {
-    const nextData = await fetchAdminData();
+    const nextData = await fetchAdminData(profile);
     setData(nextData);
     setSelectedPriceListId((current) => current || nextData.priceLists[0]?.id || "");
   };
@@ -152,7 +153,7 @@ export default function AdminDashboard() {
     try {
       setStatus(t("uploadingToSupabase"));
       const result = await parseExcelFile(file);
-      await upsertProducts(result.products);
+      await upsertProducts(result.products, tenantId);
       await load();
       setStatus(t("catalogUploaded", result.products.length));
     } catch (error) {
@@ -163,7 +164,7 @@ export default function AdminDashboard() {
   };
 
   const saveProduct = async (product) => {
-    await upsertProducts([normalizeProduct(formProductToRow(product))]);
+    await upsertProducts([normalizeProduct(formProductToRow(product))], tenantId);
     setProductModal({ open: false, product: null, mode: "create" });
     await load();
   };
@@ -174,7 +175,7 @@ export default function AdminDashboard() {
   const addToCart = (product, quantity = 1) => {
     const nextItem = productToPreorderItem(product, quantity);
     setDraftPreorder((current) => {
-      const preorder = current || { status: "pendiente", preorder_items: [] };
+      const preorder = current || { status: "pendiente", tenant_id: tenantId, created_by: profile?.id || "", preorder_items: [] };
       const existing = preorder.preorder_items.find((item) => item.producto_codigo === product.codigo);
       const preorderItems = existing
         ? preorder.preorder_items.map((item) =>
@@ -189,7 +190,7 @@ export default function AdminDashboard() {
   };
 
   const handleSaveClient = async () => {
-    await saveClient(clientForm);
+    await saveClient(clientForm, tenantId);
     setClientForm(blankClient);
     await load();
     window.alert("Cliente creado. Ahora revisa el menu de precios para confirmar labor por linea y plata fina antes de cotizar.");
@@ -288,7 +289,7 @@ export default function AdminDashboard() {
 
         {tab === "catalog" ? (
           <section className="admin-workspace">
-            <ImportPanel onImported={load} />
+            <ImportPanel onImported={load} tenantId={tenantId} />
             <div className="admin-toolbar one-input">
               <AdvancedSearch
                 value={productQuery}
@@ -392,14 +393,14 @@ export default function AdminDashboard() {
         ) : null}
 
         {tab === "prices" ? (
-          <PricingPanel clients={data.clients} products={products} />
+          <PricingPanel clients={data.clients} products={products} tenantId={tenantId} profile={profile} />
         ) : null}
         {tab === "preorders" ? (
-          <PreorderList clients={data.clients} />
+          <PreorderList clients={data.clients} profile={profile} />
         ) : null}
 
         {tab === "company" ? (
-          <CompanySettingsPanel />
+          <CompanySettingsPanel tenantId={tenantId} />
         ) : null}
       </main>
 
@@ -423,6 +424,8 @@ export default function AdminDashboard() {
         <PreorderEditor
           preorder={draftPreorder}
           clients={data.clients}
+          tenantId={tenantId}
+          profile={profile}
           onClose={(updatedDraft) => {
             if (updatedDraft) setDraftPreorder(updatedDraft);
             setIsDraftOpen(false);

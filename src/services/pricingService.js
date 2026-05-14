@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { getTenantId, withTenant } from "./tenantUtils";
 
 const emptyMetalPrices = {
   kitco_usd_oz: 0,
@@ -21,33 +22,38 @@ export const getSilverFinePrice = (metalPrices = emptyMetalPrices) => {
   return (kitco / 31.1035) * (1 + premium / 100) * exchange;
 };
 
-export const fetchLines = async () => {
-  const { data, error } = await supabase
+export const fetchLines = async (profileOrTenantId = "") => {
+  const tenantId = getTenantId(profileOrTenantId);
+  const { data, error } = await withTenant(
+    supabase
     .from("product_lines")
     .select("*")
     .eq("activa", true)
-    .order("codigo");
+      .order("codigo"),
+    tenantId
+  );
   if (error) throw error;
   return data || [];
 };
 
-export const saveLine = async (line) => {
+export const saveLine = async (line, profileOrTenantId = "") => {
+  const tenantId = getTenantId(profileOrTenantId);
+  const row = {
+    ...line,
+    codigo: String(line.codigo || "").trim(),
+    mo_base: Number(line.mo_base || 0),
+    activa: line.activa ?? true,
+    updated_at: new Date().toISOString(),
+  };
+  if (tenantId) row.tenant_id = tenantId;
   const { error } = await supabase
     .from("product_lines")
-    .upsert(
-      {
-        ...line,
-        codigo: String(line.codigo || "").trim(),
-        mo_base: Number(line.mo_base || 0),
-        activa: line.activa ?? true,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "codigo" }
-    );
+    .upsert(row, { onConflict: "codigo" });
   if (error) throw error;
 };
 
-export const syncProductLinesFromProducts = async (products = []) => {
+export const syncProductLinesFromProducts = async (products = [], profileOrTenantId = "") => {
+  const tenantId = getTenantId(profileOrTenantId);
   const lineMap = new Map();
 
   products.forEach((product) => {
@@ -71,34 +77,40 @@ export const syncProductLinesFromProducts = async (products = []) => {
 
   const rows = [...lineMap.values()];
   if (!rows.length) return [];
+  if (tenantId) rows.forEach((row) => { row.tenant_id = tenantId; });
 
   const { error } = await supabase.from("product_lines").upsert(rows, { onConflict: "codigo" });
   if (error) throw error;
-  return fetchLines();
+  return fetchLines(tenantId);
 };
 
-export const fetchMetalPrices = async () => {
-  const { data, error } = await supabase
+export const fetchMetalPrices = async (profileOrTenantId = "") => {
+  const tenantId = getTenantId(profileOrTenantId);
+  let query = supabase
     .from("metal_prices")
     .select("*")
     .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+  query = withTenant(query, tenantId);
+  const { data, error } = await query.maybeSingle();
   if (error || !data) return emptyMetalPrices;
   return { ...emptyMetalPrices, ...data };
 };
 
-export const saveMetalPrices = async ({ kitco_usd_oz, tipo_cambio, premio_pct }, userEmail) => {
+export const saveMetalPrices = async ({ kitco_usd_oz, tipo_cambio, premio_pct }, userEmail, profileOrTenantId = "") => {
+  const tenantId = getTenantId(profileOrTenantId);
   const finePrice = getSilverFinePrice({ kitco_usd_oz, tipo_cambio, premio_pct });
 
-  const { error } = await supabase.from("metal_prices").insert({
+  const row = {
     kitco_usd_oz: Number(kitco_usd_oz || 0),
     tipo_cambio: Number(tipo_cambio || 0),
     premio_pct: Number(premio_pct || 0),
     plata_fina_mxn: finePrice,
     updated_at: new Date().toISOString(),
     updated_by: userEmail || "admin",
-  });
+  };
+  if (tenantId) row.tenant_id = tenantId;
+  const { error } = await supabase.from("metal_prices").insert(row);
   if (error) throw error;
 };
 
