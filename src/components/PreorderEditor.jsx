@@ -53,7 +53,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
   };
 
   const [po, setPo] = useState({ ...blank, ...(initial || {}) });
-  const [items, setItems] = useState((initial?.preorder_items || []).map((item) => ({ ...item, _gt_manual: item.gramos_total })));
+  const [items, setItems] = useState((initial?.preorder_items || []).map((item) => ({ ...item })));
   const [lines, setLines] = useState([]);
   const [metalPrices, setMetalPrices] = useState({});
   const [plataFinaMxn, setPlataFinaMxn] = useState(0);
@@ -100,7 +100,9 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
     if (pricingLocked) return;
     setItems((current) => {
       const next = [...current];
-      next[idx] = calcItem({ ...next[idx], [key]: value });
+      const updated = { ...next[idx], [key]: value };
+      if (key === "piezas" || key === "gramos_por_pieza") delete updated._gt_manual;
+      next[idx] = calcItem(updated);
       return next;
     });
   };
@@ -296,6 +298,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
                     <th>SKU</th>
                     <th className="right">Cantidad</th>
                     <th>Descripcion</th>
+                    <th>Linea</th>
                     <th className="right">Peso unit.</th>
                     <th className="right">Gramos totales</th>
                     <th className="right">Labor/g {moneyLabel}</th>
@@ -315,8 +318,9 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
                         <td><input type="number" min="1" value={item.piezas} onChange={(event) => setItem(idx, "piezas", Number(event.target.value))} /></td>
                         <td>
                           <div>{item.producto_descripcion}</div>
-                          <small>{[item.producto_metal, item.producto_kilataje, item.producto_linea].filter(Boolean).join(" / ")}</small>
+                          <small>{[item.producto_metal, item.producto_kilataje].filter(Boolean).join(" / ")}</small>
                         </td>
+                        <td><strong>{item.producto_linea || "-"}</strong></td>
                         <td><input type="number" step="0.01" value={item.gramos_por_pieza} onChange={(event) => setItem(idx, "gramos_por_pieza", Number(event.target.value))} /></td>
                         <td><input type="number" step="0.01" value={item._gt_manual ?? item.gramos_total} onChange={(event) => setGTotal(idx, event.target.value)} readOnly={pricingLocked} /></td>
                         <td><input type="number" step="0.01" value={toDisplayMoney(item.labor_mxn) || ""} onChange={(event) => setLabor(idx, event.target.value)} readOnly={pricingLocked} /></td>
@@ -327,7 +331,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
                       </tr>
                     );
                   }) : (
-                    <tr><td colSpan="11" className="empty-row">Sin productos. Agrega productos desde el catalogo.</td></tr>
+                    <tr><td colSpan="12" className="empty-row">Sin productos. Agrega productos desde el catalogo.</td></tr>
                   )}
                 </tbody>
               </table>
