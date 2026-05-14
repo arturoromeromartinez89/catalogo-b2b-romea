@@ -34,7 +34,10 @@ const buildFolio = (customer) => {
   const num = customer.numero || "";
   if (num.startsWith("PRE-")) return num;
   const serie = customer.serie || "PRE";
-  return num ? `${serie}-${num}` : serie;
+  if (num) return `${serie}-${num}`;
+  const d = new Date();
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${serie}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
 };
 
 export async function generatePdf(cartItems, customer, language = "es", company = {}, opts = {}) {
@@ -204,7 +207,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     y += 5;
     const usd = grandTotal / Number(customer.tipoCambio);
     doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(100,100,100);
-    txt(doc, `≈ ${money(usd)} USD (TC $${customer.tipoCambio})`, page.w - page.margin, y, { align: "right" });
+    txt(doc, `Aprox. ${money(usd)} USD (TC $${customer.tipoCambio})`, page.w - page.margin, y, { align: "right" });
   }
 
   y += 6;

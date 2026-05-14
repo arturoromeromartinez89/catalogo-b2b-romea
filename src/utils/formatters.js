@@ -35,5 +35,16 @@ export const shortText = (value, max = 72) => {
   return text.length > max ? `${text.slice(0, max - 1)}...` : text;
 };
 
-export const buildPlaceholderUrl = (code = "Sin foto") =>
-  `https://placehold.co/640x640/f7f5f2/1f335f?text=${encodeURIComponent(code || "Sin foto")}`;
+export const buildPlaceholderUrl = () => {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+      <rect width="640" height="640" fill="#f4f6fb"/>
+      <g fill="none" stroke="#c5cfe0" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M214 250h42l28-34h72l28 34h42c25 0 45 20 45 45v105c0 25-20 45-45 45H214c-25 0-45-20-45-45V295c0-25 20-45 45-45z"/>
+        <circle cx="320" cy="346" r="62"/>
+      </g>
+      <text x="320" y="505" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#1f335f">Sin foto</text>
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};

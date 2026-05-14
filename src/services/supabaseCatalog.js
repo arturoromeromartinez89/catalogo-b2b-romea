@@ -2,7 +2,7 @@ import { supabase } from "../lib/supabaseClient";
 import { getTenantId, withTenant } from "./tenantUtils";
 import { normalizeText } from "../utils/textNormalizer";
 
-const PAGE_SIZE = 1000;
+const PAGE_SIZE = 500;
 
 const firstValue = (...values) => values.find((value) => value !== undefined && value !== null);
 
@@ -20,7 +20,7 @@ const toDbBoolean = (...values) => {
   return ["1", "si", "sí", "yes", "true", "activo", "active", "alta"].includes(normalizeText(value));
 };
 
-const fetchAllProducts = async ({ visibleOnly = false, tenantId = "" } = {}) => {
+export const fetchAllProducts = async ({ visibleOnly = false, tenantId = "" } = {}) => {
   const rows = [];
   let from = 0;
 

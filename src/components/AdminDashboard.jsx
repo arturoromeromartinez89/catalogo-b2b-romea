@@ -106,6 +106,7 @@ export default function AdminDashboard({ profile }) {
   const [tab, setTab] = useState("catalog");
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("");
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const [productModal, setProductModal] = useState({ open: false, product: null, mode: "create" });
   const [clientForm, setClientForm] = useState(blankClient);
   const [priceListForm, setPriceListForm] = useState(blankPriceList);
@@ -121,9 +122,16 @@ export default function AdminDashboard({ profile }) {
   const [isDraftOpen, setIsDraftOpen] = useState(false);
 
   const load = async () => {
-    const nextData = await fetchAdminData(profile);
-    setData(nextData);
-    setSelectedPriceListId((current) => current || nextData.priceLists[0]?.id || "");
+    setLoadingProducts(true);
+    setStatus("Cargando catálogo...");
+    try {
+      const nextData = await fetchAdminData(profile);
+      setData(nextData);
+      setSelectedPriceListId((current) => current || nextData.priceLists[0]?.id || "");
+      setStatus("");
+    } finally {
+      setLoadingProducts(false);
+    }
   };
 
   useEffect(() => {
@@ -233,8 +241,8 @@ export default function AdminDashboard({ profile }) {
         <section className="sidebar-section">
           <h3>{t("productBase")}</h3>
           <div className="mini-summary">
-            <div><span>{t("totalLabel")}</span><strong>{products.length}</strong></div>
-            <div><span>{t("visible")}</span><strong>{visibleCount}</strong></div>
+            <div><span>{t("totalLabel")}</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
+            <div><span>{t("visible")}</span><strong>{loadingProducts ? "..." : visibleCount.toLocaleString()}</strong></div>
             <div><span>{t("preorder")}</span><strong>{draftPreorder?.preorder_items?.reduce((sum, item) => sum + Number(item.piezas || 0), 0) || 0}</strong></div>
             <div><span>{t("models")}</span><strong>{draftPreorder?.preorder_items?.length || 0}</strong></div>
           </div>
@@ -430,10 +438,12 @@ export default function AdminDashboard({ profile }) {
             if (updatedDraft) setDraftPreorder(updatedDraft);
             setIsDraftOpen(false);
           }}
-          onSaved={() => {
+          onSaved={async () => {
             setDraftPreorder(null);
             setIsDraftOpen(false);
-            load();
+            setTab("preorders");
+            await load();
+            setStatus("Preorden guardada correctamente. Puedes verla en el menú Preórdenes.");
           }}
         />
       ) : null}
