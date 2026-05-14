@@ -9,6 +9,7 @@ const copy = {
     missingProfile: "Tu usuario existe, pero falta crear su perfil. Corre el SQL de reparación que te indiqué.",
     noConnect: "No se pudo conectar con Supabase.",
     noRefresh: "No se pudo actualizar la sesión.",
+    expiredSession: "La sesión anterior caducó. Vuelve a iniciar sesión.",
     accountCreated: "Cuenta creada. Revisa tu correo si Supabase pide confirmación.",
     noSignin: "No se pudo iniciar sesión.",
     missingSupabase: "Falta conectar Supabase",
@@ -34,6 +35,7 @@ const copy = {
     missingProfile: "Your user exists, but its profile is missing. Run the repair SQL I gave you.",
     noConnect: "Could not connect to Supabase.",
     noRefresh: "Could not refresh the session.",
+    expiredSession: "The previous session expired. Please sign in again.",
     accountCreated: "Account created. Check your email if Supabase requires confirmation.",
     noSignin: "Could not sign in.",
     missingSupabase: "Supabase connection missing",
@@ -64,6 +66,11 @@ const withTimeout = (promise, ms = 9000, message = copy.es.timeout) =>
     }),
   ]);
 
+const isExpiredTokenError = (error) => {
+  const message = String(error?.message || "");
+  return message.includes("Invalid Refresh Token") || message.includes("Refresh Token Not Found");
+};
+
 export default function AuthGate({ children }) {
   const { language, t } = useLanguage();
   const text = copy[language] || copy.es;
@@ -85,7 +92,14 @@ export default function AuthGate({ children }) {
         setMessage(text.missingProfile);
       }
     } catch (error) {
-      setMessage(error.message || text.noConnect);
+      if (isExpiredTokenError(error)) {
+        await supabase.auth.signOut();
+        setSession(null);
+        setProfile(null);
+        setMessage(text.expiredSession);
+      } else {
+        setMessage(error.message || text.noConnect);
+      }
     } finally {
       setLoading(false);
     }
@@ -99,16 +113,14 @@ export default function AuthGate({ children }) {
 
     refreshSession();
 
-    const { data } = supabase.auth.onAuthStateChange(async () => {
-      try {
-        const next = await withTimeout(getSessionAndProfile(), 9000, text.timeout);
-        setSession(next.session);
-        setProfile(next.profile);
-      } catch (error) {
-        setMessage(error.message || text.noRefresh);
-      } finally {
-        setLoading(false);
-      }
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      window.setTimeout(() => {
+        refreshSession().catch((error) => {
+          setMessage(isExpiredTokenError(error) ? text.expiredSession : error.message || text.noRefresh);
+          setLoading(false);
+        });
+      }, 0);
     });
     return () => data.subscription.unsubscribe();
   }, []);
@@ -129,7 +141,14 @@ export default function AuthGate({ children }) {
       setSession(next.session);
       setProfile(next.profile);
     } catch (error) {
-      setMessage(error.message || text.noSignin);
+      if (isExpiredTokenError(error)) {
+        await supabase.auth.signOut();
+        setSession(null);
+        setProfile(null);
+        setMessage(text.expiredSession);
+      } else {
+        setMessage(error.message || text.noSignin);
+      }
     } finally {
       setLoading(false);
     }
