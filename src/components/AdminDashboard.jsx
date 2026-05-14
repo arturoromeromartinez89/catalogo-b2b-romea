@@ -35,6 +35,7 @@ import { normalizeText } from "../utils/textNormalizer";
 const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", active: true };
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
+const PRODUCT_RENDER_BATCH = 120;
 const tabs = ["catalog", "preorders", "clients", "prices", "company"];
 const tabKeys = {
   catalog: "catalog",
@@ -121,6 +122,7 @@ export default function AdminDashboard({ profile }) {
   const [draftPreorder, setDraftPreorder] = useState(null);
   const [isDraftOpen, setIsDraftOpen] = useState(false);
   const [addedCodes, setAddedCodes] = useState([]);
+  const [visibleProductLimit, setVisibleProductLimit] = useState(PRODUCT_RENDER_BATCH);
 
   const load = async () => {
     setLoadingProducts(true);
@@ -147,7 +149,15 @@ export default function AdminDashboard({ profile }) {
     () => applyFilters(products, productQuery, filters, quickFilters, searchChips),
     [products, productQuery, filters, quickFilters, searchChips]
   );
+  const renderedProducts = useMemo(
+    () => filteredProducts.slice(0, visibleProductLimit),
+    [filteredProducts, visibleProductLimit]
+  );
   const visibleCount = products.filter((product) => product.visibleWeb).length;
+
+  useEffect(() => {
+    setVisibleProductLimit(PRODUCT_RENDER_BATCH);
+  }, [productQuery, searchChips, filters, quickFilters]);
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();
     if (!trimmed) return;
@@ -323,14 +333,16 @@ export default function AdminDashboard({ profile }) {
                 onDuplicate={(product) => setProductModal({ open: true, product, mode: "duplicate" })}
               />
             ) : filteredProducts.length ? (
+              <>
               <div className="admin-product-grid">
-                {filteredProducts.map((product) => (
+                {renderedProducts.map((product) => (
                   <article className={`admin-product-card enabled ${addedCodes.includes(product.codigo) ? "in-preorder" : ""}`} key={product.id || product.codigo}>
                     {addedCodes.includes(product.codigo) ? <span className="preorder-added-badge">✓ En preorden</span> : null}
                     <button className="admin-product-image" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
                       <img
                         src={product.fotoUrl || buildPlaceholderUrl(t("noPhoto"))}
                         alt={product.descripcion}
+                        loading="lazy"
                         onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(t("noPhoto")); }}
                       />
                     </button>
@@ -354,6 +366,14 @@ export default function AdminDashboard({ profile }) {
                   </article>
                 ))}
               </div>
+              {filteredProducts.length > renderedProducts.length ? (
+                <div className="load-more-row">
+                  <button className="secondary-button compact-action" type="button" onClick={() => setVisibleProductLimit((current) => current + PRODUCT_RENDER_BATCH)}>
+                    Mostrar más productos ({renderedProducts.length.toLocaleString()} de {filteredProducts.length.toLocaleString()})
+                  </button>
+                </div>
+              ) : null}
+              </>
             ) : (
               <div className="empty-state">
                 <h2>{t("noProducts")}</h2>

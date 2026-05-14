@@ -13,6 +13,31 @@ const calcTotals = (items) => ({
   total_mxn: items.reduce((s, i) => s + Number(i.subtotal_mxn || 0), 0),
 });
 
+const toDbNumber = (value, fallback = 0) => {
+  if (value === "" || value === null || value === undefined) return fallback;
+  const number = Number(String(value).replace(/,/g, "").trim());
+  return Number.isFinite(number) ? number : fallback;
+};
+
+const cleanPreorderNumbers = (preorderData) => ({
+  ...preorderData,
+  tipo_cambio: toDbNumber(preorderData.tipo_cambio, 0),
+  total_piezas: toDbNumber(preorderData.total_piezas, 0),
+  total_gramos: toDbNumber(preorderData.total_gramos, 0),
+  total_mxn: toDbNumber(preorderData.total_mxn, 0),
+});
+
+const cleanItemNumbers = (item, idx) => ({
+  ...item,
+  piezas: toDbNumber(item.piezas, 0),
+  gramos_por_pieza: toDbNumber(item.gramos_por_pieza, 0),
+  gramos_total: toDbNumber(item.gramos_total, 0),
+  labor_mxn: toDbNumber(item.labor_mxn, 0),
+  precio_gramo_mxn: toDbNumber(item.precio_gramo_mxn, 0),
+  subtotal_mxn: toDbNumber(item.subtotal_mxn, 0),
+  sort_order: toDbNumber(item.sort_order, idx),
+});
+
 // ── ADMIN ─────────────────────────────────────────────────
 export const fetchAllPreorders = async (profile) => {
   const tenantId = isSuperAdmin(profile) ? "" : getTenantId(profile);
@@ -50,12 +75,12 @@ export const savePreorder = async (preorder, items) => {
     delete clean.tenantId;
   }
 
-  const preorderData = {
+  const preorderData = cleanPreorderNumbers({
     ...clean,
     folio: clean.folio || buildFolio(),
     ...totals,
     updated_at: new Date().toISOString(),
-  };
+  });
 
   let preorderId = preorder.id;
 
@@ -80,12 +105,12 @@ export const savePreorder = async (preorder, items) => {
   if (items.length > 0) {
     const itemsData = items.map((item, idx) => {
       const { id, preorder_id, created_at, _gt_manual, ...cleanItem } = item;
-      return {
+      return cleanItemNumbers({
         ...cleanItem,
         preorder_id: preorderId,
         sort_order: idx,
         updated_at: new Date().toISOString(),
-      };
+      }, idx);
     });
     const { error } = await supabase.from("preorder_items").insert(itemsData);
     if (error) throw error;

@@ -19,6 +19,7 @@ const orderDefaults = {
   es: { concept: "Preorden mayorista", status: "Pendiente" },
   en: { concept: "Wholesale preorder", status: "Pending" },
 };
+const PRODUCT_RENDER_BATCH = 120;
 
 const makeDefaultCustomer = (language = "es") => ({
   serie: "PRE",
@@ -51,6 +52,7 @@ export default function ClientCatalogApp({ profile }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [status, setStatus] = useState("");
   const [addedCodes, setAddedCodes] = useState([]);
+  const [visibleProductLimit, setVisibleProductLimit] = useState(PRODUCT_RENDER_BATCH);
   const tenantId = profile?.tenant_id || profile?.tenantId || "";
 
   useEffect(() => {
@@ -109,8 +111,16 @@ export default function ClientCatalogApp({ profile }) {
     () => applyFilters(products, query, filters, quickFilters, searchChips),
     [products, query, filters, quickFilters, searchChips]
   );
+  const renderedProducts = useMemo(
+    () => filteredProducts.slice(0, visibleProductLimit),
+    [filteredProducts, visibleProductLimit]
+  );
   const selectedProduct = products.find((product) => product.codigo === selectedCode);
   const preorderPieces = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+  useEffect(() => {
+    setVisibleProductLimit(PRODUCT_RENDER_BATCH);
+  }, [query, searchChips, filters, quickFilters]);
 
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();
@@ -271,8 +281,9 @@ export default function ClientCatalogApp({ profile }) {
               onAdd={addToCart}
             />
           ) : filteredProducts.length ? (
+            <>
             <div className="admin-product-grid">
-              {filteredProducts.map((product) => (
+              {renderedProducts.map((product) => (
                 <article className={`admin-product-card enabled ${addedCodes.includes(product.codigo) ? "in-preorder" : ""}`} key={product.id || product.codigo}>
                   {addedCodes.includes(product.codigo) ? <span className="preorder-added-badge">✓ En preorden</span> : null}
                   <button
@@ -283,6 +294,7 @@ export default function ClientCatalogApp({ profile }) {
                     <img
                       src={product.fotoUrl || buildPlaceholderUrl(t("noPhoto"))}
                       alt={product.descripcion}
+                      loading="lazy"
                       onError={(event) => {
                         event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
                       }}
@@ -321,6 +333,14 @@ export default function ClientCatalogApp({ profile }) {
                 </article>
               ))}
             </div>
+            {filteredProducts.length > renderedProducts.length ? (
+              <div className="load-more-row">
+                <button className="secondary-button compact-action" type="button" onClick={() => setVisibleProductLimit((current) => current + PRODUCT_RENDER_BATCH)}>
+                  Mostrar más productos ({renderedProducts.length.toLocaleString()} de {filteredProducts.length.toLocaleString()})
+                </button>
+              </div>
+            ) : null}
+            </>
           ) : (
             <div className="empty-state">
               <h2>{t("noProducts")}</h2>
