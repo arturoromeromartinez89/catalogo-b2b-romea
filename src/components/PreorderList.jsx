@@ -11,7 +11,7 @@ const STATUS_LABELS = {
 
 const fmt = (n) => n != null ? `$${Number(n).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
 
-export default function PreorderList({ clients, profile }) {
+export default function PreorderList({ clients, products = [], profile }) {
   const [preorders, setPreorders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
@@ -115,6 +115,7 @@ export default function PreorderList({ clients, profile }) {
         <PreorderEditor
           preorder={selected}
           clients={clients}
+          products={products}
           tenantId={profile?.tenant_id || ""}
           profile={profile}
           onClose={() => setSelected(null)}

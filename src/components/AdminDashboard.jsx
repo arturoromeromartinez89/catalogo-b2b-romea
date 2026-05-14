@@ -120,6 +120,7 @@ export default function AdminDashboard({ profile }) {
   const [selectedProductCode, setSelectedProductCode] = useState("");
   const [draftPreorder, setDraftPreorder] = useState(null);
   const [isDraftOpen, setIsDraftOpen] = useState(false);
+  const [addedCodes, setAddedCodes] = useState([]);
 
   const load = async () => {
     setLoadingProducts(true);
@@ -194,6 +195,7 @@ export default function AdminDashboard({ profile }) {
         : [...preorder.preorder_items, nextItem];
       return { ...preorder, preorder_items: preorderItems };
     });
+    setAddedCodes((current) => current.includes(product.codigo) ? current : [...current, product.codigo]);
     setStatus(`Producto ${product.codigo} agregado a la preorden en proceso.`);
   };
 
@@ -323,7 +325,8 @@ export default function AdminDashboard({ profile }) {
             ) : filteredProducts.length ? (
               <div className="admin-product-grid">
                 {filteredProducts.map((product) => (
-                  <article className="admin-product-card enabled" key={product.id || product.codigo}>
+                  <article className={`admin-product-card enabled ${addedCodes.includes(product.codigo) ? "in-preorder" : ""}`} key={product.id || product.codigo}>
+                    {addedCodes.includes(product.codigo) ? <span className="preorder-added-badge">✓ En preorden</span> : null}
                     <button className="admin-product-image" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
                       <img
                         src={product.fotoUrl || buildPlaceholderUrl(t("noPhoto"))}
@@ -404,7 +407,7 @@ export default function AdminDashboard({ profile }) {
           <PricingPanel clients={data.clients} products={products} tenantId={tenantId} profile={profile} />
         ) : null}
         {tab === "preorders" ? (
-          <PreorderList clients={data.clients} profile={profile} />
+          <PreorderList clients={data.clients} products={products} profile={profile} />
         ) : null}
 
         {tab === "company" ? (
@@ -432,6 +435,7 @@ export default function AdminDashboard({ profile }) {
         <PreorderEditor
           preorder={draftPreorder}
           clients={data.clients}
+          products={products}
           tenantId={tenantId}
           profile={profile}
           onClose={(updatedDraft) => {
@@ -440,6 +444,7 @@ export default function AdminDashboard({ profile }) {
           }}
           onSaved={async () => {
             setDraftPreorder(null);
+            setAddedCodes([]);
             setIsDraftOpen(false);
             setTab("preorders");
             await load();

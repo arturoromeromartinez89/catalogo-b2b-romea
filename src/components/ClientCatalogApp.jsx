@@ -50,6 +50,7 @@ export default function ClientCatalogApp({ profile }) {
   const [selectedCode, setSelectedCode] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [status, setStatus] = useState("");
+  const [addedCodes, setAddedCodes] = useState([]);
   const tenantId = profile?.tenant_id || profile?.tenantId || "";
 
   useEffect(() => {
@@ -132,6 +133,7 @@ export default function ClientCatalogApp({ profile }) {
       }
       return [...current, { product, quantity: amount }];
     });
+    setAddedCodes((current) => current.includes(product.codigo) ? current : [...current, product.codigo]);
     setStatus(`${product.codigo} agregado a tu preorden.`);
   };
 
@@ -271,7 +273,8 @@ export default function ClientCatalogApp({ profile }) {
           ) : filteredProducts.length ? (
             <div className="admin-product-grid">
               {filteredProducts.map((product) => (
-                <article className="admin-product-card enabled" key={product.id || product.codigo}>
+                <article className={`admin-product-card enabled ${addedCodes.includes(product.codigo) ? "in-preorder" : ""}`} key={product.id || product.codigo}>
+                  {addedCodes.includes(product.codigo) ? <span className="preorder-added-badge">✓ En preorden</span> : null}
                   <button
                     className="admin-product-image"
                     type="button"
@@ -356,6 +359,7 @@ export default function ClientCatalogApp({ profile }) {
           }}
           onSaved={() => {
             setCartItems([]);
+            setAddedCodes([]);
             setIsCartOpen(false);
             setStatus("Preorden guardada. El administrador ya puede verla en el menu Preordenes.");
           }}

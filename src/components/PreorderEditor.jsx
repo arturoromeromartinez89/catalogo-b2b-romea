@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice } from "../services/pricingService";
 import { savePreorder, deletePreorder } from "../services/preorderService";
 import { generatePdf } from "../utils/pdfGenerator";
 import { useLanguage } from "../i18n/LanguageContext";
+import { buildPlaceholderUrl, shortText } from "../utils/formatters";
+import { normalizeText } from "../utils/textNormalizer";
 
 const STATUS = {
   pendiente: { label: "Pendiente", color: "#d97706" },
@@ -26,6 +28,32 @@ const calcItem = (item) => {
   return { ...item, gramos_total: gTotal, subtotal_mxn: gTotal * pGramo };
 };
 
+const productToPreorderItem = (product, quantity = 1, lines = [], plataFinaMxn = 0) => {
+  const piezas = Math.max(1, Number(quantity || 1));
+  const gramosPorPieza = Number(product.pesoPromedio || product.peso_promedio || 0);
+  const line = lines.find((lineItem) => normalizeText(lineItem.codigo) === normalizeText(product.linea));
+  const price = line && plataFinaMxn
+    ? calcPrecioGramo({ mo_base: line.mo_base, plata_fina_mxn: plataFinaMxn })
+    : null;
+  const labor = Number(price?.mo_visible || product.quoteLaborPerGram || product.manoObra || product.mano_obra || 0);
+  const precioGramo = Number(price?.integrado || product.quotePricePerGram || product.precioMinimo || product.precio_minimo || 0);
+
+  return {
+    producto_codigo: product.codigo,
+    producto_descripcion: product.descripcion,
+    producto_metal: product.metal,
+    producto_kilataje: product.kilataje,
+    producto_linea: product.linea,
+    producto_foto_url: product.fotoUrl || product.foto_url || "",
+    piezas,
+    gramos_por_pieza: gramosPorPieza,
+    gramos_total: piezas * gramosPorPieza,
+    labor_mxn: labor,
+    precio_gramo_mxn: precioGramo,
+    subtotal_mxn: piezas * gramosPorPieza * precioGramo,
+  };
+};
+
 const Field = ({ label, children }) => (
   <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: "var(--color-text-secondary)" }}>
     {label}
@@ -33,7 +61,7 @@ const Field = ({ label, children }) => (
   </label>
 );
 
-function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, pricingLocked = false, tenantId = "", profile }) {
+function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, pricingLocked = false, tenantId = "", profile }) {
   const { language } = useLanguage();
   const company = useCompany();
   const isNew = !initial?.id;
@@ -61,7 +89,9 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
   const [metalPrices, setMetalPrices] = useState({});
   const [plataFinaMxn, setPlataFinaMxn] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [msg, setMsg] = useState("");
+  const [productSearch, setProductSearch] = useState("");
 
   useEffect(() => {
     fetchLines(resolvedTenantId).then(setLines).catch((error) => setMsg(`Error: ${error.message}`));
@@ -158,14 +188,45 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
     mxn: items.reduce((sum, item) => sum + Number(item.subtotal_mxn || 0), 0),
   };
 
+  const productResults = useMemo(() => {
+    const term = normalizeText(productSearch);
+    if (!term || term.length < 2) return [];
+    return products
+      .filter((product) => {
+        const text = product.searchText || normalizeText([product.codigo, product.descripcion, product.linea, product.familia].join(" "));
+        return term.split(/\s+/).every((word) => text.includes(word));
+      })
+      .slice(0, 8);
+  }, [productSearch, products]);
+
+  const addProduct = (product) => {
+    const nextItem = productToPreorderItem(product, 1, lines, plataFinaMxn);
+    setItems((current) => {
+      const existing = current.find((item) => item.producto_codigo === nextItem.producto_codigo);
+      if (existing) {
+        return current.map((item) =>
+          item.producto_codigo === nextItem.producto_codigo
+            ? calcItem({ ...item, piezas: Number(item.piezas || 0) + 1 })
+            : item
+        );
+      }
+      return [...current, nextItem];
+    });
+    setProductSearch("");
+    setMsg(`${product.codigo} agregado a la preorden.`);
+  };
+
   const handleSave = async () => {
     if (!po.client_id) { setMsg("Debes seleccionar un cliente existente para guardar la preorden."); return; }
     if (!items.length) { setMsg("Agrega al menos un producto para guardar la preorden."); return; }
     setSaving(true);
+    setSaved(false);
     try {
       const savedId = await savePreorder({ ...po, tenant_id: resolvedTenantId, created_by: po.created_by || profile?.id || null }, items);
-      setMsg("Preorden guardada correctamente.");
-      onSaved?.({ id: savedId });
+      setPo((current) => ({ ...current, id: savedId }));
+      setSaved(true);
+      setMsg("Preorden guardada correctamente. Se cerrara automaticamente y aparecera en el menu Preordenes.");
+      window.setTimeout(() => onSaved?.({ id: savedId }), 900);
     } catch (error) {
       setMsg(`Error: ${error.message}`);
     } finally {
@@ -295,6 +356,36 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
               </div>
             </div>
             {msg ? <p className="status info">{msg}</p> : null}
+            {!pricingLocked && products.length ? (
+              <div className="quote-product-picker">
+                <label>
+                  Agregar producto a esta preorden
+                  <input
+                    value={productSearch}
+                    onChange={(event) => setProductSearch(event.target.value)}
+                    placeholder="Buscar por SKU, descripcion, linea o familia"
+                  />
+                </label>
+                {productResults.length ? (
+                  <div className="quote-product-results">
+                    {productResults.map((product) => (
+                      <button key={product.id || product.codigo} type="button" onClick={() => addProduct(product)}>
+                        <img
+                          src={product.fotoUrl || buildPlaceholderUrl()}
+                          alt={product.descripcion}
+                          onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
+                        />
+                        <span>
+                          <strong>{product.codigo}</strong>
+                          <small>{shortText(product.descripcion, 62)}</small>
+                        </span>
+                        <b>Agregar</b>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="responsive-table">
               <table className="simple-admin-table quote-items-table">
@@ -358,7 +449,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
           <div className="quote-footer-actions">
             <button className="secondary-button compact-action" type="button" onClick={handleClose}>Cancelar</button>
             <button className="secondary-button compact-action" type="button" onClick={handlePdf}>Generar PDF</button>
-            <button className="primary-button compact-action" type="button" onClick={handleSave} disabled={saving}>{saving ? "Guardando..." : "Guardar preorden"}</button>
+            <button className="primary-button compact-action" type="button" onClick={handleSave} disabled={saving || saved}>{saving ? "Guardando..." : saved ? "Guardado ✓" : "Guardar preorden"}</button>
           </div>
         </footer>
       </div>
