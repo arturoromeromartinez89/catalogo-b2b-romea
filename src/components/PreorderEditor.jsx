@@ -100,7 +100,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
     calcItem({ ...item, labor_mxn: Number(laborMxn || 0), precio_gramo_mxn: Number(laborMxn || 0) + Number(silverMxn || 0) });
 
   const setItem = (idx, key, value) => {
-    if (pricingLocked) return;
+    if (pricingLocked && key !== "piezas") return;
     setItems((current) => {
       const next = [...current];
       const updated = { ...next[idx], [key]: value };
@@ -111,6 +111,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
   };
 
   const setGTotal = (idx, value) => {
+    if (pricingLocked) return;
     setItems((current) => {
       const next = [...current];
       const item = { ...next[idx], _gt_manual: value };
@@ -122,6 +123,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
   };
 
   const setLabor = (idx, value) => {
+    if (pricingLocked) return;
     setItems((current) => {
       const next = [...current];
       next[idx] = recalcWithPrice(next[idx], fromDisplayMoney(value), plataFinaMxn);
@@ -158,11 +160,12 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, p
 
   const handleSave = async () => {
     if (!po.client_id) { setMsg("Debes seleccionar un cliente existente para guardar la preorden."); return; }
+    if (!items.length) { setMsg("Agrega al menos un producto para guardar la preorden."); return; }
     setSaving(true);
     try {
-      await savePreorder({ ...po, tenant_id: resolvedTenantId, created_by: po.created_by || profile?.id || null }, items);
-      setMsg("Guardado.");
-      onSaved?.();
+      const savedId = await savePreorder({ ...po, tenant_id: resolvedTenantId, created_by: po.created_by || profile?.id || null }, items);
+      setMsg("Preorden guardada correctamente.");
+      onSaved?.({ id: savedId });
     } catch (error) {
       setMsg(`Error: ${error.message}`);
     } finally {

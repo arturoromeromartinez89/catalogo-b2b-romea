@@ -78,12 +78,15 @@ export const savePreorder = async (preorder, items) => {
   }
 
   if (items.length > 0) {
-    const itemsData = items.map((item, idx) => ({
-      ...item,
-      preorder_id: preorderId,
-      sort_order: idx,
-      updated_at: new Date().toISOString(),
-    }));
+    const itemsData = items.map((item, idx) => {
+      const { id, preorder_id, created_at, _gt_manual, ...cleanItem } = item;
+      return {
+        ...cleanItem,
+        preorder_id: preorderId,
+        sort_order: idx,
+        updated_at: new Date().toISOString(),
+      };
+    });
     const { error } = await supabase.from("preorder_items").insert(itemsData);
     if (error) throw error;
   }

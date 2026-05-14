@@ -16,13 +16,17 @@ export default function PreorderList({ clients, profile }) {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [status, setStatus] = useState("");
 
   const load = async () => {
     setLoading(true);
     try {
       const data = await fetchAllPreorders(profile);
       setPreorders(data);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setStatus(`Error al cargar preórdenes: ${e.message}`);
+    }
     finally { setLoading(false); }
   };
 
@@ -54,6 +58,7 @@ export default function PreorderList({ clients, profile }) {
           + Nueva preorden
         </button>
       </div>
+      {status ? <p className="status info">{status}</p> : null}
 
       {/* ── TABLA ── */}
       {loading ? (
@@ -113,7 +118,11 @@ export default function PreorderList({ clients, profile }) {
           tenantId={profile?.tenant_id || ""}
           profile={profile}
           onClose={() => setSelected(null)}
-          onSaved={() => { setSelected(null); load(); }}
+          onSaved={async () => {
+            setSelected(null);
+            await load();
+            setStatus("Preorden guardada correctamente.");
+          }}
         />
       )}
     </section>
