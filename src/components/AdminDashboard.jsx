@@ -117,6 +117,7 @@ export default function AdminDashboard() {
   const [quickFilters, setQuickFilters] = useState([]);
   const [selectedProductCode, setSelectedProductCode] = useState("");
   const [draftPreorder, setDraftPreorder] = useState(null);
+  const [isDraftOpen, setIsDraftOpen] = useState(false);
 
   const load = async () => {
     const nextData = await fetchAdminData();
@@ -184,6 +185,7 @@ export default function AdminDashboard() {
         : [...preorder.preorder_items, nextItem];
       return { ...preorder, preorder_items: preorderItems };
     });
+    setStatus(`Producto ${product.codigo} agregado a la preorden en proceso.`);
   };
 
   const handleSaveClient = async () => {
@@ -236,6 +238,11 @@ export default function AdminDashboard() {
             <div><span>{t("models")}</span><strong>{draftPreorder?.preorder_items?.length || 0}</strong></div>
           </div>
           {!data.products.length ? <p className="muted">{t("sampleProductsNotice")}</p> : null}
+          {draftPreorder ? (
+            <button className="primary-button full compact-action" type="button" onClick={() => setIsDraftOpen(true)}>
+              Abrir preorden en proceso
+            </button>
+          ) : null}
         </section>
 
         <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
@@ -412,13 +419,17 @@ export default function AdminDashboard() {
         />
       ) : null}
 
-      {draftPreorder ? (
+      {draftPreorder && isDraftOpen ? (
         <PreorderEditor
           preorder={draftPreorder}
           clients={data.clients}
-          onClose={() => setDraftPreorder(null)}
+          onClose={(updatedDraft) => {
+            if (updatedDraft) setDraftPreorder(updatedDraft);
+            setIsDraftOpen(false);
+          }}
           onSaved={() => {
             setDraftPreorder(null);
+            setIsDraftOpen(false);
             load();
           }}
         />

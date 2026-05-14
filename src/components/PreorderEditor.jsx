@@ -33,7 +33,7 @@ const Field = ({ label, children }) => (
   </label>
 );
 
-function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved }) {
+function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved, pricingLocked = false }) {
   const { language } = useLanguage();
   const company = useCompany();
   const isNew = !initial?.id;
@@ -97,6 +97,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved })
     calcItem({ ...item, labor_mxn: Number(laborMxn || 0), precio_gramo_mxn: Number(laborMxn || 0) + Number(silverMxn || 0) });
 
   const setItem = (idx, key, value) => {
+    if (pricingLocked) return;
     setItems((current) => {
       const next = [...current];
       next[idx] = calcItem({ ...next[idx], [key]: value });
@@ -124,6 +125,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved })
   };
 
   const setSilverFine = (value) => {
+    if (pricingLocked) return;
     const nextSilver = fromDisplayMoney(value);
     setPlataFinaMxn(nextSilver);
     setItems((current) => current.map((item) => recalcWithPrice(item, item.labor_mxn, nextSilver)));
@@ -203,6 +205,10 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved })
     onSaved?.();
   };
 
+  const handleClose = () => {
+    onClose?.({ ...po, preorder_items: items });
+  };
+
   return (
     <div className="quote-modal-backdrop">
       <div className="quote-modal">
@@ -223,7 +229,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved })
                 {label}
               </button>
             ))}
-            <button className="icon-button" type="button" onClick={onClose}>x</button>
+            <button className="icon-button" type="button" onClick={handleClose}>x</button>
           </div>
         </header>
 
@@ -270,11 +276,14 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved })
                     step="0.0001"
                     value={toDisplayMoney(plataFinaMxn) || ""}
                     onChange={(event) => setSilverFine(event.target.value)}
+                    readOnly={pricingLocked}
                   />
                 </label>
-                <button className="secondary-button compact-action" type="button" onClick={precargarPrecios}>
-                  Calcular precios por linea
-                </button>
+                {!pricingLocked ? (
+                  <button className="secondary-button compact-action" type="button" onClick={precargarPrecios}>
+                    Calcular precios por linea
+                  </button>
+                ) : null}
               </div>
             </div>
             {msg ? <p className="status info">{msg}</p> : null}
@@ -309,8 +318,8 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved })
                           <small>{[item.producto_metal, item.producto_kilataje, item.producto_linea].filter(Boolean).join(" / ")}</small>
                         </td>
                         <td><input type="number" step="0.01" value={item.gramos_por_pieza} onChange={(event) => setItem(idx, "gramos_por_pieza", Number(event.target.value))} /></td>
-                        <td><input type="number" step="0.01" value={item._gt_manual ?? item.gramos_total} onChange={(event) => setGTotal(idx, event.target.value)} /></td>
-                        <td><input type="number" step="0.01" value={toDisplayMoney(item.labor_mxn) || ""} onChange={(event) => setLabor(idx, event.target.value)} /></td>
+                        <td><input type="number" step="0.01" value={item._gt_manual ?? item.gramos_total} onChange={(event) => setGTotal(idx, event.target.value)} readOnly={pricingLocked} /></td>
+                        <td><input type="number" step="0.01" value={toDisplayMoney(item.labor_mxn) || ""} onChange={(event) => setLabor(idx, event.target.value)} readOnly={pricingLocked} /></td>
                         <td className="right">{fmt(toDisplayMoney(fineSilver))}</td>
                         <td className="right">{fmt(toDisplayMoney(item.precio_gramo_mxn))}</td>
                         <td className="right"><strong>{fmt(toDisplayMoney(item.subtotal_mxn))}</strong></td>
@@ -337,7 +346,7 @@ function PreorderEditorContent({ preorder: initial, clients, onClose, onSaved })
             {!isNew ? <button className="secondary-button compact-action danger-text" type="button" onClick={handleDelete}>Eliminar preorden</button> : null}
           </div>
           <div className="quote-footer-actions">
-            <button className="secondary-button compact-action" type="button" onClick={onClose}>Cancelar</button>
+            <button className="secondary-button compact-action" type="button" onClick={handleClose}>Cancelar</button>
             <button className="secondary-button compact-action" type="button" onClick={handlePdf}>Generar PDF</button>
             <button className="primary-button compact-action" type="button" onClick={handleSave} disabled={saving}>{saving ? "Guardando..." : "Guardar preorden"}</button>
           </div>

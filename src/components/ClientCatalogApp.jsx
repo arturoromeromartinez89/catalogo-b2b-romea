@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import CartDrawer from "./CartDrawer";
 import FilterPanel from "./FilterPanel";
 import LanguageToggle from "./LanguageToggle";
 import ProductDetail from "./ProductDetail";
+import PreorderEditor from "./PreorderEditor";
 import QuickFilters from "./QuickFilters";
 import AdvancedSearch from "./AdvancedSearch";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -10,7 +10,6 @@ import { useCompany } from "../contexts/CompanyContext";
 import BrandLogo from "./BrandLogo";
 import { supabase } from "../lib/supabaseClient";
 import { fetchClientData } from "../services/supabaseCatalog";
-import { submitClientPreorder } from "../services/preorderService";
 import { calculateProductQuotePrice, fetchLines, fetchMetalPrices } from "../services/pricingService";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
@@ -42,6 +41,7 @@ export default function ClientCatalogApp({ profile }) {
   const company = useCompany();
   const [products, setProducts] = useState([]);
   const [cartItems, setCartItems] = useState([]);
+  const [clientData, setClientData] = useState(null);
   const [customer, setCustomer] = useState(() => makeDefaultCustomer(language));
   const [query, setQuery] = useState("");
   const [searchChips, setSearchChips] = useState([]);
@@ -50,7 +50,6 @@ export default function ClientCatalogApp({ profile }) {
   const [selectedCode, setSelectedCode] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [status, setStatus] = useState("");
-  const [savingPreorder, setSavingPreorder] = useState(false);
 
   useEffect(() => {
     setStatus(t("loadingCatalog"));
@@ -73,6 +72,7 @@ export default function ClientCatalogApp({ profile }) {
           })
         );
         if (result.client) {
+          setClientData(result.client);
           setCustomer((current) => ({
             ...current,
             name: result.client.name || "",
@@ -131,7 +131,7 @@ export default function ClientCatalogApp({ profile }) {
       }
       return [...current, { product, quantity: amount }];
     });
-    setIsCartOpen(true);
+    setStatus(`${product.codigo} agregado a tu preorden.`);
   };
 
   const handleSignOut = async () => {
@@ -147,27 +147,39 @@ export default function ClientCatalogApp({ profile }) {
     setSelectedCode("");
   };
 
-  const handleSubmitPreorder = async () => {
-    if (!cartItems.length) {
-      setStatus(t("addProductsBeforePdf"));
-      return;
-    }
-    if (!profile?.client_id) {
-      setStatus("Tu usuario todavia no esta ligado a un cliente. Pide al administrador revisar tu alta.");
-      return;
-    }
-    setSavingPreorder(true);
-    try {
-      await submitClientPreorder(profile, cartItems, customer);
-      setCartItems([]);
-      setIsCartOpen(false);
-      setStatus("Preorden guardada. El administrador ya puede verla en el menu Preordenes.");
-    } catch (error) {
-      setStatus(`Error al guardar preorden: ${error.message}`);
-    } finally {
-      setSavingPreorder(false);
-    }
-  };
+  const cartToPreorder = () => ({
+    status: "pendiente",
+    client_id: profile.client_id,
+    cliente_nombre: customer.name,
+    cliente_empresa: customer.company,
+    cliente_email: customer.email,
+    cliente_telefono: customer.phone,
+    cliente_rfc: customer.rfc,
+    tipo_cambio: Number(customer.tipoCambio || 0),
+    moneda: customer.currency || "MXN",
+    notas: customer.notes,
+    preorder_items: cartItems.map((item, idx) => {
+      const product = item.product;
+      const piezas = Number(item.quantity || 1);
+      const gramos = Number(product.pesoPromedio || 0);
+      const precio = Number(product.quotePricePerGram || product.precioMinimo || 0);
+      return {
+        producto_codigo: product.codigo,
+        producto_descripcion: product.descripcion,
+        producto_metal: product.metal,
+        producto_kilataje: product.kilataje,
+        producto_linea: product.linea,
+        producto_foto_url: product.fotoUrl,
+        piezas,
+        gramos_por_pieza: gramos,
+        gramos_total: piezas * gramos,
+        labor_mxn: Number(product.quoteLaborPerGram || 0),
+        precio_gramo_mxn: precio,
+        subtotal_mxn: piezas * gramos * precio,
+        sort_order: idx,
+      };
+    }),
+  });
 
   return (
     <div className="admin-catalog-shell">
@@ -312,30 +324,38 @@ export default function ClientCatalogApp({ profile }) {
         </section>
       </main>
 
-      <CartDrawer
-        isOpen={isCartOpen}
-        cartItems={cartItems}
-        customer={customer}
-        onCustomerChange={setCustomer}
-        onQuantityChange={(code, quantity) =>
-          setCartItems((items) =>
-            items.map((item) =>
-              item.product.codigo === code
-                ? { ...item, quantity: Math.max(1, Number(quantity || 1)) }
-                : item
-            )
-          )
-        }
-        onRemove={(code) =>
-          setCartItems((items) => items.filter((item) => item.product.codigo !== code))
-        }
-        onClear={() => setCartItems([])}
-        onClose={() => setIsCartOpen(false)}
-        onOpen={() => setIsCartOpen(true)}
-        onSubmitPreorder={handleSubmitPreorder}
-        submitting={savingPreorder}
-        submitLabel="Enviar preorden"
-      />
+      {isCartOpen ? (
+        <PreorderEditor
+          preorder={cartToPreorder()}
+          clients={clientData ? [clientData] : []}
+          pricingLocked
+          onClose={(updatedDraft) => {
+            if (updatedDraft?.preorder_items) {
+              setCartItems(updatedDraft.preorder_items.map((item) => ({
+                quantity: Number(item.piezas || 1),
+                product: {
+                  codigo: item.producto_codigo,
+                  descripcion: item.producto_descripcion,
+                  metal: item.producto_metal,
+                  kilataje: item.producto_kilataje,
+                  linea: item.producto_linea,
+                  fotoUrl: item.producto_foto_url,
+                  pesoPromedio: Number(item.gramos_por_pieza || 0),
+                  precioMinimo: Number(item.precio_gramo_mxn || 0),
+                  quotePricePerGram: Number(item.precio_gramo_mxn || 0),
+                  quoteLaborPerGram: Number(item.labor_mxn || 0),
+                },
+              })));
+            }
+            setIsCartOpen(false);
+          }}
+          onSaved={() => {
+            setCartItems([]);
+            setIsCartOpen(false);
+            setStatus("Preorden guardada. El administrador ya puede verla en el menu Preordenes.");
+          }}
+        />
+      ) : null}
     </div>
   );
 }
