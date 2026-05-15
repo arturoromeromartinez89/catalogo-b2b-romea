@@ -20,6 +20,17 @@ const fmt = (value) =>
     ? `$${Number(value || 0).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : "-";
 
+const IVA_RATE = 0.16;
+const TROY_OUNCE_GRAMS = 31.1035;
+
+const calcSilverFineFromKitco = (kitcoUsdOz, exchangeRate, premiumPct = 4) => {
+  const kitco = Number(kitcoUsdOz || 0);
+  const tc = Number(exchangeRate || 0);
+  const premium = Number(premiumPct || 0);
+  if (!kitco || !tc) return 0;
+  return (kitco / TROY_OUNCE_GRAMS) * (1 + premium / 100) * tc;
+};
+
 const calcItem = (item) => {
   const piezas = Number(item.piezas || 0);
   const gPieza = Number(item.gramos_por_pieza || 0);
@@ -81,6 +92,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     tipo_cambio: "",
     moneda: "MXN",
     notas: "",
+    pf_mode: "manual",
+    kitco_usd_oz: "",
+    premio_pct: 4,
+    aplicar_iva: false,
+    mostrar_desglose: true,
   };
 
   const [po, setPo] = useState({ ...blank, ...(initial || {}) });
@@ -99,6 +115,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       .then((prices) => {
         setMetalPrices(prices);
         setPlataFinaMxn(getSilverFinePrice(prices));
+        setPo((current) => ({
+          ...current,
+          tipo_cambio: current.tipo_cambio || prices.tipo_cambio || "",
+          kitco_usd_oz: current.kitco_usd_oz || prices.kitco_usd_oz || "",
+          premio_pct: current.premio_pct || prices.premio_pct || 4,
+        }));
       })
       .catch((error) => setMsg(`Error: ${error.message}`));
     document.body.style.overflow = "hidden";
@@ -120,10 +142,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const exchangeRate = Number(po.tipo_cambio || metalPrices.tipo_cambio || 0);
   const useUsd = po.moneda === "USD" && exchangeRate > 0;
-  const moneyLabel = useUsd ? "USD" : "MXN";
+  const moneyLabel = po.moneda === "USD" ? "USD" : "MXN";
   const toDisplayMoney = (value) => (useUsd ? Number(value || 0) / exchangeRate : Number(value || 0));
   const fromDisplayMoney = (value) => (useUsd ? Number(value || 0) * exchangeRate : Number(value || 0));
   const set = (key) => (event) => setPo((current) => ({ ...current, [key]: event.target.value }));
+  const setChecked = (key) => (event) => setPo((current) => ({ ...current, [key]: event.target.checked }));
   const inp = { width: "100%", boxSizing: "border-box" };
 
   const recalcWithPrice = (item, laborMxn = item.labor_mxn, silverMxn = plataFinaMxn) =>
@@ -168,6 +191,18 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     setItems((current) => current.map((item) => recalcWithPrice(item, item.labor_mxn, nextSilver)));
   };
 
+  const calculateSilverFineByKitco = () => {
+    if (pricingLocked) return;
+    const nextSilver = calcSilverFineFromKitco(po.kitco_usd_oz, po.tipo_cambio || metalPrices.tipo_cambio, po.premio_pct || 4);
+    if (!nextSilver) {
+      setMsg("Captura KITCO USD/oz y tipo de cambio para calcular la plata fina.");
+      return;
+    }
+    setPlataFinaMxn(nextSilver);
+    setItems((current) => current.map((item) => recalcWithPrice(item, item.labor_mxn, nextSilver)));
+    setMsg(`Plata fina calculada: $${nextSilver.toFixed(4)} MXN/g.`);
+  };
+
   const precargarPrecios = () => {
     if (!po.client_id) { setMsg("Debes seleccionar un cliente existente."); return; }
     if (!lines.length) { setMsg("No hay lineas configuradas en el menu de precios."); return; }
@@ -187,6 +222,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     gramos: items.reduce((sum, item) => sum + Number(item.gramos_total || 0), 0),
     mxn: items.reduce((sum, item) => sum + Number(item.subtotal_mxn || 0), 0),
   };
+  const ivaMxn = po.aplicar_iva ? totals.mxn * IVA_RATE : 0;
+  const totalFinalMxn = totals.mxn + ivaMxn;
 
   const productResults = useMemo(() => {
     const term = normalizeText(productSearch);
@@ -222,7 +259,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     setSaving(true);
     setSaved(false);
     try {
-      const savedId = await savePreorder({ ...po, tenant_id: resolvedTenantId, created_by: po.created_by || profile?.id || null }, items);
+      const savedId = await savePreorder({
+        ...po,
+        total_mxn: totalFinalMxn,
+        tenant_id: resolvedTenantId,
+        created_by: po.created_by || profile?.id || null,
+      }, items);
       setPo((current) => ({ ...current, id: savedId }));
       setSaved(true);
       setMsg("Preorden guardada correctamente. Se cerrara automaticamente y aparecera en el menu Preordenes.");
@@ -246,6 +288,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       rfc: po.cliente_rfc,
       tipoCambio: po.tipo_cambio || metalPrices.tipo_cambio,
       currency: po.moneda,
+      applyIva: po.aplicar_iva,
+      showBreakdown: po.mostrar_desglose,
+      plataFinaMxn,
     };
     const pdfItems = items.map((item) => ({
       product: {
@@ -265,7 +310,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       precio_gramo_mxn: item.precio_gramo_mxn,
       subtotal_mxn: item.subtotal_mxn,
     }));
-    await generatePdf(pdfItems, customer, language, company, { showGramos: true });
+    await generatePdf(pdfItems, customer, language, company, {
+      showGramos: true,
+      applyIva: po.aplicar_iva,
+      showBreakdown: po.mostrar_desglose,
+      silverFineMxn: plataFinaMxn,
+    });
   };
 
   const handleDelete = async () => {
@@ -339,6 +389,30 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               <h3>Productos cotizados</h3>
               <div className="quote-price-tools">
                 <label>
+                  Metodo PF
+                  <select value={po.pf_mode || "manual"} onChange={set("pf_mode")} disabled={pricingLocked}>
+                    <option value="manual">Manual</option>
+                    <option value="kitco">Kitco + 4%</option>
+                  </select>
+                </label>
+                {po.pf_mode === "kitco" ? (
+                  <>
+                    <label>
+                      KITCO USD/oz
+                      <input type="number" step="0.01" value={po.kitco_usd_oz || ""} onChange={set("kitco_usd_oz")} readOnly={pricingLocked} />
+                    </label>
+                    <label>
+                      Premio %
+                      <input type="number" step="0.1" value={po.premio_pct ?? 4} onChange={set("premio_pct")} readOnly={pricingLocked} />
+                    </label>
+                    {!pricingLocked ? (
+                      <button className="secondary-button compact-action" type="button" onClick={calculateSilverFineByKitco}>
+                        Calcular PF Kitco
+                      </button>
+                    ) : null}
+                  </>
+                ) : null}
+                <label>
                   Plata fina ({moneyLabel}/g)
                   <input
                     type="number"
@@ -354,6 +428,16 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   </button>
                 ) : null}
               </div>
+            </div>
+            <div className="quote-option-row">
+              <label>
+                <input type="checkbox" checked={Boolean(po.mostrar_desglose)} onChange={setChecked("mostrar_desglose")} />
+                Mostrar desglose labor + plata fina
+              </label>
+              <label>
+                <input type="checkbox" checked={Boolean(po.aplicar_iva)} onChange={setChecked("aplicar_iva")} />
+                Agregar IVA 16%
+              </label>
             </div>
             {msg ? <p className="status info">{msg}</p> : null}
             {!pricingLocked && products.length ? (
@@ -398,8 +482,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     <th>Linea</th>
                     <th className="right">Peso unit.</th>
                     <th className="right">Gramos totales</th>
-                    <th className="right">Labor/g {moneyLabel}</th>
-                    <th className="right">PF/g {moneyLabel}</th>
+                    {po.mostrar_desglose ? <th className="right">Labor/g {moneyLabel}</th> : null}
+                    {po.mostrar_desglose ? <th className="right">PF/g {moneyLabel}</th> : null}
                     <th className="right">Labor+PF {moneyLabel}</th>
                     <th className="right">Subtotal</th>
                     <th></th>
@@ -420,8 +504,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                         <td><strong>{item.producto_linea || "-"}</strong></td>
                         <td><input type="number" step="0.01" value={item.gramos_por_pieza} onChange={(event) => setItem(idx, "gramos_por_pieza", Number(event.target.value))} /></td>
                         <td><input type="number" step="0.01" value={item._gt_manual ?? item.gramos_total} onChange={(event) => setGTotal(idx, event.target.value)} readOnly={pricingLocked} /></td>
-                        <td><input type="number" step="0.01" value={toDisplayMoney(item.labor_mxn) || ""} onChange={(event) => setLabor(idx, event.target.value)} readOnly={pricingLocked} /></td>
-                        <td className="right">{fmt(toDisplayMoney(fineSilver))}</td>
+                        {po.mostrar_desglose ? <td><input type="number" step="0.01" value={toDisplayMoney(item.labor_mxn) || ""} onChange={(event) => setLabor(idx, event.target.value)} readOnly={pricingLocked} /></td> : null}
+                        {po.mostrar_desglose ? <td className="right">{fmt(toDisplayMoney(fineSilver))}</td> : null}
                         <td className="right">{fmt(toDisplayMoney(item.precio_gramo_mxn))}</td>
                         <td className="right"><strong>{fmt(toDisplayMoney(item.subtotal_mxn))}</strong></td>
                         <td><button className="table-delete" type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== idx))}>x</button></td>
@@ -438,7 +522,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           <section className="quote-totals-box">
             <div><span>Total piezas</span><strong>{totals.piezas}</strong></div>
             <div><span>Total gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
-            <div><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totals.mxn))}</strong></div>
+            <div><span>Subtotal {moneyLabel}</span><strong>{fmt(toDisplayMoney(totals.mxn))}</strong></div>
+            <div><span>IVA 16%</span><strong>{po.aplicar_iva ? fmt(toDisplayMoney(ivaMxn)) : "-"}</strong></div>
+            <div><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
           </section>
         </main>
 

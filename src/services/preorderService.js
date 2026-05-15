@@ -7,10 +7,10 @@ const buildFolio = () => {
   return `PRE-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
 };
 
-const calcTotals = (items) => ({
+const calcTotals = (items, preorder = {}) => ({
   total_piezas: items.reduce((s, i) => s + Number(i.piezas || 0), 0),
   total_gramos: items.reduce((s, i) => s + Number(i.gramos_total || 0), 0),
-  total_mxn: items.reduce((s, i) => s + Number(i.subtotal_mxn || 0), 0),
+  total_mxn: preorder.total_mxn ?? items.reduce((s, i) => s + Number(i.subtotal_mxn || 0), 0),
 });
 
 const toDbNumber = (value, fallback = 0) => {
@@ -62,11 +62,24 @@ export const fetchPreorder = async (id) => {
 };
 
 export const savePreorder = async (preorder, items) => {
-  const totals = calcTotals(items);
+  const totals = calcTotals(items, preorder);
   const isNew = !preorder.id;
 
   // Limpiar campos vacíos que son UUID en Supabase
-  const { preorder_items, id, ...clean } = { ...preorder };
+  const {
+    preorder_items,
+    id,
+    aplicar_iva,
+    mostrar_desglose,
+    pf_mode,
+    kitco_usd_oz,
+    premio_pct,
+    plata_fina_mxn,
+    plataFinaMxn,
+    total_subtotal_mxn,
+    total_iva_mxn,
+    ...clean
+  } = { ...preorder };
   if (!clean.client_id) clean.client_id = null;
   if (!clean.created_by) clean.created_by = null;
   if (!clean.tenant_id && !clean.tenantId) delete clean.tenant_id;

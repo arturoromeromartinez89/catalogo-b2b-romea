@@ -51,6 +51,9 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   const useUsd = currency === "USD" && exchangeRate > 0;
   const displayMoney = (value) => (useUsd ? Number(value || 0) / exchangeRate : Number(value || 0));
   const showGramos = opts.showGramos !== false;
+  const showBreakdown = opts.showBreakdown !== false;
+  const applyIva = Boolean(opts.applyIva || customer.applyIva);
+  const IVA_RATE = 0.16;
 
   // ── HEADER ───────────────────────────────────────────────
   const logo = await loadImageAsDataUrl(company.logo_url);
@@ -129,9 +132,13 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   txt(doc, t("PZS","QTY"),         C.pzs,   y+3);
   txt(doc, t("G/PZA","G/PC"),      C.gpz,   y+3);
   txt(doc, t("G.TOTAL","G.TOTAL"), C.gtot,  y+3);
-  txt(doc, t("LABOR","LABOR"),     C.labor, y+3);
-  txt(doc, t("PF","FS"),           C.pf,    y+3);
-  txt(doc, t("LAB+PF","LAB+FS"),   C.pgr,  y+3);
+  if (showBreakdown) {
+    txt(doc, t("LABOR","LABOR"),     C.labor, y+3);
+    txt(doc, t("PF","FS"),           C.pf,    y+3);
+    txt(doc, t("LAB+PF","LAB+FS"),   C.pgr,  y+3);
+  } else {
+    txt(doc, t("PRECIO/G","PRICE/G"), C.pgr, y+3);
+  }
   txt(doc, t("SUBTOTAL","SUBTOTAL"),C.sub,  y+3, { align: "right" });
   y += 10;
 
@@ -174,8 +181,10 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     txt(doc, String(qty),                    C.pzs,   y+9);
     txt(doc, `${gPieza.toFixed(2)}g`,        C.gpz,   y+9);
     txt(doc, `${gTotal.toFixed(2)}g`,        C.gtot,  y+9);
+    if (showBreakdown) {
     txt(doc, labor ? money(displayMoney(labor)) : "—", C.labor, y+9);
     txt(doc, plataFina ? money(displayMoney(plataFina)) : "—", C.pf, y+9);
+    }
     txt(doc, pGramo ? money(displayMoney(pGramo)) : "—", C.pgr, y+9);
 
     doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
@@ -199,13 +208,23 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   txt(doc, `${grandPiezas} pz`, page.w - page.margin, y, { align: "right" });
   y += 6;
 
+  doc.setFontSize(9);
+  txt(doc, t("SUBTOTAL","SUBTOTAL"), page.margin + 80, y);
+  txt(doc, `${money(displayMoney(grandTotal))} ${currency}`, page.w - page.margin, y, { align: "right" });
+  y += 6;
+
+  const iva = applyIva ? grandTotal * IVA_RATE : 0;
+  txt(doc, t("IVA 16%","VAT 16%"), page.margin + 80, y);
+  txt(doc, applyIva ? `${money(displayMoney(iva))} ${currency}` : "—", page.w - page.margin, y, { align: "right" });
+  y += 6;
+
   doc.setFontSize(10);
   txt(doc, t("TOTAL ESTIMADO","ESTIMATED TOTAL"), page.margin + 80, y);
-  txt(doc, `${money(displayMoney(grandTotal))} ${currency}`, page.w - page.margin, y, { align: "right" });
+  txt(doc, `${money(displayMoney(grandTotal + iva))} ${currency}`, page.w - page.margin, y, { align: "right" });
 
   if (!useUsd && customer.tipoCambio && Number(customer.tipoCambio) > 0) {
     y += 5;
-    const usd = grandTotal / Number(customer.tipoCambio);
+    const usd = (grandTotal + iva) / Number(customer.tipoCambio);
     doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(100,100,100);
     txt(doc, `Aprox. ${money(usd)} USD (TC $${customer.tipoCambio})`, page.w - page.margin, y, { align: "right" });
   }

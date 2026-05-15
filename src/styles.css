@@ -1557,6 +1557,32 @@ dd {
   width: 112px;
 }
 
+.quote-price-tools select {
+  min-height: 34px;
+  width: 128px;
+}
+
+.quote-option-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.quote-option-row label {
+  align-items: center;
+  color: var(--romea-blue);
+  display: flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 8px;
+}
+
+.quote-option-row input {
+  min-height: auto;
+  width: auto;
+}
+
 .quote-items-table {
   min-width: 1080px;
 }
@@ -1642,9 +1668,9 @@ dd {
 .quote-totals-box {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  justify-self: end;
-  max-width: 620px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  justify-self: stretch;
+  max-width: 980px;
   width: 100%;
 }
 
