@@ -25,34 +25,69 @@ export default function CatalogPdfPanel({ products, company, onClose }) {
   return (
     <div className="modal-backdrop">
       <section className="catalog-tool-panel">
-        <header className="modal-header">
+        <header className="catalog-tool-header">
           <div>
+            <span className="tool-eyebrow">Catalogo para enviar</span>
             <h2>Generar catalogo PDF</h2>
-            <p className="muted">{products.length.toLocaleString()} productos seleccionados</p>
+            <p>Arma un PDF limpio con los productos seleccionados y la informacion que quieras mostrar.</p>
           </div>
           <button className="icon-button" type="button" onClick={onClose}>x</button>
         </header>
         <div className="catalog-tool-body">
-          <label>
-            Nombre del catalogo
-            <input value={catalogName} onChange={(event) => setCatalogName(event.target.value)} />
-          </label>
-          <label className="check-row">
-            <input type="checkbox" checked={showPrice} onChange={(event) => setShowPrice(event.target.checked)} />
-            Mostrar precio
-          </label>
-          <label className="check-row">
-            <input type="checkbox" checked={showWeight} onChange={(event) => setShowWeight(event.target.checked)} />
-            Mostrar peso
-          </label>
-          <label>
-            Columnas por fila
-            <select value={columns} onChange={(event) => setColumns(Number(event.target.value))}>
-              <option value={2}>2</option>
-              <option value={3}>3</option>
-              <option value={4}>4</option>
-            </select>
-          </label>
+          <section className="tool-summary-strip">
+            <div>
+              <span>Seleccionados</span>
+              <strong>{products.length.toLocaleString()}</strong>
+            </div>
+            <div>
+              <span>Formato</span>
+              <strong>{columns} columnas</strong>
+            </div>
+          </section>
+
+          <section className="tool-section">
+            <h3>1. Identificacion</h3>
+            <label>
+              Nombre del catalogo
+              <input value={catalogName} onChange={(event) => setCatalogName(event.target.value)} />
+            </label>
+          </section>
+
+          <section className="tool-section">
+            <h3>2. Informacion del producto</h3>
+            <div className="tool-option-grid">
+              <label className="tool-switch">
+                <input type="checkbox" checked={showPrice} onChange={(event) => setShowPrice(event.target.checked)} />
+                <span>
+                  <strong>Mostrar precio</strong>
+                  <small>Incluye precio integrado cuando exista.</small>
+                </span>
+              </label>
+              <label className="tool-switch">
+                <input type="checkbox" checked={showWeight} onChange={(event) => setShowWeight(event.target.checked)} />
+                <span>
+                  <strong>Mostrar peso</strong>
+                  <small>Incluye gramos promedio por pieza.</small>
+                </span>
+              </label>
+            </div>
+          </section>
+
+          <section className="tool-section">
+            <h3>3. Distribucion</h3>
+            <div className="segmented-control">
+              {[2, 3, 4].map((value) => (
+                <button
+                  key={value}
+                  className={columns === value ? "active" : ""}
+                  type="button"
+                  onClick={() => setColumns(value)}
+                >
+                  {value} columnas
+                </button>
+              ))}
+            </div>
+          </section>
           {status ? <p className="status info">{status}</p> : null}
         </div>
         <footer className="modal-actions">
