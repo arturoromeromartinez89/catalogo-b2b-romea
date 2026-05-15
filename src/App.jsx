@@ -8,6 +8,7 @@ import ProductFormModal from "./components/ProductFormModal";
 import AuthGate from "./components/AuthGate";
 import AdminDashboard from "./components/AdminDashboard";
 import ClientCatalogApp from "./components/ClientCatalogApp";
+import QuotePage from "./pages/QuotePage";
 import { LanguageProvider } from "./i18n/LanguageContext";
 import { makeTranslator } from "./i18n/translations";
 import { isAdminRole } from "./services/tenantUtils";
@@ -128,6 +129,7 @@ export default function App() {
   };
   const statusMessage =
     status.message || (status.messageKey ? t(status.messageKey, ...(status.args || [])) : "");
+  const isPublicQuoteRoute = window.location.pathname.startsWith("/cotizacion/");
 
   useEffect(() => {
     const onPopState = () => setSelectedCode(codeFromPath());
@@ -281,9 +283,13 @@ export default function App() {
 
   return (
     <LanguageProvider language={language} setLanguage={setLanguage}>
+    {isPublicQuoteRoute ? (
+      <QuotePage />
+    ) : (
     <AuthGate>
       {({ profile }) => (isAdminRole(profile?.role) ? <AdminDashboard profile={profile} /> : <ClientCatalogApp profile={profile} />)}
     </AuthGate>
+    )}
     </LanguageProvider>
   );
 

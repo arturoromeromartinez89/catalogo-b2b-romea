@@ -168,6 +168,12 @@ export const translations = {
     addRule: "Agregar regla",
     laborExtra: "Mano de obra extra",
     catalogAssigned: "Catálogo disponible por ROMEA",
+    selectedProducts: (count) => `${count} productos seleccionados`,
+    selectVisibleProducts: "Seleccionar todos los visibles",
+    generateCatalogPdf: "Generar catalogo PDF",
+    generateQuoteLink: "Generar liga para cliente",
+    clearSelection: "Limpiar seleccion",
+    quoteLink: "Liga de cotizacion",
   },
   en: {
     brand: "ROMEA JEWELRY",
@@ -333,6 +339,12 @@ export const translations = {
     addRule: "Add rule",
     laborExtra: "Extra labor",
     catalogAssigned: "Catalog available by ROMEA",
+    selectedProducts: (count) => `${count} selected products`,
+    selectVisibleProducts: "Select all visible",
+    generateCatalogPdf: "Generate catalog PDF",
+    generateQuoteLink: "Generate client link",
+    clearSelection: "Clear selection",
+    quoteLink: "Quote link",
   },
 };
 

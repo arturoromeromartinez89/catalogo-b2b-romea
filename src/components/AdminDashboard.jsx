@@ -3,8 +3,11 @@ import AdvancedSearch from "./AdvancedSearch";
 import BrandLogo from "./BrandLogo";
 import ImportPanel from "./ImportPanel";
 import CompanySettingsPanel from "./CompanySettingsPanel";
+import CatalogPdfPanel from "./CatalogPdfPanel";
 import PricingPanel from "./PricingPanel";
 import PreorderList from "./PreorderList";
+import QuoteLinkPanel from "./QuoteLinkPanel";
+import SelectionBar from "./SelectionBar";
 import { useCompany } from "../contexts/CompanyContext";
 import CatalogExportButton from "./CatalogExportButton";
 import ExcelTemplateButton from "./ExcelTemplateButton";
@@ -123,6 +126,9 @@ export default function AdminDashboard({ profile }) {
   const [isDraftOpen, setIsDraftOpen] = useState(false);
   const [addedCodes, setAddedCodes] = useState([]);
   const [visibleProductLimit, setVisibleProductLimit] = useState(PRODUCT_RENDER_BATCH);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [catalogPdfOpen, setCatalogPdfOpen] = useState(false);
+  const [quoteLinkOpen, setQuoteLinkOpen] = useState(false);
 
   const load = async () => {
     setLoadingProducts(true);
@@ -153,6 +159,11 @@ export default function AdminDashboard({ profile }) {
     () => filteredProducts.slice(0, visibleProductLimit),
     [filteredProducts, visibleProductLimit]
   );
+  const selectedProducts = useMemo(
+    () => products.filter((product) => selectedIds.has(product.codigo)),
+    [products, selectedIds]
+  );
+  const allRenderedSelected = renderedProducts.length > 0 && renderedProducts.every((product) => selectedIds.has(product.codigo));
   const visibleCount = products.filter((product) => product.visibleWeb).length;
 
   useEffect(() => {
@@ -223,6 +234,24 @@ export default function AdminDashboard({ profile }) {
     setFilters(emptyFilters);
     setQuickFilters([]);
     setSelectedProductCode("");
+  };
+
+  const toggleProductSelection = (code) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  };
+
+  const toggleRenderedSelection = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allRenderedSelected) renderedProducts.forEach((product) => next.delete(product.codigo));
+      else renderedProducts.forEach((product) => next.add(product.codigo));
+      return next;
+    });
   };
 
   if (!data) {
@@ -323,6 +352,13 @@ export default function AdminDashboard({ profile }) {
                 onRemoveChip={(chip) => setSearchChips((current) => current.filter((item) => item !== chip))}
               />
             </div>
+            <div className="catalog-selection-tools">
+              <label className="check-row">
+                <input type="checkbox" checked={allRenderedSelected} onChange={toggleRenderedSelection} />
+                Seleccionar todos los visibles ({renderedProducts.length.toLocaleString()})
+              </label>
+              <span>Mostrando {renderedProducts.length.toLocaleString()} de {filteredProducts.length.toLocaleString()} filtrados</span>
+            </div>
 
             {selectedProductCode ? (
               <ProductDetail
@@ -337,6 +373,13 @@ export default function AdminDashboard({ profile }) {
               <div className="admin-product-grid">
                 {renderedProducts.map((product) => (
                   <article className={`admin-product-card enabled ${addedCodes.includes(product.codigo) ? "in-preorder" : ""}`} key={product.id || product.codigo}>
+                    <label className="product-select-check" onClick={(event) => event.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(product.codigo)}
+                        onChange={() => toggleProductSelection(product.codigo)}
+                      />
+                    </label>
                     {addedCodes.includes(product.codigo) ? <span className="preorder-added-badge">✓ En preorden</span> : null}
                     <button className="admin-product-image" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
                       <img
@@ -470,6 +513,27 @@ export default function AdminDashboard({ profile }) {
             await load();
             setStatus("Preorden guardada correctamente. Puedes verla en el menú Preórdenes.");
           }}
+        />
+      ) : null}
+
+      <SelectionBar
+        count={selectedProducts.length}
+        onCatalogPdf={() => setCatalogPdfOpen(true)}
+        onQuoteLink={() => setQuoteLinkOpen(true)}
+        onClear={() => setSelectedIds(new Set())}
+      />
+
+      {catalogPdfOpen ? (
+        <CatalogPdfPanel products={selectedProducts} company={company} onClose={() => setCatalogPdfOpen(false)} />
+      ) : null}
+
+      {quoteLinkOpen ? (
+        <QuoteLinkPanel
+          products={selectedProducts}
+          clients={data.clients}
+          profile={profile}
+          tenantId={tenantId}
+          onClose={() => setQuoteLinkOpen(false)}
         />
       ) : null}
     </div>
