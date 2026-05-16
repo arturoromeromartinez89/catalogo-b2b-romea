@@ -1,4 +1,5 @@
 import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
+import { useLanguage } from "../i18n/LanguageContext";
 
 export default function SelectedProductsDrawer({
   products,
@@ -10,6 +11,7 @@ export default function SelectedProductsDrawer({
   onCatalogPdf,
   onQuoteLink,
 }) {
+  const { t } = useLanguage();
   const count = products.length;
   if (!count) return null;
 
@@ -18,29 +20,29 @@ export default function SelectedProductsDrawer({
       {!isOpen ? (
         <button className="selection-drawer-tab" type="button" onClick={onOpen}>
           <span>{count}</span>
-          Seleccion
+          {t("selection")}
         </button>
       ) : null}
 
       <aside className={`selection-drawer ${isOpen ? "open" : ""}`}>
         <header className="selection-drawer-header">
           <div>
-            <span className="tool-eyebrow">Productos marcados</span>
-            <h2>Seleccion actual</h2>
-            <p>{count.toLocaleString()} productos listos para catalogo o liga.</p>
+            <span className="tool-eyebrow">{t("markedProducts")}</span>
+            <h2>{t("currentSelection")}</h2>
+            <p>{t("readyForCatalogOrLink", count.toLocaleString())}</p>
           </div>
           <button className="icon-button" type="button" onClick={onClose}>x</button>
         </header>
 
         <div className="selection-drawer-actions">
           <button className="primary-button compact-action" type="button" onClick={onCatalogPdf}>
-            Generar catalogo PDF
+            {t("generateCatalogPdf")}
           </button>
           <button className="secondary-button compact-action" type="button" onClick={onQuoteLink}>
-            Generar liga
+            {t("generateQuoteLinkShort")}
           </button>
           <button className="secondary-button compact-action" type="button" onClick={onClear}>
-            Limpiar
+            {t("clearSelectionShort")}
           </button>
         </div>
 

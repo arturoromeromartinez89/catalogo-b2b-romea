@@ -39,13 +39,14 @@ const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", acti
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
 const PRODUCT_RENDER_BATCH = 120;
-const tabs = ["catalog", "preorders", "clients", "prices", "company"];
+const tabs = ["catalog", "preorders", "clients", "prices", "company", "database"];
 const tabKeys = {
   catalog: "catalog",
   preorders: "preorders",
   clients: "clients",
   prices: "priceMenu",
   company: "company",
+  database: "database",
 };
 const titleKeys = {
   catalog: "adminCatalog",
@@ -53,6 +54,7 @@ const titleKeys = {
   clients: "clients",
   prices: "priceMenu",
   company: "company",
+  database: "database",
 };
 
 const formProductToRow = (product) => ({
@@ -264,11 +266,13 @@ export default function AdminDashboard({ profile }) {
 
   const openCatalogPdfPanel = () => {
     setQuoteLinkOpen(false);
+    setSelectionDrawerOpen(false);
     setCatalogPdfOpen(true);
   };
 
   const openQuoteLinkPanel = () => {
     setCatalogPdfOpen(false);
+    setSelectionDrawerOpen(false);
     setQuoteLinkOpen(true);
   };
 
@@ -284,48 +288,7 @@ export default function AdminDashboard({ profile }) {
           <p>{t("b2bCatalog")}</p>
         </div>
 
-        <section className="sidebar-section">
-          <h3>{t("operation")}</h3>
-          <div className="sidebar-actions admin-sidebar-actions">
-            <UploadExcel onFileSelected={handleExcel} />
-            <ExcelTemplateButton />
-            <CatalogExportButton products={products} />
-            <button className="primary-button full compact-action" type="button" onClick={() => setProductModal({ open: true, product: null, mode: "create" })}>
-              {t("newProduct")}
-            </button>
-          </div>
-          {status ? <p className="status info">{status}</p> : null}
-        </section>
-
-        <section className="sidebar-section">
-          <h3>{t("productBase")}</h3>
-          <div className="mini-summary">
-            <div><span>{t("totalLabel")}</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
-            <div><span>{t("visible")}</span><strong>{loadingProducts ? "..." : visibleCount.toLocaleString()}</strong></div>
-            <div><span>{t("preorder")}</span><strong>{draftPreorder?.preorder_items?.reduce((sum, item) => sum + Number(item.piezas || 0), 0) || 0}</strong></div>
-            <div><span>{t("models")}</span><strong>{draftPreorder?.preorder_items?.length || 0}</strong></div>
-          </div>
-          {!data.products.length ? <p className="muted">{t("sampleProductsNotice")}</p> : null}
-          {draftPreorder ? (
-            <button className="primary-button full compact-action" type="button" onClick={() => setIsDraftOpen(true)}>
-              Abrir preorden en proceso
-            </button>
-          ) : null}
-        </section>
-
-        <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
-
-        <QuickFilters
-          activeFilters={quickFilters}
-          onToggle={(id) => setQuickFilters((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
-          onRemove={(id) => setQuickFilters((current) => current.filter((item) => item !== id))}
-        />
-
-        <button className="secondary-button full compact-action" type="button" onClick={clearCatalogFilters}>
-          {t("clearFilters")}
-        </button>
-
-        <section className="sidebar-section">
+        <section className="sidebar-section sidebar-menu-section">
           <h3>{t("admin")}</h3>
           <div className="admin-nav-list">
             {tabs.map((id) => (
@@ -356,8 +319,32 @@ export default function AdminDashboard({ profile }) {
 
         {tab === "catalog" ? (
           <section className="admin-workspace">
-            <ImportPanel onImported={load} tenantId={tenantId} />
-            <div className="admin-toolbar one-input">
+            <div className="catalog-control-panel">
+              <div className="catalog-control-heading">
+                <div>
+                  <span className="tool-eyebrow">{t("catalogControls")}</span>
+                  <h2>{t("searchAndFilter")}</h2>
+                  <p>{t("catalogControlsHelp")}</p>
+                </div>
+                <div className="catalog-control-actions">
+                  {draftPreorder ? (
+                    <button className="primary-button compact-action" type="button" onClick={() => setIsDraftOpen(true)}>
+                      Abrir preorden en proceso
+                    </button>
+                  ) : null}
+                  <button className="secondary-button compact-action" type="button" onClick={clearCatalogFilters}>
+                    {t("clearFilters")}
+                  </button>
+                </div>
+              </div>
+
+              <div className="catalog-metric-row">
+                <div><span>{t("totalLabel")}</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
+                <div><span>{t("visible")}</span><strong>{loadingProducts ? "..." : visibleCount.toLocaleString()}</strong></div>
+                <div><span>{t("filtered")}</span><strong>{filteredProducts.length.toLocaleString()}</strong></div>
+                <div><span>{t("selected")}</span><strong>{selectedIds.size.toLocaleString()}</strong></div>
+              </div>
+
               <AdvancedSearch
                 value={productQuery}
                 chips={searchChips}
@@ -369,13 +356,25 @@ export default function AdminDashboard({ profile }) {
                 }}
                 onRemoveChip={(chip) => setSearchChips((current) => current.filter((item) => item !== chip))}
               />
-            </div>
-            <div className="catalog-selection-tools">
-              <label className="check-row">
-                <input type="checkbox" checked={allRenderedSelected} onChange={toggleRenderedSelection} />
-                Seleccionar todos los visibles ({renderedProducts.length.toLocaleString()})
-              </label>
-              <span>Mostrando {renderedProducts.length.toLocaleString()} de {filteredProducts.length.toLocaleString()} filtrados</span>
+
+              <div className="catalog-filter-board">
+                <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
+                <QuickFilters
+                  activeFilters={quickFilters}
+                  onToggle={(id) => setQuickFilters((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
+                  onRemove={(id) => setQuickFilters((current) => current.filter((item) => item !== id))}
+                />
+              </div>
+
+              <div className="catalog-selection-tools">
+                <label className="check-row">
+                  <input type="checkbox" checked={allRenderedSelected} onChange={toggleRenderedSelection} />
+                  {t("selectVisibleProducts")} ({renderedProducts.length.toLocaleString()})
+                </label>
+                <span>{t("showingFiltered", renderedProducts.length.toLocaleString(), filteredProducts.length.toLocaleString())}</span>
+              </div>
+
+              {status ? <p className="status info">{status}</p> : null}
             </div>
 
             {selectedProductCode ? (
@@ -424,7 +423,7 @@ export default function AdminDashboard({ profile }) {
                         {t("editProduct")}
                       </button>
                       <button className="secondary-button compact-action" type="button" onClick={() => toggleProductSelection(product.codigo)}>
-                        {selectedIds.has(product.codigo) ? "Quitar seleccion" : "Agregar a seleccion"}
+                        {selectedIds.has(product.codigo) ? t("removeFromSelection") : t("addToSelection")}
                       </button>
                     </div>
                   </article>
@@ -496,6 +495,43 @@ export default function AdminDashboard({ profile }) {
 
         {tab === "company" ? (
           <CompanySettingsPanel tenantId={tenantId} />
+        ) : null}
+
+        {tab === "database" ? (
+          <section className="admin-workspace database-workspace">
+            <div className="admin-soft-panel compact-panel">
+              <span className="tool-eyebrow">{t("database")}</span>
+              <h2>{t("databaseOperations")}</h2>
+              <p className="muted">{t("databaseOperationsHelp")}</p>
+              <div className="database-action-grid">
+                <UploadExcel onFileSelected={handleExcel} />
+                <ExcelTemplateButton />
+                <CatalogExportButton products={products} />
+                <button className="primary-button compact-action" type="button" onClick={() => setProductModal({ open: true, product: null, mode: "create" })}>
+                  {t("newProduct")}
+                </button>
+              </div>
+              {status ? <p className="status info">{status}</p> : null}
+            </div>
+
+            <div className="admin-soft-panel compact-panel">
+              <h2>{t("productBase")}</h2>
+              <div className="catalog-metric-row database-metrics">
+                <div><span>{t("totalLabel")}</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
+                <div><span>{t("visible")}</span><strong>{loadingProducts ? "..." : visibleCount.toLocaleString()}</strong></div>
+                <div><span>{t("preorder")}</span><strong>{draftPreorder?.preorder_items?.reduce((sum, item) => sum + Number(item.piezas || 0), 0) || 0}</strong></div>
+                <div><span>{t("models")}</span><strong>{draftPreorder?.preorder_items?.length || 0}</strong></div>
+              </div>
+              {!data.products.length ? <p className="muted">{t("sampleProductsNotice")}</p> : null}
+              {draftPreorder ? (
+                <button className="primary-button compact-action" type="button" onClick={() => setIsDraftOpen(true)}>
+                  Abrir preorden en proceso
+                </button>
+              ) : null}
+            </div>
+
+            <ImportPanel onImported={load} tenantId={tenantId} />
+          </section>
         ) : null}
       </main>
 
