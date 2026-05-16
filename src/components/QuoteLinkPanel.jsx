@@ -12,7 +12,7 @@ export default function QuoteLinkPanel({ products, clients = [], profile, tenant
 
   const friendlyError = (message = "") => {
     if (message.includes("quote_links")) {
-      return "Falta activar la tabla de ligas en Supabase. Ejecuta el archivo supabase/quote_links.sql en SQL Editor.";
+      return "Pendiente de configuracion: falta ejecutar el archivo supabase/quote_links.sql en Supabase SQL Editor para activar las ligas de cotizacion.";
     }
     return message;
   };
@@ -33,7 +33,7 @@ export default function QuoteLinkPanel({ products, clients = [], profile, tenant
       setResultUrl(result.url);
       setStatus("Liga generada correctamente.");
     } catch (error) {
-      setStatus(`Error: ${friendlyError(error.message)}`);
+      setStatus(friendlyError(error.message));
     } finally {
       setSaving(false);
     }

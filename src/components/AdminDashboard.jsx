@@ -7,7 +7,7 @@ import CatalogPdfPanel from "./CatalogPdfPanel";
 import PricingPanel from "./PricingPanel";
 import PreorderList from "./PreorderList";
 import QuoteLinkPanel from "./QuoteLinkPanel";
-import SelectionBar from "./SelectionBar";
+import SelectedProductsDrawer from "./SelectedProductsDrawer";
 import { useCompany } from "../contexts/CompanyContext";
 import CatalogExportButton from "./CatalogExportButton";
 import ExcelTemplateButton from "./ExcelTemplateButton";
@@ -129,6 +129,7 @@ export default function AdminDashboard({ profile }) {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [catalogPdfOpen, setCatalogPdfOpen] = useState(false);
   const [quoteLinkOpen, setQuoteLinkOpen] = useState(false);
+  const [selectionDrawerOpen, setSelectionDrawerOpen] = useState(false);
 
   const load = async () => {
     setLoadingProducts(true);
@@ -169,6 +170,10 @@ export default function AdminDashboard({ profile }) {
   useEffect(() => {
     setVisibleProductLimit(PRODUCT_RENDER_BATCH);
   }, [productQuery, searchChips, filters, quickFilters]);
+
+  useEffect(() => {
+    if (!selectedIds.size) setSelectionDrawerOpen(false);
+  }, [selectedIds]);
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();
     if (!trimmed) return;
@@ -237,12 +242,14 @@ export default function AdminDashboard({ profile }) {
   };
 
   const toggleProductSelection = (code) => {
+    const willAdd = !selectedIds.has(code);
     setSelectedIds((current) => {
       const next = new Set(current);
       if (next.has(code)) next.delete(code);
       else next.add(code);
       return next;
     });
+    if (willAdd) setSelectionDrawerOpen(true);
   };
 
   const toggleRenderedSelection = () => {
@@ -252,6 +259,17 @@ export default function AdminDashboard({ profile }) {
       else renderedProducts.forEach((product) => next.add(product.codigo));
       return next;
     });
+    if (!allRenderedSelected && renderedProducts.length) setSelectionDrawerOpen(true);
+  };
+
+  const openCatalogPdfPanel = () => {
+    setQuoteLinkOpen(false);
+    setCatalogPdfOpen(true);
+  };
+
+  const openQuoteLinkPanel = () => {
+    setCatalogPdfOpen(false);
+    setQuoteLinkOpen(true);
   };
 
   if (!data) {
@@ -405,6 +423,9 @@ export default function AdminDashboard({ profile }) {
                       <button className="secondary-button compact-action" type="button" onClick={() => setProductModal({ open: true, product, mode: "edit" })}>
                         {t("editProduct")}
                       </button>
+                      <button className="secondary-button compact-action" type="button" onClick={() => toggleProductSelection(product.codigo)}>
+                        {selectedIds.has(product.codigo) ? "Quitar seleccion" : "Agregar a seleccion"}
+                      </button>
                     </div>
                   </article>
                 ))}
@@ -516,10 +537,14 @@ export default function AdminDashboard({ profile }) {
         />
       ) : null}
 
-      <SelectionBar
-        count={selectedProducts.length}
-        onCatalogPdf={() => setCatalogPdfOpen(true)}
-        onQuoteLink={() => setQuoteLinkOpen(true)}
+      <SelectedProductsDrawer
+        products={selectedProducts}
+        isOpen={selectionDrawerOpen}
+        onOpen={() => setSelectionDrawerOpen(true)}
+        onClose={() => setSelectionDrawerOpen(false)}
+        onRemove={toggleProductSelection}
+        onCatalogPdf={openCatalogPdfPanel}
+        onQuoteLink={openQuoteLinkPanel}
         onClear={() => setSelectedIds(new Set())}
       />
 
