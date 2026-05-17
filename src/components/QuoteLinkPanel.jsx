@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ActionNotice from "./ActionNotice";
 import { createQuoteLink } from "../services/quoteLinkService";
 
 export default function QuoteLinkPanel({ products, clients = [], profile, tenantId = "", onClose }) {
@@ -8,6 +9,7 @@ export default function QuoteLinkPanel({ products, clients = [], profile, tenant
   const [clientId, setClientId] = useState("");
   const [resultUrl, setResultUrl] = useState("");
   const [status, setStatus] = useState("");
+  const [notice, setNotice] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const friendlyError = (message = "") => {
@@ -35,8 +37,11 @@ export default function QuoteLinkPanel({ products, clients = [], profile, tenant
       });
       setResultUrl(result.url);
       setStatus("Liga generada correctamente.");
+      setNotice({ type: "success", title: "Liga creada", message: "La liga para cliente ya esta lista. Puedes copiarla y enviarla." });
     } catch (error) {
-      setStatus(friendlyError(error.message));
+      const message = friendlyError(error.message);
+      setStatus(message);
+      setNotice({ type: "error", title: "No se pudo generar", message });
     } finally {
       setSaving(false);
     }
@@ -46,6 +51,7 @@ export default function QuoteLinkPanel({ products, clients = [], profile, tenant
     if (!resultUrl) return;
     await navigator.clipboard.writeText(resultUrl);
     setStatus("Liga copiada.");
+    setNotice({ type: "success", title: "Liga copiada", message: "La liga quedo copiada para pegarla en WhatsApp o correo." });
   };
 
   return (
@@ -126,6 +132,7 @@ export default function QuoteLinkPanel({ products, clients = [], profile, tenant
           </button>
         </footer>
       </section>
+      <ActionNotice notice={notice} onClose={() => setNotice(null)} />
     </div>
   );
 }

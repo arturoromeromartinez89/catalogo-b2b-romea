@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ActionNotice from "./ActionNotice";
 import { generateCatalogPdf } from "../utils/catalogPdfGenerator";
 
 export default function CatalogPdfPanel({ products, company, onClose }) {
@@ -7,6 +8,7 @@ export default function CatalogPdfPanel({ products, company, onClose }) {
   const [showWeight, setShowWeight] = useState(true);
   const [columns, setColumns] = useState(3);
   const [status, setStatus] = useState("");
+  const [notice, setNotice] = useState(null);
   const [generating, setGenerating] = useState(false);
 
   const handleGenerate = async () => {
@@ -15,8 +17,10 @@ export default function CatalogPdfPanel({ products, company, onClose }) {
     try {
       await generateCatalogPdf(products, { catalogName, showPrice, showWeight, columns }, company);
       setStatus("PDF generado correctamente.");
+      setNotice({ type: "success", title: "PDF generado", message: "El catalogo PDF se genero correctamente y ya se descargo." });
     } catch (error) {
       setStatus(`Error: ${error.message}`);
+      setNotice({ type: "error", title: "No se pudo generar", message: `Error: ${error.message}` });
     } finally {
       setGenerating(false);
     }
@@ -97,6 +101,7 @@ export default function CatalogPdfPanel({ products, company, onClose }) {
           </button>
         </footer>
       </section>
+      <ActionNotice notice={notice} onClose={() => setNotice(null)} />
     </div>
   );
 }

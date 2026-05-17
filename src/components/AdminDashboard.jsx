@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import ActionNotice from "./ActionNotice";
 import AdvancedSearch from "./AdvancedSearch";
 import BrandLogo from "./BrandLogo";
 import ImportPanel from "./ImportPanel";
@@ -125,9 +126,11 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [tab, setTab] = useState("catalog");
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("");
+  const [actionNotice, setActionNotice] = useState(null);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productModal, setProductModal] = useState({ open: false, product: null, mode: "create" });
   const [clientForm, setClientForm] = useState(blankClient);
+  const [savingClient, setSavingClient] = useState(false);
   const [isClientFormOpen, setIsClientFormOpen] = useState(false);
   const [priceListForm, setPriceListForm] = useState(blankPriceList);
   const [priceItemForm, setPriceItemForm] = useState(blankPriceItem);
@@ -150,6 +153,11 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [quoteLinkOpen, setQuoteLinkOpen] = useState(false);
   const [selectionDrawerOpen, setSelectionDrawerOpen] = useState(false);
   const [tenantForm, setTenantForm] = useState({ name: "", slug: "", status: "active" });
+
+  const notifyAction = (type, title, message) => {
+    setActionNotice({ type, title, message });
+    setLastActionMessage(message);
+  };
 
   const load = async () => {
     if (!tenantId) {
@@ -262,6 +270,12 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     const timer = window.setTimeout(() => setLastActionMessage(""), 2400);
     return () => window.clearTimeout(timer);
   }, [lastActionMessage]);
+
+  useEffect(() => {
+    if (!actionNotice?.message) return undefined;
+    const timer = window.setTimeout(() => setActionNotice(null), actionNotice.type === "error" ? 9000 : 5200);
+    return () => window.clearTimeout(timer);
+  }, [actionNotice]);
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();
     if (!trimmed) return;
@@ -326,11 +340,20 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const saveProduct = async (product) => {
     if (!tenantId) {
       setStatus("Primero selecciona una empresa para guardar productos.");
+      notifyAction("warning", "Falta empresa", "Primero selecciona una empresa para guardar productos.");
       return;
     }
-    await upsertProducts([normalizeProduct(formProductToRow(product))], tenantId);
-    setProductModal({ open: false, product: null, mode: "create" });
-    await load();
+    setStatus("Guardando producto...");
+    try {
+      await upsertProducts([normalizeProduct(formProductToRow(product))], tenantId);
+      setProductModal({ open: false, product: null, mode: "create" });
+      await load();
+      setStatus(`Producto ${product.codigo} guardado correctamente.`);
+      notifyAction("success", "Producto guardado", `Producto ${product.codigo} guardado correctamente.`);
+    } catch (error) {
+      setStatus(`Error guardando producto: ${error.message}`);
+      notifyAction("error", "No se pudo guardar", `Error guardando producto: ${error.message}`);
+    }
   };
 
   const isClientPriceActive = (priceListId) =>
@@ -373,14 +396,33 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const handleSaveClient = async () => {
     if (!tenantId) {
       setStatus("Primero selecciona una empresa para crear clientes.");
+      notifyAction("warning", "Falta empresa", "Primero selecciona una empresa para crear clientes.");
       return;
     }
-    await saveClient(clientForm, tenantId);
-    setClientForm(blankClient);
-    setIsClientFormOpen(false);
-    await load();
-    window.alert("Cliente creado. Ahora revisa el menu de precios para confirmar labor por linea y plata fina antes de cotizar.");
-    setTab("prices");
+    if (!clientForm.name.trim() && !clientForm.company.trim()) {
+      notifyAction("warning", "Datos incompletos", "Captura al menos nombre o empresa antes de guardar el cliente.");
+      return;
+    }
+    setSavingClient(true);
+    setStatus("Guardando cliente...");
+    try {
+      const saved = await saveClient(clientForm, tenantId);
+      setClientForm(blankClient);
+      setIsClientFormOpen(false);
+      await load();
+      setTab("prices");
+      setStatus("Cliente guardado correctamente. Ahora configura su lista de precios.");
+      notifyAction(
+        "success",
+        "Cliente creado",
+        `${saved.company || saved.name || "Cliente"} se guardo correctamente. Revisa el menu de precios para confirmar su configuracion.`
+      );
+    } catch (error) {
+      setStatus(`Error creando cliente: ${error.message}`);
+      notifyAction("error", "No se pudo guardar", `Error creando cliente: ${error.message}`);
+    } finally {
+      setSavingClient(false);
+    }
   };
 
   const clearCatalogFilters = () => {
@@ -856,10 +898,11 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               </div>
               <div className="client-form-actions">
                 <button className="secondary-button compact-action" type="button" onClick={() => setIsClientFormOpen(false)}>Cancelar</button>
-                <button className="new-client-button" type="button" onClick={handleSaveClient}>
-                  Guardar cliente
+                <button className="new-client-button" type="button" onClick={handleSaveClient} disabled={savingClient}>
+                  {savingClient ? "Guardando..." : "Guardar cliente"}
                 </button>
               </div>
+              {status ? <p className="inline-action-confirmation success">{status}</p> : null}
               <p className="muted">{t("customerAccessNote")}</p>
             </div>
             ) : null}
@@ -877,7 +920,22 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                     <h3>{t("priceMenu")}</h3>
                     {data.priceLists.map((priceList) => (
                       <label className="switch-row" key={priceList.id}>
-                        <input type="checkbox" checked={isClientPriceActive(priceList.id)} onChange={async (event) => { await setClientPriceList(selectedClientId, priceList.id, event.target.checked); await load(); }} />
+                        <input
+                          type="checkbox"
+                          checked={isClientPriceActive(priceList.id)}
+                          onChange={async (event) => {
+                            setStatus("Actualizando lista de precios...");
+                            try {
+                              await setClientPriceList(selectedClientId, priceList.id, event.target.checked);
+                              await load();
+                              setStatus("Lista de precios actualizada correctamente.");
+                              notifyAction("success", "Permiso actualizado", "La lista de precios del cliente quedo actualizada.");
+                            } catch (error) {
+                              setStatus(`Error actualizando lista: ${error.message}`);
+                              notifyAction("error", "No se pudo actualizar", `Error actualizando lista: ${error.message}`);
+                            }
+                          }}
+                        />
                         <span>{priceList.name}</span>
                       </label>
                     ))}
@@ -947,10 +1005,17 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           products={products}
           onSave={saveProduct}
           onDelete={async (code) => {
-            const product = data.products.find((item) => item.codigo === code);
-            if (product) await deleteProduct(product.id);
-            setProductModal({ open: false, product: null, mode: "create" });
-            await load();
+            try {
+              const product = data.products.find((item) => item.codigo === code);
+              if (product) await deleteProduct(product.id);
+              setProductModal({ open: false, product: null, mode: "create" });
+              await load();
+              setStatus(`Producto ${code} eliminado correctamente.`);
+              notifyAction("success", "Producto eliminado", `Producto ${code} eliminado correctamente.`);
+            } catch (error) {
+              setStatus(`Error eliminando producto: ${error.message}`);
+              notifyAction("error", "No se pudo eliminar", `Error eliminando producto: ${error.message}`);
+            }
           }}
           onClose={() => setProductModal({ open: false, product: null, mode: "create" })}
         />
@@ -1026,6 +1091,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           {lastActionMessage}
         </div>
       ) : null}
+
+      <ActionNotice notice={actionNotice} onClose={() => setActionNotice(null)} />
     </div>
   );
 }

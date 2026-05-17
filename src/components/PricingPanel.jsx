@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import ActionNotice from "./ActionNotice";
 import {
   calcPrecioGramo,
   fetchLines,
@@ -15,6 +16,7 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
   const [savingMetal, setSavingMetal] = useState(false);
   const [syncingLines, setSyncingLines] = useState(false);
   const [status, setStatus] = useState("");
+  const [notice, setNotice] = useState(null);
   const [tcOutput, setTcOutput] = useState("");
 
   const loadPricing = async () => {
@@ -38,8 +40,10 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
       const updated = await fetchMetalPrices(tenantId);
       setMetalPrices(updated);
       setStatus("Precio de plata fina guardado.");
+      setNotice({ type: "success", title: "Precio guardado", message: "La plata fina vigente se guardo correctamente." });
     } catch (error) {
       setStatus(`Error: ${error.message}`);
+      setNotice({ type: "error", title: "No se pudo guardar", message: `Error: ${error.message}` });
     } finally {
       setSavingMetal(false);
     }
@@ -52,8 +56,10 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
       const updated = await syncProductLinesFromProducts(products, tenantId);
       setLines(updated);
       setStatus(`Lineas sincronizadas: ${updated.length}. Revisa la labor por gramo antes de cotizar.`);
+      setNotice({ type: "success", title: "Lineas sincronizadas", message: `${updated.length} lineas quedaron listas para configurar labor.` });
     } catch (error) {
       setStatus(`Error: ${error.message}`);
+      setNotice({ type: "error", title: "No se pudo sincronizar", message: `Error: ${error.message}` });
     } finally {
       setSyncingLines(false);
     }
@@ -64,8 +70,10 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
       await saveLine(line, tenantId);
       setLines((current) => current.map((item) => (item.codigo === line.codigo ? { ...item, ...line } : item)));
       setStatus("Labor por linea guardada.");
+      setNotice({ type: "success", title: "Linea actualizada", message: `La labor de la linea ${line.codigo} se guardo correctamente.` });
     } catch (error) {
       setStatus(`Error: ${error.message}`);
+      setNotice({ type: "error", title: "No se pudo guardar", message: `Error: ${error.message}` });
     }
   };
 
@@ -197,6 +205,7 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
           </table>
         </div>
       </div>
+      <ActionNotice notice={notice} onClose={() => setNotice(null)} />
     </section>
   );
 }
