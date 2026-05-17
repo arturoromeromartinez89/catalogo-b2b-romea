@@ -41,6 +41,18 @@ export default function SelectedProductsDrawer({
   const catalogCount = catalogProducts.length;
   const count = preorderCount + catalogCount;
   if (!count) return null;
+  const confirmCatalog = () => {
+    if (!catalogCount) return;
+    if (window.confirm(`Seleccionaste ${catalogCount.toLocaleString()} productos. ¿Deseas generar el catálogo con esta selección?`)) {
+      onCatalogPdf();
+    }
+  };
+  const confirmQuoteLink = () => {
+    if (!catalogCount) return;
+    if (window.confirm(`Seleccionaste ${catalogCount.toLocaleString()} productos. ¿Deseas generar la liga con esta selección?`)) {
+      onQuoteLink();
+    }
+  };
 
   return (
     <>
@@ -88,13 +100,13 @@ export default function SelectedProductsDrawer({
             </div>
           </div>
           <div className="selection-drawer-actions">
-            <button className="primary-button compact-action" type="button" onClick={onCatalogPdf} disabled={!catalogCount}>
+            <button className="tray-action catalog-pdf" type="button" onClick={confirmCatalog} disabled={!catalogCount}>
               {t("generateCatalogPdf")}
             </button>
-            <button className="secondary-button compact-action" type="button" onClick={onQuoteLink} disabled={!catalogCount}>
+            <button className="tray-action quote-link" type="button" onClick={confirmQuoteLink} disabled={!catalogCount}>
               {t("generateQuoteLinkShort")}
             </button>
-            <button className="secondary-button compact-action" type="button" onClick={onClearCatalog} disabled={!catalogCount}>
+            <button className="tray-action clear" type="button" onClick={onClearCatalog} disabled={!catalogCount}>
               {t("clearSelectionShort")}
             </button>
           </div>

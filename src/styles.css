@@ -1167,8 +1167,8 @@ dd {
 }
 
 .admin-catalog-main {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   overflow: hidden;
 }
@@ -1199,6 +1199,8 @@ dd {
 }
 
 .admin-workspace {
+  flex: 1;
+  min-height: 0;
   min-width: 0;
   overflow-x: hidden;
   overflow-y: auto;
@@ -1207,15 +1209,15 @@ dd {
 
 .catalog-control-panel {
   background: #ffffff;
-  border: 1px solid var(--romea-line);
-  border-radius: 16px;
-  box-shadow: var(--shadow-soft);
+  border: 0;
+  border-bottom: 1px solid var(--romea-line);
+  border-radius: 0;
+  box-shadow: 0 10px 28px rgba(18, 32, 61, 0.06);
+  flex-shrink: 0;
   display: grid;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding: 18px;
-  position: sticky;
-  top: 0;
+  gap: 10px;
+  margin-bottom: 0;
+  padding: 11px clamp(18px, 3vw, 36px);
   z-index: 18;
 }
 
@@ -1226,25 +1228,33 @@ dd {
 
 .catalog-control-heading {
   align-items: start;
-  border-bottom: 1px solid var(--romea-line);
+  border-bottom: 0;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   grid-template-columns: minmax(0, 1fr) auto;
-  padding-bottom: 14px;
+  padding-bottom: 0;
 }
 
 .catalog-control-heading h2 {
   color: var(--romea-blue);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1.1;
-  margin: 4px 0 5px;
+  margin: 2px 0 3px;
 }
 
 .catalog-control-heading p {
   color: var(--romea-muted);
   font-size: 13px;
   margin: 0;
+}
+
+.catalog-control-body {
+  display: grid;
+  gap: 10px;
+  max-height: min(46vh, 420px);
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .catalog-control-actions {
@@ -1268,7 +1278,7 @@ dd {
   display: grid;
   gap: 4px;
   min-width: 0;
-  padding: 11px 12px;
+  padding: 8px 10px;
 }
 
 .catalog-metric-row span {
@@ -1286,7 +1296,7 @@ dd {
 .catalog-filter-board {
   align-items: start;
   display: grid;
-  gap: 14px;
+  gap: 10px;
   grid-template-columns: minmax(280px, 1.15fr) minmax(260px, 0.85fr);
 }
 
@@ -1295,9 +1305,9 @@ dd {
   border: 1px solid var(--romea-line);
   border-radius: 13px;
   display: grid;
-  gap: 12px;
+  gap: 9px;
   margin: 0;
-  padding: 14px;
+  padding: 11px;
 }
 
 .catalog-filter-board .sidebar-section h3 {
@@ -1530,6 +1540,71 @@ dd {
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+}
+
+.clients-workspace {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.client-command-panel {
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.new-client-button {
+  background: #eaf8f1;
+  border: 1px solid #8ed7b3;
+  border-radius: 9px;
+  color: #087a45;
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 38px;
+  padding: 8px 14px;
+}
+
+.client-form-panel {
+  max-width: 980px;
+}
+
+.client-form-sections {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.client-form-sections section {
+  background: var(--romea-soft);
+  border: 1px solid var(--romea-line);
+  border-radius: 12px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.client-form-sections h3 {
+  color: var(--romea-blue);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.client-active-switch {
+  align-self: end;
+  background: #ffffff;
+  border: 1px solid var(--romea-line);
+  border-radius: 10px;
+  min-height: 40px;
+  padding: 9px 10px;
+}
+
+.client-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
 }
 
 .permission-grid {
@@ -2483,9 +2558,40 @@ body > div[data-portal] {
 .selection-drawer-actions {
   border-bottom: 1px solid var(--romea-line);
   display: grid;
-  gap: 8px;
+  gap: 7px;
   grid-template-columns: 1fr;
-  padding: 12px 18px;
+  padding: 10px 18px;
+}
+
+.tray-action {
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 900;
+  min-height: 34px;
+  padding: 7px 10px;
+}
+
+.tray-action.catalog-pdf {
+  background: #eaf8f1;
+  border: 1px solid #8ed7b3;
+  color: #087a45;
+}
+
+.tray-action.quote-link {
+  background: #fff5e8;
+  border: 1px solid #f0c27a;
+  color: #9a5b00;
+}
+
+.tray-action.clear {
+  background: #ffffff;
+  border: 1px solid var(--romea-line);
+  color: var(--romea-blue);
+}
+
+.tray-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .work-tray-section {
@@ -2616,7 +2722,9 @@ body > div[data-portal] {
 
   .product-action-layout,
   .detail-action-panel,
-  .detail-action-grid {
+  .detail-action-grid,
+  .client-command-panel,
+  .client-form-sections {
     grid-template-columns: minmax(0, 1fr);
   }
 }

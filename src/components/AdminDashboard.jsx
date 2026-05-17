@@ -128,6 +128,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productModal, setProductModal] = useState({ open: false, product: null, mode: "create" });
   const [clientForm, setClientForm] = useState(blankClient);
+  const [isClientFormOpen, setIsClientFormOpen] = useState(false);
   const [priceListForm, setPriceListForm] = useState(blankPriceList);
   const [priceItemForm, setPriceItemForm] = useState(blankPriceItem);
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -376,6 +377,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     }
     await saveClient(clientForm, tenantId);
     setClientForm(blankClient);
+    setIsClientFormOpen(false);
     await load();
     window.alert("Cliente creado. Ahora revisa el menu de precios para confirmar labor por linea y plata fina antes de cotizar.");
     setTab("prices");
@@ -643,76 +645,76 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           </section>
         ) : null}
 
+        {tab === "catalog" && !selectedProductCode ? (
+          <div className={`catalog-control-panel ${filtersCollapsed ? "collapsed" : ""}`}>
+            <div className="catalog-control-heading">
+              <div>
+                <span className="tool-eyebrow">{t("catalogControls")}</span>
+                <h2>{t("searchAndFilter")}</h2>
+                <p>{t("catalogControlsHelp")}</p>
+              </div>
+              <div className="catalog-control-actions">
+                <button className="secondary-button compact-action" type="button" onClick={clearCatalogFilters}>
+                  {t("clearFilters")}
+                </button>
+                <button className="secondary-button compact-action filter-collapse-button" type="button" onClick={() => setFiltersCollapsed((current) => !current)}>
+                  {filtersCollapsed ? t("showFilters") : t("hideFilters")}
+                </button>
+              </div>
+            </div>
+
+            {!filtersCollapsed ? (
+              <div className="catalog-control-body">
+                <div className="catalog-metric-row">
+                  <div><span>{t("totalLabel")}</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
+                  <div><span>{t("visible")}</span><strong>{loadingProducts ? "..." : visibleCount.toLocaleString()}</strong></div>
+                  <div><span>{t("filtered")}</span><strong>{filteredProducts.length.toLocaleString()}</strong></div>
+                  <div><span>{t("marked")}</span><strong>{checkedIds.size.toLocaleString()}</strong></div>
+                </div>
+
+                <AdvancedSearch
+                  value={productQuery}
+                  chips={searchChips}
+                  products={products}
+                  onChange={setProductQuery}
+                  onAddChip={(chip) => {
+                    addSearchChip(chip);
+                    setProductQuery("");
+                  }}
+                  onRemoveChip={(chip) => setSearchChips((current) => current.filter((item) => item !== chip))}
+                />
+
+                <div className="catalog-filter-board">
+                  <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
+                  <QuickFilters
+                    activeFilters={quickFilters}
+                    onToggle={(id) => setQuickFilters((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
+                    onRemove={(id) => setQuickFilters((current) => current.filter((item) => item !== id))}
+                  />
+                </div>
+
+                <div className="catalog-selection-tools">
+                  <label className="check-row">
+                    <input type="checkbox" checked={allRenderedChecked} onChange={toggleRenderedChecks} />
+                    {t("selectVisibleProducts")} ({renderedProducts.length.toLocaleString()})
+                  </label>
+                  <button className="selection-action catalog" type="button" onClick={addCheckedToCatalogSelection} disabled={!checkedIds.size}>
+                    {t("addMarkedToCatalog")}
+                  </button>
+                  <button className="selection-action preorder" type="button" onClick={addCheckedToPreorder} disabled={!checkedIds.size}>
+                    {t("addMarkedToPreorder")}
+                  </button>
+                  <span>{t("showingFiltered", renderedProducts.length.toLocaleString(), filteredProducts.length.toLocaleString())}</span>
+                </div>
+
+                {status ? <p className="status info">{status}</p> : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         {tab === "catalog" ? (
           <section className="admin-workspace">
-            {!selectedProductCode ? (
-            <div className={`catalog-control-panel ${filtersCollapsed ? "collapsed" : ""}`}>
-              <div className="catalog-control-heading">
-                <div>
-                  <span className="tool-eyebrow">{t("catalogControls")}</span>
-                  <h2>{t("searchAndFilter")}</h2>
-                  <p>{t("catalogControlsHelp")}</p>
-                </div>
-                <div className="catalog-control-actions">
-                  <button className="secondary-button compact-action" type="button" onClick={clearCatalogFilters}>
-                    {t("clearFilters")}
-                  </button>
-                  <button className="secondary-button compact-action filter-collapse-button" type="button" onClick={() => setFiltersCollapsed((current) => !current)}>
-                    {filtersCollapsed ? t("showFilters") : t("hideFilters")}
-                  </button>
-                </div>
-              </div>
-
-              {!filtersCollapsed ? (
-              <>
-              <div className="catalog-metric-row">
-                <div><span>{t("totalLabel")}</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
-                <div><span>{t("visible")}</span><strong>{loadingProducts ? "..." : visibleCount.toLocaleString()}</strong></div>
-                <div><span>{t("filtered")}</span><strong>{filteredProducts.length.toLocaleString()}</strong></div>
-                <div><span>{t("marked")}</span><strong>{checkedIds.size.toLocaleString()}</strong></div>
-              </div>
-
-              <AdvancedSearch
-                value={productQuery}
-                chips={searchChips}
-                products={products}
-                onChange={setProductQuery}
-                onAddChip={(chip) => {
-                  addSearchChip(chip);
-                  setProductQuery("");
-                }}
-                onRemoveChip={(chip) => setSearchChips((current) => current.filter((item) => item !== chip))}
-              />
-
-              <div className="catalog-filter-board">
-                <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
-                <QuickFilters
-                  activeFilters={quickFilters}
-                  onToggle={(id) => setQuickFilters((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
-                  onRemove={(id) => setQuickFilters((current) => current.filter((item) => item !== id))}
-                />
-              </div>
-
-              <div className="catalog-selection-tools">
-                <label className="check-row">
-                  <input type="checkbox" checked={allRenderedChecked} onChange={toggleRenderedChecks} />
-                  {t("selectVisibleProducts")} ({renderedProducts.length.toLocaleString()})
-                </label>
-                <button className="selection-action catalog" type="button" onClick={addCheckedToCatalogSelection} disabled={!checkedIds.size}>
-                  {t("addMarkedToCatalog")}
-                </button>
-                <button className="selection-action preorder" type="button" onClick={addCheckedToPreorder} disabled={!checkedIds.size}>
-                  {t("addMarkedToPreorder")}
-                </button>
-                <span>{t("showingFiltered", renderedProducts.length.toLocaleString(), filteredProducts.length.toLocaleString())}</span>
-              </div>
-
-              {status ? <p className="status info">{status}</p> : null}
-              </>
-              ) : null}
-            </div>
-            ) : null}
-
             {selectedProductCode ? (
               <ProductDetail
                 product={selectedProduct}
@@ -813,24 +815,58 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
         ) : null}
 
         {tab === "clients" ? (
-          <section className="admin-workspace two-column-admin">
-            <div className="admin-soft-panel compact-panel">
-              <h2>{t("customerCreateTitle")}</h2>
-              <div className="form-grid">
-                <input placeholder={t("customerName")} value={clientForm.name} onChange={(event) => setClientForm({ ...clientForm, name: event.target.value })} />
-                <input placeholder={t("company")} value={clientForm.company} onChange={(event) => setClientForm({ ...clientForm, company: event.target.value })} />
-                <input placeholder={t("email")} value={clientForm.email} onChange={(event) => setClientForm({ ...clientForm, email: event.target.value })} />
-                <input placeholder={t("phone")} value={clientForm.phone} onChange={(event) => setClientForm({ ...clientForm, phone: event.target.value })} />
-                <input placeholder={t("rfc")} value={clientForm.rfc} onChange={(event) => setClientForm({ ...clientForm, rfc: event.target.value })} />
+          <section className="admin-workspace clients-workspace">
+            <div className="admin-soft-panel compact-panel client-command-panel">
+              <div>
+                <span className="tool-eyebrow">Clientes mayoristas</span>
+                <h2>Registro y permisos de cliente</h2>
+                <p className="muted">Da de alta el cliente, confirma su correo de acceso y asígnale lista de precios por línea.</p>
               </div>
-              <button className="primary-button compact-action" type="button" onClick={handleSaveClient}>
-                {t("saveClient")}
+              <button className="new-client-button" type="button" onClick={() => setIsClientFormOpen((current) => !current)}>
+                + Nuevo cliente
               </button>
+            </div>
+
+            {isClientFormOpen ? (
+            <div className="admin-soft-panel compact-panel client-form-panel">
+              <div className="section-title-row">
+                <h2>{t("customerCreateTitle")}</h2>
+                <span>Campos principales para activar acceso comercial.</span>
+              </div>
+              <div className="client-form-sections">
+                <section>
+                  <h3>Identificación</h3>
+                  <div className="form-grid">
+                    <label>Nombre del contacto<input placeholder="Ej. Arturo Romero" value={clientForm.name} onChange={(event) => setClientForm({ ...clientForm, name: event.target.value })} /></label>
+                    <label>Empresa<input placeholder="Ej. Comercial ABC" value={clientForm.company} onChange={(event) => setClientForm({ ...clientForm, company: event.target.value })} /></label>
+                    <label>RFC / Tax ID<input placeholder="RFC o Tax ID" value={clientForm.rfc} onChange={(event) => setClientForm({ ...clientForm, rfc: event.target.value })} /></label>
+                  </div>
+                </section>
+                <section>
+                  <h3>Acceso y contacto</h3>
+                  <div className="form-grid">
+                    <label>Correo de acceso<input placeholder="cliente@empresa.com" value={clientForm.email} onChange={(event) => setClientForm({ ...clientForm, email: event.target.value })} /></label>
+                    <label>Teléfono<input placeholder="+52..." value={clientForm.phone} onChange={(event) => setClientForm({ ...clientForm, phone: event.target.value })} /></label>
+                    <label className="switch-row client-active-switch">
+                      <input type="checkbox" checked={clientForm.active} onChange={(event) => setClientForm({ ...clientForm, active: event.target.checked })} />
+                      <span>Cliente activo</span>
+                    </label>
+                  </div>
+                </section>
+              </div>
+              <div className="client-form-actions">
+                <button className="secondary-button compact-action" type="button" onClick={() => setIsClientFormOpen(false)}>Cancelar</button>
+                <button className="new-client-button" type="button" onClick={handleSaveClient}>
+                  Guardar cliente
+                </button>
+              </div>
               <p className="muted">{t("customerAccessNote")}</p>
             </div>
+            ) : null}
 
             <div className="admin-soft-panel compact-panel">
               <h2>{t("customerPricingTitle")}</h2>
+              <p className="muted">Selecciona un cliente existente para confirmar qué lista de precios tendrá activa.</p>
               <select value={selectedClientId} onChange={(event) => setSelectedClientId(event.target.value)}>
                 <option value="">{t("selectClient")}</option>
                 {data.clients.map((client) => <option key={client.id} value={client.id}>{client.company || client.name} - {client.email}</option>)}
