@@ -141,7 +141,10 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [isDraftOpen, setIsDraftOpen] = useState(false);
   const [addedCodes, setAddedCodes] = useState([]);
   const [visibleProductLimit, setVisibleProductLimit] = useState(PRODUCT_RENDER_BATCH);
-  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [checkedIds, setCheckedIds] = useState(() => new Set());
+  const [catalogSelectionIds, setCatalogSelectionIds] = useState(() => new Set());
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
+  const [lastActionMessage, setLastActionMessage] = useState("");
   const [catalogPdfOpen, setCatalogPdfOpen] = useState(false);
   const [quoteLinkOpen, setQuoteLinkOpen] = useState(false);
   const [selectionDrawerOpen, setSelectionDrawerOpen] = useState(false);
@@ -223,11 +226,26 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     () => filteredProducts.slice(0, visibleProductLimit),
     [filteredProducts, visibleProductLimit]
   );
-  const selectedProducts = useMemo(
-    () => products.filter((product) => selectedIds.has(product.codigo)),
-    [products, selectedIds]
+  const checkedProducts = useMemo(
+    () => products.filter((product) => checkedIds.has(product.codigo)),
+    [products, checkedIds]
   );
-  const allRenderedSelected = renderedProducts.length > 0 && renderedProducts.every((product) => selectedIds.has(product.codigo));
+  const catalogSelectionProducts = useMemo(
+    () => products.filter((product) => catalogSelectionIds.has(product.codigo)),
+    [products, catalogSelectionIds]
+  );
+  const preorderProducts = useMemo(
+    () => (draftPreorder?.preorder_items || []).map((item) => ({
+      codigo: item.producto_codigo,
+      descripcion: item.producto_descripcion,
+      linea: item.producto_linea,
+      fotoUrl: item.producto_foto_url,
+      pesoPromedio: item.gramos_por_pieza,
+      piezas: item.piezas,
+    })),
+    [draftPreorder]
+  );
+  const allRenderedChecked = renderedProducts.length > 0 && renderedProducts.every((product) => checkedIds.has(product.codigo));
   const visibleCount = products.filter((product) => product.visibleWeb).length;
 
   useEffect(() => {
@@ -235,8 +253,14 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   }, [productQuery, searchChips, filters, quickFilters]);
 
   useEffect(() => {
-    if (!selectedIds.size) setSelectionDrawerOpen(false);
-  }, [selectedIds]);
+    if (!catalogSelectionIds.size && !preorderProducts.length) setSelectionDrawerOpen(false);
+  }, [catalogSelectionIds, preorderProducts.length]);
+
+  useEffect(() => {
+    if (!lastActionMessage) return undefined;
+    const timer = window.setTimeout(() => setLastActionMessage(""), 2400);
+    return () => window.clearTimeout(timer);
+  }, [lastActionMessage]);
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();
     if (!trimmed) return;
@@ -286,7 +310,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       const deleted = await deleteTenantProducts(tenantId);
       setDraftPreorder(null);
       setAddedCodes([]);
-      setSelectedIds(new Set());
+      setCheckedIds(new Set());
+      setCatalogSelectionIds(new Set());
       setSelectedProductCode("");
       await load();
       setStatus(`Base de productos borrada correctamente: ${deleted.toLocaleString()} productos eliminados.`);
@@ -329,7 +354,19 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       return { ...preorder, preorder_items: preorderItems };
     });
     setAddedCodes((current) => current.includes(product.codigo) ? current : [...current, product.codigo]);
+    setSelectionDrawerOpen(true);
+    setLastActionMessage(`Producto ${product.codigo} agregado a pre-orden.`);
     setStatus(`Producto ${product.codigo} agregado a la preorden en proceso.`);
+  };
+
+  const removeFromPreorder = (code) => {
+    setDraftPreorder((current) => {
+      if (!current) return current;
+      const preorderItems = (current.preorder_items || []).filter((item) => item.producto_codigo !== code);
+      return preorderItems.length ? { ...current, preorder_items: preorderItems } : null;
+    });
+    setAddedCodes((current) => current.filter((item) => item !== code));
+    setLastActionMessage(`Producto ${code} eliminado de pre-orden.`);
   };
 
   const handleSaveClient = async () => {
@@ -352,25 +389,67 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     setSelectedProductCode("");
   };
 
-  const toggleProductSelection = (code) => {
-    const willAdd = !selectedIds.has(code);
-    setSelectedIds((current) => {
+  const toggleProductCheck = (code) => {
+    setCheckedIds((current) => {
       const next = new Set(current);
       if (next.has(code)) next.delete(code);
       else next.add(code);
       return next;
     });
-    if (willAdd) setSelectionDrawerOpen(true);
   };
 
-  const toggleRenderedSelection = () => {
-    setSelectedIds((current) => {
+  const toggleRenderedChecks = () => {
+    setCheckedIds((current) => {
       const next = new Set(current);
-      if (allRenderedSelected) renderedProducts.forEach((product) => next.delete(product.codigo));
+      if (allRenderedChecked) renderedProducts.forEach((product) => next.delete(product.codigo));
       else renderedProducts.forEach((product) => next.add(product.codigo));
       return next;
     });
-    if (!allRenderedSelected && renderedProducts.length) setSelectionDrawerOpen(true);
+  };
+
+  const addToCatalogSelection = (product) => {
+    setCatalogSelectionIds((current) => {
+      const next = new Set(current);
+      next.add(product.codigo);
+      return next;
+    });
+    setSelectionDrawerOpen(true);
+    setLastActionMessage(`Producto ${product.codigo} agregado a catálogo.`);
+  };
+
+  const removeFromCatalogSelection = (code) => {
+    setCatalogSelectionIds((current) => {
+      const next = new Set(current);
+      next.delete(code);
+      return next;
+    });
+    setLastActionMessage(`Producto ${code} eliminado de catálogo.`);
+  };
+
+  const addCheckedToCatalogSelection = () => {
+    if (!checkedIds.size) {
+      setLastActionMessage("Marca productos primero.");
+      return;
+    }
+    setCatalogSelectionIds((current) => {
+      const next = new Set(current);
+      checkedIds.forEach((code) => next.add(code));
+      return next;
+    });
+    setCheckedIds(new Set());
+    setSelectionDrawerOpen(true);
+    setLastActionMessage(`${checkedIds.size.toLocaleString()} productos agregados a catálogo.`);
+  };
+
+  const addCheckedToPreorder = () => {
+    if (!checkedProducts.length) {
+      setLastActionMessage("Marca productos primero.");
+      return;
+    }
+    checkedProducts.forEach((product) => addToCart(product));
+    setCheckedIds(new Set());
+    setSelectionDrawerOpen(true);
+    setLastActionMessage(`${checkedProducts.length.toLocaleString()} productos agregados a pre-orden.`);
   };
 
   const openCatalogPdfPanel = () => {
@@ -393,7 +472,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     setSelectedPriceListId("");
     setDraftPreorder(null);
     setAddedCodes([]);
-    setSelectedIds(new Set());
+    setCheckedIds(new Set());
+    setCatalogSelectionIds(new Set());
   };
 
   const handleTenantSave = async () => {
@@ -565,7 +645,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
 
         {tab === "catalog" ? (
           <section className="admin-workspace">
-            <div className="catalog-control-panel">
+            {!selectedProductCode ? (
+            <div className={`catalog-control-panel ${filtersCollapsed ? "collapsed" : ""}`}>
               <div className="catalog-control-heading">
                 <div>
                   <span className="tool-eyebrow">{t("catalogControls")}</span>
@@ -573,22 +654,22 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                   <p>{t("catalogControlsHelp")}</p>
                 </div>
                 <div className="catalog-control-actions">
-                  {draftPreorder ? (
-                    <button className="primary-button compact-action" type="button" onClick={() => setIsDraftOpen(true)}>
-                      Abrir preorden en proceso
-                    </button>
-                  ) : null}
                   <button className="secondary-button compact-action" type="button" onClick={clearCatalogFilters}>
                     {t("clearFilters")}
+                  </button>
+                  <button className="secondary-button compact-action filter-collapse-button" type="button" onClick={() => setFiltersCollapsed((current) => !current)}>
+                    {filtersCollapsed ? t("showFilters") : t("hideFilters")}
                   </button>
                 </div>
               </div>
 
+              {!filtersCollapsed ? (
+              <>
               <div className="catalog-metric-row">
                 <div><span>{t("totalLabel")}</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
                 <div><span>{t("visible")}</span><strong>{loadingProducts ? "..." : visibleCount.toLocaleString()}</strong></div>
                 <div><span>{t("filtered")}</span><strong>{filteredProducts.length.toLocaleString()}</strong></div>
-                <div><span>{t("selected")}</span><strong>{selectedIds.size.toLocaleString()}</strong></div>
+                <div><span>{t("marked")}</span><strong>{checkedIds.size.toLocaleString()}</strong></div>
               </div>
 
               <AdvancedSearch
@@ -614,20 +695,34 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
 
               <div className="catalog-selection-tools">
                 <label className="check-row">
-                  <input type="checkbox" checked={allRenderedSelected} onChange={toggleRenderedSelection} />
+                  <input type="checkbox" checked={allRenderedChecked} onChange={toggleRenderedChecks} />
                   {t("selectVisibleProducts")} ({renderedProducts.length.toLocaleString()})
                 </label>
+                <button className="selection-action catalog" type="button" onClick={addCheckedToCatalogSelection} disabled={!checkedIds.size}>
+                  {t("addMarkedToCatalog")}
+                </button>
+                <button className="selection-action preorder" type="button" onClick={addCheckedToPreorder} disabled={!checkedIds.size}>
+                  {t("addMarkedToPreorder")}
+                </button>
                 <span>{t("showingFiltered", renderedProducts.length.toLocaleString(), filteredProducts.length.toLocaleString())}</span>
               </div>
 
               {status ? <p className="status info">{status}</p> : null}
+              </>
+              ) : null}
             </div>
+            ) : null}
 
             {selectedProductCode ? (
               <ProductDetail
                 product={selectedProduct}
                 onBack={() => setSelectedProductCode("")}
                 onAdd={addToCart}
+                onRemovePreorder={removeFromPreorder}
+                onAddToCatalog={addToCatalogSelection}
+                onRemoveFromCatalog={removeFromCatalogSelection}
+                inPreorder={addedCodes.includes(selectedProduct?.codigo)}
+                inCatalogSelection={catalogSelectionIds.has(selectedProduct?.codigo)}
                 onEdit={(product) => setProductModal({ open: true, product, mode: "edit" })}
                 onDuplicate={(product) => setProductModal({ open: true, product, mode: "duplicate" })}
               />
@@ -639,11 +734,12 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                     <label className="product-select-check" onClick={(event) => event.stopPropagation()}>
                       <input
                         type="checkbox"
-                        checked={selectedIds.has(product.codigo)}
-                        onChange={() => toggleProductSelection(product.codigo)}
+                        checked={checkedIds.has(product.codigo)}
+                        onChange={() => toggleProductCheck(product.codigo)}
                       />
                     </label>
                     {addedCodes.includes(product.codigo) ? <span className="preorder-added-badge">✓ En preorden</span> : null}
+                    {catalogSelectionIds.has(product.codigo) ? <span className="catalog-added-badge">✓ Catálogo</span> : null}
                     <button className="admin-product-image" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
                       <img
                         src={product.fotoUrl || buildPlaceholderUrl(t("noPhoto"))}
@@ -658,19 +754,43 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                       <p>{[product.metal, product.kilataje, formatWeight(product.pesoPromedio)].filter(Boolean).join(" / ")}</p>
                       <span>{product.precioMinimo ? formatCurrency(product.precioMinimo, product.monedaPrecioMin) : t("priceToConfirm")} · MO {formatCurrency(product.manoObra || 0, product.monedaPrecioMin)}</span>
                     </div>
-                    <div className="admin-product-actions triple-action">
-                      <button className="secondary-button compact-action" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
-                        {t("viewDetail")}
-                      </button>
-                      <button className="primary-button compact-action" type="button" onClick={() => addToCart(product)}>
-                        {t("addToPreorder")}
-                      </button>
-                      <button className="secondary-button compact-action" type="button" onClick={() => setProductModal({ open: true, product, mode: "edit" })}>
-                        {t("editProduct")}
-                      </button>
-                      <button className="secondary-button compact-action" type="button" onClick={() => toggleProductSelection(product.codigo)}>
-                        {selectedIds.has(product.codigo) ? t("removeFromSelection") : t("addToSelection")}
-                      </button>
+                    <div className="admin-product-actions product-action-layout">
+                      <div className="product-action-admin">
+                        <button className="secondary-button compact-action" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
+                          {t("viewDetail")}
+                        </button>
+                        <button className="secondary-button compact-action" type="button" onClick={() => setProductModal({ open: true, product, mode: "edit" })}>
+                          {t("editProduct")}
+                        </button>
+                      </div>
+                      <div className="product-action-client">
+                        <button
+                          className={`action-button preorder ${addedCodes.includes(product.codigo) ? "done" : ""}`}
+                          type="button"
+                          onClick={() => addToCart(product)}
+                          disabled={addedCodes.includes(product.codigo)}
+                        >
+                          {t("addPreorderShort")}
+                        </button>
+                        {addedCodes.includes(product.codigo) ? (
+                          <button className="action-button undo" type="button" onClick={() => removeFromPreorder(product.codigo)}>
+                            {t("undo")}
+                          </button>
+                        ) : null}
+                        <button
+                          className={`action-button catalog ${catalogSelectionIds.has(product.codigo) ? "done" : ""}`}
+                          type="button"
+                          onClick={() => addToCatalogSelection(product)}
+                          disabled={catalogSelectionIds.has(product.codigo)}
+                        >
+                          {t("addCatalogShort")}
+                        </button>
+                        {catalogSelectionIds.has(product.codigo) ? (
+                          <button className="action-button undo" type="button" onClick={() => removeFromCatalogSelection(product.codigo)}>
+                            {t("undo")}
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                   </article>
                 ))}
@@ -823,28 +943,37 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       ) : null}
 
       <SelectedProductsDrawer
-        products={selectedProducts}
+        preorderProducts={preorderProducts}
+        catalogProducts={catalogSelectionProducts}
         isOpen={selectionDrawerOpen}
         onOpen={() => setSelectionDrawerOpen(true)}
         onClose={() => setSelectionDrawerOpen(false)}
-        onRemove={toggleProductSelection}
+        onOpenPreorder={() => setIsDraftOpen(true)}
+        onRemovePreorder={removeFromPreorder}
+        onRemoveCatalog={removeFromCatalogSelection}
         onCatalogPdf={openCatalogPdfPanel}
         onQuoteLink={openQuoteLinkPanel}
-        onClear={() => setSelectedIds(new Set())}
+        onClearCatalog={() => setCatalogSelectionIds(new Set())}
       />
 
       {catalogPdfOpen ? (
-        <CatalogPdfPanel products={selectedProducts} company={activeCompany} onClose={() => setCatalogPdfOpen(false)} />
+        <CatalogPdfPanel products={catalogSelectionProducts} company={activeCompany} onClose={() => setCatalogPdfOpen(false)} />
       ) : null}
 
       {quoteLinkOpen ? (
         <QuoteLinkPanel
-          products={selectedProducts}
+          products={catalogSelectionProducts}
           clients={data.clients}
           profile={profile}
           tenantId={tenantId}
           onClose={() => setQuoteLinkOpen(false)}
         />
+      ) : null}
+
+      {lastActionMessage ? (
+        <div className="action-toast" role="status">
+          {lastActionMessage}
+        </div>
       ) : null}
     </div>
   );

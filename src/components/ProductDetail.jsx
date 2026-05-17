@@ -2,7 +2,18 @@ import { useMemo, useState } from "react";
 import { buildPlaceholderUrl, formatCurrency, formatWeight } from "../utils/formatters";
 import { useLanguage } from "../i18n/LanguageContext";
 
-export default function ProductDetail({ product, onBack, onAdd, onEdit, onDuplicate }) {
+export default function ProductDetail({
+  product,
+  onBack,
+  onAdd,
+  onRemovePreorder,
+  onAddToCatalog,
+  onRemoveFromCatalog,
+  inPreorder = false,
+  inCatalogSelection = false,
+  onEdit,
+  onDuplicate,
+}) {
   const { t } = useLanguage();
   const [selectedImage, setSelectedImage] = useState(product?.fotoUrl || "");
   const [quantity, setQuantity] = useState(1);
@@ -101,7 +112,7 @@ export default function ProductDetail({ product, onBack, onAdd, onEdit, onDuplic
             </div>
           ) : null}
 
-          <div className="detail-buy-box">
+          <div className="detail-buy-box detail-action-panel">
             <label>
               {t("quantity")}
               <input
@@ -111,9 +122,36 @@ export default function ProductDetail({ product, onBack, onAdd, onEdit, onDuplic
                 onChange={(event) => setQuantity(Math.max(1, Number(event.target.value || 1)))}
               />
             </label>
-            <button className="primary-button full" type="button" onClick={() => onAdd(product, quantity)}>
-              {t("addToPreorder")}
-            </button>
+            <div className="detail-action-grid">
+              <button
+                className={`action-button preorder ${inPreorder ? "done" : ""}`}
+                type="button"
+                onClick={() => onAdd(product, quantity)}
+                disabled={inPreorder}
+              >
+                {t("addPreorderShort")}
+              </button>
+              {inPreorder ? (
+                <button className="action-button undo" type="button" onClick={() => onRemovePreorder?.(product.codigo)}>
+                  {t("undoPreorder")}
+                </button>
+              ) : null}
+              {onAddToCatalog ? (
+                <button
+                  className={`action-button catalog ${inCatalogSelection ? "done" : ""}`}
+                  type="button"
+                  onClick={() => onAddToCatalog(product)}
+                  disabled={inCatalogSelection}
+                >
+                  {t("addCatalogShort")}
+                </button>
+              ) : null}
+              {onRemoveFromCatalog && inCatalogSelection ? (
+                <button className="action-button undo" type="button" onClick={() => onRemoveFromCatalog?.(product.codigo)}>
+                  {t("undoCatalog")}
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

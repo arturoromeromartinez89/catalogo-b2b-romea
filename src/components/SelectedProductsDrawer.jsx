@@ -1,72 +1,109 @@
 import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
 import { useLanguage } from "../i18n/LanguageContext";
 
+const ProductMiniRow = ({ product, onRemove, mode }) => (
+  <article className="selection-drawer-item">
+    <img
+      src={product.fotoUrl || buildPlaceholderUrl()}
+      alt={product.descripcion}
+      onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
+    />
+    <div>
+      <strong>{product.codigo}</strong>
+      <span>{shortText(product.descripcion, 62)}</span>
+      <small>
+        {mode === "preorder"
+          ? `${Number(product.piezas || 1).toLocaleString()} pz / ${formatWeight(Number(product.pesoPromedio || 0) * Number(product.piezas || 1))}`
+          : [product.linea, formatWeight(product.pesoPromedio), product.precioMinimo ? formatCurrency(product.precioMinimo, product.monedaPrecioMin) : ""]
+              .filter(Boolean)
+              .join(" / ")}
+      </small>
+    </div>
+    <button className="table-delete" type="button" onClick={() => onRemove(product.codigo)}>x</button>
+  </article>
+);
+
 export default function SelectedProductsDrawer({
-  products,
+  preorderProducts = [],
+  catalogProducts = [],
   isOpen,
   onOpen,
   onClose,
-  onRemove,
-  onClear,
+  onOpenPreorder,
+  onRemovePreorder,
+  onRemoveCatalog,
+  onClearCatalog,
   onCatalogPdf,
   onQuoteLink,
 }) {
   const { t } = useLanguage();
-  const count = products.length;
+  const preorderCount = preorderProducts.length;
+  const catalogCount = catalogProducts.length;
+  const count = preorderCount + catalogCount;
   if (!count) return null;
 
   return (
     <>
       {!isOpen ? (
-        <button className="selection-drawer-tab" type="button" onClick={onOpen}>
-          <span>{count}</span>
-          {t("selection")}
+        <button className="selection-drawer-tab split" type="button" onClick={onOpen}>
+          <span>{preorderCount}</span>
+          Preorden
+          <span>{catalogCount}</span>
+          Catálogo
         </button>
       ) : null}
 
-      <aside className={`selection-drawer ${isOpen ? "open" : ""}`}>
+      <aside className={`selection-drawer work-tray ${isOpen ? "open" : ""}`}>
         <header className="selection-drawer-header">
           <div>
-            <span className="tool-eyebrow">{t("markedProducts")}</span>
-            <h2>{t("currentSelection")}</h2>
-            <p>{t("readyForCatalogOrLink", count.toLocaleString())}</p>
+            <span className="tool-eyebrow">{t("workTray")}</span>
+            <h2>{t("productsInProcess")}</h2>
+            <p>{t("workTrayHelp")}</p>
           </div>
           <button className="icon-button" type="button" onClick={onClose}>x</button>
         </header>
 
-        <div className="selection-drawer-actions">
-          <button className="primary-button compact-action" type="button" onClick={onCatalogPdf}>
-            {t("generateCatalogPdf")}
-          </button>
-          <button className="secondary-button compact-action" type="button" onClick={onQuoteLink}>
-            {t("generateQuoteLinkShort")}
-          </button>
-          <button className="secondary-button compact-action" type="button" onClick={onClear}>
-            {t("clearSelectionShort")}
-          </button>
-        </div>
+        <section className="work-tray-section preorder-zone">
+          <div className="work-tray-section-head">
+            <div>
+            <span className="tool-eyebrow">{t("preorder")}</span>
+              <h3>{preorderCount.toLocaleString()} productos</h3>
+            </div>
+            <button className="action-button preorder" type="button" onClick={onOpenPreorder} disabled={!preorderCount}>
+              Abrir preorden
+            </button>
+          </div>
+          <div className="selection-drawer-list compact">
+            {preorderProducts.length ? preorderProducts.map((product) => (
+              <ProductMiniRow key={product.codigo} product={product} mode="preorder" onRemove={onRemovePreorder} />
+            )) : <p className="empty-tray-copy">{t("noPreorderProducts")}</p>}
+          </div>
+        </section>
 
-        <div className="selection-drawer-list">
-          {products.map((product) => (
-            <article className="selection-drawer-item" key={product.codigo}>
-              <img
-                src={product.fotoUrl || buildPlaceholderUrl()}
-                alt={product.descripcion}
-                onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
-              />
-              <div>
-                <strong>{product.codigo}</strong>
-                <span>{shortText(product.descripcion, 62)}</span>
-                <small>
-                  {[product.linea, formatWeight(product.pesoPromedio), product.precioMinimo ? formatCurrency(product.precioMinimo, product.monedaPrecioMin) : ""]
-                    .filter(Boolean)
-                    .join(" / ")}
-                </small>
-              </div>
-              <button className="table-delete" type="button" onClick={() => onRemove(product.codigo)}>x</button>
-            </article>
-          ))}
-        </div>
+        <section className="work-tray-section catalog-zone">
+          <div className="work-tray-section-head">
+            <div>
+              <span className="tool-eyebrow">{t("markedProducts")}</span>
+              <h3>{t("catalogSelectedCount", catalogCount.toLocaleString())}</h3>
+            </div>
+          </div>
+          <div className="selection-drawer-actions">
+            <button className="primary-button compact-action" type="button" onClick={onCatalogPdf} disabled={!catalogCount}>
+              {t("generateCatalogPdf")}
+            </button>
+            <button className="secondary-button compact-action" type="button" onClick={onQuoteLink} disabled={!catalogCount}>
+              {t("generateQuoteLinkShort")}
+            </button>
+            <button className="secondary-button compact-action" type="button" onClick={onClearCatalog} disabled={!catalogCount}>
+              {t("clearSelectionShort")}
+            </button>
+          </div>
+          <div className="selection-drawer-list compact">
+            {catalogProducts.length ? catalogProducts.map((product) => (
+              <ProductMiniRow key={product.codigo} product={product} mode="catalog" onRemove={onRemoveCatalog} />
+            )) : <p className="empty-tray-copy">{t("noCatalogProducts")}</p>}
+          </div>
+        </section>
       </aside>
     </>
   );
