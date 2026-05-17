@@ -209,6 +209,16 @@ export const deleteProduct = async (id) => {
   throwIfError(await supabase.from("products").delete().eq("id", id));
 };
 
+export const deleteTenantProducts = async (tenantId = "") => {
+  if (!tenantId) throw new Error("No hay empresa activa para borrar productos.");
+  const result = await supabase
+    .from("products")
+    .delete({ count: "exact" })
+    .eq("tenant_id", tenantId);
+  throwIfError(result);
+  return result.count || 0;
+};
+
 export const saveClient = async (client, tenantId = "") => {
   const row = { ...client };
   if (tenantId) row.tenant_id = tenantId;

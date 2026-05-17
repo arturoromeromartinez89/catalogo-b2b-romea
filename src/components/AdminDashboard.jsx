@@ -24,6 +24,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { supabase } from "../lib/supabaseClient";
 import {
   deleteProduct,
+  deleteTenantProducts,
   fetchAdminData,
   saveClient,
   savePriceItem,
@@ -262,6 +263,37 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       setStatus(error.message);
     } finally {
       event.target.value = "";
+    }
+  };
+
+  const handleDeleteCatalog = async () => {
+    if (!tenantId) {
+      setStatus("Primero selecciona una empresa para borrar su catálogo.");
+      return;
+    }
+    const productCount = data?.products?.length || 0;
+    const activeName = activeTenant?.name || "esta empresa";
+    const ok = window.confirm(
+      `Vas a borrar ${productCount.toLocaleString()} productos de ${activeName}.\n\n` +
+      "Esto NO borra clientes, preórdenes ni listas de precios.\n\n" +
+      "¿Quieres continuar?"
+    );
+    if (!ok) return;
+
+    setLoadingProducts(true);
+    setStatus("Borrando base de productos...");
+    try {
+      const deleted = await deleteTenantProducts(tenantId);
+      setDraftPreorder(null);
+      setAddedCodes([]);
+      setSelectedIds(new Set());
+      setSelectedProductCode("");
+      await load();
+      setStatus(`Base de productos borrada correctamente: ${deleted.toLocaleString()} productos eliminados.`);
+    } catch (error) {
+      setStatus(`Error al borrar catálogo: ${error.message}`);
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
@@ -723,6 +755,9 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                 <CatalogExportButton products={products} />
                 <button className="primary-button compact-action" type="button" onClick={() => setProductModal({ open: true, product: null, mode: "create" })}>
                   {t("newProduct")}
+                </button>
+                <button className="danger-button compact-action" type="button" onClick={handleDeleteCatalog} disabled={loadingProducts || !products.length}>
+                  {t("clearCatalog")}
                 </button>
               </div>
               {status ? <p className="status info">{status}</p> : null}
