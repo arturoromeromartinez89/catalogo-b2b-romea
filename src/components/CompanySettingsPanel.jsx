@@ -46,7 +46,7 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
     setUploading(true);
     setStatus("Subiendo logo...");
     try {
-      const url = await uploadLogo(file);
+      const url = await uploadLogo(file, tenantId);
       setForm((f) => ({ ...f, logo_url: url }));
       setStatus("Logo subido ✓");
     } catch (err) {
@@ -62,6 +62,7 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
     try {
       await saveCompanySettings(form, tenantId);
       company.reload();
+      window.dispatchEvent(new CustomEvent("company-settings-updated", { detail: { tenantId } }));
       setStatus("¡Guardado correctamente!");
     } catch (err) {
       setStatus("Error: " + err.message);
@@ -81,7 +82,7 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
         <div className="form-grid">
           <label>
             Nombre comercial
-            <input placeholder="Ej. Vanguardia Joyera" value={form.brand_name} onChange={set("brand_name")} />
+            <input placeholder="Ej. Mi empresa" value={form.brand_name} onChange={set("brand_name")} />
           </label>
           <label>
             Razón social
@@ -134,7 +135,7 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
               />
             </div>
           ) : (
-            <p className="muted" style={{ marginBottom: 8 }}>Sin logo cargado — se mostrará el nombre de texto.</p>
+            <p className="muted" style={{ marginBottom: 8 }}>Sin logo cargado. En espacios de marca se reservará el lugar del logo sin mostrar otro nombre.</p>
           )}
           <input type="file" accept="image/*" onChange={handleLogo} disabled={uploading} style={{ background: "transparent", border: "none", padding: 0 }} />
           {form.logo_url && (

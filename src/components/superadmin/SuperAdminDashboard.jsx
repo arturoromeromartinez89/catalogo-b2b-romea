@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import BrandLogo from "../BrandLogo";
 import LanguageToggle from "../LanguageToggle";
 import CompaniesPanel from "./CompaniesPanel";
 import MetricsPanel from "./MetricsPanel";
@@ -47,7 +46,7 @@ export default function SuperAdminDashboard({ profile }) {
     <div className="superadmin-shell">
       <aside className="superadmin-sidebar">
         <div className="brand-block">
-          <BrandLogo />
+          <div className="saas-mark" aria-hidden="true">SaaS</div>
           <p>Panel SaaS</p>
         </div>
         <section className="sidebar-section sidebar-menu-section">

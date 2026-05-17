@@ -21,6 +21,7 @@ export const fetchCompanySettings = async (tenantId = "") => {
     .select("*")
     .limit(1);
   if (tenantId) query = query.eq("tenant_id", tenantId);
+  else query = query.is("tenant_id", null);
   const { data, error } = await query.maybeSingle();
   if (error) return defaultSettings;
   return { ...defaultSettings, ...data };
@@ -31,6 +32,7 @@ export const saveCompanySettings = async (settings, tenantId = "") => {
   if (tenantId) row.tenant_id = tenantId;
   let query = supabase.from("company_settings").select("id").limit(1);
   if (tenantId) query = query.eq("tenant_id", tenantId);
+  else query = query.is("tenant_id", null);
   const { data: existing } = await query.maybeSingle();
   if (existing?.id) {
     const { error } = await supabase.from("company_settings").update(row).eq("id", existing.id);
@@ -41,9 +43,10 @@ export const saveCompanySettings = async (settings, tenantId = "") => {
   }
 };
 
-export const uploadLogo = async (file) => {
+export const uploadLogo = async (file, tenantId = "") => {
   const ext = file.name.split(".").pop();
-  const path = `logos/logo.${ext}`;
+  const owner = tenantId || "global";
+  const path = `logos/${owner}/logo.${ext}`;
   const { error } = await supabase.storage.from("company-assets").upload(path, file, { upsert: true });
   if (error) throw error;
   const { data } = supabase.storage.from("company-assets").getPublicUrl(path);

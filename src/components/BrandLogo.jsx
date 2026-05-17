@@ -1,14 +1,15 @@
 import { useCompany } from "../contexts/CompanyContext";
 
-export default function BrandLogo({ size = "md" }) {
-  const company = useCompany();
-  const name = company.brand_name || "Mi Catálogo";
+export default function BrandLogo({ size = "md", company: companyOverride = null }) {
+  const contextCompany = useCompany();
+  const company = companyOverride || contextCompany || {};
+  const alt = company.brand_name || company.legal_name || "Logo de empresa";
 
   if (company.logo_url) {
     return (
       <img
         src={company.logo_url}
-        alt={name}
+        alt={alt}
         style={{
           maxHeight: size === "sm" ? 36 : 56,
           maxWidth: size === "sm" ? 120 : 200,
@@ -18,9 +19,5 @@ export default function BrandLogo({ size = "md" }) {
     );
   }
 
-  return (
-    <div className="brand-fallback">
-      <strong>{name}</strong>
-    </div>
-  );
+  return <div className={`brand-logo-placeholder ${size}`} aria-label="Logo no cargado" />;
 }

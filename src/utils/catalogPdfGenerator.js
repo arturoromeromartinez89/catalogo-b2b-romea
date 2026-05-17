@@ -30,24 +30,19 @@ const drawFooter = (doc, companyName) => {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(145, 153, 171);
-    doc.text(companyName, page.margin, page.h - 7);
+    if (companyName) doc.text(companyName, page.margin, page.h - 7);
     doc.text(`${index} / ${totalPages}`, page.w - page.margin, page.h - 7, { align: "right" });
   }
 };
 
 const drawCover = async (doc, { catalogName, company }) => {
-  const brandName = company.brand_name || "ROMEA JOYERIA";
+  const brandName = company.brand_name || company.legal_name || "";
   const logo = await loadImageAsDataUrl(company.logo_url);
   doc.setFillColor(31, 51, 95);
   doc.rect(0, 0, page.w, 64, "F");
 
   if (logo) {
     doc.addImage(logo, "JPEG", page.margin, 12, 48, 28);
-  } else {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(255, 255, 255);
-    doc.text(brandName, page.margin, 30);
   }
 
   doc.setFont("helvetica", "bold");
@@ -57,8 +52,8 @@ const drawCover = async (doc, { catalogName, company }) => {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(94, 105, 127);
-  doc.text(brandName, page.margin, 102);
-  doc.text(new Date().toLocaleDateString("es-MX"), page.margin, 109);
+  if (brandName) doc.text(brandName, page.margin, 102);
+  doc.text(new Date().toLocaleDateString("es-MX"), page.margin, brandName ? 109 : 102);
 };
 
 export const generateCatalogPdf = async (products, options = {}, company = {}) => {
@@ -67,7 +62,7 @@ export const generateCatalogPdf = async (products, options = {}, company = {}) =
   const columns = Number(options.columns || 3);
   const showPrice = options.showPrice !== false;
   const showWeight = options.showWeight !== false;
-  const brandName = company.brand_name || "ROMEA JOYERIA";
+  const brandName = company.brand_name || company.legal_name || "";
 
   await drawCover(doc, { catalogName, company });
   doc.addPage();

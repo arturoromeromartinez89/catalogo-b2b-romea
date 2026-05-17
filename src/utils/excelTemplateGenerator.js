@@ -3,7 +3,7 @@ import { EXCEL_COLUMNS_BY_LANGUAGE, productToExcelRow } from "./excelParser";
 
 const sampleProductsEs = [
   {
-    codigo: "AN-ROMEA-001",
+    codigo: "AN-001",
     modelo: "Solitario Alba",
     descripcion: "Anillo solitario con zirconia central",
     metal: "Oro",
@@ -30,7 +30,7 @@ const sampleProductsEs = [
     tagsBusqueda: "anillo mujer solitario zirconia oro compromiso",
   },
   {
-    codigo: "AR-ROMEA-002",
+    codigo: "AR-002",
     modelo: "Arracada Diamantada",
     descripcion: "Arracada diamantada mediana",
     metal: "Plata",
@@ -57,7 +57,7 @@ const sampleProductsEs = [
     tagsBusqueda: "arracada diamantada mujer plata arete",
   },
   {
-    codigo: "DI-ROMEA-003",
+    codigo: "DI-003",
     modelo: "San Benito",
     descripcion: "Dije San Benito acabado liso",
     metal: "Plata",
@@ -193,10 +193,10 @@ const makeWorkbook = (rows, language = "es") => {
 export const downloadExcelTemplate = (language = "es") => {
   const source = language === "en" ? sampleProductsEn : sampleProductsEs;
   const rows = source.map((product) => productToExcelRow(product, language));
-  XLSX.writeFile(makeWorkbook(rows, language), language === "en" ? "romea_catalog_template.xlsx" : "plantilla_catalogo_romea.xlsx");
+  XLSX.writeFile(makeWorkbook(rows, language), language === "en" ? "catalog_template.xlsx" : "plantilla_catalogo.xlsx");
 };
 
 export const downloadCurrentCatalog = (products, language = "es") => {
   const rows = products.map((product) => productToExcelRow(product, language));
-  XLSX.writeFile(makeWorkbook(rows, language), language === "en" ? "romea_updated_catalog.xlsx" : "catalogo_romea_actualizado.xlsx");
+  XLSX.writeFile(makeWorkbook(rows, language), language === "en" ? "updated_catalog.xlsx" : "catalogo_actualizado.xlsx");
 };

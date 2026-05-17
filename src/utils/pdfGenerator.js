@@ -42,7 +42,7 @@ const buildFolio = (customer) => {
 
 export async function generatePdf(cartItems, customer, language = "es", company = {}, opts = {}) {
   const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
-  const brandName = company.brand_name || "Mi Catálogo";
+  const brandName = company.brand_name || company.legal_name || "";
   const t = (es, en) => language === "en" ? en : es;
   const folio = buildFolio(customer);
   const today = new Date().toLocaleDateString(language === "en" ? "en-US" : "es-MX");
@@ -62,9 +62,6 @@ export async function generatePdf(cartItems, customer, language = "es", company 
 
   if (logo) {
     doc.addImage(logo, "JPEG", page.margin, 4, 40, 24);
-  } else {
-    doc.setFontSize(18); doc.setFont("helvetica", "bold"); doc.setTextColor(255,255,255);
-    txt(doc, brandName, page.margin, 18);
   }
   doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(180,195,220);
   txt(doc, t("Catálogo B2B · Mayorista", "B2B Catalog · Wholesale"), page.margin, 27);
@@ -81,7 +78,8 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   doc.setFontSize(7); doc.setFont("helvetica", "bold"); doc.setTextColor(100,100,100);
   txt(doc, t("PROVEEDOR", "SUPPLIER"), page.margin, y); y += 4;
   doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(31,51,95);
-  txt(doc, brandName, page.margin, y); y += 4;
+  txt(doc, brandName, page.margin, y);
+  if (brandName) y += 4;
   doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(60,60,60);
   [
     company.legal_name,
@@ -261,7 +259,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     doc.setFontSize(6.5); doc.setFont("helvetica","normal"); doc.setTextColor(170,170,170);
-    txt(doc, `${brandName} · ${t("Documento generado como preorden comercial","Commercial preorder document")}`, page.margin, page.h - 5);
+    txt(doc, [brandName, t("Documento generado como preorden comercial","Commercial preorder document")].filter(Boolean).join(" · "), page.margin, page.h - 5);
     txt(doc, `${i} / ${totalPages}`, page.w - page.margin, page.h - 5, { align: "right" });
   }
 

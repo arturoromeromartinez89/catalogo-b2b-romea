@@ -119,7 +119,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [selectedTenantId, setSelectedTenantId] = useState(() => localStorage.getItem("catalogo-b2b-selected-tenant") || profile?.tenant_id || profile?.tenantId || "");
   const tenantId = tenantOverride || (superadmin ? selectedTenantId : profile?.tenant_id || profile?.tenantId || "");
   const activeTenant = tenants.find((tenant) => tenant.id === tenantId);
-  const activeCompany = tenantCompany || company;
+  const activeCompany = tenantId ? (tenantCompany || {}) : company;
   const tabs = superadmin ? ["tenants", ...baseTabs] : baseTabs;
   const [tab, setTab] = useState("catalog");
   const [data, setData] = useState(null);
@@ -199,6 +199,15 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       return;
     }
     fetchCompanySettings(tenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
+  }, [tenantId]);
+
+  useEffect(() => {
+    const refreshTenantCompany = (event) => {
+      if (!tenantId || event.detail?.tenantId !== tenantId) return;
+      fetchCompanySettings(tenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
+    };
+    window.addEventListener("company-settings-updated", refreshTenantCompany);
+    return () => window.removeEventListener("company-settings-updated", refreshTenantCompany);
   }, [tenantId]);
 
   const products = data ? data.products : sampleProducts;
@@ -381,7 +390,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     <div className="admin-catalog-shell">
       <aside className="admin-romea-sidebar">
         <div className="brand-block">
-          <BrandLogo />
+          <BrandLogo company={activeCompany} />
           <p>{t("b2bCatalog")}</p>
         </div>
 
@@ -427,7 +436,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       <main className="admin-catalog-main">
         <header className="admin-catalog-header">
           <div>
-            <p className="eyebrow">{activeCompany.brand_name || activeTenant?.name || "Mi Catálogo"}</p>
+            <p className="eyebrow">{t("admin")}</p>
             <h1>{t(titleKeys[tab])}</h1>
             <span>
               {superadmin && activeTenant ? `Empresa activa: ${activeTenant.name} · ` : ""}
@@ -450,7 +459,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                 <label>
                   Nombre de empresa
                   <input
-                    placeholder="Ej. ROMEA"
+                    placeholder="Ej. Empresa"
                     value={tenantForm.name}
                     onChange={(event) => setTenantForm((current) => ({
                       ...current,
@@ -512,7 +521,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                     ))}
                     {!tenants.length ? (
                       <tr>
-                        <td colSpan="4">Aún no hay empresas. Crea ROMEA primero.</td>
+                        <td colSpan="4">Aún no hay empresas. Crea una empresa primero.</td>
                       </tr>
                     ) : null}
                   </tbody>

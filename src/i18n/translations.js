@@ -5,7 +5,7 @@ export const languages = {
 
 export const translations = {
   es: {
-    brand: "ROMEA JOYERÍA",
+    brand: "Catálogo B2B",
     company: "Mi empresa",
     preorders: "Preórdenes",
     b2bCatalog: "Catálogo B2B",
@@ -118,7 +118,7 @@ export const translations = {
     closePreorder: "Cerrar preorden",
     closeMenu: "Cerrar menú",
     closeForm: "Cerrar formulario",
-    productFormEyebrow: "Catálogo ROMEA",
+    productFormEyebrow: "Catálogo",
     visibleCatalog: "Visible en catálogo",
     active: "Activo",
     lowStatus: "Baja",
@@ -169,7 +169,7 @@ export const translations = {
     pricePerGram: "Precio por gramo",
     addRule: "Agregar regla",
     laborExtra: "Mano de obra extra",
-    catalogAssigned: "Catálogo disponible por ROMEA",
+    catalogAssigned: "Catálogo disponible",
     selectedProducts: (count) => `${count} productos seleccionados`,
     selectVisibleProducts: "Seleccionar todos los visibles",
     generateCatalogPdf: "Generar catalogo PDF",
@@ -194,7 +194,7 @@ export const translations = {
     databaseOperationsHelp: "Carga, exporta, crea productos e importa archivos fuente desde este espacio administrativo.",
   },
   en: {
-    brand: "ROMEA JEWELRY",
+    brand: "B2B Catalog",
     company: "My company",
     preorders: "Preorders",
     b2bCatalog: "B2B Catalog",
@@ -307,7 +307,7 @@ export const translations = {
     closePreorder: "Close preorder",
     closeMenu: "Close menu",
     closeForm: "Close form",
-    productFormEyebrow: "ROMEA Catalog",
+    productFormEyebrow: "Catalog",
     visibleCatalog: "Visible in catalog",
     active: "Active",
     lowStatus: "Discontinued",
@@ -358,7 +358,7 @@ export const translations = {
     pricePerGram: "Price per gram",
     addRule: "Add rule",
     laborExtra: "Extra labor",
-    catalogAssigned: "Catalog available by ROMEA",
+    catalogAssigned: "Catalog available",
     selectedProducts: (count) => `${count} selected products`,
     selectVisibleProducts: "Select all visible",
     generateCatalogPdf: "Generate catalog PDF",

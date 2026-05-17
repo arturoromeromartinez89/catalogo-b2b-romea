@@ -1,19 +1,19 @@
 export const companyInfo = {
-  brandName: "ROMEA JOYERÍA",
-  commercialName: "ROMEA JOYERÍA",
+  brandName: "",
+  commercialName: "",
   legalName: "",
   rfc: "",
   phone: "",
   email: "",
-  city: "Guadalajara",
-  state: "Jalisco",
+  city: "",
+  state: "",
   country: "México",
-  logoPath: "/logo-romea.png",
-  markPath: "/logo-romea-r.png",
+  logoPath: "",
+  markPath: "",
   bankAccounts: [
     {
       bank: "Banco",
-      accountHolder: "ROMEA JOYERÍA",
+      accountHolder: "",
       accountNumber: "",
       clabe: "",
       currency: "MXN",
@@ -21,14 +21,14 @@ export const companyInfo = {
   ],
   orderInstructions: [
     "Revisar códigos y cantidades.",
-    "Enviar esta preorden a su asesor ROMEA.",
+    "Enviar esta preorden a su asesor.",
     "Esperar confirmación de existencia y precio final.",
     "Realizar pago o anticipo.",
     "Enviar comprobante.",
-    "La orden queda confirmada hasta validación de ROMEA.",
+    "La orden queda confirmada hasta validación comercial.",
   ],
   commercialTerms:
-    "Esta preorden no es factura ni orden confirmada. Disponibilidad, precios, crédito, tiempos de entrega y envío están sujetos a confirmación por ROMEA JOYERÍA.",
+    "Esta preorden no es factura ni orden confirmada. Disponibilidad, precios, crédito, tiempos de entrega y envío están sujetos a confirmación.",
 };
 
 export const bankAccounts = companyInfo.bankAccounts;

@@ -1,9 +1,9 @@
-import { useState } from "react";
 import CatalogExportButton from "./CatalogExportButton";
 import ExcelTemplateButton from "./ExcelTemplateButton";
 import FilterPanel from "./FilterPanel";
 import QuickFilters from "./QuickFilters";
 import UploadExcel from "./UploadExcel";
+import BrandLogo from "./BrandLogo";
 import { useLanguage } from "../i18n/LanguageContext";
 import { calculateCartTotals } from "../utils/filters";
 import { formatCurrency, formatWeight } from "../utils/formatters";
@@ -28,20 +28,13 @@ export default function Sidebar({
 }) {
   const { t } = useLanguage();
   const totals = calculateCartTotals(cartItems);
-  const [logoFailed, setLogoFailed] = useState(false);
 
   return (
     <>
       {isOpen ? <button className="sidebar-backdrop" type="button" aria-label={t("closeMenu")} onClick={onClose} /> : null}
       <aside className={`sidebar ${isOpen ? "open" : ""}`}>
         <div className="brand-block">
-          {!logoFailed ? <img src="/logo-romea.png" alt={t("brand")} onError={() => setLogoFailed(true)} /> : null}
-          {logoFailed ? (
-            <div className="brand-fallback">
-              <strong>ROMEA</strong>
-              <span>{t("brand").replace("ROMEA ", "")}</span>
-            </div>
-          ) : null}
+          <BrandLogo />
           <p>{t("b2bCatalog")}</p>
         </div>
 

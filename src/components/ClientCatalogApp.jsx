@@ -8,6 +8,7 @@ import AdvancedSearch from "./AdvancedSearch";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useCompany } from "../contexts/CompanyContext";
 import BrandLogo from "./BrandLogo";
+import { fetchCompanySettings } from "../services/companySettings";
 import { supabase } from "../lib/supabaseClient";
 import { fetchClientData } from "../services/supabaseCatalog";
 import { calculateProductQuotePrice, fetchLines, fetchMetalPrices } from "../services/pricingService";
@@ -40,6 +41,7 @@ const makeDefaultCustomer = (language = "es") => ({
 export default function ClientCatalogApp({ profile }) {
   const { t, language } = useLanguage();
   const company = useCompany();
+  const [tenantCompany, setTenantCompany] = useState(null);
   const [products, setProducts] = useState([]);
   const [cartItems, setCartItems] = useState([]);
   const [clientData, setClientData] = useState(null);
@@ -54,6 +56,7 @@ export default function ClientCatalogApp({ profile }) {
   const [addedCodes, setAddedCodes] = useState([]);
   const [visibleProductLimit, setVisibleProductLimit] = useState(PRODUCT_RENDER_BATCH);
   const tenantId = profile?.tenant_id || profile?.tenantId || "";
+  const activeCompany = tenantId ? (tenantCompany || {}) : company;
 
   useEffect(() => {
     setStatus(t("loadingCatalog"));
@@ -91,6 +94,14 @@ export default function ClientCatalogApp({ profile }) {
       })
       .catch((error) => setStatus(error.message));
   }, [profile, language]);
+
+  useEffect(() => {
+    if (!tenantId) {
+      setTenantCompany(null);
+      return;
+    }
+    fetchCompanySettings(tenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
+  }, [tenantId]);
 
   useEffect(() => {
     setCustomer((current) => {
@@ -200,7 +211,7 @@ export default function ClientCatalogApp({ profile }) {
     <div className="admin-catalog-shell">
       <aside className="admin-romea-sidebar">
         <div className="brand-block">
-          <BrandLogo />
+          <BrandLogo company={activeCompany} />
           <p>{t("b2bCatalog")}</p>
         </div>
 
@@ -250,7 +261,7 @@ export default function ClientCatalogApp({ profile }) {
       <main className="admin-catalog-main">
         <header className="admin-catalog-header">
           <div>
-            <p className="eyebrow">{company.brand_name || "Catálogo B2B"}</p>
+            <p className="eyebrow">{t("b2bCatalog")}</p>
             <h1>Catálogo mayorista</h1>
             <span>{profile?.email}</span>
           </div>

@@ -1,4 +1,5 @@
 import PdfButton from "./PdfButton";
+import BrandLogo from "./BrandLogo";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useCompany } from "../contexts/CompanyContext";
 import { calculateCartTotals } from "../utils/filters";
@@ -89,8 +90,7 @@ export default function CartDrawer({
             <span>{t("folio")} {folio}</span>
           </div>
           <div className="sheet-brand">
-            <strong>{company?.brand_name || "Mi Catálogo"}</strong>
-            
+            <BrandLogo size="sm" company={company} />
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label={t("closePreorder")}>
             ×
@@ -238,7 +238,7 @@ export default function CartDrawer({
             <div><span>{t("total")}</span><strong>{total ? formatCurrency(moneyValue(total), currency) : "-"}</strong></div>
           </div>
           <div className="sheet-actions">
-            <PdfButton cartItems={cartItems} customer={{ ...customer, numero: folio }} />
+            <PdfButton cartItems={cartItems} customer={{ ...customer, numero: folio }} company={company} />
             <button className="secondary-button" type="button" onClick={onClear}>{t("clearPreorder")}</button>
             <button
               className="secondary-button"

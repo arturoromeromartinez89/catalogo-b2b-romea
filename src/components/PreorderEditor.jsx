@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCompany } from "../contexts/CompanyContext";
+import { fetchCompanySettings } from "../services/companySettings";
 import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice } from "../services/pricingService";
 import { savePreorder, deletePreorder } from "../services/preorderService";
 import { generatePdf } from "../utils/pdfGenerator";
@@ -108,8 +109,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [saved, setSaved] = useState(false);
   const [msg, setMsg] = useState("");
   const [productSearch, setProductSearch] = useState("");
+  const [tenantCompany, setTenantCompany] = useState(null);
+  const activeCompany = resolvedTenantId ? (tenantCompany || {}) : company;
 
   useEffect(() => {
+    if (resolvedTenantId) fetchCompanySettings(resolvedTenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
+    else setTenantCompany(null);
     fetchLines(resolvedTenantId).then(setLines).catch((error) => setMsg(`Error: ${error.message}`));
     fetchMetalPrices(resolvedTenantId)
       .then((prices) => {
@@ -310,7 +315,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       precio_gramo_mxn: item.precio_gramo_mxn,
       subtotal_mxn: item.subtotal_mxn,
     }));
-    await generatePdf(pdfItems, customer, language, company, {
+    await generatePdf(pdfItems, customer, language, activeCompany, {
       showGramos: true,
       applyIva: po.aplicar_iva,
       showBreakdown: po.mostrar_desglose,

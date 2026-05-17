@@ -2,7 +2,7 @@ import { useState } from "react";
 import { generateCatalogPdf } from "../utils/catalogPdfGenerator";
 
 export default function CatalogPdfPanel({ products, company, onClose }) {
-  const [catalogName, setCatalogName] = useState("Catalogo ROMEA");
+  const [catalogName, setCatalogName] = useState("Catalogo seleccionado");
   const [showPrice, setShowPrice] = useState(true);
   const [showWeight, setShowWeight] = useState(true);
   const [columns, setColumns] = useState(3);

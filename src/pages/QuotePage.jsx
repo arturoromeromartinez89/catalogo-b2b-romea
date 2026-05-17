@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import BrandLogo from "../components/BrandLogo";
 import LanguageToggle from "../components/LanguageToggle";
 import { useCompany } from "../contexts/CompanyContext";
+import { fetchCompanySettings } from "../services/companySettings";
 import { fetchQuoteLinkByToken, submitQuoteLinkSelection } from "../services/quoteLinkService";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
 
@@ -14,6 +15,7 @@ export default function QuotePage() {
   const company = useCompany();
   const token = readToken();
   const [quote, setQuote] = useState(null);
+  const [tenantCompany, setTenantCompany] = useState(null);
   const [quantities, setQuantities] = useState({});
   const [customer, setCustomer] = useState({ name: "", company: "", email: "", phone: "", rfc: "" });
   const [status, setStatus] = useState("Cargando cotizacion...");
@@ -28,6 +30,14 @@ export default function QuotePage() {
       })
       .catch(() => setStatus("La liga no existe o ya expiro."));
   }, [token]);
+
+  useEffect(() => {
+    if (!quote?.tenant_id) {
+      setTenantCompany(null);
+      return;
+    }
+    fetchCompanySettings(quote.tenant_id).then(setTenantCompany).catch(() => setTenantCompany(null));
+  }, [quote?.tenant_id]);
 
   const products = Array.isArray(quote?.products) ? quote.products : [];
   const selectedItems = useMemo(
@@ -59,7 +69,7 @@ export default function QuotePage() {
     try {
       const id = await submitQuoteLinkSelection({ token, customer, items: selectedItems });
       setSubmittedId(id);
-      setStatus("Seleccion enviada correctamente. ROMEA revisara disponibilidad y precio final.");
+      setStatus("Seleccion enviada correctamente. Un asesor revisara disponibilidad y precio final.");
     } catch (error) {
       setStatus(`Error: ${error.message}`);
     } finally {
@@ -71,12 +81,14 @@ export default function QuotePage() {
     return <section className="quote-public-screen"><div className="setup-card">{status}</div></section>;
   }
 
+  const activeCompany = quote?.tenant_id ? (tenantCompany || {}) : company;
+
   return (
     <div className="quote-public-screen">
       <header className="quote-public-header">
         <div>
-          <BrandLogo />
-          <p>{company.brand_name || "Catalogo B2B"}</p>
+          <BrandLogo company={activeCompany} />
+          <p>Cotizacion</p>
         </div>
         <LanguageToggle />
       </header>

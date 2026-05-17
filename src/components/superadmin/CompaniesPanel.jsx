@@ -25,12 +25,12 @@ export default function CompaniesPanel({ tenants, metrics, onRefresh, onManage }
       <div className="admin-soft-panel compact-panel">
         <span className="tool-eyebrow">Alta de empresa</span>
         <h2>Crear empresa SaaS</h2>
-        <p className="muted">Crea ROMEA, Vanguardia u otra empresa. Cada una tendra su propia base operativa.</p>
+        <p className="muted">Crea una empresa SaaS. Cada una tendra su propia base operativa.</p>
         <div className="form-grid">
           <label>
             Nombre
             <input
-              placeholder="Ej. ROMEA"
+              placeholder="Ej. Empresa"
               value={form.name}
               onChange={(event) => setForm((current) => ({
                 ...current,
@@ -42,7 +42,7 @@ export default function CompaniesPanel({ tenants, metrics, onRefresh, onManage }
           <label>
             Slug
             <input
-              placeholder="romea"
+              placeholder="empresa"
               value={form.slug}
               onChange={(event) => setForm((current) => ({ ...current, slug: makeTenantSlug(event.target.value) }))}
             />
