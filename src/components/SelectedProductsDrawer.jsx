@@ -98,11 +98,11 @@ export default function SelectedProductsDrawer({
               <span className="tool-eyebrow">{t("markedProducts")}</span>
               <h3>{t("catalogSelectedCount", catalogCount.toLocaleString())}</h3>
             </div>
-          </div>
-          <div className="selection-drawer-actions">
-            <button className="tray-action catalog-pdf" type="button" onClick={confirmCatalog} disabled={!catalogCount}>
+            <button className="tray-action catalog-pdf compact-head" type="button" onClick={confirmCatalog} disabled={!catalogCount}>
               {t("generateCatalogPdf")}
             </button>
+          </div>
+          <div className="selection-drawer-actions compact-row">
             <button className="tray-action quote-link" type="button" onClick={confirmQuoteLink} disabled={!catalogCount}>
               {t("generateQuoteLinkShort")}
             </button>

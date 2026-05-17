@@ -2560,15 +2560,25 @@ body > div[data-portal] {
   display: grid;
   gap: 7px;
   grid-template-columns: 1fr;
-  padding: 10px 18px;
+  padding: 8px 18px 10px;
+}
+
+.selection-drawer-actions.compact-row {
+  grid-template-columns: minmax(0, 1fr) minmax(86px, 0.55fr);
 }
 
 .tray-action {
   border-radius: 9px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
-  min-height: 34px;
-  padding: 7px 10px;
+  min-height: 31px;
+  padding: 6px 9px;
+  white-space: normal;
+}
+
+.tray-action.compact-head {
+  flex: 0 0 auto;
+  min-width: 112px;
 }
 
 .tray-action.catalog-pdf {
@@ -2599,6 +2609,10 @@ body > div[data-portal] {
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
+}
+
+.work-tray-section.catalog-zone {
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 
 .work-tray-section + .work-tray-section {
