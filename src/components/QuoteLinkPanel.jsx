@@ -12,7 +12,10 @@ export default function QuoteLinkPanel({ products, clients = [], profile, tenant
 
   const friendlyError = (message = "") => {
     if (message.includes("quote_links")) {
-      return "Pendiente de configuracion: falta ejecutar el archivo supabase/quote_links.sql en Supabase SQL Editor para activar las ligas de cotizacion.";
+      return "Para activar esta función ejecuta una sola vez el archivo supabase/quote_links.sql en Supabase SQL Editor. Después vuelve a intentar Generar liga.";
+    }
+    if (message.includes("get_quote_link_by_token") || message.includes("submit_quote_link_preorder")) {
+      return "Falta actualizar las funciones de ligas. Ejecuta supabase/quote_links.sql completo en Supabase SQL Editor.";
     }
     return message;
   };

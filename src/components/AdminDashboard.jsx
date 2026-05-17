@@ -1006,6 +1006,21 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
         />
       ) : null}
 
+      {checkedIds.size ? (
+        <div className="checked-batch-bar" role="region" aria-label="Productos marcados">
+          <strong>{checkedIds.size.toLocaleString()} productos marcados</strong>
+          <button className="selection-action preorder" type="button" onClick={addCheckedToPreorder}>
+            {t("addMarkedToPreorder")}
+          </button>
+          <button className="selection-action catalog" type="button" onClick={addCheckedToCatalogSelection}>
+            {t("addMarkedToCatalog")}
+          </button>
+          <button className="secondary-button compact-action" type="button" onClick={() => setCheckedIds(new Set())}>
+            {t("clearSelectionShort")}
+          </button>
+        </div>
+      ) : null}
+
       {lastActionMessage ? (
         <div className="action-toast" role="status">
           {lastActionMessage}

@@ -34,7 +34,8 @@ returns table (
   show_price boolean,
   show_weight boolean,
   expires_at timestamptz,
-  client_id uuid
+  client_id uuid,
+  tenant_id uuid
 )
 language sql
 security definer
@@ -46,7 +47,8 @@ as $$
     q.show_price,
     q.show_weight,
     q.expires_at,
-    q.client_id
+    q.client_id,
+    q.tenant_id
   from public.quote_links q
   where q.token = p_token
     and q.expires_at > now()
