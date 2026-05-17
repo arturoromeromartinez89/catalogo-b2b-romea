@@ -20,6 +20,57 @@ export const fetchTenants = async () => {
   return data || [];
 };
 
+export const fetchProfiles = async () => {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,email,role,tenant_id,client_id,created_at")
+    .order("email");
+  if (error) throw error;
+  return data || [];
+};
+
+export const updateProfileAccess = async (profileId, changes) => {
+  const row = {
+    role: changes.role,
+    tenant_id: changes.tenant_id || null,
+    client_id: changes.client_id || null,
+  };
+  const { data, error } = await supabase
+    .from("profiles")
+    .update(row)
+    .eq("id", profileId)
+    .select("id,email,role,tenant_id,client_id,created_at")
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const fetchTenantMetrics = async (tenants = []) => {
+  const metrics = await Promise.all(tenants.map(async (tenant) => {
+    const [products, clients, preorders] = await Promise.all([
+      supabase.from("products").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
+      supabase.from("clients").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
+      supabase.from("preorders").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
+    ]);
+
+    [products, clients, preorders].forEach(({ error }) => {
+      if (error) throw error;
+    });
+
+    return {
+      tenantId: tenant.id,
+      products: products.count || 0,
+      clients: clients.count || 0,
+      preorders: preorders.count || 0,
+    };
+  }));
+
+  return metrics.reduce((index, item) => {
+    index[item.tenantId] = item;
+    return index;
+  }, {});
+};
+
 export const saveTenant = async (tenant) => {
   const row = {
     ...tenant,

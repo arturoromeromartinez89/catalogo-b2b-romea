@@ -8,10 +8,12 @@ import ProductFormModal from "./components/ProductFormModal";
 import AuthGate from "./components/AuthGate";
 import AdminDashboard from "./components/AdminDashboard";
 import ClientCatalogApp from "./components/ClientCatalogApp";
+import SuperAdminDashboard from "./components/superadmin/SuperAdminDashboard";
 import QuotePage from "./pages/QuotePage";
+import { ImpersonationProvider, useImpersonation } from "./contexts/ImpersonationContext";
 import { LanguageProvider } from "./i18n/LanguageContext";
 import { makeTranslator } from "./i18n/translations";
-import { isAdminRole } from "./services/tenantUtils";
+import { isAdminRole, isSuperAdmin } from "./services/tenantUtils";
 import { sampleProducts } from "./data/sampleProducts";
 import { normalizeProduct, parseExcelFile, sortProducts } from "./utils/excelParser";
 import { applyFilters, buildFilterOptions, emptyFilters } from "./utils/filters";
@@ -103,6 +105,40 @@ const formProductToExcelRow = (product) => ({
   orden_web: product.ordenWeb,
   tags_busqueda: product.tagsBusqueda,
 });
+
+function AuthenticatedApp() {
+  const impersonation = useImpersonation();
+  return (
+    <AuthGate>
+      {({ profile }) => {
+        if (isSuperAdmin(profile) && !impersonation.impersonating) {
+          return <SuperAdminDashboard profile={profile} />;
+        }
+        if (isAdminRole(profile?.role)) {
+          return (
+            <>
+              {impersonation.impersonating ? (
+                <div className="support-mode-bar">
+                  <strong>Modo soporte</strong>
+                  <span>Administrando: {impersonation.tenantName}</span>
+                  <button className="secondary-button compact-action" type="button" onClick={impersonation.stopImpersonation}>
+                    Volver a Superadmin
+                  </button>
+                </div>
+              ) : null}
+              <AdminDashboard
+                profile={profile}
+                tenantOverride={impersonation.impersonating ? impersonation.tenantId : ""}
+                supportMode={impersonation.impersonating}
+              />
+            </>
+          );
+        }
+        return <ClientCatalogApp profile={profile} />;
+      }}
+    </AuthGate>
+  );
+}
 
 export default function App() {
   const [products, setProducts] = useState(() => readStorage(storageKeys.products, sampleProducts));
@@ -283,13 +319,9 @@ export default function App() {
 
   return (
     <LanguageProvider language={language} setLanguage={setLanguage}>
-    {isPublicQuoteRoute ? (
-      <QuotePage />
-    ) : (
-    <AuthGate>
-      {({ profile }) => (isAdminRole(profile?.role) ? <AdminDashboard profile={profile} /> : <ClientCatalogApp profile={profile} />)}
-    </AuthGate>
-    )}
+      <ImpersonationProvider>
+        {isPublicQuoteRoute ? <QuotePage /> : <AuthenticatedApp />}
+      </ImpersonationProvider>
     </LanguageProvider>
   );
 

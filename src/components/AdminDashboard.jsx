@@ -110,14 +110,14 @@ const productToPreorderItem = (product, quantity = 1) => {
   };
 };
 
-export default function AdminDashboard({ profile }) {
+export default function AdminDashboard({ profile, tenantOverride = "", supportMode = false }) {
   const { t, language } = useLanguage();
   const company = useCompany();
   const [tenantCompany, setTenantCompany] = useState(null);
-  const superadmin = isSuperAdmin(profile);
+  const superadmin = isSuperAdmin(profile) && !supportMode;
   const [tenants, setTenants] = useState([]);
   const [selectedTenantId, setSelectedTenantId] = useState(() => localStorage.getItem("catalogo-b2b-selected-tenant") || profile?.tenant_id || profile?.tenantId || "");
-  const tenantId = superadmin ? selectedTenantId : profile?.tenant_id || profile?.tenantId || "";
+  const tenantId = tenantOverride || (superadmin ? selectedTenantId : profile?.tenant_id || profile?.tenantId || "");
   const activeTenant = tenants.find((tenant) => tenant.id === tenantId);
   const activeCompany = tenantCompany || company;
   const tabs = superadmin ? ["tenants", ...baseTabs] : baseTabs;
@@ -147,7 +147,7 @@ export default function AdminDashboard({ profile }) {
   const [tenantForm, setTenantForm] = useState({ name: "", slug: "", status: "active" });
 
   const load = async () => {
-    if (superadmin && !tenantId) {
+    if (!tenantId) {
       setData({
         products: [],
         clients: [],
@@ -158,7 +158,7 @@ export default function AdminDashboard({ profile }) {
         clientCatalogs: [],
         clientPriceLists: [],
       });
-      setStatus("Selecciona o crea una empresa para trabajar.");
+      setStatus("Sin empresa asignada. Contacta al superadmin para asignarte una empresa.");
       return;
     }
     setLoadingProducts(true);
@@ -201,7 +201,7 @@ export default function AdminDashboard({ profile }) {
     fetchCompanySettings(tenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
   }, [tenantId]);
 
-  const products = data?.products.length ? data.products : sampleProducts;
+  const products = data ? data.products : sampleProducts;
   const selectedClient = data?.clients.find((client) => client.id === selectedClientId);
   const selectedProduct = products.find((product) => product.codigo === selectedProductCode);
   const filterOptions = useMemo(() => buildFilterOptions(products), [products]);
@@ -238,7 +238,7 @@ export default function AdminDashboard({ profile }) {
   const handleExcel = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (superadmin && !tenantId) {
+    if (!tenantId) {
       setStatus("Primero selecciona una empresa para cargar el catálogo.");
       event.target.value = "";
       return;
@@ -257,7 +257,7 @@ export default function AdminDashboard({ profile }) {
   };
 
   const saveProduct = async (product) => {
-    if (superadmin && !tenantId) {
+    if (!tenantId) {
       setStatus("Primero selecciona una empresa para guardar productos.");
       return;
     }
@@ -270,7 +270,7 @@ export default function AdminDashboard({ profile }) {
     data?.clientPriceLists.some((item) => item.client_id === selectedClientId && item.price_list_id === priceListId && item.active);
 
   const addToCart = (product, quantity = 1) => {
-    if (superadmin && !tenantId) {
+    if (!tenantId) {
       setStatus("Primero selecciona una empresa para crear preórdenes.");
       return;
     }
@@ -292,7 +292,7 @@ export default function AdminDashboard({ profile }) {
   };
 
   const handleSaveClient = async () => {
-    if (superadmin && !tenantId) {
+    if (!tenantId) {
       setStatus("Primero selecciona una empresa para crear clientes.");
       return;
     }
@@ -695,7 +695,7 @@ export default function AdminDashboard({ profile }) {
           <PricingPanel clients={data.clients} products={products} tenantId={tenantId} profile={profile} />
         ) : null}
         {tab === "preorders" ? (
-          <PreorderList clients={data.clients} products={products} profile={profile} />
+          <PreorderList clients={data.clients} products={products} profile={profile} tenantId={tenantId} />
         ) : null}
 
         {tab === "company" ? (

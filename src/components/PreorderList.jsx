@@ -11,7 +11,7 @@ const STATUS_LABELS = {
 
 const fmt = (n) => n != null ? `$${Number(n).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
 
-export default function PreorderList({ clients, products = [], profile }) {
+export default function PreorderList({ clients, products = [], profile, tenantId = "" }) {
   const [preorders, setPreorders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
@@ -21,7 +21,7 @@ export default function PreorderList({ clients, products = [], profile }) {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await fetchAllPreorders(profile);
+      const data = await fetchAllPreorders({ ...profile, tenant_id: tenantId || profile?.tenant_id || "" });
       setPreorders(data);
     } catch (e) {
       console.error(e);
@@ -30,7 +30,7 @@ export default function PreorderList({ clients, products = [], profile }) {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [profile?.tenant_id, profile?.role]);
+  useEffect(() => { load(); }, [tenantId, profile?.tenant_id, profile?.role]);
 
   const filtered = filter === "all" ? preorders : preorders.filter((p) => p.status === filter);
 
@@ -116,7 +116,7 @@ export default function PreorderList({ clients, products = [], profile }) {
           preorder={selected}
           clients={clients}
           products={products}
-          tenantId={profile?.tenant_id || ""}
+          tenantId={tenantId || profile?.tenant_id || ""}
           profile={profile}
           onClose={() => setSelected(null)}
           onSaved={async () => {
