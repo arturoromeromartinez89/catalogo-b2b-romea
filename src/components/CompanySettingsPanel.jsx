@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCompany } from "../contexts/CompanyContext";
-import { saveCompanySettings, uploadLogo } from "../services/companySettings";
+import { fetchCompanySettings, saveCompanySettings, uploadLogo } from "../services/companySettings";
 
 export default function CompanySettingsPanel({ tenantId = "" }) {
   const company = useCompany();
@@ -19,6 +19,24 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    fetchCompanySettings(tenantId)
+      .then((settings) => setForm({
+        brand_name: settings.brand_name || "",
+        legal_name: settings.legal_name || "",
+        rfc: settings.rfc || "",
+        phone: settings.phone || "",
+        email: settings.email || "",
+        city: settings.city || "",
+        state: settings.state || "",
+        country: settings.country || "México",
+        logo_url: settings.logo_url || "",
+        commercial_terms: settings.commercial_terms || "",
+      }))
+      .catch(() => {});
+  }, [tenantId]);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 

@@ -15,12 +15,13 @@ export const defaultSettings = {
   commercial_terms: "",
 };
 
-export const fetchCompanySettings = async () => {
-  const { data, error } = await supabase
+export const fetchCompanySettings = async (tenantId = "") => {
+  let query = supabase
     .from("company_settings")
     .select("*")
-    .limit(1)
-    .single();
+    .limit(1);
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { data, error } = await query.maybeSingle();
   if (error) return defaultSettings;
   return { ...defaultSettings, ...data };
 };
@@ -28,7 +29,9 @@ export const fetchCompanySettings = async () => {
 export const saveCompanySettings = async (settings, tenantId = "") => {
   const row = { ...settings };
   if (tenantId) row.tenant_id = tenantId;
-  const { data: existing } = await supabase.from("company_settings").select("id").limit(1).single();
+  let query = supabase.from("company_settings").select("id").limit(1);
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { data: existing } = await query.maybeSingle();
   if (existing?.id) {
     const { error } = await supabase.from("company_settings").update(row).eq("id", existing.id);
     if (error) throw error;

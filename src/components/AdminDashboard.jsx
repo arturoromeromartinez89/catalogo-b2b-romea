@@ -9,6 +9,7 @@ import PreorderList from "./PreorderList";
 import QuoteLinkPanel from "./QuoteLinkPanel";
 import SelectedProductsDrawer from "./SelectedProductsDrawer";
 import { useCompany } from "../contexts/CompanyContext";
+import { fetchCompanySettings } from "../services/companySettings";
 import CatalogExportButton from "./CatalogExportButton";
 import ExcelTemplateButton from "./ExcelTemplateButton";
 import FilterPanel from "./FilterPanel";
@@ -30,6 +31,8 @@ import {
   setClientPriceList,
   upsertProducts,
 } from "../services/supabaseCatalog";
+import { fetchTenants, makeTenantSlug, saveTenant } from "../services/tenantService";
+import { isSuperAdmin } from "../services/tenantUtils";
 import { normalizeProduct, parseExcelFile } from "../utils/excelParser";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
@@ -39,8 +42,9 @@ const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", acti
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
 const PRODUCT_RENDER_BATCH = 120;
-const tabs = ["catalog", "preorders", "clients", "prices", "company", "database"];
+const baseTabs = ["catalog", "preorders", "clients", "prices", "company", "database"];
 const tabKeys = {
+  tenants: "tenants",
   catalog: "catalog",
   preorders: "preorders",
   clients: "clients",
@@ -49,6 +53,7 @@ const tabKeys = {
   database: "database",
 };
 const titleKeys = {
+  tenants: "tenants",
   catalog: "adminCatalog",
   preorders: "preorders",
   clients: "clients",
@@ -108,7 +113,14 @@ const productToPreorderItem = (product, quantity = 1) => {
 export default function AdminDashboard({ profile }) {
   const { t, language } = useLanguage();
   const company = useCompany();
-  const tenantId = profile?.tenant_id || profile?.tenantId || "";
+  const [tenantCompany, setTenantCompany] = useState(null);
+  const superadmin = isSuperAdmin(profile);
+  const [tenants, setTenants] = useState([]);
+  const [selectedTenantId, setSelectedTenantId] = useState(() => localStorage.getItem("catalogo-b2b-selected-tenant") || profile?.tenant_id || profile?.tenantId || "");
+  const tenantId = superadmin ? selectedTenantId : profile?.tenant_id || profile?.tenantId || "";
+  const activeTenant = tenants.find((tenant) => tenant.id === tenantId);
+  const activeCompany = tenantCompany || company;
+  const tabs = superadmin ? ["tenants", ...baseTabs] : baseTabs;
   const [tab, setTab] = useState("catalog");
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("");
@@ -132,12 +144,27 @@ export default function AdminDashboard({ profile }) {
   const [catalogPdfOpen, setCatalogPdfOpen] = useState(false);
   const [quoteLinkOpen, setQuoteLinkOpen] = useState(false);
   const [selectionDrawerOpen, setSelectionDrawerOpen] = useState(false);
+  const [tenantForm, setTenantForm] = useState({ name: "", slug: "", status: "active" });
 
   const load = async () => {
+    if (superadmin && !tenantId) {
+      setData({
+        products: [],
+        clients: [],
+        catalogs: [],
+        catalogProducts: [],
+        priceLists: [],
+        priceItems: [],
+        clientCatalogs: [],
+        clientPriceLists: [],
+      });
+      setStatus("Selecciona o crea una empresa para trabajar.");
+      return;
+    }
     setLoadingProducts(true);
     setStatus("Cargando catálogo...");
     try {
-      const nextData = await fetchAdminData(profile);
+      const nextData = await fetchAdminData({ ...profile, tenant_id: tenantId });
       setData(nextData);
       setSelectedPriceListId((current) => current || nextData.priceLists[0]?.id || "");
       setStatus("");
@@ -148,7 +175,31 @@ export default function AdminDashboard({ profile }) {
 
   useEffect(() => {
     load().catch((error) => setStatus(error.message));
-  }, []);
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!superadmin) return;
+    fetchTenants()
+      .then((items) => {
+        setTenants(items);
+        setSelectedTenantId((current) => {
+          if (current && items.some((tenant) => tenant.id === current)) return current;
+          const romea = items.find((tenant) => tenant.slug === "romea");
+          const fallback = romea?.id || items[0]?.id || "";
+          if (fallback) localStorage.setItem("catalogo-b2b-selected-tenant", fallback);
+          return fallback;
+        });
+      })
+      .catch((error) => setStatus(`Error cargando empresas: ${error.message}`));
+  }, [superadmin]);
+
+  useEffect(() => {
+    if (!tenantId) {
+      setTenantCompany(null);
+      return;
+    }
+    fetchCompanySettings(tenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
+  }, [tenantId]);
 
   const products = data?.products.length ? data.products : sampleProducts;
   const selectedClient = data?.clients.find((client) => client.id === selectedClientId);
@@ -187,6 +238,11 @@ export default function AdminDashboard({ profile }) {
   const handleExcel = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (superadmin && !tenantId) {
+      setStatus("Primero selecciona una empresa para cargar el catálogo.");
+      event.target.value = "";
+      return;
+    }
     try {
       setStatus(t("uploadingToSupabase"));
       const result = await parseExcelFile(file);
@@ -201,6 +257,10 @@ export default function AdminDashboard({ profile }) {
   };
 
   const saveProduct = async (product) => {
+    if (superadmin && !tenantId) {
+      setStatus("Primero selecciona una empresa para guardar productos.");
+      return;
+    }
     await upsertProducts([normalizeProduct(formProductToRow(product))], tenantId);
     setProductModal({ open: false, product: null, mode: "create" });
     await load();
@@ -210,6 +270,10 @@ export default function AdminDashboard({ profile }) {
     data?.clientPriceLists.some((item) => item.client_id === selectedClientId && item.price_list_id === priceListId && item.active);
 
   const addToCart = (product, quantity = 1) => {
+    if (superadmin && !tenantId) {
+      setStatus("Primero selecciona una empresa para crear preórdenes.");
+      return;
+    }
     const nextItem = productToPreorderItem(product, quantity);
     setDraftPreorder((current) => {
       const preorder = current || { status: "pendiente", tenant_id: tenantId, created_by: profile?.id || "", preorder_items: [] };
@@ -228,6 +292,10 @@ export default function AdminDashboard({ profile }) {
   };
 
   const handleSaveClient = async () => {
+    if (superadmin && !tenantId) {
+      setStatus("Primero selecciona una empresa para crear clientes.");
+      return;
+    }
     await saveClient(clientForm, tenantId);
     setClientForm(blankClient);
     await load();
@@ -276,6 +344,35 @@ export default function AdminDashboard({ profile }) {
     setQuoteLinkOpen(true);
   };
 
+  const handleTenantChange = (nextTenantId) => {
+    setSelectedTenantId(nextTenantId);
+    localStorage.setItem("catalogo-b2b-selected-tenant", nextTenantId);
+    setSelectedProductCode("");
+    setSelectedClientId("");
+    setSelectedPriceListId("");
+    setDraftPreorder(null);
+    setAddedCodes([]);
+    setSelectedIds(new Set());
+  };
+
+  const handleTenantSave = async () => {
+    if (!tenantForm.name.trim()) {
+      setStatus("Captura el nombre de la empresa.");
+      return;
+    }
+    try {
+      const saved = await saveTenant({ ...tenantForm, slug: tenantForm.slug || makeTenantSlug(tenantForm.name) });
+      const nextTenants = await fetchTenants();
+      setTenants(nextTenants);
+      setTenantForm({ name: "", slug: "", status: "active" });
+      handleTenantChange(saved.id);
+      setStatus(`Empresa ${saved.name} lista. Ahora puedes cargar su catálogo.`);
+      setTab("database");
+    } catch (error) {
+      setStatus(`Error creando empresa: ${error.message}`);
+    }
+  };
+
   if (!data) {
     return <section className="setup-screen"><div className="setup-card">{t("loadingAdmin")}</div></section>;
   }
@@ -287,6 +384,26 @@ export default function AdminDashboard({ profile }) {
           <BrandLogo />
           <p>{t("b2bCatalog")}</p>
         </div>
+
+        {superadmin ? (
+          <section className="sidebar-section superadmin-tenant-box">
+            <h3>Superadmin</h3>
+            <label>
+              Empresa activa
+              <select value={tenantId} onChange={(event) => handleTenantChange(event.target.value)}>
+                <option value="">Seleccionar empresa</option>
+                {tenants.map((tenant) => (
+                  <option key={tenant.id} value={tenant.id}>
+                    {tenant.name} ({tenant.slug})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="muted">
+              {activeTenant ? `Trabajando en: ${activeTenant.name}` : "Sin empresa seleccionada"}
+            </p>
+          </section>
+        ) : null}
 
         <section className="sidebar-section sidebar-menu-section">
           <h3>{t("admin")}</h3>
@@ -310,12 +427,100 @@ export default function AdminDashboard({ profile }) {
       <main className="admin-catalog-main">
         <header className="admin-catalog-header">
           <div>
-            <p className="eyebrow">{company.brand_name || "Mi Catálogo"}</p>
+            <p className="eyebrow">{activeCompany.brand_name || activeTenant?.name || "Mi Catálogo"}</p>
             <h1>{t(titleKeys[tab])}</h1>
-            <span>{t("adminSubtitle")}</span>
+            <span>
+              {superadmin && activeTenant ? `Empresa activa: ${activeTenant.name} · ` : ""}
+              {t("adminSubtitle")}
+            </span>
           </div>
           <LanguageToggle />
         </header>
+
+        {tab === "tenants" && superadmin ? (
+          <section className="admin-workspace superadmin-workspace">
+            <div className="admin-soft-panel compact-panel">
+              <span className="tool-eyebrow">Control global</span>
+              <h2>Empresas del sistema</h2>
+              <p className="muted">
+                Desde aquí creas empresas independientes. Después seleccionas una empresa activa y cargas su catálogo, clientes, precios y configuración.
+              </p>
+
+              <div className="form-grid">
+                <label>
+                  Nombre de empresa
+                  <input
+                    placeholder="Ej. ROMEA"
+                    value={tenantForm.name}
+                    onChange={(event) => setTenantForm((current) => ({
+                      ...current,
+                      name: event.target.value,
+                      slug: current.slug || makeTenantSlug(event.target.value),
+                    }))}
+                  />
+                </label>
+                <label>
+                  Slug interno
+                  <input
+                    placeholder="romea"
+                    value={tenantForm.slug}
+                    onChange={(event) => setTenantForm((current) => ({ ...current, slug: makeTenantSlug(event.target.value) }))}
+                  />
+                </label>
+                <label>
+                  Estatus
+                  <select value={tenantForm.status} onChange={(event) => setTenantForm((current) => ({ ...current, status: event.target.value }))}>
+                    <option value="active">Activa</option>
+                    <option value="paused">Pausada</option>
+                  </select>
+                </label>
+              </div>
+
+              <button className="primary-button compact-action" type="button" onClick={handleTenantSave}>
+                Crear / actualizar empresa
+              </button>
+              {status ? <p className="status info">{status}</p> : null}
+            </div>
+
+            <div className="admin-soft-panel compact-panel">
+              <h2>Empresas disponibles</h2>
+              <div className="responsive-table">
+                <table className="simple-admin-table">
+                  <thead>
+                    <tr>
+                      <th>Empresa</th>
+                      <th>Slug</th>
+                      <th>Estatus</th>
+                      <th>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tenants.map((tenant) => (
+                      <tr key={tenant.id}>
+                        <td><strong>{tenant.name}</strong></td>
+                        <td>{tenant.slug}</td>
+                        <td>{tenant.status}</td>
+                        <td>
+                          <button className="secondary-button compact-action" type="button" onClick={() => {
+                            handleTenantChange(tenant.id);
+                            setTab("catalog");
+                          }}>
+                            Trabajar aquí
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {!tenants.length ? (
+                      <tr>
+                        <td colSpan="4">Aún no hay empresas. Crea ROMEA primero.</td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {tab === "catalog" ? (
           <section className="admin-workspace">
@@ -585,7 +790,7 @@ export default function AdminDashboard({ profile }) {
       />
 
       {catalogPdfOpen ? (
-        <CatalogPdfPanel products={selectedProducts} company={company} onClose={() => setCatalogPdfOpen(false)} />
+        <CatalogPdfPanel products={selectedProducts} company={activeCompany} onClose={() => setCatalogPdfOpen(false)} />
       ) : null}
 
       {quoteLinkOpen ? (

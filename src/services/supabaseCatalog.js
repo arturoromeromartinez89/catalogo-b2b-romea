@@ -197,7 +197,10 @@ export const fetchAdminData = async (profile) => {
 
 export const upsertProducts = async (products, tenantId = "") => {
   const rows = products.map((product) => productToDb(product, tenantId));
-  const result = await supabase.from("products").upsert(rows, { onConflict: "codigo" }).select("*");
+  const result = await supabase
+    .from("products")
+    .upsert(rows, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" })
+    .select("*");
   throwIfError(result);
   return result.data.map(dbProductToProduct);
 };
