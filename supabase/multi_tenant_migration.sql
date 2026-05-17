@@ -2,7 +2,7 @@
 -- Ejecutar en Supabase SQL Editor.
 -- Objetivo:
 -- 1. Mantener superadmin sin tenant operativo.
--- 2. Asignar el admin operativo a ROMEA.
+-- 2. Mantener Vanguardia Joyera y ROMEA como tenants separados.
 -- 3. Asegurar que productos sean unicos por empresa, no globalmente.
 -- 4. Asegurar lectura/administracion de tenants y profiles por superadmin.
 
@@ -33,7 +33,14 @@ alter table public.company_settings add column if not exists tenant_id uuid refe
 alter table public.preorders add column if not exists tenant_id uuid references public.tenants(id) on delete set null;
 
 insert into public.tenants (id, name, slug, status)
-values ('77d5d8e5-9a8b-4e90-a125-06d7d70cc2eb', 'ROMEA', 'romea', 'active')
+values ('77d5d8e5-9a8b-4e90-a125-06d7d70cc2eb', 'Vanguardia Joyera', 'vanguardia-joyera', 'active')
+on conflict (slug) do update
+set name = excluded.name,
+    status = excluded.status,
+    updated_at = now();
+
+insert into public.tenants (id, name, slug, status)
+values ('3b5a512d-c7e8-4700-87a9-78cfd4d63d18', 'ROMEA', 'romea', 'active')
 on conflict (slug) do update
 set name = excluded.name,
     status = excluded.status,
@@ -46,10 +53,10 @@ where lower(email) = lower('arturo.romero.martinez89@gmail.com');
 
 update public.profiles
 set role = 'tenant_admin',
-    tenant_id = '77d5d8e5-9a8b-4e90-a125-06d7d70cc2eb'
+    tenant_id = '3b5a512d-c7e8-4700-87a9-78cfd4d63d18'
 where lower(email) = lower('arturo.romero@vanguardiajoyera.com');
 
--- Si existian datos sin empresa, quedan asignados a ROMEA para evitar que se mezclen con futuros tenants.
+-- Si existian datos sin empresa, quedan asignados a Vanguardia Joyera porque esa era la base historica ya cargada.
 update public.clients
 set tenant_id = '77d5d8e5-9a8b-4e90-a125-06d7d70cc2eb'
 where tenant_id is null;
