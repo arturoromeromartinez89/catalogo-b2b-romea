@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { resolveImageUrl } from "../utils/formatters";
 import { getTenantId, withTenant } from "./tenantUtils";
 import { normalizeText } from "../utils/textNormalizer";
 
@@ -67,9 +68,9 @@ export const dbProductToProduct = (row) => ({
   precioMinimo: Number(row.precio_minimo || 0),
   manoObra: Number(row.mano_obra || 0),
   monedaPrecioMin: row.moneda_precio_min || "MXN",
-  fotoUrl: row.foto_url || "",
-  fotoUrl2: row.foto_url_2 || "",
-  fotoUrl3: row.foto_url_3 || "",
+  fotoUrl: resolveImageUrl(row.foto_url),
+  fotoUrl2: resolveImageUrl(row.foto_url_2),
+  fotoUrl3: resolveImageUrl(row.foto_url_3),
   visibleWeb: Boolean(row.visible_web),
   ordenWeb: Number(row.orden_web || 0),
   tagsBusqueda: row.tags_busqueda || "",
@@ -135,9 +136,9 @@ export const productToDb = (product, tenantId = "") => {
     precio_minimo: toDbNumber(product.precioMinimo, product.precio_minimo, product.minimum_price),
     mano_obra: toDbNumber(product.manoObra, product.mano_obra, product.laborPrice, product.labor_price),
     moneda_precio_min: firstValue(product.monedaPrecioMin, product.moneda_precio_min, product.minimum_price_currency, "MXN"),
-    foto_url: firstValue(product.fotoUrl, product.foto_url, product.photo_url, ""),
-    foto_url_2: firstValue(product.fotoUrl2, product.foto_url_2, product.photo_url_2, ""),
-    foto_url_3: firstValue(product.fotoUrl3, product.foto_url_3, product.photo_url_3, ""),
+    foto_url: resolveImageUrl(firstValue(product.fotoUrl, product.foto_url, product.photo_url, "")),
+    foto_url_2: resolveImageUrl(firstValue(product.fotoUrl2, product.foto_url_2, product.photo_url_2, "")),
+    foto_url_3: resolveImageUrl(firstValue(product.fotoUrl3, product.foto_url_3, product.photo_url_3, "")),
     visible_web: toDbBoolean(product.visibleWeb, product.visible_web),
     orden_web: toDbNumber(product.ordenWeb, product.orden_web, product.web_order),
     tags_busqueda: firstValue(product.tagsBusqueda, product.tags_busqueda, product.search_tags, ""),

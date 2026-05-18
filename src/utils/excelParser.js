@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { toNumber, toOptionalNumber } from "./formatters";
+import { resolveImageUrl, toNumber, toOptionalNumber } from "./formatters";
 import { normalizeText } from "./textNormalizer";
 
 export const REQUIRED_COLUMNS = [
@@ -135,9 +135,9 @@ export const normalizeProduct = (row) => {
     precioMinimo: toOptionalNumber(valueByColumn(row, "precio_minimo")),
     manoObra: toOptionalNumber(valueByColumn(row, "mano_obra")),
     monedaPrecioMin: String(valueByColumn(row, "moneda_precio_min") || "MXN").trim(),
-    fotoUrl: String(valueByColumn(row, "foto_url") ?? "").trim(),
-    fotoUrl2: String(valueByColumn(row, "foto_url_2") ?? "").trim(),
-    fotoUrl3: String(valueByColumn(row, "foto_url_3") ?? "").trim(),
+    fotoUrl: resolveImageUrl(valueByColumn(row, "foto_url")),
+    fotoUrl2: resolveImageUrl(valueByColumn(row, "foto_url_2")),
+    fotoUrl3: resolveImageUrl(valueByColumn(row, "foto_url_3")),
     visibleWeb: isVisibleValue(valueByColumn(row, "visible_web")),
     ordenWeb: toOptionalNumber(valueByColumn(row, "orden_web")),
     tagsBusqueda: String(valueByColumn(row, "tags_busqueda") ?? "").trim(),

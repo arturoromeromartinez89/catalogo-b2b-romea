@@ -35,6 +35,27 @@ export const shortText = (value, max = 72) => {
   return text.length > max ? `${text.slice(0, max - 1)}...` : text;
 };
 
+export const resolveImageUrl = (value) => {
+  const url = String(value || "").trim();
+  if (!url) return "";
+  if (url.startsWith("data:image/") || url.startsWith("/") || url.startsWith("blob:")) return url;
+
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.includes("drive.google.com")) return url;
+
+    if (parsed.pathname.includes("/folders/")) return "";
+
+    const fileMatch = parsed.pathname.match(/\/file\/d\/([^/]+)/);
+    const id = fileMatch?.[1] || parsed.searchParams.get("id");
+    if (!id) return url;
+
+    return `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w1000`;
+  } catch {
+    return url;
+  }
+};
+
 export const buildPlaceholderUrl = () => {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
