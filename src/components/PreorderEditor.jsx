@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings } from "../services/companySettings";
 import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice } from "../services/pricingService";
+import { saveClient } from "../services/supabaseCatalog";
 import { savePreorder, deletePreorder } from "../services/preorderService";
 import { generatePdf } from "../utils/pdfGenerator";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -23,6 +24,7 @@ const fmt = (value) =>
 
 const IVA_RATE = 0.16;
 const TROY_OUNCE_GRAMS = 31.1035;
+const PROSPECT_CLIENT_VALUE = "__new_prospect__";
 
 const calcSilverFineFromKitco = (kitcoUsdOz, exchangeRate, premiumPct = 4) => {
   const kitco = Number(kitcoUsdOz || 0);
@@ -109,7 +111,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [saved, setSaved] = useState(false);
   const [msg, setMsg] = useState("");
   const [productSearch, setProductSearch] = useState("");
+  const [scanCode, setScanCode] = useState("");
+  const [scanStatus, setScanStatus] = useState({ type: "info", text: "Listo para escanear." });
+  const [prospectForm, setProspectForm] = useState({ name: "", company: "", email: "", phone: "", rfc: "", active: true });
   const [tenantCompany, setTenantCompany] = useState(null);
+  const scannerInputRef = useRef(null);
   const activeCompany = resolvedTenantId ? (tenantCompany || {}) : company;
 
   useEffect(() => {
@@ -145,6 +151,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     }));
   }, [po.client_id, clients]);
 
+  useEffect(() => {
+    if (!pricingLocked) window.setTimeout(() => scannerInputRef.current?.focus(), 120);
+  }, [pricingLocked]);
+
   const exchangeRate = Number(po.tipo_cambio || metalPrices.tipo_cambio || 0);
   const useUsd = po.moneda === "USD" && exchangeRate > 0;
   const moneyLabel = po.moneda === "USD" ? "USD" : "MXN";
@@ -153,6 +163,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const set = (key) => (event) => setPo((current) => ({ ...current, [key]: event.target.value }));
   const setChecked = (key) => (event) => setPo((current) => ({ ...current, [key]: event.target.checked }));
   const inp = { width: "100%", boxSizing: "border-box" };
+  const isProspectMode = po.client_id === PROSPECT_CLIENT_VALUE;
 
   const recalcWithPrice = (item, laborMxn = item.labor_mxn, silverMxn = plataFinaMxn) =>
     calcItem({ ...item, labor_mxn: Number(laborMxn || 0), precio_gramo_mxn: Number(laborMxn || 0) + Number(silverMxn || 0) });
@@ -256,16 +267,109 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     });
     setProductSearch("");
     setMsg(`${product.codigo} agregado a la preorden.`);
+    window.setTimeout(() => scannerInputRef.current?.focus(), 80);
+  };
+
+  const findProductByScan = (code) => {
+    const scanned = normalizeText(code);
+    if (!scanned) return null;
+    return products.find((product) => {
+      const candidates = [
+        product.codigo,
+        product.modelo,
+        product.claveVenta,
+        product.clave_venta,
+        product.id,
+      ].filter(Boolean);
+      return candidates.some((value) => normalizeText(String(value)) === scanned);
+    });
+  };
+
+  const handleScanSubmit = () => {
+    const code = scanCode.trim();
+    if (!code) {
+      setScanStatus({ type: "error", text: "Escanea o escribe un codigo primero." });
+      scannerInputRef.current?.focus();
+      return;
+    }
+    const product = findProductByScan(code);
+    if (!product) {
+      setScanStatus({ type: "error", text: `No encontre producto con codigo: ${code}` });
+      setScanCode("");
+      window.setTimeout(() => scannerInputRef.current?.focus(), 80);
+      return;
+    }
+    addProduct(product);
+    setScanStatus({ type: "success", text: `${product.codigo} agregado. Listo para el siguiente.` });
+    setScanCode("");
+    window.setTimeout(() => scannerInputRef.current?.focus(), 80);
+  };
+
+  const handleClientSelect = (event) => {
+    const value = event.target.value;
+    setPo((current) => ({
+      ...current,
+      client_id: value,
+      ...(value === PROSPECT_CLIENT_VALUE
+        ? {
+            cliente_nombre: prospectForm.name,
+            cliente_empresa: prospectForm.company,
+            cliente_email: prospectForm.email,
+            cliente_telefono: prospectForm.phone,
+            cliente_rfc: prospectForm.rfc,
+          }
+        : {}),
+    }));
+  };
+
+  const updateProspect = (key, value) => {
+    setProspectForm((current) => ({ ...current, [key]: value }));
+    setPo((current) => current.client_id === PROSPECT_CLIENT_VALUE
+      ? {
+          ...current,
+          cliente_nombre: key === "name" ? value : current.cliente_nombre,
+          cliente_empresa: key === "company" ? value : current.cliente_empresa,
+          cliente_email: key === "email" ? value : current.cliente_email,
+          cliente_telefono: key === "phone" ? value : current.cliente_telefono,
+          cliente_rfc: key === "rfc" ? value : current.cliente_rfc,
+        }
+      : current
+    );
+  };
+
+  const resolveClientForSave = async () => {
+    if (po.client_id && po.client_id !== PROSPECT_CLIENT_VALUE) return po.client_id;
+    if (!isProspectMode) return "";
+    if (!prospectForm.name.trim() && !prospectForm.company.trim()) {
+      throw new Error("Captura nombre o empresa del prospecto.");
+    }
+    if (!prospectForm.email.trim() && !prospectForm.phone.trim()) {
+      throw new Error("Captura correo o telefono del prospecto.");
+    }
+    const savedClient = await saveClient(prospectForm, resolvedTenantId);
+    setPo((current) => ({
+      ...current,
+      client_id: savedClient.id,
+      cliente_nombre: savedClient.name || "",
+      cliente_empresa: savedClient.company || "",
+      cliente_email: savedClient.email || "",
+      cliente_telefono: savedClient.phone || "",
+      cliente_rfc: savedClient.rfc || "",
+    }));
+    setMsg("Prospecto creado como cliente y listo para guardar preorden.");
+    return savedClient.id;
   };
 
   const handleSave = async () => {
-    if (!po.client_id) { setMsg("Debes seleccionar un cliente existente para guardar la preorden."); return; }
     if (!items.length) { setMsg("Agrega al menos un producto para guardar la preorden."); return; }
     setSaving(true);
     setSaved(false);
     try {
+      const resolvedClientId = await resolveClientForSave();
+      if (!resolvedClientId) { setMsg("Debes seleccionar un cliente o registrar un prospecto para guardar la preorden."); return; }
       const savedId = await savePreorder({
         ...po,
+        client_id: resolvedClientId,
         total_mxn: totalFinalMxn,
         tenant_id: resolvedTenantId,
         created_by: po.created_by || profile?.id || null,
@@ -282,7 +386,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const handlePdf = async () => {
-    if (!po.client_id) { setMsg("Debes seleccionar un cliente existente para generar el PDF."); return; }
+    if (!po.client_id) { setMsg("Debes seleccionar un cliente o registrar un prospecto para generar el PDF."); return; }
+    if (isProspectMode && !prospectForm.name.trim() && !prospectForm.company.trim()) {
+      setMsg("Captura nombre o empresa del prospecto antes de generar PDF.");
+      return;
+    }
     const customer = {
       serie: "",
       numero: po.folio,
@@ -362,8 +470,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             <h3>Cliente obligatorio</h3>
             <div className="form-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
               <Field label="Cliente">
-                <select value={po.client_id} onChange={set("client_id")} style={inp}>
+                <select value={po.client_id} onChange={handleClientSelect} style={inp}>
                   <option value="">Selecciona cliente existente</option>
+                  <option value={PROSPECT_CLIENT_VALUE}>+ Prospecto nuevo</option>
                   {(clients || []).map((client) => (
                     <option key={client.id} value={client.id}>{client.company || client.name}</option>
                   ))}
@@ -387,6 +496,21 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 <input value={po.notas || ""} onChange={set("notas")} style={inp} placeholder="Observaciones" />
               </Field>
             </div>
+            {isProspectMode ? (
+              <div className="prospect-inline-card">
+                <div>
+                  <h4>Prospecto JCK</h4>
+                  <p>Captura sus datos aqui mismo. Al guardar la preorden, se crea el cliente/prospecto.</p>
+                </div>
+                <div className="form-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+                  <Field label="Nombre"><input value={prospectForm.name} onChange={(event) => updateProspect("name", event.target.value)} style={inp} placeholder="Nombre del contacto" /></Field>
+                  <Field label="Empresa"><input value={prospectForm.company} onChange={(event) => updateProspect("company", event.target.value)} style={inp} placeholder="Empresa / tienda" /></Field>
+                  <Field label="Correo"><input value={prospectForm.email} onChange={(event) => updateProspect("email", event.target.value)} style={inp} placeholder="correo@empresa.com" /></Field>
+                  <Field label="Telefono"><input value={prospectForm.phone} onChange={(event) => updateProspect("phone", event.target.value)} style={inp} placeholder="+1..." /></Field>
+                  <Field label="RFC / Tax ID"><input value={prospectForm.rfc} onChange={(event) => updateProspect("rfc", event.target.value)} style={inp} placeholder="Opcional" /></Field>
+                </div>
+              </div>
+            ) : null}
           </section>
 
           <section className="quote-block">
@@ -447,6 +571,30 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             {msg ? <p className="status info">{msg}</p> : null}
             {!pricingLocked && products.length ? (
               <div className="quote-product-picker">
+                <div className="scanner-workstation">
+                  <div>
+                    <h4>Escaner QR / codigo de barras</h4>
+                    <p>Escanea una pieza y presiona Enter. El campo queda listo para la siguiente lectura.</p>
+                  </div>
+                  <div className="scanner-input-row">
+                    <input
+                      ref={scannerInputRef}
+                      value={scanCode}
+                      onChange={(event) => setScanCode(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          handleScanSubmit();
+                        }
+                      }}
+                      placeholder="Escanear SKU / codigo de barras"
+                    />
+                    <button className="primary-button compact-action" type="button" onClick={handleScanSubmit}>
+                      Agregar lectura
+                    </button>
+                  </div>
+                  <p className={`scanner-status ${scanStatus.type}`}>{scanStatus.text}</p>
+                </div>
                 <label>
                   Agregar producto a esta preorden
                   <input

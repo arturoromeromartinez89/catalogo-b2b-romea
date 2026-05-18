@@ -1892,6 +1892,67 @@ dd {
   padding: 12px;
 }
 
+.scanner-workstation,
+.prospect-inline-card {
+  background: #ffffff;
+  border: 1px solid var(--romea-line);
+  border-radius: 12px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.scanner-workstation h4,
+.prospect-inline-card h4 {
+  color: var(--romea-blue);
+  font-family: var(--font-serif);
+  font-size: 18px;
+  margin: 0 0 2px;
+}
+
+.scanner-workstation p,
+.prospect-inline-card p {
+  color: var(--romea-muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.scanner-input-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.scanner-input-row input {
+  border-color: #d8b334;
+  box-shadow: inset 0 0 0 1px rgba(216, 179, 52, 0.24);
+  font-size: 16px;
+  font-weight: 800;
+  min-height: 46px;
+}
+
+.scanner-status {
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 9px 11px;
+}
+
+.scanner-status.info {
+  background: #edf3ff;
+  color: #244373;
+}
+
+.scanner-status.success {
+  background: #edf7f0;
+  color: #247044;
+}
+
+.scanner-status.error {
+  background: #fff0f0;
+  color: #9f2d2d;
+}
+
 .quote-product-results {
   display: grid;
   gap: 8px;
