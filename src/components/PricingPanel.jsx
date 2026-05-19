@@ -11,7 +11,7 @@ import {
 } from "../services/pricingService";
 
 export default function PricingPanel({ products = [], tenantId = "", profile }) {
-  const [metalPrices, setMetalPrices] = useState({ kitco_usd_oz: "", tipo_cambio: "", premio_pct: 4 });
+  const [metalPrices, setMetalPrices] = useState({ kitco_usd_oz: "", tipo_cambio: "", premio_pct: 0 });
   const [lines, setLines] = useState([]);
   const [savingMetal, setSavingMetal] = useState(false);
   const [syncingLines, setSyncingLines] = useState(false);
@@ -119,16 +119,18 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
             />
           </label>
           <label>
-            Premio %
+            Premio sobre Kitco (%)
             <input
               type="number"
               step="0.1"
+              min="0"
               placeholder="Ej. 4"
               value={metalPrices.premio_pct || ""}
               onChange={(event) => setMetalPrices({ ...metalPrices, premio_pct: event.target.value })}
             />
           </label>
         </div>
+        <p className="muted">Formula: precio spot por onza / 31.1035 x tipo de cambio x (1 + premio/100).</p>
         <div className="pricing-result-row">
           <span>Plata fina calculada</span>
           <strong>${plataFina.toFixed(4)} MXN/g</strong>

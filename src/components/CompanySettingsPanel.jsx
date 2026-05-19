@@ -73,7 +73,7 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
 
   return (
     <section className="admin-workspace">
-      <div className="admin-soft-panel compact-panel" style={{ maxWidth: 640 }}>
+      <div className="admin-soft-panel compact-panel">
         <h2>Información de la empresa</h2>
         <p className="muted" style={{ marginBottom: 16 }}>
           Estos datos aparecen en la app y en los PDFs de preorden.

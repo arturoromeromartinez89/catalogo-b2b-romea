@@ -26,7 +26,7 @@ const IVA_RATE = 0.16;
 const TROY_OUNCE_GRAMS = 31.1035;
 const PROSPECT_CLIENT_VALUE = "__new_prospect__";
 
-const calcSilverFineFromKitco = (kitcoUsdOz, exchangeRate, premiumPct = 4) => {
+const calcSilverFineFromKitco = (kitcoUsdOz, exchangeRate, premiumPct = 0) => {
   const kitco = Number(kitcoUsdOz || 0);
   const tc = Number(exchangeRate || 0);
   const premium = Number(premiumPct || 0);
@@ -97,7 +97,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     notas: "",
     pf_mode: "manual",
     kitco_usd_oz: "",
-    premio_pct: 4,
+    premio_pct: 0,
     aplicar_iva: false,
     mostrar_desglose: true,
   };
@@ -111,8 +111,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [saved, setSaved] = useState(false);
   const [msg, setMsg] = useState("");
   const [productSearch, setProductSearch] = useState("");
-  const [scanCode, setScanCode] = useState("");
-  const [scanStatus, setScanStatus] = useState({ type: "info", text: "Listo para escanear." });
+  const [productStatus, setProductStatus] = useState({ type: "info", text: "Escanea o busca un producto para agregarlo." });
   const [prospectForm, setProspectForm] = useState({ name: "", company: "", email: "", phone: "", rfc: "", active: true });
   const [tenantCompany, setTenantCompany] = useState(null);
   const scannerInputRef = useRef(null);
@@ -130,7 +129,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           ...current,
           tipo_cambio: current.tipo_cambio || prices.tipo_cambio || "",
           kitco_usd_oz: current.kitco_usd_oz || prices.kitco_usd_oz || "",
-          premio_pct: current.premio_pct || prices.premio_pct || 4,
+          premio_pct: current.premio_pct ?? prices.premio_pct ?? 0,
         }));
       })
       .catch((error) => setMsg(`Error: ${error.message}`));
@@ -209,7 +208,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const calculateSilverFineByKitco = () => {
     if (pricingLocked) return;
-    const nextSilver = calcSilverFineFromKitco(po.kitco_usd_oz, po.tipo_cambio || metalPrices.tipo_cambio, po.premio_pct || 4);
+    const nextSilver = calcSilverFineFromKitco(po.kitco_usd_oz, po.tipo_cambio || metalPrices.tipo_cambio, po.premio_pct || 0);
     if (!nextSilver) {
       setMsg("Captura KITCO USD/oz y tipo de cambio para calcular la plata fina.");
       return;
@@ -267,6 +266,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     });
     setProductSearch("");
     setMsg(`${product.codigo} agregado a la preorden.`);
+    setProductStatus({ type: "success", text: `${product.codigo} agregado. Listo para el siguiente.` });
     window.setTimeout(() => scannerInputRef.current?.focus(), 80);
   };
 
@@ -285,24 +285,31 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     });
   };
 
-  const handleScanSubmit = () => {
-    const code = scanCode.trim();
+  const handleProductEntrySubmit = () => {
+    const code = productSearch.trim();
     if (!code) {
-      setScanStatus({ type: "error", text: "Escanea o escribe un codigo primero." });
+      setProductStatus({ type: "error", text: "Escanea, escribe un SKU o busca un producto primero." });
       scannerInputRef.current?.focus();
       return;
     }
     const product = findProductByScan(code);
     if (!product) {
-      setScanStatus({ type: "error", text: `No encontre producto con codigo: ${code}` });
-      setScanCode("");
+      setProductStatus({ type: "error", text: `No encontre producto con codigo exacto: ${code}` });
       window.setTimeout(() => scannerInputRef.current?.focus(), 80);
       return;
     }
     addProduct(product);
-    setScanStatus({ type: "success", text: `${product.codigo} agregado. Listo para el siguiente.` });
-    setScanCode("");
     window.setTimeout(() => scannerInputRef.current?.focus(), 80);
+  };
+
+  const adjustQuantity = (idx, delta) => {
+    setItems((current) => {
+      const next = [...current];
+      const item = { ...next[idx], piezas: Math.max(1, Number(next[idx]?.piezas || 1) + delta) };
+      delete item._gt_manual;
+      next[idx] = calcItem(item);
+      return next;
+    });
   };
 
   const handleClientSelect = (event) => {
@@ -521,7 +528,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   Metodo PF
                   <select value={po.pf_mode || "manual"} onChange={set("pf_mode")} disabled={pricingLocked}>
                     <option value="manual">Manual</option>
-                    <option value="kitco">Kitco + 4%</option>
+                    <option value="kitco">Kitco + premio</option>
                   </select>
                 </label>
                 {po.pf_mode === "kitco" ? (
@@ -531,8 +538,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                       <input type="number" step="0.01" value={po.kitco_usd_oz || ""} onChange={set("kitco_usd_oz")} readOnly={pricingLocked} />
                     </label>
                     <label>
-                      Premio %
-                      <input type="number" step="0.1" value={po.premio_pct ?? 4} onChange={set("premio_pct")} readOnly={pricingLocked} />
+                      Premio sobre Kitco (%)
+                      <input type="number" step="0.1" min="0" value={po.premio_pct ?? 0} onChange={set("premio_pct")} readOnly={pricingLocked} />
                     </label>
                     {!pricingLocked ? (
                       <button className="secondary-button compact-action" type="button" onClick={calculateSilverFineByKitco}>
@@ -550,6 +557,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     onChange={(event) => setSilverFine(event.target.value)}
                     readOnly={pricingLocked}
                   />
+                  <small>Aplica en {moneyLabel} segun la moneda de la preorden.</small>
                 </label>
                 {!pricingLocked ? (
                   <button className="secondary-button compact-action" type="button" onClick={precargarPrecios}>
@@ -571,38 +579,32 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             {msg ? <p className="status info">{msg}</p> : null}
             {!pricingLocked && products.length ? (
               <div className="quote-product-picker">
-                <div className="scanner-workstation">
-                  <div>
-                    <h4>Escaner QR / codigo de barras</h4>
-                    <p>Escanea una pieza y presiona Enter. El campo queda listo para la siguiente lectura.</p>
-                  </div>
-                  <div className="scanner-input-row">
-                    <input
-                      ref={scannerInputRef}
-                      value={scanCode}
-                      onChange={(event) => setScanCode(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          handleScanSubmit();
-                        }
-                      }}
-                      placeholder="Escanear SKU / codigo de barras"
-                    />
-                    <button className="primary-button compact-action" type="button" onClick={handleScanSubmit}>
-                      Agregar lectura
-                    </button>
-                  </div>
-                  <p className={`scanner-status ${scanStatus.type}`}>{scanStatus.text}</p>
-                </div>
                 <label>
                   Agregar producto a esta preorden
                   <input
+                    ref={scannerInputRef}
                     value={productSearch}
-                    onChange={(event) => setProductSearch(event.target.value)}
-                    placeholder="Buscar por SKU, descripcion, linea o familia"
+                    onChange={(event) => {
+                      setProductSearch(event.target.value);
+                      if (productStatus.type !== "info") {
+                        setProductStatus({ type: "info", text: "Presiona Enter para agregar un codigo exacto o elige una sugerencia." });
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        handleProductEntrySubmit();
+                      }
+                    }}
+                    placeholder="Escanear codigo o buscar por SKU, descripcion, linea o familia"
                   />
                 </label>
+                <div className="quote-picker-actions">
+                  <button className="primary-button compact-action" type="button" onClick={handleProductEntrySubmit}>
+                    Agregar por codigo
+                  </button>
+                  <p className={`scanner-status ${productStatus.type}`}>{productStatus.text}</p>
+                </div>
                 {productResults.length ? (
                   <div className="quote-product-results">
                     {productResults.map((product) => (
@@ -649,7 +651,13 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                       <tr key={`${item.producto_codigo}-${idx}`}>
                         <td>{item.producto_foto_url ? <img src={item.producto_foto_url} alt={item.producto_codigo} /> : "-"}</td>
                         <td><strong>{item.producto_codigo}</strong></td>
-                        <td><input type="number" min="1" value={item.piezas} onChange={(event) => setItem(idx, "piezas", Number(event.target.value))} /></td>
+                        <td>
+                          <div className="qty-stepper">
+                            <button type="button" onClick={() => adjustQuantity(idx, -1)}>-</button>
+                            <input type="number" min="1" value={item.piezas} onChange={(event) => setItem(idx, "piezas", Number(event.target.value))} />
+                            <button type="button" onClick={() => adjustQuantity(idx, 1)}>+</button>
+                          </div>
+                        </td>
                         <td>
                           <div>{item.producto_descripcion}</div>
                           <small>{[item.producto_metal, item.producto_kilataje].filter(Boolean).join(" / ")}</small>

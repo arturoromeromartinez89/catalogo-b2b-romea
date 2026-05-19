@@ -1,22 +1,53 @@
 import jsPDF from "jspdf";
 
-const loadImageAsDataUrl = (url) =>
+const withTimeout = (promise, ms = 4000) =>
+  Promise.race([
+    promise,
+    new Promise((resolve) => window.setTimeout(() => resolve(null), ms)),
+  ]);
+
+const blobToDataUrl = (blob) =>
   new Promise((resolve) => {
-    if (!url) { resolve(null); return; }
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(blob);
+  });
+
+const loadImageViaFetch = async (url) => {
+  try {
+    const response = await fetch(url, { mode: "cors" });
+    if (!response.ok) return null;
+    return await blobToDataUrl(await response.blob());
+  } catch {
+    return null;
+  }
+};
+
+const loadImageViaCanvas = (url) =>
+  new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
       try {
         const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
+        canvas.width = img.naturalWidth || 1;
+        canvas.height = img.naturalHeight || 1;
         canvas.getContext("2d").drawImage(img, 0, 0);
         resolve(canvas.toDataURL("image/jpeg", 0.85));
-      } catch { resolve(null); }
+      } catch {
+        resolve(null);
+      }
     };
     img.onerror = () => resolve(null);
     img.src = url;
   });
+
+const loadImageAsDataUrl = async (url) => {
+  if (!url) return null;
+  if (String(url).startsWith("data:image/")) return url;
+  return withTimeout(loadImageViaFetch(url).then((data) => data || loadImageViaCanvas(url)));
+};
 
 const page = { w: 216, h: 279, margin: 12, col: 192 };
 
@@ -56,7 +87,9 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   const IVA_RATE = 0.16;
 
   // ── HEADER ───────────────────────────────────────────────
-  const logo = await loadImageAsDataUrl(company.logo_url);
+  const storedLogo = typeof localStorage !== "undefined" ? localStorage.getItem("romea-logo-data") : "";
+  const logoSource = company.logo_data_url || company.logoDataUrl || company.logo_url || company.logoPath || storedLogo;
+  const logo = await loadImageAsDataUrl(logoSource);
   doc.setFillColor(31, 51, 95);
   doc.rect(0, 0, page.w, 32, "F");
 

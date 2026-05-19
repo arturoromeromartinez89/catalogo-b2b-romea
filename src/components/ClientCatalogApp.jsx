@@ -93,7 +93,7 @@ export default function ClientCatalogApp({ profile }) {
         setStatus("");
       })
       .catch((error) => setStatus(error.message));
-  }, [profile, language]);
+  }, [profile, tenantId]);
 
   useEffect(() => {
     if (!tenantId) {
