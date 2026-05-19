@@ -28,6 +28,15 @@ const copy = {
     enter: "Entrar",
     haveAccount: "Ya tengo cuenta",
     createClientAccount: "Crear cuenta de cliente",
+    welcome: "Bienvenido",
+    loginHelp: "Ingresa tus credenciales para continuar",
+    loginProductName: "Catalogo B2B",
+    loginProductHelp: "Sistema comercial para catalogos, clientes, preordenes y cotizaciones.",
+    loginFeature1: "Gestion de catalogos y productos",
+    loginFeature2: "Preordenes y cotizaciones B2B",
+    loginFeature3: "Clientes, precios y permisos",
+    loginFeature4: "PDFs y ligas comerciales",
+    appCopyright: "Catalogo B2B",
   },
   en: {
     timeout: "Supabase took too long to respond. Check that the SQL ran completely.",
@@ -53,6 +62,15 @@ const copy = {
     enter: "Enter",
     haveAccount: "I already have an account",
     createClientAccount: "Create client account",
+    welcome: "Welcome",
+    loginHelp: "Enter your credentials to continue",
+    loginProductName: "B2B Catalog",
+    loginProductHelp: "Commercial system for catalogs, customers, preorders and quotes.",
+    loginFeature1: "Catalog and product management",
+    loginFeature2: "B2B preorders and quotes",
+    loginFeature3: "Customers, pricing and permissions",
+    loginFeature4: "PDFs and commercial links",
+    appCopyright: "B2B Catalog",
   },
 };
 
@@ -177,26 +195,53 @@ export default function AuthGate({ children }) {
 
   if (!session) {
     return (
-      <section className="setup-screen">
-        <form className="setup-card auth-card" onSubmit={submit}>
-          <p className="eyebrow">{t("brand")}</p>
-          <h1>{mode === "signup" ? text.createAccess : text.signIn}</h1>
-          <label>
-            {text.email}
-            <input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
-          </label>
-          <label>
-            {text.password}
-            <input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />
-          </label>
-          {message ? <p className="status info">{message}</p> : null}
-          <button className="primary-button full" type="submit">
-            {mode === "signup" ? text.createAccount : text.enter}
-          </button>
-          <button className="link-button" type="button" onClick={() => setMode(mode === "signup" ? "signin" : "signup")}>
-            {mode === "signup" ? text.haveAccount : text.createClientAccount}
-          </button>
-        </form>
+      <section className="login-shell">
+        <aside className="login-brand-panel">
+          <div className="login-brand-orb one" />
+          <div className="login-brand-orb two" />
+          <div className="login-brand-content">
+            <div className="login-icon-box" aria-hidden="true">▥</div>
+            <h1>{text.loginProductName}</h1>
+            <p>{text.loginProductHelp}</p>
+            <ul>
+              <li>{text.loginFeature1}</li>
+              <li>{text.loginFeature2}</li>
+              <li>{text.loginFeature3}</li>
+              <li>{text.loginFeature4}</li>
+            </ul>
+          </div>
+        </aside>
+
+        <main className="login-form-panel">
+          <form className="login-form-card" onSubmit={submit}>
+            <div>
+              <h2>{mode === "signup" ? text.createAccess : text.welcome}</h2>
+              <p>{text.loginHelp}</p>
+            </div>
+            <label>
+              {text.email}
+              <div className="login-input-wrap">
+                <span aria-hidden="true">✉</span>
+                <input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
+              </div>
+            </label>
+            <label>
+              {text.password}
+              <div className="login-input-wrap">
+                <span aria-hidden="true">□</span>
+                <input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />
+              </div>
+            </label>
+            {message ? <p className="status info">{message}</p> : null}
+            <button className="primary-button full login-submit" type="submit">
+              {mode === "signup" ? text.createAccount : text.signIn}
+            </button>
+            <button className="link-button" type="button" onClick={() => setMode(mode === "signup" ? "signin" : "signup")}>
+              {mode === "signup" ? text.haveAccount : text.createClientAccount}
+            </button>
+            <small>{text.appCopyright} © 2026</small>
+          </form>
+        </main>
       </section>
     );
   }
