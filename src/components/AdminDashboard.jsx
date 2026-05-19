@@ -486,8 +486,10 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const addCheckedToCatalogSelection = () => {
     if (!checkedIds.size) {
       setLastActionMessage("Marca productos primero.");
+      notifyAction("warning", "Sin productos marcados", "Marca productos primero para agregarlos al catalogo.");
       return;
     }
+    const selectedCount = checkedIds.size;
     setCatalogSelectionIds((current) => {
       const next = new Set(current);
       checkedIds.forEach((code) => next.add(code));
@@ -495,18 +497,21 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     });
     setCheckedIds(new Set());
     setSelectionDrawerOpen(true);
-    setLastActionMessage(`${checkedIds.size.toLocaleString()} productos agregados a catálogo.`);
+    setLastActionMessage(`${selectedCount.toLocaleString()} productos agregados a catalogo.`);
+    notifyAction("success", "Seleccion agregada", `${selectedCount.toLocaleString()} productos agregados a catalogo.`);
   };
 
   const addCheckedToPreorder = () => {
     if (!checkedProducts.length) {
       setLastActionMessage("Marca productos primero.");
+      notifyAction("warning", "Sin productos marcados", "Marca productos primero para agregarlos a pre-orden.");
       return;
     }
     checkedProducts.forEach((product) => addToCart(product));
     setCheckedIds(new Set());
     setSelectionDrawerOpen(true);
     setLastActionMessage(`${checkedProducts.length.toLocaleString()} productos agregados a pre-orden.`);
+    notifyAction("success", "Pre-orden actualizada", `${checkedProducts.length.toLocaleString()} productos agregados a pre-orden.`);
   };
 
   const openCatalogPdfPanel = () => {
@@ -597,20 +602,55 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           </div>
         </section>
 
+        {tab === "catalog" && !selectedProductCode ? (
+          <section className={`sidebar-section sidebar-catalog-tools ${filtersCollapsed ? "collapsed" : ""}`}>
+            <div className="sidebar-tool-heading">
+              <h3>Filtros</h3>
+              <button className="link-button sidebar-collapse-link" type="button" onClick={() => setFiltersCollapsed((current) => !current)}>
+                {filtersCollapsed ? "Mostrar" : "Ocultar"}
+              </button>
+            </div>
+            {!filtersCollapsed ? (
+              <div className="sidebar-filter-stack">
+                <div className="sidebar-mini-metrics">
+                  <div><span>Total</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
+                  <div><span>Filtrados</span><strong>{filteredProducts.length.toLocaleString()}</strong></div>
+                </div>
+                <AdvancedSearch
+                  value={productQuery}
+                  chips={searchChips}
+                  products={products}
+                  onChange={setProductQuery}
+                  onAddChip={(chip) => {
+                    addSearchChip(chip);
+                    setProductQuery("");
+                  }}
+                  onRemoveChip={(chip) => setSearchChips((current) => current.filter((item) => item !== chip))}
+                />
+                <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
+                <QuickFilters
+                  activeFilters={quickFilters}
+                  onToggle={(id) => setQuickFilters((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
+                  onRemove={(id) => setQuickFilters((current) => current.filter((item) => item !== id))}
+                />
+                <button className="secondary-button compact-action full" type="button" onClick={clearCatalogFilters}>
+                  {t("clearFilters")}
+                </button>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
         <button className="secondary-button full compact-action" type="button" onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }}>
           {t("logout")}
         </button>
       </aside>
 
       <main className="admin-catalog-main">
-        <header className="admin-catalog-header">
-          <div>
-            <p className="eyebrow">{t("admin")}</p>
-            <h1>{t(titleKeys[tab])}</h1>
-            <span>
-              {superadmin && activeTenant ? `Empresa activa: ${activeTenant.name} · ` : ""}
-              {t("adminSubtitle")}
-            </span>
+        <header className="admin-catalog-header minimal">
+          <div className="admin-header-context">
+            {superadmin && activeTenant ? <span>Empresa activa: {activeTenant.name}</span> : null}
+            {status && tab !== "catalog" ? <span className="header-status-text">{status}</span> : null}
           </div>
           <LanguageToggle />
         </header>
@@ -700,76 +740,29 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           </section>
         ) : null}
 
-        {tab === "catalog" && !selectedProductCode ? (
-          <div className={`catalog-control-panel ${filtersCollapsed ? "collapsed" : ""}`}>
-            <div className="catalog-control-heading">
-              <div>
-                <span className="tool-eyebrow">{t("catalogControls")}</span>
-                <h2>{t("searchAndFilter")}</h2>
-                <p>{t("catalogControlsHelp")}</p>
-              </div>
-              <div className="catalog-control-actions">
-                <button className="secondary-button compact-action" type="button" onClick={clearCatalogFilters}>
-                  {t("clearFilters")}
-                </button>
-                <button className="secondary-button compact-action filter-collapse-button" type="button" onClick={() => setFiltersCollapsed((current) => !current)}>
-                  {filtersCollapsed ? t("showFilters") : t("hideFilters")}
-                </button>
-              </div>
-            </div>
-
-            {!filtersCollapsed ? (
-              <div className="catalog-control-body">
-                <div className="catalog-metric-row">
-                  <div><span>{t("totalLabel")}</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
-                  <div><span>{t("visible")}</span><strong>{loadingProducts ? "..." : visibleCount.toLocaleString()}</strong></div>
-                  <div><span>{t("filtered")}</span><strong>{filteredProducts.length.toLocaleString()}</strong></div>
-                  <div><span>{t("marked")}</span><strong>{checkedIds.size.toLocaleString()}</strong></div>
-                </div>
-
-                <AdvancedSearch
-                  value={productQuery}
-                  chips={searchChips}
-                  products={products}
-                  onChange={setProductQuery}
-                  onAddChip={(chip) => {
-                    addSearchChip(chip);
-                    setProductQuery("");
-                  }}
-                  onRemoveChip={(chip) => setSearchChips((current) => current.filter((item) => item !== chip))}
-                />
-
-                <div className="catalog-filter-board">
-                  <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
-                  <QuickFilters
-                    activeFilters={quickFilters}
-                    onToggle={(id) => setQuickFilters((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
-                    onRemove={(id) => setQuickFilters((current) => current.filter((item) => item !== id))}
-                  />
-                </div>
-
-                <div className="catalog-selection-tools">
-                  <label className="check-row">
-                    <input type="checkbox" checked={allRenderedChecked} onChange={toggleRenderedChecks} />
-                    {t("selectVisibleProducts")} ({renderedProducts.length.toLocaleString()})
-                  </label>
-                  <button className="selection-action catalog" type="button" onClick={addCheckedToCatalogSelection} disabled={!checkedIds.size}>
-                    {t("addMarkedToCatalog")}
-                  </button>
-                  <button className="selection-action preorder" type="button" onClick={addCheckedToPreorder} disabled={!checkedIds.size}>
-                    {t("addMarkedToPreorder")}
-                  </button>
-                  <span>{t("showingFiltered", renderedProducts.length.toLocaleString(), filteredProducts.length.toLocaleString())}</span>
-                </div>
-
-                {status ? <p className="status info">{status}</p> : null}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
         {tab === "catalog" ? (
           <section className="admin-workspace">
+            {!selectedProductCode ? (
+              <div className="catalog-page-topbar">
+                <div>
+                  <span className="tool-eyebrow">Catálogo</span>
+                  <h2>Catálogo administrador</h2>
+                  <p>{t("showingFiltered", renderedProducts.length.toLocaleString(), filteredProducts.length.toLocaleString())}</p>
+                </div>
+                <div className="catalog-topbar-actions">
+                  <label className="check-row catalog-select-visible">
+                    <input type="checkbox" checked={allRenderedChecked} onChange={toggleRenderedChecks} />
+                    Seleccionar visibles ({renderedProducts.length.toLocaleString()})
+                  </label>
+                  <button className="selection-action catalog" type="button" onClick={addCheckedToCatalogSelection} disabled={!checkedIds.size}>
+                    + Catálogo
+                  </button>
+                  <button className="selection-action preorder" type="button" onClick={addCheckedToPreorder} disabled={!checkedIds.size}>
+                    + Pre-orden
+                  </button>
+                </div>
+              </div>
+            ) : null}
             {selectedProductCode ? (
               <ProductDetail
                 product={selectedProduct}
