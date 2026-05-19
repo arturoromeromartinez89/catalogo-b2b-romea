@@ -1826,6 +1826,148 @@ dd {
   align-content: start;
 }
 
+.company-settings-workspace {
+  background: #f4f6fa;
+}
+
+.company-settings-page {
+  display: grid;
+  gap: 18px;
+  margin: 0 auto;
+  max-width: 720px;
+  width: 100%;
+}
+
+.company-settings-title h2 {
+  color: var(--romea-blue);
+  font-family: var(--font-serif);
+  font-size: 26px;
+  line-height: 1.05;
+  margin: 0 0 6px;
+}
+
+.company-settings-title p {
+  color: var(--romea-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.company-config-card {
+  background: #ffffff;
+  border: 1px solid var(--romea-line);
+  border-radius: 8px;
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  overflow: hidden;
+}
+
+.company-config-card > header {
+  align-items: center;
+  border-bottom: 1px solid var(--romea-line);
+  display: flex;
+  gap: 10px;
+  padding: 14px 18px;
+}
+
+.company-config-card > header span {
+  color: #2563eb;
+  font-size: 15px;
+}
+
+.company-config-card h3 {
+  color: var(--romea-blue);
+  font-size: 14px;
+  margin: 0;
+}
+
+.company-form-grid {
+  display: grid;
+  gap: 14px 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 18px;
+}
+
+.company-form-grid .wide-field,
+.company-config-card > label {
+  grid-column: 1 / -1;
+}
+
+.company-config-card > label {
+  display: grid;
+  padding: 18px;
+}
+
+.company-logo-row {
+  align-items: center;
+  display: grid;
+  gap: 22px;
+  grid-template-columns: 90px minmax(0, 1fr);
+  padding: 20px 18px;
+}
+
+.company-logo-preview {
+  align-items: center;
+  background: #fbfcfe;
+  border: 1px dashed var(--romea-line);
+  border-radius: 8px;
+  display: flex;
+  height: 86px;
+  justify-content: center;
+  overflow: hidden;
+  width: 86px;
+}
+
+.company-logo-preview img {
+  max-height: 72px;
+  max-width: 72px;
+  object-fit: contain;
+}
+
+.company-logo-preview span {
+  color: #c5cfe0;
+  font-size: 30px;
+}
+
+.company-logo-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.company-logo-actions p {
+  color: var(--romea-muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.upload-logo-button {
+  align-items: center;
+  background: var(--romea-blue);
+  border: 1px solid var(--romea-blue);
+  border-radius: 7px;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 16px;
+  width: fit-content;
+}
+
+.upload-logo-button input {
+  display: none;
+}
+
+.company-save-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.company-save-row .primary-button {
+  min-width: 210px;
+}
+
 .clients-page-header {
   align-items: end;
   display: flex;

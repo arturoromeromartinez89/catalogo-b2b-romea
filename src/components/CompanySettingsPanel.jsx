@@ -12,7 +12,7 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
     email: company.email || "",
     city: company.city || "",
     state: company.state || "",
-    country: company.country || "México",
+    country: company.country || "Mexico",
     logo_url: company.logo_url || "",
     commercial_terms: company.commercial_terms || "",
   });
@@ -31,28 +31,29 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
         email: settings.email || "",
         city: settings.city || "",
         state: settings.state || "",
-        country: settings.country || "México",
+        country: settings.country || "Mexico",
         logo_url: settings.logo_url || "",
         commercial_terms: settings.commercial_terms || "",
       }))
       .catch(() => {});
   }, [tenantId]);
 
-  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
 
-  const handleLogo = async (e) => {
-    const file = e.target.files?.[0];
+  const handleLogo = async (event) => {
+    const file = event.target.files?.[0];
     if (!file) return;
     setUploading(true);
     setStatus("Subiendo logo...");
     try {
       const url = await uploadLogo(file, tenantId);
-      setForm((f) => ({ ...f, logo_url: url }));
-      setStatus("Logo subido ✓");
-    } catch (err) {
-      setStatus("Error al subir logo: " + err.message);
+      setForm((current) => ({ ...current, logo_url: url }));
+      setStatus("Logo subido correctamente.");
+    } catch (error) {
+      setStatus("Error al subir logo: " + error.message);
     } finally {
       setUploading(false);
+      event.target.value = "";
     }
   };
 
@@ -63,100 +64,113 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
       await saveCompanySettings(form, tenantId);
       company.reload();
       window.dispatchEvent(new CustomEvent("company-settings-updated", { detail: { tenantId } }));
-      setStatus("¡Guardado correctamente!");
-    } catch (err) {
-      setStatus("Error: " + err.message);
+      setStatus("Informacion de empresa guardada correctamente.");
+    } catch (error) {
+      setStatus("Error: " + error.message);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <section className="admin-workspace">
-      <div className="admin-soft-panel compact-panel">
-        <h2>Información de la empresa</h2>
-        <p className="muted" style={{ marginBottom: 16 }}>
-          Estos datos aparecen en la app y en los PDFs de preorden.
-        </p>
+    <section className="admin-workspace company-settings-workspace">
+      <div className="company-settings-page">
+        <header className="company-settings-title">
+          <h2>Configuracion del sistema</h2>
+          <p>Ajustes generales de la empresa, identidad comercial y datos para PDFs.</p>
+        </header>
 
-        <div className="form-grid">
-          <label>
-            Nombre comercial
-            <input placeholder="Ej. Mi empresa" value={form.brand_name} onChange={set("brand_name")} />
-          </label>
-          <label>
-            Razón social
-            <input placeholder="Ej. Comercializadora XYZ S.A. de C.V." value={form.legal_name} onChange={set("legal_name")} />
-          </label>
-          <label>
-            RFC
-            <input placeholder="XYZZ010101ABC" value={form.rfc} onChange={set("rfc")} />
-          </label>
-          <label>
-            Teléfono
-            <input placeholder="+52 33 1234 5678" value={form.phone} onChange={set("phone")} />
-          </label>
-          <label>
-            Correo
-            <input placeholder="contacto@miempresa.com" value={form.email} onChange={set("email")} />
-          </label>
-          <label>
-            Ciudad
-            <input placeholder="Guadalajara" value={form.city} onChange={set("city")} />
-          </label>
-          <label>
-            Estado
-            <input placeholder="Jalisco" value={form.state} onChange={set("state")} />
-          </label>
-          <label>
-            País
-            <input placeholder="México" value={form.country} onChange={set("country")} />
-          </label>
-        </div>
+        <section className="company-config-card">
+          <header>
+            <span aria-hidden="true">▦</span>
+            <h3>Datos de empresa</h3>
+          </header>
+          <div className="company-form-grid">
+            <label className="wide-field">
+              Nombre de empresa
+              <input placeholder="Ej. ROMEA Joyeria" value={form.brand_name} onChange={set("brand_name")} />
+            </label>
+            <label>
+              Razon social
+              <input placeholder="Ej. Comercializadora XYZ S.A. de C.V." value={form.legal_name} onChange={set("legal_name")} />
+            </label>
+            <label>
+              RFC
+              <input placeholder="XYZZ010101ABC" value={form.rfc} onChange={set("rfc")} />
+            </label>
+            <label>
+              Telefono
+              <input placeholder="+52 33 1234 5678" value={form.phone} onChange={set("phone")} />
+            </label>
+            <label>
+              Correo
+              <input placeholder="contacto@miempresa.com" value={form.email} onChange={set("email")} />
+            </label>
+            <label>
+              Ciudad
+              <input placeholder="Guadalajara" value={form.city} onChange={set("city")} />
+            </label>
+            <label>
+              Estado
+              <input placeholder="Jalisco" value={form.state} onChange={set("state")} />
+            </label>
+            <label className="wide-field">
+              Pais
+              <input placeholder="Mexico" value={form.country} onChange={set("country")} />
+            </label>
+          </div>
+        </section>
 
-        <label style={{ marginTop: 16, display: "block" }}>
-          Términos comerciales (aparece en el PDF)
-          <textarea
-            rows={3}
-            placeholder="Ej. Esta preorden no es factura ni orden confirmada..."
-            value={form.commercial_terms}
-            onChange={set("commercial_terms")}
-          />
-        </label>
-
-        <div style={{ marginTop: 20 }}>
-          <h3>Logo de la empresa</h3>
-          {form.logo_url ? (
-            <div style={{ marginBottom: 12 }}>
-              <img
-                src={form.logo_url}
-                alt="Logo"
-                style={{ maxHeight: 80, maxWidth: 240, objectFit: "contain", border: "1px solid #eee", borderRadius: 8, padding: 8 }}
-              />
+        <section className="company-config-card">
+          <header>
+            <span aria-hidden="true">▧</span>
+            <h3>Logo de empresa</h3>
+          </header>
+          <div className="company-logo-row">
+            <div className="company-logo-preview">
+              {form.logo_url ? (
+                <img src={form.logo_url} alt="Logo de empresa" />
+              ) : (
+                <span aria-hidden="true">□</span>
+              )}
             </div>
-          ) : (
-            <p className="muted" style={{ marginBottom: 8 }}>Sin logo cargado. En espacios de marca se reservará el lugar del logo sin mostrar otro nombre.</p>
-          )}
-          <input type="file" accept="image/*" onChange={handleLogo} disabled={uploading} style={{ background: "transparent", border: "none", padding: 0 }} />
-          {form.logo_url && (
-            <div style={{ marginTop: 8 }}>
-              <label>O pega una URL de imagen</label>
-              <input placeholder="https://..." value={form.logo_url} onChange={set("logo_url")} />
+            <div className="company-logo-actions">
+              <label className="upload-logo-button">
+                {uploading ? "Subiendo..." : "Subir logo"}
+                <input type="file" accept="image/*" onChange={handleLogo} disabled={uploading} />
+              </label>
+              <p>PNG, JPG o SVG. Recomendado: fondo transparente y formato horizontal.</p>
+              <label>
+                URL de logo
+                <input placeholder="https://..." value={form.logo_url} onChange={set("logo_url")} />
+              </label>
             </div>
-          )}
+          </div>
+        </section>
+
+        <section className="company-config-card">
+          <header>
+            <span aria-hidden="true">☰</span>
+            <h3>Terminos comerciales</h3>
+          </header>
+          <label>
+            Texto para PDFs de preorden
+            <textarea
+              rows={4}
+              placeholder="Ej. Esta preorden no es factura ni orden confirmada..."
+              value={form.commercial_terms}
+              onChange={set("commercial_terms")}
+            />
+          </label>
+        </section>
+
+        {status ? <p className="status info">{status}</p> : null}
+
+        <div className="company-save-row">
+          <button className="primary-button compact-action" type="button" onClick={handleSave} disabled={saving}>
+            {saving ? "Guardando..." : "Guardar configuracion"}
+          </button>
         </div>
-
-        {status ? <p className="status info" style={{ marginTop: 12 }}>{status}</p> : null}
-
-        <button
-          className="primary-button compact-action"
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          style={{ marginTop: 20, width: "100%" }}
-        >
-          {saving ? "Guardando..." : "Guardar información"}
-        </button>
       </div>
     </section>
   );
