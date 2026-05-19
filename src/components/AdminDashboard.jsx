@@ -132,6 +132,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [clientForm, setClientForm] = useState(blankClient);
   const [savingClient, setSavingClient] = useState(false);
   const [isClientFormOpen, setIsClientFormOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientStatusFilter, setClientStatusFilter] = useState("all");
   const [priceListForm, setPriceListForm] = useState(blankPriceList);
   const [priceItemForm, setPriceItemForm] = useState(blankPriceItem);
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -235,6 +237,17 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     () => filteredProducts.slice(0, visibleProductLimit),
     [filteredProducts, visibleProductLimit]
   );
+  const filteredClients = useMemo(() => {
+    const term = normalizeText(clientSearch);
+    return (data?.clients || []).filter((client) => {
+      const activeMatch =
+        clientStatusFilter === "all" ||
+        (clientStatusFilter === "active" && client.active !== false) ||
+        (clientStatusFilter === "inactive" && client.active === false);
+      const text = normalizeText([client.name, client.company, client.rfc, client.phone, client.email].join(" "));
+      return activeMatch && (!term || text.includes(term));
+    });
+  }, [clientSearch, clientStatusFilter, data?.clients]);
   const checkedProducts = useMemo(
     () => products.filter((product) => checkedIds.has(product.codigo)),
     [products, checkedIds]
@@ -410,12 +423,12 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       setClientForm(blankClient);
       setIsClientFormOpen(false);
       await load();
-      setTab("prices");
-      setStatus("Cliente guardado correctamente. Ahora configura su lista de precios.");
+      setSelectedClientId(saved.id);
+      setStatus("Cliente guardado correctamente.");
       notifyAction(
         "success",
-        "Cliente creado",
-        `${saved.company || saved.name || "Cliente"} se guardo correctamente. Revisa el menu de precios para confirmar su configuracion.`
+        clientForm.id ? "Cliente actualizado" : "Cliente creado",
+        `${saved.company || saved.name || "Cliente"} se guardo correctamente.`
       );
     } catch (error) {
       setStatus(`Error creando cliente: ${error.message}`);
@@ -858,91 +871,165 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
 
         {tab === "clients" ? (
           <section className="admin-workspace clients-workspace">
-            <div className="admin-soft-panel compact-panel client-command-panel">
+            <div className="clients-page-header">
               <div>
-                <span className="tool-eyebrow">Clientes mayoristas</span>
-                <h2>Registro y permisos de cliente</h2>
-                <p className="muted">Da de alta el cliente, confirma su correo de acceso y asígnale lista de precios por línea.</p>
+                <h2>Clientes</h2>
+                <p>{filteredClients.length.toLocaleString()} de {(data.clients || []).length.toLocaleString()} clientes</p>
               </div>
-              <button className="new-client-button" type="button" onClick={() => setIsClientFormOpen((current) => !current)}>
+              <button
+                className="new-client-button"
+                type="button"
+                onClick={() => {
+                  setClientForm(blankClient);
+                  setIsClientFormOpen(true);
+                }}
+              >
                 + Nuevo cliente
               </button>
             </div>
 
-            {isClientFormOpen ? (
-            <div className="admin-soft-panel compact-panel client-form-panel">
-              <div className="section-title-row">
-                <h2>{t("customerCreateTitle")}</h2>
-                <span>Campos principales para activar acceso comercial.</span>
+            <div className="clients-filter-card">
+              <div className="client-search-box">
+                <span aria-hidden="true">?</span>
+                <input
+                  value={clientSearch}
+                  onChange={(event) => setClientSearch(event.target.value)}
+                  placeholder="Buscar por nombre, empresa, RFC, celular o email..."
+                />
               </div>
-              <div className="client-form-sections">
-                <section>
-                  <h3>Identificación</h3>
-                  <div className="form-grid">
-                    <label>Nombre del contacto<input placeholder="Ej. Arturo Romero" value={clientForm.name} onChange={(event) => setClientForm({ ...clientForm, name: event.target.value })} /></label>
-                    <label>Empresa<input placeholder="Ej. Comercial ABC" value={clientForm.company} onChange={(event) => setClientForm({ ...clientForm, company: event.target.value })} /></label>
-                    <label>RFC / Tax ID<input placeholder="RFC o Tax ID" value={clientForm.rfc} onChange={(event) => setClientForm({ ...clientForm, rfc: event.target.value })} /></label>
-                  </div>
-                </section>
-                <section>
-                  <h3>Acceso y contacto</h3>
-                  <div className="form-grid">
-                    <label>Correo de acceso<input placeholder="cliente@empresa.com" value={clientForm.email} onChange={(event) => setClientForm({ ...clientForm, email: event.target.value })} /></label>
-                    <label>Teléfono<input placeholder="+52..." value={clientForm.phone} onChange={(event) => setClientForm({ ...clientForm, phone: event.target.value })} /></label>
-                    <label className="switch-row client-active-switch">
-                      <input type="checkbox" checked={clientForm.active} onChange={(event) => setClientForm({ ...clientForm, active: event.target.checked })} />
-                      <span>Cliente activo</span>
-                    </label>
-                  </div>
-                </section>
-              </div>
-              <div className="client-form-actions">
-                <button className="secondary-button compact-action" type="button" onClick={() => setIsClientFormOpen(false)}>Cancelar</button>
-                <button className="new-client-button" type="button" onClick={handleSaveClient} disabled={savingClient}>
-                  {savingClient ? "Guardando..." : "Guardar cliente"}
-                </button>
-              </div>
-              {status ? <p className="inline-action-confirmation success">{status}</p> : null}
-              <p className="muted">{t("customerAccessNote")}</p>
+              <select value={clientStatusFilter} onChange={(event) => setClientStatusFilter(event.target.value)}>
+                <option value="all">Todos</option>
+                <option value="active">Activos</option>
+                <option value="inactive">Inactivos</option>
+              </select>
             </div>
+
+            <div className="clients-table-card">
+              <div className="responsive-table">
+                <table className="simple-admin-table clients-directory-table">
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>RFC</th>
+                      <th>Celular</th>
+                      <th>Email</th>
+                      <th>Lista de precios</th>
+                      <th>Estado</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredClients.length ? filteredClients.map((client) => {
+                      const assignedPriceList = data.clientPriceLists.find((item) => item.client_id === client.id);
+                      const priceList = data.priceLists.find((item) => item.id === assignedPriceList?.price_list_id);
+                      const initials = (client.company || client.name || "?").trim().slice(0, 1).toUpperCase();
+                      return (
+                        <tr key={client.id}>
+                          <td>
+                            <div className="client-name-cell">
+                              <span>{initials}</span>
+                              <strong>{client.company || client.name || "Sin nombre"}</strong>
+                              {client.company && client.name ? <small>{client.name}</small> : null}
+                            </div>
+                          </td>
+                          <td>{client.rfc || "-"}</td>
+                          <td>{client.phone || "-"}</td>
+                          <td>{client.email || "-"}</td>
+                          <td>{priceList?.name || "Sin lista"}</td>
+                          <td><span className={`client-status-pill ${client.active === false ? "inactive" : "active"}`}>{client.active === false ? "Inactivo" : "Activo"}</span></td>
+                          <td>
+                            <div className="client-action-row">
+                              <button
+                                className="secondary-button compact-action"
+                                type="button"
+                                onClick={() => {
+                                  setClientForm({ ...blankClient, ...client });
+                                  setIsClientFormOpen(true);
+                                }}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                className="secondary-button compact-action"
+                                type="button"
+                                onClick={() => setSelectedClientId(client.id)}
+                              >
+                                Precios
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }) : (
+                      <tr><td colSpan="7" className="empty-row">No hay clientes con esos filtros.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {selectedClient ? (
+              <div className="clients-pricing-panel">
+                <div>
+                  <span className="tool-eyebrow">Lista de precios</span>
+                  <h3>{selectedClient.company || selectedClient.name}</h3>
+                  <p>Selecciona la lista activa para este cliente.</p>
+                </div>
+                <div className="client-price-list-options">
+                  {data.priceLists.map((priceList) => (
+                    <label className="switch-row" key={priceList.id}>
+                      <input
+                        type="checkbox"
+                        checked={isClientPriceActive(priceList.id)}
+                        onChange={async (event) => {
+                          setStatus("Actualizando lista de precios...");
+                          try {
+                            await setClientPriceList(selectedClientId, priceList.id, event.target.checked);
+                            await load();
+                            setStatus("Lista de precios actualizada correctamente.");
+                            notifyAction("success", "Permiso actualizado", "La lista de precios del cliente quedo actualizada.");
+                          } catch (error) {
+                            setStatus(`Error actualizando lista: ${error.message}`);
+                            notifyAction("error", "No se pudo actualizar", `Error actualizando lista: ${error.message}`);
+                          }
+                        }}
+                      />
+                      <span>{priceList.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             ) : null}
 
-            <div className="admin-soft-panel compact-panel">
-              <h2>{t("customerPricingTitle")}</h2>
-              <p className="muted">Selecciona un cliente existente para confirmar qué lista de precios tendrá activa.</p>
-              <select value={selectedClientId} onChange={(event) => setSelectedClientId(event.target.value)}>
-                <option value="">{t("selectClient")}</option>
-                {data.clients.map((client) => <option key={client.id} value={client.id}>{client.company || client.name} - {client.email}</option>)}
-              </select>
-              {selectedClient ? (
-                <div className="permission-grid single-permission">
-                  <div>
-                    <h3>{t("priceMenu")}</h3>
-                    {data.priceLists.map((priceList) => (
-                      <label className="switch-row" key={priceList.id}>
-                        <input
-                          type="checkbox"
-                          checked={isClientPriceActive(priceList.id)}
-                          onChange={async (event) => {
-                            setStatus("Actualizando lista de precios...");
-                            try {
-                              await setClientPriceList(selectedClientId, priceList.id, event.target.checked);
-                              await load();
-                              setStatus("Lista de precios actualizada correctamente.");
-                              notifyAction("success", "Permiso actualizado", "La lista de precios del cliente quedo actualizada.");
-                            } catch (error) {
-                              setStatus(`Error actualizando lista: ${error.message}`);
-                              notifyAction("error", "No se pudo actualizar", `Error actualizando lista: ${error.message}`);
-                            }
-                          }}
-                        />
-                        <span>{priceList.name}</span>
-                      </label>
-                    ))}
+            {isClientFormOpen ? (
+              <div className="client-modal-backdrop">
+                <section className="client-modal">
+                  <header>
+                    <h2>{clientForm.id ? "Editar cliente" : "Nuevo cliente"}</h2>
+                    <button className="icon-button" type="button" onClick={() => setIsClientFormOpen(false)}>x</button>
+                  </header>
+                  <div className="client-modal-body">
+                    <label className="wide-field">Nombre <span>*</span><input value={clientForm.name} onChange={(event) => setClientForm({ ...clientForm, name: event.target.value })} /></label>
+                    <label>RFC<input value={clientForm.rfc} onChange={(event) => setClientForm({ ...clientForm, rfc: event.target.value })} /></label>
+                    <label>Celular<input value={clientForm.phone} onChange={(event) => setClientForm({ ...clientForm, phone: event.target.value })} /></label>
+                    <label className="wide-field">Empresa<input value={clientForm.company} onChange={(event) => setClientForm({ ...clientForm, company: event.target.value })} /></label>
+                    <label className="wide-field">Email<input value={clientForm.email} onChange={(event) => setClientForm({ ...clientForm, email: event.target.value })} /></label>
+                    <label className="wide-field">Estado
+                      <select value={clientForm.active === false ? "inactive" : "active"} onChange={(event) => setClientForm({ ...clientForm, active: event.target.value === "active" })}>
+                        <option value="active">Activo</option>
+                        <option value="inactive">Inactivo</option>
+                      </select>
+                    </label>
                   </div>
-                </div>
-              ) : <p className="muted">{t("selectClientForPricing")}</p>}
-            </div>
+                  <footer>
+                    <button className="secondary-button" type="button" onClick={() => setIsClientFormOpen(false)}>Cancelar</button>
+                    <button className="new-client-button" type="button" onClick={handleSaveClient} disabled={savingClient}>
+                      {savingClient ? "Guardando..." : "Guardar"}
+                    </button>
+                  </footer>
+                </section>
+              </div>
+            ) : null}
           </section>
         ) : null}
 
