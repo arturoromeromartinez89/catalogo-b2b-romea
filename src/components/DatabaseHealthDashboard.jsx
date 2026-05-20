@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { normalizeText } from "../utils/textNormalizer";
 
 const missingText = {
@@ -25,6 +26,9 @@ const missingText = {
     diagnostics: "Diagnostico",
     problemProducts: "Productos con problemas",
     noProblems: "No se detectaron productos incompletos con los criterios actuales.",
+    showingProblems: (showing, total) => `Mostrando ${showing} de ${total} productos con problemas.`,
+    viewAllProblems: "Ver todos los problemas",
+    viewLessProblems: "Ver menos",
     providers: "Proveedores encontrados",
     providerRanking: "Ranking por SKUs",
     providerTotal: "Total de proveedores",
@@ -79,6 +83,9 @@ const missingText = {
     diagnostics: "Diagnostics",
     problemProducts: "Products with issues",
     noProblems: "No incomplete products were detected with the current criteria.",
+    showingProblems: (showing, total) => `Showing ${showing} of ${total} products with issues.`,
+    viewAllProblems: "View all issues",
+    viewLessProblems: "View less",
     providers: "Detected suppliers",
     providerRanking: "SKU ranking",
     providerTotal: "Total suppliers",
@@ -226,7 +233,9 @@ const buildStats = (products, language) => {
 
 export default function DatabaseHealthDashboard({ products = [], language = "es", loading = false }) {
   const t = missingText[language] || missingText.es;
-  const stats = buildStats(products, language);
+  const [showAllProblems, setShowAllProblems] = useState(false);
+  const stats = useMemo(() => buildStats(products, language), [products, language]);
+  const visibleProblems = showAllProblems ? stats.problemProducts : stats.problemProducts.slice(0, 12);
   const ringStyle = { background: `conic-gradient(var(--color-success) 0 ${stats.health}%, #e8edf5 ${stats.health}% 100%)` };
   const readyWidth = { width: `${Math.min(stats.health, 100)}%` };
   const incompleteWidth = { width: `${stats.total ? Math.min(Math.round((stats.incomplete / stats.total) * 100), 100) : 0}%` };
@@ -313,6 +322,14 @@ export default function DatabaseHealthDashboard({ products = [], language = "es"
         <article className="database-health-card">
           <span className="tool-eyebrow">{t.diagnostics}</span>
           <h2>{t.problemProducts}</h2>
+          <div className="table-card-heading">
+            <p className="muted">{t.showingProblems(visibleProblems.length, stats.problemProducts.length)}</p>
+            {stats.problemProducts.length > 12 ? (
+              <button className="secondary-button compact-action" type="button" onClick={() => setShowAllProblems((current) => !current)}>
+                {showAllProblems ? t.viewLessProblems : t.viewAllProblems}
+              </button>
+            ) : null}
+          </div>
           <div className="database-table-wrap">
             <table className="database-health-table">
               <thead>
@@ -326,7 +343,7 @@ export default function DatabaseHealthDashboard({ products = [], language = "es"
                 </tr>
               </thead>
               <tbody>
-                {stats.problemProducts.length ? stats.problemProducts.slice(0, 12).map(({ product, problems }) => (
+                {visibleProblems.length ? visibleProblems.map(({ product, problems }) => (
                   <tr key={product.id || product.codigo}>
                     <td><strong>{product.codigo || t.empty}</strong></td>
                     <td>{product.descripcion || t.empty}</td>

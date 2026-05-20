@@ -1930,7 +1930,17 @@ dd {
 
 .database-health-summary {
   align-items: center;
-  grid-template-columns: 150px minmax(0, 1fr);
+  grid-template-columns: 170px minmax(0, 1fr);
+  padding: 20px;
+}
+
+.database-health-summary h2 {
+  font-size: 17px;
+  max-width: 280px;
+}
+
+.database-health-summary .muted {
+  max-width: 320px;
 }
 
 .health-ring {
@@ -1962,6 +1972,8 @@ dd {
   color: var(--romea-muted);
   font-size: 11px;
   font-weight: 800;
+  max-width: 92px;
+  text-align: center;
 }
 
 .database-bar-list,
@@ -1977,7 +1989,7 @@ dd {
   font-size: 12px;
   font-weight: 800;
   gap: 8px;
-  grid-template-columns: 92px minmax(0, 1fr) 64px;
+  grid-template-columns: 92px minmax(90px, 1fr) 64px;
 }
 
 .database-bar-row div {
@@ -2066,6 +2078,23 @@ dd {
   margin: 2px 4px 2px 0;
   padding: 3px 7px;
   white-space: nowrap;
+}
+
+.table-card-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.table-card-heading p {
+  margin: 0;
+}
+
+.table-card-heading .secondary-button {
+  min-height: 34px;
+  padding: 7px 12px;
 }
 
 .admin-toolbar {

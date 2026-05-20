@@ -59,6 +59,7 @@ export const dbProductToProduct = (row) => ({
   linea: row.linea || "",
   familia: row.familia || "",
   grupo: row.grupo || "",
+  proveedor: row.proveedor || row.provider || row.supplier || "",
   genero: row.genero || "",
   acabado: row.acabado || "",
   piedra: row.piedra || "",
@@ -88,6 +89,7 @@ export const dbProductToProduct = (row) => ({
         row.linea,
         row.familia,
         row.grupo,
+        row.proveedor,
         row.genero,
         row.acabado,
         row.piedra,
@@ -110,6 +112,7 @@ export const productToDb = (product, tenantId = "") => {
         product.linea,
         product.familia,
         product.grupo,
+        firstValue(product.proveedor, product.provider, product.supplier),
         product.genero,
         product.acabado,
         product.piedra,
@@ -127,6 +130,7 @@ export const productToDb = (product, tenantId = "") => {
     linea: firstValue(product.linea, ""),
     familia: firstValue(product.familia, ""),
     grupo: firstValue(product.grupo, ""),
+    proveedor: firstValue(product.proveedor, product.provider, product.supplier, ""),
     genero: firstValue(product.genero, ""),
     acabado: firstValue(product.acabado, ""),
     piedra: firstValue(product.piedra, ""),
@@ -200,10 +204,17 @@ export const fetchAdminData = async (profile) => {
 
 export const upsertProducts = async (products, tenantId = "") => {
   const rows = products.map((product) => productToDb(product, tenantId));
-  const result = await supabase
+  let result = await supabase
     .from("products")
     .upsert(rows, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" })
     .select("*");
+  if (result.error && String(result.error.message || "").toLowerCase().includes("proveedor")) {
+    const fallbackRows = rows.map(({ proveedor, ...row }) => row);
+    result = await supabase
+      .from("products")
+      .upsert(fallbackRows, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" })
+      .select("*");
+  }
   throwIfError(result);
   return result.data.map(dbProductToProduct);
 };
