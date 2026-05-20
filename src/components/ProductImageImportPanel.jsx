@@ -105,7 +105,8 @@ export default function ProductImageImportPanel({ products = [], tenantId = "", 
           <h2>{text.title}</h2>
           <p className="muted">{text.help}</p>
         </div>
-        <button className="primary-button compact-action" type="button" onClick={() => inputRef.current?.click()} disabled={running}>
+        <button className="primary-button compact-action image-upload-action" type="button" onClick={() => inputRef.current?.click()} disabled={running}>
+          <span aria-hidden="true">↑</span>
           {running ? text.running : text.choose}
         </button>
         <input

@@ -1787,14 +1787,67 @@ dd {
   gap: 18px;
 }
 
-.database-action-grid {
+.database-admin-row {
   display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-width: 0;
 }
 
-.database-metrics {
-  max-width: 720px;
+.database-action-grid {
+  display: grid;
+  gap: 10px 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.database-admin-card .primary-button,
+.database-admin-card .secondary-button,
+.database-admin-card .danger-button,
+.image-import-header .primary-button {
+  align-items: center;
+  border-radius: 6px;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 7px;
+  justify-content: center;
+  line-height: 1.15;
+  min-height: 42px;
+  padding: 9px 13px;
+  text-align: center;
+  white-space: normal;
+}
+
+.database-admin-card .database-upload-action,
+.image-import-header .image-upload-action {
+  background: #14a36c;
+  border-color: #14a36c;
+  color: #ffffff;
+}
+
+.database-admin-card .database-upload-action:hover,
+.image-import-header .image-upload-action:hover {
+  background: #0f8b5b;
+  border-color: #0f8b5b;
+}
+
+.database-admin-card .database-new-product {
+  background: #ecfdf5;
+  border-color: #86d8b3;
+  color: #007a47;
+}
+
+.database-admin-card .danger-button {
+  background: #fff4f4;
+  border-color: #f0bbbb;
+  color: #a91717;
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-width: min(260px, 100%);
+}
+
+.database-admin-card .status {
+  margin: 0;
 }
 
 .database-health-dashboard {
@@ -1838,7 +1891,7 @@ dd {
 .database-metric-grid {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
 }
 
 .database-metric-grid div {
@@ -1847,13 +1900,13 @@ dd {
   border-radius: 6px;
   display: grid;
   gap: 6px;
-  min-height: 78px;
-  padding: 10px;
+  min-height: 76px;
+  padding: 10px 9px;
 }
 
 .database-metric-grid span {
   color: var(--romea-muted);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -1861,8 +1914,9 @@ dd {
 
 .database-metric-grid strong {
   color: var(--romea-blue);
-  font-size: 22px;
+  font-size: clamp(18px, 1.65vw, 22px);
   line-height: 1;
+  overflow-wrap: anywhere;
 }
 
 .database-metric-grid .warning-number {
@@ -1870,7 +1924,7 @@ dd {
 }
 
 .database-metric-grid .date-number {
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.2;
 }
 
@@ -4415,7 +4469,7 @@ body > div[data-portal] {
 .image-import-metrics {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(5, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
 }
 
 .image-import-metrics div {
@@ -4436,7 +4490,7 @@ body > div[data-portal] {
 
 .image-import-metrics strong {
   color: var(--romea-blue);
-  font-size: 18px;
+  font-size: 17px;
 }
 
 .image-import-progress {
@@ -4490,6 +4544,7 @@ body > div[data-portal] {
   .catalog-filter-board .range-grid,
   .database-action-grid,
   .catalog-metric-row,
+  .database-admin-row,
   .database-executive-row,
   .database-table-row,
   .image-import-header,

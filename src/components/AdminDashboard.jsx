@@ -1039,33 +1039,35 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
 
         {tab === "database" ? (
           <section className="admin-workspace database-workspace">
-            <div className="admin-soft-panel compact-panel">
-              <span className="tool-eyebrow">{t("database")}</span>
-              <h2>{t("databaseOperations")}</h2>
-              <p className="muted">{t("databaseOperationsHelp")}</p>
-              <div className="database-action-grid">
-                <UploadExcel onFileSelected={handleExcel} />
-                <ExcelTemplateButton />
-                <CatalogExportButton products={products} />
-                <button className="primary-button compact-action" type="button" onClick={() => setProductModal({ open: true, product: null, mode: "create" })}>
-                  {t("newProduct")}
-                </button>
-                <button className="danger-button compact-action" type="button" onClick={handleDeleteCatalog} disabled={loadingProducts || !products.length}>
-                  {t("clearCatalog")}
-                </button>
+            <div className="database-admin-row">
+              <div className="admin-soft-panel compact-panel database-admin-card">
+                <span className="tool-eyebrow">{t("database")}</span>
+                <h2>{language === "en" ? "Database administration" : "Administración de base de datos"}</h2>
+                <p className="muted">{t("databaseOperationsHelp")}</p>
+                <div className="database-action-grid">
+                  <UploadExcel onFileSelected={handleExcel} icon="↑" className="database-upload-action" />
+                  <ExcelTemplateButton />
+                  <CatalogExportButton products={products} />
+                  <button className="secondary-button compact-action database-new-product" type="button" onClick={() => setProductModal({ open: true, product: null, mode: "create" })}>
+                    + {t("newProduct")}
+                  </button>
+                  <button className="danger-button compact-action" type="button" onClick={handleDeleteCatalog} disabled={loadingProducts || !products.length}>
+                    {t("clearCatalog")}
+                  </button>
+                </div>
+                {status ? <p className="status info">{status}</p> : null}
               </div>
-              {status ? <p className="status info">{status}</p> : null}
+
+              <ProductImageImportPanel
+                products={data.products}
+                tenantId={tenantId}
+                onCompleted={load}
+                onStatus={setStatus}
+                onNotice={notifyAction}
+              />
             </div>
 
             <DatabaseHealthDashboard products={data.products} language={language} loading={loadingProducts} />
-
-            <ProductImageImportPanel
-              products={data.products}
-              tenantId={tenantId}
-              onCompleted={load}
-              onStatus={setStatus}
-              onNotice={notifyAction}
-            />
 
             <ImportPanel onImported={load} tenantId={tenantId} />
           </section>
