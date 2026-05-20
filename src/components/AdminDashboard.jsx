@@ -17,6 +17,7 @@ import FilterPanel from "./FilterPanel";
 import LanguageToggle from "./LanguageToggle";
 import ProductDetail from "./ProductDetail";
 import ProductFormModal from "./ProductFormModal";
+import ProductImageImportPanel from "./ProductImageImportPanel";
 import PreorderEditor from "./PreorderEditor";
 import QuickFilters from "./QuickFilters";
 import UploadExcel from "./UploadExcel";
@@ -1072,6 +1073,14 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                 </button>
               ) : null}
             </div>
+
+            <ProductImageImportPanel
+              products={data.products}
+              tenantId={tenantId}
+              onCompleted={load}
+              onStatus={setStatus}
+              onNotice={notifyAction}
+            />
 
             <ImportPanel onImported={load} tenantId={tenantId} />
           </section>

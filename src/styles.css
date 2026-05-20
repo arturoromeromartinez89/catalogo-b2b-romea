@@ -4170,14 +4170,116 @@ body > div[data-portal] {
   margin: 0;
 }
 
+.image-import-panel {
+  gap: 16px;
+}
+
+.image-import-header {
+  align-items: start;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.image-import-header .primary-button {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.visually-hidden-file {
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  width: 1px;
+}
+
+.image-import-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(5, minmax(110px, 1fr));
+}
+
+.image-import-metrics div {
+  background: var(--romea-soft);
+  border: 1px solid var(--romea-line);
+  border-radius: 10px;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.image-import-metrics span {
+  color: var(--romea-muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.image-import-metrics strong {
+  color: var(--romea-blue);
+  font-size: 18px;
+}
+
+.image-import-progress {
+  background: #eef2f8;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.image-import-progress span {
+  background: var(--color-success);
+  display: block;
+  height: 100%;
+  transition: width 0.18s ease;
+}
+
+.small-note {
+  font-size: 12px;
+}
+
+.image-import-details {
+  background: #f8fbff;
+  border: 1px solid #c8d6ee;
+  border-radius: 10px;
+  color: var(--romea-blue);
+  padding: 10px 12px;
+}
+
+.image-import-details summary {
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.image-import-details p {
+  color: var(--romea-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.image-import-details.error {
+  background: #fff7f7;
+  border-color: #f2c6c6;
+}
+
 @media (max-width: 980px) {
   .catalog-control-heading,
   .catalog-filter-board,
   .catalog-filter-board .side-filter-list,
   .catalog-filter-board .range-grid,
   .database-action-grid,
-  .catalog-metric-row {
+  .catalog-metric-row,
+  .image-import-header,
+  .image-import-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .image-import-header .primary-button {
+    justify-self: stretch;
   }
 }
 
