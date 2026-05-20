@@ -5,6 +5,7 @@ import BrandLogo from "./BrandLogo";
 import ImportPanel from "./ImportPanel";
 import CompanySettingsPanel from "./CompanySettingsPanel";
 import CatalogPdfPanel from "./CatalogPdfPanel";
+import DatabaseHealthDashboard from "./DatabaseHealthDashboard";
 import PricingPanel from "./PricingPanel";
 import PreorderList from "./PreorderList";
 import QuoteLinkPanel from "./QuoteLinkPanel";
@@ -269,8 +270,6 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     [draftPreorder]
   );
   const allRenderedChecked = renderedProducts.length > 0 && renderedProducts.every((product) => checkedIds.has(product.codigo));
-  const visibleCount = products.filter((product) => product.visibleWeb).length;
-
   useEffect(() => {
     setVisibleProductLimit(PRODUCT_RENDER_BATCH);
   }, [productQuery, searchChips, filters, quickFilters]);
@@ -1058,21 +1057,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               {status ? <p className="status info">{status}</p> : null}
             </div>
 
-            <div className="admin-soft-panel compact-panel">
-              <h2>{t("productBase")}</h2>
-              <div className="catalog-metric-row database-metrics">
-                <div><span>{t("totalLabel")}</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
-                <div><span>{t("visible")}</span><strong>{loadingProducts ? "..." : visibleCount.toLocaleString()}</strong></div>
-                <div><span>{t("preorder")}</span><strong>{draftPreorder?.preorder_items?.reduce((sum, item) => sum + Number(item.piezas || 0), 0) || 0}</strong></div>
-                <div><span>{t("models")}</span><strong>{draftPreorder?.preorder_items?.length || 0}</strong></div>
-              </div>
-              {!data.products.length ? <p className="muted">{t("sampleProductsNotice")}</p> : null}
-              {draftPreorder ? (
-                <button className="primary-button compact-action" type="button" onClick={() => setIsDraftOpen(true)}>
-                  Abrir preorden en proceso
-                </button>
-              ) : null}
-            </div>
+            <DatabaseHealthDashboard products={data.products} language={language} loading={loadingProducts} />
 
             <ProductImageImportPanel
               products={data.products}

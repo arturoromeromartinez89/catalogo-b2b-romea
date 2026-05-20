@@ -1797,6 +1797,223 @@ dd {
   max-width: 720px;
 }
 
+.database-health-dashboard {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.database-executive-row {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(300px, .95fr) minmax(360px, 1.05fr) minmax(280px, .75fr);
+  min-width: 0;
+}
+
+.database-table-row {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(420px, .8fr);
+  min-width: 0;
+}
+
+.database-health-card {
+  background: #ffffff;
+  border: 1px solid var(--romea-line);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(9, 25, 54, 0.07);
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.database-health-card h2 {
+  color: var(--romea-blue);
+  font-size: 18px;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.database-metric-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.database-metric-grid div {
+  background: var(--romea-soft);
+  border: 1px solid var(--romea-line);
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+  min-height: 78px;
+  padding: 10px;
+}
+
+.database-metric-grid span {
+  color: var(--romea-muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.database-metric-grid strong {
+  color: var(--romea-blue);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.database-metric-grid .warning-number {
+  color: #d97706;
+}
+
+.database-metric-grid .date-number {
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.database-health-summary {
+  align-items: center;
+  grid-template-columns: 150px minmax(0, 1fr);
+}
+
+.health-ring {
+  align-items: center;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  justify-items: center;
+  padding: 12px;
+}
+
+.health-ring div {
+  align-items: center;
+  background: #ffffff;
+  border-radius: 50%;
+  display: grid;
+  height: 100%;
+  justify-items: center;
+  width: 100%;
+}
+
+.health-ring strong {
+  color: var(--romea-blue);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.health-ring span {
+  color: var(--romea-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.database-bar-list,
+.database-timeline {
+  display: grid;
+  gap: 10px;
+}
+
+.database-bar-row {
+  align-items: center;
+  color: var(--romea-muted);
+  display: grid;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 8px;
+  grid-template-columns: 92px minmax(0, 1fr) 64px;
+}
+
+.database-bar-row div {
+  background: #eef1f6;
+  border-radius: 999px;
+  height: 9px;
+  overflow: hidden;
+}
+
+.database-bar-row i {
+  background: #3566c9;
+  display: block;
+  height: 100%;
+}
+
+.database-bar-row i.warn {
+  background: #d97706;
+}
+
+.database-bar-row strong {
+  color: var(--romea-blue);
+  text-align: right;
+}
+
+.database-timeline div {
+  border-left: 3px solid #d5e2fb;
+  padding-left: 12px;
+}
+
+.database-timeline strong {
+  color: var(--romea-blue);
+  display: block;
+  font-size: 13px;
+}
+
+.database-timeline span {
+  color: var(--romea-muted);
+  display: block;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.database-table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.database-health-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 760px;
+  width: 100%;
+}
+
+.provider-table {
+  min-width: 680px;
+}
+
+.database-health-table th {
+  color: var(--romea-muted);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.database-health-table th,
+.database-health-table td {
+  border-bottom: 1px solid var(--romea-line);
+  padding: 10px 8px;
+  vertical-align: top;
+}
+
+.database-health-table td strong {
+  color: var(--romea-blue);
+}
+
+.issue-tag {
+  background: #fff7e8;
+  border: 1px solid #f1d2a7;
+  border-radius: 999px;
+  color: #a76100;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  margin: 2px 4px 2px 0;
+  padding: 3px 7px;
+  white-space: nowrap;
+}
+
 .admin-toolbar {
   align-items: center;
   display: grid;
@@ -4273,13 +4490,39 @@ body > div[data-portal] {
   .catalog-filter-board .range-grid,
   .database-action-grid,
   .catalog-metric-row,
+  .database-executive-row,
+  .database-table-row,
   .image-import-header,
   .image-import-metrics {
     grid-template-columns: 1fr;
   }
 
+  .database-health-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .health-ring {
+    max-width: 170px;
+  }
+
   .image-import-header .primary-button {
     justify-self: stretch;
+  }
+}
+
+@media (max-width: 1240px) and (min-width: 981px) {
+  .database-executive-row {
+    grid-template-columns: 1fr;
+  }
+
+  .database-table-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .database-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

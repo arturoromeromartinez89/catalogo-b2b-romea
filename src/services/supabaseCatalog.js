@@ -49,6 +49,8 @@ export const fetchAllProducts = async ({ visibleOnly = false, tenantId = "" } = 
 export const dbProductToProduct = (row) => ({
   id: row.id,
   tenantId: row.tenant_id || "",
+  createdAt: row.created_at || "",
+  updatedAt: row.updated_at || "",
   codigo: row.codigo || "",
   modelo: row.modelo || "",
   descripcion: row.descripcion || "",
