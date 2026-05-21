@@ -38,22 +38,13 @@ function AuthenticatedApp() {
 
         if (isAdminRole(profile?.role)) {
           return (
-            <>
-              {impersonation.impersonating ? (
-                <div className="support-mode-bar">
-                  <strong>Modo soporte</strong>
-                  <span>Administrando: {impersonation.tenantName}</span>
-                  <button className="secondary-button compact-action" type="button" onClick={impersonation.stopImpersonation}>
-                    Volver a Superadmin
-                  </button>
-                </div>
-              ) : null}
-              <AdminDashboard
-                profile={profile}
-                tenantOverride={impersonation.impersonating ? impersonation.tenantId : ""}
-                supportMode={impersonation.impersonating}
-              />
-            </>
+            <AdminDashboard
+              profile={profile}
+              tenantOverride={impersonation.impersonating ? impersonation.tenantId : ""}
+              supportMode={impersonation.impersonating}
+              supportTenantName={impersonation.tenantName}
+              onExitSupport={impersonation.stopImpersonation}
+            />
           );
         }
 

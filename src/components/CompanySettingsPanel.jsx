@@ -63,7 +63,7 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
     try {
       await saveCompanySettings(form, tenantId);
       company.reload();
-      window.dispatchEvent(new CustomEvent("company-settings-updated", { detail: { tenantId } }));
+      window.dispatchEvent(new CustomEvent("company-settings-updated", { detail: { tenantId, settings: form } }));
       setStatus("Informacion de empresa guardada correctamente.");
     } catch (error) {
       setStatus("Error: " + error.message);

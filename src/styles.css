@@ -3936,6 +3936,17 @@ body > div[data-portal] {
   color: #087a45;
 }
 
+.selection-action.all-filtered {
+  background: #fff8e8;
+  border: 1px solid #e8c56d;
+  color: #8a5a00;
+}
+
+.selection-action.all-filtered.selected {
+  background: #f7f1e3;
+  border-color: #d4b560;
+}
+
 .selection-action:disabled {
   cursor: not-allowed;
   opacity: 0.45;
@@ -4011,6 +4022,79 @@ body > div[data-portal] {
   min-width: 26px;
   place-items: center;
   writing-mode: horizontal-tb;
+}
+
+/* Ajustes finales de sidebar y tarjetas de catálogo */
+.admin-romea-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-catalog-tools {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sidebar-support-card {
+  background: #fff8e8;
+  border: 1px solid #e3c64d;
+  border-radius: 8px;
+  color: var(--romea-blue);
+  display: grid;
+  gap: 6px;
+  margin-top: auto;
+  padding: 8px;
+}
+
+.sidebar-support-card strong {
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.sidebar-support-card span {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.sidebar-support-card .compact-action {
+  min-height: 28px;
+  padding: 4px 8px;
+  width: 100%;
+}
+
+.sidebar-logout {
+  align-self: stretch;
+  flex: 0 0 auto;
+  margin-top: auto;
+  width: 100%;
+}
+
+.sidebar-support-card + .sidebar-logout {
+  margin-top: 8px;
+}
+
+.admin-product-actions {
+  gap: 5px;
+  padding: 8px;
+}
+
+.product-action-admin,
+.product-action-client {
+  gap: 5px;
+}
+
+.admin-product-actions .compact-action,
+.admin-product-actions .action-button {
+  border-radius: 6px;
+  font-size: 10.5px;
+  line-height: 1.05;
+  min-height: 22px;
+  padding: 4px 7px;
+}
+
+.admin-product-actions button {
+  font-size: 10.5px;
 }
 
 .selection-drawer {

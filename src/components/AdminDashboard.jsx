@@ -113,7 +113,7 @@ const productToPreorderItem = (product, quantity = 1) => {
   };
 };
 
-export default function AdminDashboard({ profile, tenantOverride = "", supportMode = false }) {
+export default function AdminDashboard({ profile, tenantOverride = "", supportMode = false, supportTenantName = "", onExitSupport }) {
   const { t, language } = useLanguage();
   const company = useCompany();
   const [tenantCompany, setTenantCompany] = useState(null);
@@ -220,6 +220,10 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   useEffect(() => {
     const refreshTenantCompany = (event) => {
       if (!tenantId || event.detail?.tenantId !== tenantId) return;
+      if (event.detail?.settings) {
+        setTenantCompany(event.detail.settings);
+        return;
+      }
       fetchCompanySettings(tenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
     };
     window.addEventListener("company-settings-updated", refreshTenantCompany);
@@ -269,6 +273,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     [draftPreorder]
   );
   const allRenderedChecked = renderedProducts.length > 0 && renderedProducts.every((product) => checkedIds.has(product.codigo));
+  const allFilteredChecked = filteredProducts.length > 0 && filteredProducts.every((product) => checkedIds.has(product.codigo));
   useEffect(() => {
     setVisibleProductLimit(PRODUCT_RENDER_BATCH);
   }, [productQuery, searchChips, filters, quickFilters]);
@@ -463,6 +468,15 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     });
   };
 
+  const toggleFilteredChecks = () => {
+    setCheckedIds((current) => {
+      const next = new Set(current);
+      if (allFilteredChecked) filteredProducts.forEach((product) => next.delete(product.codigo));
+      else filteredProducts.forEach((product) => next.add(product.codigo));
+      return next;
+    });
+  };
+
   const addToCatalogSelection = (product) => {
     setCatalogSelectionIds((current) => {
       const next = new Set(current);
@@ -649,6 +663,16 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           </section>
         ) : null}
 
+        {supportMode ? (
+          <section className="sidebar-support-card" aria-label="Modo soporte">
+            <strong>Modo soporte</strong>
+            <span>Administrando: {supportTenantName || activeTenant?.name || "empresa"}</span>
+            <button className="secondary-button compact-action" type="button" onClick={onExitSupport}>
+              Volver a Superadmin
+            </button>
+          </section>
+        ) : null}
+
         <button
           className="sidebar-logout"
           type="button"
@@ -769,8 +793,13 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                 <div className="catalog-topbar-actions">
                   <label className="check-row catalog-select-visible">
                     <input type="checkbox" checked={allRenderedChecked} onChange={toggleRenderedChecks} />
-                    Seleccionar visibles ({renderedProducts.length.toLocaleString()})
+                    Seleccionar pantalla ({renderedProducts.length.toLocaleString()})
                   </label>
+                  {filteredProducts.length > renderedProducts.length ? (
+                    <button className={`selection-action all-filtered ${allFilteredChecked ? "selected" : ""}`} type="button" onClick={toggleFilteredChecks}>
+                      {allFilteredChecked ? "Quitar todos filtrados" : `Seleccionar todos filtrados (${filteredProducts.length.toLocaleString()})`}
+                    </button>
+                  ) : null}
                   <button className="selection-action catalog" type="button" onClick={addCheckedToCatalogSelection} disabled={!checkedIds.size}>
                     + Catálogo
                   </button>
