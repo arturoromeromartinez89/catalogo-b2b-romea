@@ -665,26 +665,32 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
 
         {supportMode ? (
           <section className="sidebar-support-card" aria-label="Modo soporte">
-            <strong>Modo soporte</strong>
-            <span>Administrando: {supportTenantName || activeTenant?.name || "empresa"}</span>
-            <button className="secondary-button compact-action" type="button" onClick={onExitSupport}>
-              Volver a Superadmin
-            </button>
+            <div>
+              <strong>Modo soporte</strong>
+              <span>Administrando: {supportTenantName || activeTenant?.name || "empresa"}</span>
+            </div>
           </section>
         ) : null}
 
-        <button
-          className="sidebar-logout"
-          type="button"
-          onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-          {t("logout")}
-        </button>
+        <div className="sidebar-bottom-actions">
+          <button
+            className="sidebar-logout"
+            type="button"
+            onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            {t("logout")}
+          </button>
+          {supportMode ? (
+            <button className="support-exit-button" type="button" onClick={onExitSupport}>
+              Superadmin
+            </button>
+          ) : null}
+        </div>
       </aside>
 
       <main className="admin-catalog-main">
