@@ -19,7 +19,6 @@ import LanguageToggle from "./LanguageToggle";
 import ProductDetail from "./ProductDetail";
 import ProductFormModal from "./ProductFormModal";
 import ProductImageImportPanel from "./ProductImageImportPanel";
-import PreorderEditor from "./PreorderEditor";
 import QuickFilters from "./QuickFilters";
 import UploadExcel from "./UploadExcel";
 import { sampleProducts } from "../data/sampleProducts";
@@ -524,6 +523,15 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     setCatalogPdfOpen(false);
     setSelectionDrawerOpen(false);
     setQuoteLinkOpen(true);
+  };
+
+  const openDraftPreorderWorkspace = () => {
+    if (!draftPreorder?.preorder_items?.length) return;
+    setCatalogPdfOpen(false);
+    setQuoteLinkOpen(false);
+    setSelectionDrawerOpen(false);
+    setIsDraftOpen(true);
+    setTab("preorders");
   };
 
   const handleTenantChange = (nextTenantId) => {
@@ -1039,7 +1047,25 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           <PricingPanel clients={data.clients} products={products} tenantId={tenantId} profile={profile} />
         ) : null}
         {tab === "preorders" ? (
-          <PreorderWorkspace clients={data.clients} products={products} profile={profile} tenantId={tenantId} />
+          <PreorderWorkspace
+            clients={data.clients}
+            products={products}
+            profile={profile}
+            tenantId={tenantId}
+            draftPreorder={draftPreorder}
+            isDraftOpen={isDraftOpen}
+            onDraftClose={(updatedDraft) => {
+              if (updatedDraft) setDraftPreorder(updatedDraft);
+              setIsDraftOpen(false);
+            }}
+            onDraftSaved={async () => {
+              setDraftPreorder(null);
+              setAddedCodes([]);
+              setIsDraftOpen(false);
+              await load();
+              setStatus("Preorden guardada correctamente. Puedes verla en el menu Preordenes.");
+            }}
+          />
         ) : null}
 
         {tab === "company" ? (
@@ -1105,36 +1131,13 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           onClose={() => setProductModal({ open: false, product: null, mode: "create" })}
         />
       ) : null}
-
-      {draftPreorder && isDraftOpen ? (
-        <PreorderEditor
-          preorder={draftPreorder}
-          clients={data.clients}
-          products={products}
-          tenantId={tenantId}
-          profile={profile}
-          onClose={(updatedDraft) => {
-            if (updatedDraft) setDraftPreorder(updatedDraft);
-            setIsDraftOpen(false);
-          }}
-          onSaved={async () => {
-            setDraftPreorder(null);
-            setAddedCodes([]);
-            setIsDraftOpen(false);
-            setTab("preorders");
-            await load();
-            setStatus("Preorden guardada correctamente. Puedes verla en el menú Preórdenes.");
-          }}
-        />
-      ) : null}
-
       <SelectedProductsDrawer
         preorderProducts={preorderProducts}
         catalogProducts={catalogSelectionProducts}
         isOpen={selectionDrawerOpen}
         onOpen={() => setSelectionDrawerOpen(true)}
         onClose={() => setSelectionDrawerOpen(false)}
-        onOpenPreorder={() => setIsDraftOpen(true)}
+        onOpenPreorder={openDraftPreorderWorkspace}
         onRemovePreorder={removeFromPreorder}
         onRemoveCatalog={removeFromCatalogSelection}
         onCatalogPdf={openCatalogPdfPanel}

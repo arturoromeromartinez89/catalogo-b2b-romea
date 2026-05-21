@@ -142,7 +142,16 @@ function PreorderListView({ clients, products, profile, tenantId, onOpen, onNew,
 }
 
 // ─── Workspace principal ──────────────────────────────────────────────────────
-export default function PreorderWorkspace({ clients, products = [], profile, tenantId = "" }) {
+export default function PreorderWorkspace({
+  clients,
+  products = [],
+  profile,
+  tenantId = "",
+  draftPreorder = null,
+  isDraftOpen = false,
+  onDraftClose,
+  onDraftSaved,
+}) {
   const [tabs, setTabs] = useState([{ id: TAB_LIST, type: TAB_LIST, label: "Preórdenes", dirty: false }]);
   const [activeId, setActiveId] = useState(TAB_LIST);
   const [preorders, setPreorders] = useState([]);
@@ -163,6 +172,24 @@ export default function PreorderWorkspace({ clients, products = [], profile, ten
 
   useEffect(() => { loadPreorders(); }, [tenantId, profile?.tenant_id, profile?.role]);
 
+  useEffect(() => {
+    if (!isDraftOpen || !draftPreorder?.preorder_items?.length) return;
+    const tabId = "draft-preorder";
+    const tab = {
+      id: tabId,
+      type: "preorder",
+      preorder: draftPreorder,
+      label: "Preorden en proceso",
+      dirty: true,
+      isDraft: true,
+    };
+    setTabs((prev) => {
+      const exists = prev.some((item) => item.id === tabId);
+      return exists ? prev.map((item) => (item.id === tabId ? { ...item, ...tab } : item)) : [...prev, tab];
+    });
+    setActiveId(tabId);
+  }, [isDraftOpen, draftPreorder]);
+
   // Abre una preorden en una pestaña (si ya está abierta, activa esa pestaña)
   const openTab = (preorder) => {
     const tabId = preorder?.id || `new-${Date.now()}`;
@@ -175,9 +202,10 @@ export default function PreorderWorkspace({ clients, products = [], profile, ten
 
   const openNewTab = () => openTab({ id: `new-${Date.now()}` });
 
-  const closeTab = (tabId) => {
+  const closeTab = (tabId, updatedDraft) => {
     const tab = tabs.find((t) => t.id === tabId);
     if (tab?.dirty && !window.confirm("¿Cerrar sin guardar los cambios?")) return;
+    if (tab?.isDraft) onDraftClose?.(updatedDraft || tab.preorder);
     setTabs((prev) => prev.filter((t) => t.id !== tabId));
     if (activeId === tabId) setActiveId(TAB_LIST);
   };
@@ -187,6 +215,15 @@ export default function PreorderWorkspace({ clients, products = [], profile, ten
   };
 
   const handleSaved = (tabId, savedData) => {
+    const tab = tabs.find((item) => item.id === tabId);
+    if (tab?.isDraft) {
+      setTabs((prev) => prev.filter((item) => item.id !== tabId));
+      setActiveId(TAB_LIST);
+      onDraftSaved?.(savedData);
+      loadPreorders();
+      setListMsg("Preorden guardada.");
+      return;
+    }
     // Update tab label with folio and mark clean
     setTabs((prev) =>
       prev.map((t) =>
@@ -242,7 +279,7 @@ export default function PreorderWorkspace({ clients, products = [], profile, ten
             products={products}
             tenantId={tenantId}
             profile={profile}
-            onClose={() => closeTab(activeTab.id)}
+            onClose={(updatedDraft) => closeTab(activeTab.id, updatedDraft)}
             onSaved={(savedData) => handleSaved(activeTab.id, savedData)}
             onDirty={() => markDirty(activeTab.id)}
           />

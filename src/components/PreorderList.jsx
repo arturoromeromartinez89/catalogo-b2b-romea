@@ -34,6 +34,27 @@ export default function PreorderList({ clients, products = [], profile, tenantId
 
   const filtered = filter === "all" ? preorders : preorders.filter((p) => p.status === filter);
 
+  if (selected !== null) {
+    return (
+      <section className="admin-workspace">
+        <PreorderEditor
+          embedded
+          preorder={selected}
+          clients={clients}
+          products={products}
+          tenantId={tenantId || profile?.tenant_id || ""}
+          profile={profile}
+          onClose={() => setSelected(null)}
+          onSaved={async () => {
+            setSelected(null);
+            await load();
+            setStatus("Preorden guardada correctamente.");
+          }}
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="admin-workspace">
       {/* ── HEADER ── */}
@@ -111,21 +132,6 @@ export default function PreorderList({ clients, products = [], profile, tenantId
       )}
 
       {/* ── EDITOR ── */}
-      {selected !== null && (
-        <PreorderEditor
-          preorder={selected}
-          clients={clients}
-          products={products}
-          tenantId={tenantId || profile?.tenant_id || ""}
-          profile={profile}
-          onClose={() => setSelected(null)}
-          onSaved={async () => {
-            setSelected(null);
-            await load();
-            setStatus("Preorden guardada correctamente.");
-          }}
-        />
-      )}
     </section>
   );
 }

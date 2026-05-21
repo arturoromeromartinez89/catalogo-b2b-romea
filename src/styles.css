@@ -3145,6 +3145,27 @@ dd {
   padding: 18px 22px;
 }
 
+.quote-editor-inline {
+  background: transparent;
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+.quote-modal-embedded {
+  border: 1px solid var(--romea-line);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+  height: auto;
+  max-height: none;
+  max-width: none;
+  min-height: calc(100vh - 190px);
+}
+
+.quote-modal-embedded .quote-modal-body {
+  overflow: visible;
+}
+
 .quote-block {
   background: #ffffff;
   border: 1px solid var(--romea-line);
