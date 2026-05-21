@@ -134,6 +134,60 @@ export const saveClientMargin = async (clientId, lineCodigo, margenPct) => {
   if (error) throw error;
 };
 
+// ─── Listas de labor ────────────────────────────────────────────────────────
+
+export const fetchLaborLists = async (profileOrTenantId = "") => {
+  const tenantId = getTenantId(profileOrTenantId);
+  let query = supabase.from("labor_lists").select("*").eq("active", true).order("created_at");
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+};
+
+export const saveLaborList = async ({ id, name }, profileOrTenantId = "") => {
+  const tenantId = getTenantId(profileOrTenantId);
+  const row = { name: String(name || "").trim(), updated_at: new Date().toISOString() };
+  if (tenantId) row.tenant_id = tenantId;
+  if (id) {
+    const { data, error } = await supabase.from("labor_lists").update(row).eq("id", id).select("*").single();
+    if (error) throw error;
+    return data;
+  }
+  const { data, error } = await supabase.from("labor_lists").insert(row).select("*").single();
+  if (error) throw error;
+  return data;
+};
+
+export const deleteLaborList = async (id) => {
+  const { error } = await supabase.from("labor_lists").update({ active: false }).eq("id", id);
+  if (error) throw error;
+};
+
+export const fetchLaborListLines = async (laborListId) => {
+  const { data, error } = await supabase
+    .from("labor_list_lines")
+    .select("*")
+    .eq("labor_list_id", laborListId);
+  if (error) throw error;
+  return data || [];
+};
+
+export const upsertLaborListLines = async (laborListId, lines = []) => {
+  if (!lines.length) return;
+  const rows = lines.map((line) => ({
+    labor_list_id: laborListId,
+    line_codigo: String(line.line_codigo || line.codigo || "").trim(),
+    mo_base: Number(line.mo_base || 0),
+  }));
+  const { error } = await supabase
+    .from("labor_list_lines")
+    .upsert(rows, { onConflict: "labor_list_id,line_codigo" });
+  if (error) throw error;
+};
+
+// ─── Precios por gramo ───────────────────────────────────────────────────────
+
 export const calcPrecioGramo = ({ mo_base, plata_fina_mxn, tipo_cambio_output = 1 }) => {
   const plata = Number(plata_fina_mxn || 0);
   const mo = Number(mo_base || 0);
