@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { normalizeText } from "../utils/textNormalizer";
 
 const missingText = {
@@ -175,6 +175,17 @@ const buildStats = (products, language) => {
     .map((product) => ({ product, problems: getProblems(product, t) }))
     .filter(({ product, problems }) => (isActiveProduct(product) || product.visibleWeb) && problems.length);
 
+  const activeProducts = products.filter(isActiveProduct);
+  const problemCounts = [
+    { key: "missingPhoto", label: t.missingPhoto, count: activeProducts.filter((p) => !hasPhoto(p)).length },
+    { key: "missingWeight", label: t.missingWeight, count: activeProducts.filter((p) => !hasWeight(p)).length },
+    { key: "missingDescription", label: t.missingDescription, count: activeProducts.filter((p) => !hasText(p.descripcion)).length },
+    { key: "missingLine", label: t.missingLine, count: activeProducts.filter((p) => !hasText(p.linea)).length },
+    { key: "missingProvider", label: t.missingProvider, count: activeProducts.filter((p) => !hasText(getProvider(p, ""))).length },
+    { key: "missingFamily", label: t.missingFamily, count: activeProducts.filter((p) => !hasText(p.familia)).length },
+    { key: "missingGroup", label: t.missingGroup, count: activeProducts.filter((p) => !hasText(p.grupo)).length },
+  ];
+
   const lastUpdate = products
     .map((product) => product.updatedAt || product.createdAt)
     .filter(Boolean)
@@ -224,6 +235,7 @@ const buildStats = (products, language) => {
     incomplete: problemProducts.length,
     health: total ? Math.round((readyProducts.length / total) * 100) : 0,
     problemProducts,
+    problemCounts,
     providers: Array.from(providerMap.values()).sort((a, b) => b.total - a.total),
     lastUpdate: lastUpdate ? formatDate(lastUpdate, language) : "",
     createdRecent,
@@ -233,9 +245,7 @@ const buildStats = (products, language) => {
 
 export default function DatabaseHealthDashboard({ products = [], language = "es", loading = false }) {
   const t = missingText[language] || missingText.es;
-  const [showAllProblems, setShowAllProblems] = useState(false);
   const stats = useMemo(() => buildStats(products, language), [products, language]);
-  const visibleProblems = showAllProblems ? stats.problemProducts : stats.problemProducts.slice(0, 12);
   const ringStyle = { background: `conic-gradient(var(--color-success) 0 ${stats.health}%, #e8edf5 ${stats.health}% 100%)` };
   const readyWidth = { width: `${Math.min(stats.health, 100)}%` };
   const incompleteWidth = { width: `${stats.total ? Math.min(Math.round((stats.incomplete / stats.total) * 100), 100) : 0}%` };
@@ -321,51 +331,33 @@ export default function DatabaseHealthDashboard({ products = [], language = "es"
       <div className="database-table-row">
         <article className="database-health-card">
           <span className="tool-eyebrow">{t.diagnostics}</span>
-          <h2>{t.problemProducts}</h2>
-          <div className="table-card-heading">
-            <p className="muted">{t.showingProblems(visibleProblems.length, stats.problemProducts.length)}</p>
-            {stats.problemProducts.length > 12 ? (
-              <button className="secondary-button compact-action" type="button" onClick={() => setShowAllProblems((current) => !current)}>
-                {showAllProblems ? t.viewLessProblems : t.viewAllProblems}
-              </button>
-            ) : null}
+          <div className="database-card-header">
+            <h2>{t.problemProducts}</h2>
+            <span className="database-badge database-badge--warn">{number(stats.incomplete)} SKUs</span>
           </div>
-          <div className="database-table-wrap">
-            <table className="database-health-table">
-              <thead>
-                <tr>
-                  <th>{t.sku}</th>
-                  <th>{t.description}</th>
-                  <th>{t.provider}</th>
-                  <th>{t.productStatus}</th>
-                  <th>{t.visibleWeb}</th>
-                  <th>{t.problems}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleProblems.length ? visibleProblems.map(({ product, problems }) => (
-                  <tr key={product.id || product.codigo}>
-                    <td><strong>{product.codigo || t.empty}</strong></td>
-                    <td>{product.descripcion || t.empty}</td>
-                    <td>{getProvider(product, t.noProvider)}</td>
-                    <td>{product.estatus || t.empty}</td>
-                    <td>{product.visibleWeb ? t.yes : t.no}</td>
-                    <td>
-                      {problems.map((problem) => <span className="issue-tag" key={`${product.codigo}-${problem}`}>{problem}</span>)}
-                    </td>
-                  </tr>
-                )) : (
-                  <tr><td colSpan="6" className="empty-row">{t.noProblems}</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          {stats.problemCounts.some((item) => item.count > 0) ? (
+            <div className="problem-summary-grid">
+              {stats.problemCounts.map((item) => (
+                <div
+                  key={item.key}
+                  className={`problem-summary-item${item.count === 0 ? " problem-summary-item--ok" : ""}`}
+                >
+                  <strong>{item.count === 0 ? "✓" : number(item.count)}</strong>
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">{t.noProblems}</p>
+          )}
         </article>
 
         <article className="database-health-card">
           <span className="tool-eyebrow">{t.providers}</span>
-          <h2>{t.providerRanking}</h2>
-          <p className="muted">{t.providerTotal}: {number(stats.providers.length)}</p>
+          <div className="database-card-header">
+            <h2>{t.providerRanking}</h2>
+            <span className="database-badge">{number(stats.providers.length)} {language === "en" ? "suppliers" : "proveedores"}</span>
+          </div>
           <div className="database-table-wrap">
             <table className="database-health-table provider-table">
               <thead>
@@ -373,25 +365,19 @@ export default function DatabaseHealthDashboard({ products = [], language = "es"
                   <th>{t.provider}</th>
                   <th>{t.totalSkus}</th>
                   <th>{t.activeSkus}</th>
-                  <th>{t.inactiveSkus}</th>
-                  <th>{t.visibleSkus}</th>
-                  <th>{t.photoSkus}</th>
                   <th>{t.noPhotoSkus}</th>
                 </tr>
               </thead>
               <tbody>
-                {stats.providers.length ? stats.providers.slice(0, 10).map((provider) => (
+                {stats.providers.length ? stats.providers.slice(0, 15).map((provider) => (
                   <tr key={provider.provider}>
                     <td><strong>{provider.provider}</strong></td>
                     <td>{number(provider.total)}</td>
                     <td>{number(provider.active)}</td>
-                    <td>{number(provider.inactive)}</td>
-                    <td>{number(provider.visible)}</td>
-                    <td>{number(provider.withPhoto)}</td>
-                    <td>{number(provider.withoutPhoto)}</td>
+                    <td className={provider.withoutPhoto > 0 ? "warn-cell" : ""}>{number(provider.withoutPhoto)}</td>
                   </tr>
                 )) : (
-                  <tr><td colSpan="7" className="empty-row">{t.noHistory}</td></tr>
+                  <tr><td colSpan="4" className="empty-row">{t.noHistory}</td></tr>
                 )}
               </tbody>
             </table>

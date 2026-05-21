@@ -1913,6 +1913,7 @@ dd {
 }
 
 .database-health-card {
+  align-content: start;
   background: #ffffff;
   border: 1px solid var(--romea-line);
   border-radius: 6px;
@@ -2087,7 +2088,85 @@ dd {
 }
 
 .provider-table {
-  min-width: 680px;
+  min-width: 380px;
+}
+
+.database-card-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.database-card-header h2 {
+  margin: 0;
+}
+
+.database-badge {
+  background: var(--romea-soft);
+  border: 1px solid var(--romea-line);
+  border-radius: 999px;
+  color: var(--romea-muted);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.database-badge--warn {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-text);
+}
+
+.problem-summary-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+}
+
+.problem-summary-item {
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.problem-summary-item strong {
+  color: var(--color-warning-text);
+  font-size: clamp(18px, 1.6vw, 22px);
+  line-height: 1;
+}
+
+.problem-summary-item span {
+  color: var(--color-warning-text);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  opacity: 0.75;
+  text-transform: uppercase;
+}
+
+.problem-summary-item--ok {
+  background: var(--color-success-bg);
+  border-color: #b6e4cf;
+}
+
+.problem-summary-item--ok strong {
+  color: var(--color-success);
+  font-size: 16px;
+}
+
+.problem-summary-item--ok span {
+  color: var(--color-success-text);
+}
+
+.warn-cell {
+  color: #d97706;
+  font-weight: 700;
 }
 
 .database-health-table th {
