@@ -1,65 +1,29 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import ActionNotice from "./ActionNotice";
-import {
-  calcPrecioGramo,
-  fetchLines,
-  fetchMetalPrices,
-  getSilverFinePrice,
-  saveLine,
-  saveMetalPrices,
-  syncProductLinesFromProducts,
-} from "../services/pricingService";
+import { fetchLines, saveLine, syncProductLinesFromProducts } from "../services/pricingService";
 
-export default function PricingPanel({ products = [], tenantId = "", profile }) {
-  const [metalPrices, setMetalPrices] = useState({ kitco_usd_oz: "", tipo_cambio: "", premio_pct: 0 });
+export default function PricingPanel({ products = [], tenantId = "" }) {
   const [lines, setLines] = useState([]);
-  const [savingMetal, setSavingMetal] = useState(false);
   const [syncingLines, setSyncingLines] = useState(false);
-  const [status, setStatus] = useState("");
   const [notice, setNotice] = useState(null);
-  const [tcOutput, setTcOutput] = useState("");
 
-  const loadPricing = async () => {
-    const [metal, nextLines] = await Promise.all([fetchMetalPrices(tenantId), fetchLines(tenantId)]);
-    setMetalPrices(metal);
+  const loadLines = async () => {
+    const nextLines = await fetchLines(tenantId);
     setLines(nextLines);
   };
 
   useEffect(() => {
-    loadPricing().catch((error) => setStatus(`Error: ${error.message}`));
+    loadLines().catch((error) => setNotice({ type: "error", title: "Error", message: error.message }));
   }, [tenantId]);
-
-  const plataFina = useMemo(() => getSilverFinePrice(metalPrices), [metalPrices]);
-  const tc = Number(tcOutput) || 1;
-
-  const handleSaveMetal = async () => {
-    setSavingMetal(true);
-    setStatus("");
-    try {
-      await saveMetalPrices(metalPrices, profile?.email, tenantId);
-      const updated = await fetchMetalPrices(tenantId);
-      setMetalPrices(updated);
-      setStatus("Precio de plata fina guardado.");
-      setNotice({ type: "success", title: "Precio guardado", message: "La plata fina vigente se guardo correctamente." });
-    } catch (error) {
-      setStatus(`Error: ${error.message}`);
-      setNotice({ type: "error", title: "No se pudo guardar", message: `Error: ${error.message}` });
-    } finally {
-      setSavingMetal(false);
-    }
-  };
 
   const handleSyncLines = async () => {
     setSyncingLines(true);
-    setStatus("");
     try {
       const updated = await syncProductLinesFromProducts(products, tenantId);
       setLines(updated);
-      setStatus(`Lineas sincronizadas: ${updated.length}. Revisa la labor por gramo antes de cotizar.`);
-      setNotice({ type: "success", title: "Lineas sincronizadas", message: `${updated.length} lineas quedaron listas para configurar labor.` });
+      setNotice({ type: "success", title: "Líneas sincronizadas", message: `${updated.length} líneas listas para configurar labor.` });
     } catch (error) {
-      setStatus(`Error: ${error.message}`);
-      setNotice({ type: "error", title: "No se pudo sincronizar", message: `Error: ${error.message}` });
+      setNotice({ type: "error", title: "No se pudo sincronizar", message: error.message });
     } finally {
       setSyncingLines(false);
     }
@@ -69,175 +33,134 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
     try {
       await saveLine(line, tenantId);
       setLines((current) => current.map((item) => (item.codigo === line.codigo ? { ...item, ...line } : item)));
-      setStatus("Labor por linea guardada.");
-      setNotice({ type: "success", title: "Linea actualizada", message: `La labor de la linea ${line.codigo} se guardo correctamente.` });
+      setNotice({ type: "success", title: "Línea actualizada", message: `Labor de la línea ${line.codigo} guardada.` });
     } catch (error) {
-      setStatus(`Error: ${error.message}`);
-      setNotice({ type: "error", title: "No se pudo guardar", message: `Error: ${error.message}` });
+      setNotice({ type: "error", title: "No se pudo guardar", message: error.message });
     }
   };
 
+  const noPhoto = lines.filter((l) => !l.mo_base || Number(l.mo_base) === 0).length;
+  const configured = lines.length - noPhoto;
+
   return (
-    <section className="admin-workspace">
-      <div className="admin-soft-panel compact-panel" style={{ marginBottom: 20 }}>
-        <h2>Menu de precios para cotizar</h2>
-        <p className="muted">
-          Politica actual: cada producto toma su precio por gramo desde su linea. No se usa margen.
-        </p>
-        <div className="pricing-formula-box">
-          <strong>Formula:</strong>
-          <span>Precio integrado/g = labor por linea + plata fina.</span>
-          <span>Subtotal = piezas x gramos por pieza x precio integrado/g.</span>
-        </div>
-        {status ? <p className="status info">{status}</p> : null}
-      </div>
+    <section className="database-health-dashboard" style={{ padding: "20px 24px" }}>
 
-      <div className="admin-soft-panel compact-panel" style={{ marginBottom: 20 }}>
-        <h2>1. Plata fina vigente</h2>
-        <p className="muted">
-          Todos los productos usan este mismo valor de plata fina. En una preorden de admin tambien puedes ajustarlo manualmente.
-        </p>
-        <div className="form-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
-          <label>
-            KITCO plata (USD/oz)
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Ej. 31.50"
-              value={metalPrices.kitco_usd_oz || ""}
-              onChange={(event) => setMetalPrices({ ...metalPrices, kitco_usd_oz: event.target.value })}
-            />
-          </label>
-          <label>
-            Tipo de cambio (MXN/USD)
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Ej. 17.25"
-              value={metalPrices.tipo_cambio || ""}
-              onChange={(event) => setMetalPrices({ ...metalPrices, tipo_cambio: event.target.value })}
-            />
-          </label>
-          <label>
-            Premio sobre Kitco (%)
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              placeholder="Ej. 4"
-              value={metalPrices.premio_pct || ""}
-              onChange={(event) => setMetalPrices({ ...metalPrices, premio_pct: event.target.value })}
-            />
-          </label>
-        </div>
-        <p className="muted">Formula: precio spot por onza / 31.1035 x tipo de cambio x (1 + premio/100).</p>
-        <div className="pricing-result-row">
-          <span>Plata fina calculada</span>
-          <strong>${plataFina.toFixed(4)} MXN/g</strong>
-        </div>
-        <button className="primary-button compact-action" type="button" onClick={handleSaveMetal} disabled={savingMetal}>
-          {savingMetal ? "Guardando..." : "Guardar plata fina"}
-        </button>
-      </div>
-
-      <div className="admin-soft-panel compact-panel">
-        <div className="section-title-row">
-          <div>
-            <h2>2. Labor por linea</h2>
-            <p className="muted">
-              La linea del producto manda. Si un SKU trae linea 0112, se cotiza con la labor configurada para 0112.
-            </p>
+      {/* Métricas de estado */}
+      <div className="database-executive-row" style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)" }}>
+        <article className="database-health-card">
+          <span className="tool-eyebrow">Líneas de producto</span>
+          <h2>Labor por línea</h2>
+          <div className="database-metric-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+            <div><span>Total líneas</span><strong>{lines.length}</strong></div>
+            <div><span>Configuradas</span><strong style={{ color: "var(--color-success)" }}>{configured}</strong></div>
+            <div><span>Sin labor</span><strong className="warning-number">{noPhoto}</strong></div>
           </div>
-          <button className="secondary-button compact-action" type="button" onClick={handleSyncLines} disabled={syncingLines}>
-            {syncingLines ? "Sincronizando..." : "Crear lineas desde productos"}
+        </article>
+
+        <article className="database-health-card">
+          <span className="tool-eyebrow">Plata fina</span>
+          <h2>Precio por preorden</h2>
+          <p className="muted" style={{ fontSize: 13, lineHeight: 1.5 }}>
+            El precio de plata fina se configura individualmente en cada preorden.
+            Aquí solo se define la <strong>mano de obra por línea</strong>.
+          </p>
+        </article>
+
+        <article className="database-health-card">
+          <span className="tool-eyebrow">Acciones</span>
+          <h2>Sincronizar líneas</h2>
+          <p className="muted" style={{ fontSize: 13 }}>
+            Crea o actualiza las líneas basándose en los productos del catálogo.
+          </p>
+          <button
+            className="secondary-button compact-action"
+            type="button"
+            onClick={handleSyncLines}
+            disabled={syncingLines}
+          >
+            {syncingLines ? "Sincronizando..." : "Crear líneas desde productos"}
           </button>
-        </div>
+        </article>
+      </div>
 
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-          <label style={{ width: 180 }}>
-            Vista USD con TC
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Ej. 17.25"
-              value={tcOutput}
-              onChange={(event) => setTcOutput(event.target.value)}
-            />
-          </label>
+      {/* Tabla de labor */}
+      <article className="database-health-card">
+        <div className="database-card-header">
+          <h2>Mano de obra por línea</h2>
+          <span className="database-badge">{lines.length} líneas · MXN/g</span>
         </div>
-
-        <div className="responsive-table">
-          <table className="simple-admin-table">
+        <p className="muted" style={{ fontSize: 12 }}>
+          La línea del producto determina su mano de obra. El precio de plata fina se ajusta en la preorden.
+        </p>
+        <div className="database-table-wrap">
+          <table className="database-health-table pricing-labor-table">
             <thead>
               <tr>
-                <th>Linea</th>
-                <th>Descripcion</th>
-                <th className="right">Labor MXN/g</th>
-                <th className="right">Plata fina</th>
-                <th className="right">Labor + PF</th>
-                <th></th>
+                <th>Línea</th>
+                <th>Descripción</th>
+                <th style={{ textAlign: "right" }}>Labor MXN/g</th>
+                <th style={{ width: 90 }} />
               </tr>
             </thead>
             <tbody>
               {lines.length ? (
-                lines.map((line) => {
-                  const price = calcPrecioGramo({
-                    mo_base: line.mo_base,
-                    plata_fina_mxn: plataFina,
-                    tipo_cambio_output: tc,
-                  });
-                  return (
-                    <LineRow
-                      key={line.codigo}
-                      line={line}
-                      price={price}
-                      currency={tcOutput ? "USD" : "MXN"}
-                      onSave={handleSaveLine}
-                    />
-                  );
-                })
+                lines.map((line) => (
+                  <LaborRow key={line.codigo} line={line} onSave={handleSaveLine} />
+                ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="empty-row">
-                    No hay lineas configuradas. Presiona "Crear lineas desde productos".
+                  <td colSpan="4" className="empty-row">
+                    No hay líneas configuradas. Presiona "Crear líneas desde productos".
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-      </div>
+      </article>
+
       <ActionNotice notice={notice} onClose={() => setNotice(null)} />
     </section>
   );
 }
 
-function LineRow({ line, price, currency, onSave }) {
-  const [mo, setMo] = useState(line.mo_base);
+function LaborRow({ line, onSave }) {
+  const [mo, setMo] = useState(line.mo_base ?? "");
   const [desc, setDesc] = useState(line.descripcion || "");
-  const dirty = Number(mo || 0) !== Number(line.mo_base || 0) || desc !== (line.descripcion || "");
-  const money = (number) => (Number(number) > 0 ? `$${Number(number).toFixed(4)}` : "-");
+  const dirty =
+    String(mo) !== String(line.mo_base ?? "") ||
+    desc !== (line.descripcion || "");
 
   return (
     <tr>
       <td><strong>{line.codigo}</strong></td>
       <td>
-        <input value={desc} onChange={(event) => setDesc(event.target.value)} placeholder="Descripcion de la linea" />
+        <input
+          value={desc}
+          onChange={(event) => setDesc(event.target.value)}
+          placeholder="Descripción de la línea"
+        />
       </td>
       <td>
         <input
           type="number"
           step="0.01"
+          min="0"
           value={mo}
           onChange={(event) => setMo(event.target.value)}
           style={{ textAlign: "right" }}
+          placeholder="0.00"
         />
       </td>
-      <td className="right">{money(price.plata_fina)} {currency}</td>
-      <td className="right"><strong>{money(price.integrado)} {currency}</strong></td>
       <td>
         {dirty ? (
-          <button className="primary-button compact-action" type="button" onClick={() => onSave({ ...line, mo_base: Number(mo || 0), descripcion: desc })}>
+          <button
+            className="primary-button compact-action"
+            type="button"
+            onClick={() =>
+              onSave({ ...line, mo_base: Number(mo || 0), descripcion: desc })
+            }
+          >
             Guardar
           </button>
         ) : null}

@@ -1075,6 +1075,73 @@ dd {
   }
 }
 
+/* ── Loading card ── */
+.loading-card {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--romea-line);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding: 36px 48px;
+  text-align: center;
+}
+
+.loading-spinner {
+  animation: spin 0.9s linear infinite;
+  border: 3px solid var(--romea-line);
+  border-radius: 50%;
+  border-top-color: var(--romea-blue);
+  display: block;
+  height: 36px;
+  width: 36px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-label {
+  color: var(--romea-blue);
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.loading-hint {
+  font-size: 12px;
+  margin: 0;
+  max-width: 300px;
+}
+
+/* ── Logout button ── */
+.sidebar-logout {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--romea-line);
+  border-radius: 8px;
+  color: var(--romea-muted);
+  cursor: pointer;
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 7px;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 12px;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+  width: 100%;
+}
+
+.sidebar-logout:hover {
+  background: var(--color-error-bg);
+  border-color: var(--color-error-border);
+  color: var(--color-error);
+}
+
+/* ── Setup screen ── */
 .setup-screen {
   align-items: center;
   background: var(--romea-soft);
@@ -2951,6 +3018,15 @@ dd {
 .responsive-table {
   max-width: 100%;
   overflow-x: auto;
+}
+
+.pricing-labor-table {
+  min-width: 380px !important;
+}
+
+.pricing-labor-table td input {
+  min-height: 32px;
+  padding: 4px 8px;
 }
 
 .simple-admin-table {

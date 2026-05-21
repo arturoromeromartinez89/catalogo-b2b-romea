@@ -90,7 +90,14 @@ export default function AuthGate({ children }) {
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(true);
+  const [showSlowHint, setShowSlowHint] = useState(false);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!loading) { setShowSlowHint(false); return undefined; }
+    const timer = window.setTimeout(() => setShowSlowHint(true), 5000);
+    return () => window.clearTimeout(timer);
+  }, [loading]);
 
   const refreshSession = async () => {
     setLoading(true);
@@ -170,9 +177,10 @@ export default function AuthGate({ children }) {
   if (loading) {
     return (
       <section className="setup-screen">
-        <div className="setup-card">
-          <p>{text.loading}</p>
-          <p className="muted">{text.slowHelp}</p>
+        <div className="loading-card">
+          <span className="loading-spinner" aria-hidden="true" />
+          <p className="loading-label">{text.loading}</p>
+          {showSlowHint ? <p className="muted loading-hint">{text.slowHelp}</p> : null}
         </div>
       </section>
     );
