@@ -573,10 +573,13 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           </section>
 
           <section className="quote-block">
-            <div className="section-title-row">
-              <h3>Productos cotizados</h3>
-              <div className="quote-price-tools">
-                <label>
+            <h3>Productos cotizados</h3>
+
+            {/* ── Panel de cálculo de precios ── */}
+            <div className="po-pricing-panel">
+              {/* Fila 1: referencias de precio */}
+              <div className="po-pricing-row">
+                <label className="po-pricing-field">
                   Lista de labor
                   <select
                     value={selectedLaborListId || ""}
@@ -588,64 +591,74 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                       <option key={list.id} value={list.id}>{list.name}</option>
                     ))}
                   </select>
-                  {selectedLaborListId ? (
-                    <small style={{ color: "var(--color-success)" }}>✓ Lista aplicada</small>
-                  ) : (
-                    <small>Elige para cargar mano de obra</small>
-                  )}
+                  {selectedLaborListId
+                    ? <span className="po-pricing-hint po-pricing-hint--ok">✓ Lista aplicada</span>
+                    : <span className="po-pricing-hint">Selecciona una lista de labor</span>}
                 </label>
-                <label>
-                  Metodo PF
+
+                <label className="po-pricing-field">
+                  Método plata fina
                   <select value={po.pf_mode || "manual"} onChange={set("pf_mode")} disabled={pricingLocked}>
-                    <option value="manual">Manual</option>
-                    <option value="kitco">Kitco + premio</option>
+                    <option value="manual">Captura manual</option>
+                    <option value="kitco">Calcular desde Kitco</option>
                   </select>
                 </label>
+
                 {po.pf_mode === "kitco" ? (
                   <>
-                    <label>
+                    <label className="po-pricing-field">
                       KITCO USD/oz
-                      <input type="number" step="0.01" value={po.kitco_usd_oz || ""} onChange={set("kitco_usd_oz")} readOnly={pricingLocked} />
+                      <input type="number" step="0.01" placeholder="Ej. 31.50" value={po.kitco_usd_oz || ""} onChange={set("kitco_usd_oz")} readOnly={pricingLocked} />
                     </label>
-                    <label>
-                      Premio sobre Kitco (%)
-                      <input type="number" step="0.1" min="0" value={po.premio_pct ?? 0} onChange={set("premio_pct")} readOnly={pricingLocked} />
+                    <label className="po-pricing-field">
+                      Premio Kitco (%)
+                      <input type="number" step="0.1" min="0" placeholder="Ej. 4" value={po.premio_pct ?? 0} onChange={set("premio_pct")} readOnly={pricingLocked} />
                     </label>
                     {!pricingLocked ? (
-                      <button className="secondary-button compact-action" type="button" onClick={calculateSilverFineByKitco}>
-                        Calcular PF Kitco
-                      </button>
+                      <div className="po-pricing-field po-pricing-field--action">
+                        <button className="secondary-button compact-action" type="button" onClick={calculateSilverFineByKitco}>
+                          Calcular PF
+                        </button>
+                      </div>
                     ) : null}
                   </>
                 ) : null}
-                <label>
-                  Plata fina ({moneyLabel}/g)
+
+                <label className="po-pricing-field">
+                  Plata fina {moneyLabel}/g
                   <input
                     type="number"
                     step="0.0001"
+                    placeholder="0.0000"
                     value={toDisplayMoney(plataFinaMxn) || ""}
                     onChange={(event) => setSilverFine(event.target.value)}
                     readOnly={pricingLocked}
                   />
-                  <small>Aplica en {moneyLabel} segun la moneda de la preorden.</small>
+                  <span className="po-pricing-hint">Se suma a la labor por línea</span>
                 </label>
+
                 {!pricingLocked ? (
-                  <button className="secondary-button compact-action" type="button" onClick={precargarPrecios}>
-                    Calcular precios por linea
-                  </button>
+                  <div className="po-pricing-field po-pricing-field--action">
+                    <button className="primary-button compact-action" type="button" onClick={precargarPrecios}>
+                      Calcular precios
+                    </button>
+                  </div>
                 ) : null}
               </div>
+
+              {/* Fila 2: opciones */}
+              <div className="po-pricing-options">
+                <label className="po-check-label">
+                  <input type="checkbox" checked={Boolean(po.mostrar_desglose)} onChange={setChecked("mostrar_desglose")} />
+                  Mostrar desglose labor + PF
+                </label>
+                <label className="po-check-label">
+                  <input type="checkbox" checked={Boolean(po.aplicar_iva)} onChange={setChecked("aplicar_iva")} />
+                  Agregar IVA 16%
+                </label>
+              </div>
             </div>
-            <div className="quote-option-row">
-              <label>
-                <input type="checkbox" checked={Boolean(po.mostrar_desglose)} onChange={setChecked("mostrar_desglose")} />
-                Mostrar desglose labor + plata fina
-              </label>
-              <label>
-                <input type="checkbox" checked={Boolean(po.aplicar_iva)} onChange={setChecked("aplicar_iva")} />
-                Agregar IVA 16%
-              </label>
-            </div>
+
             {msg ? <p className="status info">{msg}</p> : null}
             {!pricingLocked && products.length ? (
               <div className="quote-product-picker">

@@ -5403,3 +5403,97 @@ body > div[data-portal] {
   color: var(--romea-muted);
 }
 
+/* ─── Preorder: pricing panel inside editor ──────────────────────────────── */
+
+.po-pricing-panel {
+  background: var(--romea-soft);
+  border: 1px solid var(--romea-line);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+/* Row that holds all field columns */
+.po-pricing-row {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Individual stacked field: label text on top, control below */
+.po-pricing-field {
+  color: var(--romea-muted);
+  cursor: default;
+  display: grid;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 5px;
+  letter-spacing: 0.04em;
+  min-width: 140px;
+  text-transform: uppercase;
+}
+
+.po-pricing-field input,
+.po-pricing-field select {
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 34px;
+  padding: 5px 9px;
+}
+
+/* Action column: vertically aligns button at the bottom of the row */
+.po-pricing-field--action {
+  align-self: end;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: auto;
+}
+
+.po-pricing-field--action button {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* Hint text below inputs */
+.po-pricing-hint {
+  color: var(--romea-muted);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.po-pricing-hint--ok {
+  color: var(--color-success);
+}
+
+/* Options row: checkboxes */
+.po-pricing-options {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.po-check-label {
+  align-items: center;
+  color: var(--romea-ink);
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 7px;
+  user-select: none;
+}
+
+.po-check-label input[type="checkbox"] {
+  accent-color: var(--romea-blue);
+  cursor: pointer;
+  height: 15px;
+  margin: 0;
+  width: 15px;
+}
+
