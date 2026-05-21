@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings } from "../services/companySettings";
-import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice } from "../services/pricingService";
+import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice, fetchLaborLists, fetchLaborListLines } from "../services/pricingService";
 import { saveClient } from "../services/supabaseCatalog";
 import { savePreorder, deletePreorder } from "../services/preorderService";
 import { generatePdf } from "../utils/pdfGenerator";
@@ -105,6 +105,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [po, setPo] = useState({ ...blank, ...(initial || {}) });
   const [items, setItems] = useState((initial?.preorder_items || []).map((item) => ({ ...item })));
   const [lines, setLines] = useState([]);
+  const [laborLists, setLaborLists] = useState([]);
+  const [selectedLaborListId, setSelectedLaborListId] = useState(initial?.labor_list_id || "");
   const [metalPrices, setMetalPrices] = useState({});
   const [plataFinaMxn, setPlataFinaMxn] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -121,6 +123,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     if (resolvedTenantId) fetchCompanySettings(resolvedTenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
     else setTenantCompany(null);
     fetchLines(resolvedTenantId).then(setLines).catch((error) => setMsg(`Error: ${error.message}`));
+    fetchLaborLists(resolvedTenantId).then(setLaborLists).catch(() => setLaborLists([]));
     fetchMetalPrices(resolvedTenantId)
       .then((prices) => {
         setMetalPrices(prices);
@@ -216,6 +219,33 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     setPlataFinaMxn(nextSilver);
     setItems((current) => current.map((item) => recalcWithPrice(item, item.labor_mxn, nextSilver)));
     setMsg(`Plata fina calculada: $${nextSilver.toFixed(4)} MXN/g.`);
+  };
+
+  const applyLaborList = async (listId, currentLines) => {
+    if (!listId) {
+      // Reset to base product_lines mo_base
+      const baseLines = await fetchLines(resolvedTenantId);
+      setLines(baseLines);
+      setSelectedLaborListId("");
+      setPo((current) => ({ ...current, labor_list_id: "" }));
+      setMsg("Lista de labor removida. Usando mano de obra base de líneas.");
+      return;
+    }
+    try {
+      const listLines = await fetchLaborListLines(listId);
+      const lineMap = new Map(listLines.map((l) => [l.line_codigo, Number(l.mo_base || 0)]));
+      const merged = (currentLines || lines).map((line) => ({
+        ...line,
+        mo_base: lineMap.has(line.codigo) ? lineMap.get(line.codigo) : line.mo_base,
+      }));
+      setLines(merged);
+      setSelectedLaborListId(listId);
+      setPo((current) => ({ ...current, labor_list_id: listId }));
+      const listName = laborLists.find((l) => l.id === listId)?.name || listId;
+      setMsg(`Lista "${listName}" aplicada. Presiona "Calcular precios" para actualizar.`);
+    } catch (err) {
+      setMsg(`Error al cargar lista: ${err.message}`);
+    }
   };
 
   const precargarPrecios = () => {
@@ -524,6 +554,24 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             <div className="section-title-row">
               <h3>Productos cotizados</h3>
               <div className="quote-price-tools">
+                <label>
+                  Lista de labor
+                  <select
+                    value={selectedLaborListId || ""}
+                    onChange={(e) => applyLaborList(e.target.value, lines)}
+                    disabled={pricingLocked}
+                  >
+                    <option value="">— Sin lista —</option>
+                    {laborLists.map((list) => (
+                      <option key={list.id} value={list.id}>{list.name}</option>
+                    ))}
+                  </select>
+                  {selectedLaborListId ? (
+                    <small style={{ color: "var(--color-success)" }}>✓ Lista aplicada</small>
+                  ) : (
+                    <small>Elige para cargar mano de obra</small>
+                  )}
+                </label>
                 <label>
                   Metodo PF
                   <select value={po.pf_mode || "manual"} onChange={set("pf_mode")} disabled={pricingLocked}>
