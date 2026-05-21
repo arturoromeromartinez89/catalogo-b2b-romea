@@ -1,4 +1,5 @@
 import { normalizeText } from "./textNormalizer";
+import { getNombreProveedor } from "../data/proveedores";
 
 const COLUMN_ALIASES = {
   codigo: ["codigo", "código", "code", "sku", "clave"],
@@ -17,6 +18,8 @@ const COLUMN_ALIASES = {
   precioMinimo: ["precio minimo", "precio mínimo", "precio_minimo", "minimum price", "minimum_price"],
   monedaPrecioMin: ["mon precio min", "moneda precio min", "moneda_precio_min", "currency", "moneda"],
   manoObra: ["m de obra 1", "mano de obra", "mano_obra", "labor price", "labor_price", "labor cost"],
+  numProveed: ["num proveed", "núm proveed", "num prov", "número proveedor"],
+  proveedor: ["proveedor", "proveedor principal", "supplier", "fabricante", "marca"],
 };
 
 const LINEAS_OMITIR = [
@@ -163,6 +166,7 @@ export const parseImportFile = async (file) => {
       precioMinimo: parseNumber(get(row, "precioMinimo")),
       monedaPrecioMin: parseString(get(row, "monedaPrecioMin")) || "MXN",
       manoObra: parseNumber(get(row, "manoObra")),
+      proveedor: parseString(get(row, "proveedor")) || getNombreProveedor(get(row, "numProveed")),
       fotoUrl: "",
       fotoUrl2: "",
       fotoUrl3: "",
