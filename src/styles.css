@@ -2242,6 +2242,38 @@ dd {
   color: var(--color-success-text);
 }
 
+.missing-report-panel {
+  border-top: 1px solid var(--romea-line);
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 12px;
+}
+
+.missing-report-toolbar {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(220px, 1fr) auto;
+}
+
+.missing-report-toolbar label {
+  color: var(--romea-blue);
+  display: grid;
+  font-size: 11px;
+  font-weight: 900;
+  gap: 5px;
+  text-transform: uppercase;
+}
+
+.missing-report-toolbar select {
+  min-height: 34px;
+}
+
+.missing-report-table {
+  min-width: 920px;
+}
+
 .warn-cell {
   color: #d97706;
   font-weight: 700;

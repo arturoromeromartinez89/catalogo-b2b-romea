@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { normalizeText } from "../utils/textNormalizer";
 
 const missingText = {
@@ -25,6 +25,12 @@ const missingText = {
     noHistory: "Aun no hay historial de cambios disponible.",
     diagnostics: "Diagnostico",
     problemProducts: "Productos con problemas",
+    reportByMissing: "Reporte por dato faltante",
+    selectMissingField: "Selecciona dato faltante",
+    downloadExcel: "Descargar Excel",
+    showingReport: (showing, total) => `Mostrando ${showing} de ${total} productos.`,
+    noReportRows: "No hay productos en este reporte.",
+    allIssues: "Todos los problemas",
     noProblems: "No se detectaron productos incompletos con los criterios actuales.",
     showingProblems: (showing, total) => `Mostrando ${showing} de ${total} productos con problemas.`,
     viewAllProblems: "Ver todos los problemas",
@@ -82,6 +88,12 @@ const missingText = {
     noHistory: "No change history is available yet.",
     diagnostics: "Diagnostics",
     problemProducts: "Products with issues",
+    reportByMissing: "Report by missing field",
+    selectMissingField: "Select missing field",
+    downloadExcel: "Download Excel",
+    showingReport: (showing, total) => `Showing ${showing} of ${total} products.`,
+    noReportRows: "There are no products in this report.",
+    allIssues: "All issues",
     noProblems: "No incomplete products were detected with the current criteria.",
     showingProblems: (showing, total) => `Showing ${showing} of ${total} products with issues.`,
     viewAllProblems: "View all issues",
@@ -156,6 +168,23 @@ const getProblems = (product, t) => {
   return problems;
 };
 
+const getIssueDefinitions = (t) => [
+  { key: "all", label: t.allIssues, predicate: (product) => getProblems(product, t).length > 0 },
+  { key: "missingPhoto", label: t.missingPhoto, predicate: (product) => !hasPhoto(product) },
+  { key: "missingProvider", label: t.missingProvider, predicate: (product) => !hasText(getProvider(product, "")) },
+  { key: "missingLine", label: t.missingLine, predicate: (product) => !hasText(product.linea) },
+  { key: "missingWeight", label: t.missingWeight, predicate: (product) => !hasWeight(product) },
+  { key: "missingDescription", label: t.missingDescription, predicate: (product) => !hasText(product.descripcion) },
+  { key: "missingFamily", label: t.missingFamily, predicate: (product) => !hasText(product.familia) },
+  { key: "missingGroup", label: t.missingGroup, predicate: (product) => !hasText(product.grupo) },
+  { key: "missingStatus", label: t.missingStatus, predicate: (product) => !hasText(product.estatus) },
+  {
+    key: "missingVisibility",
+    label: t.missingVisibility,
+    predicate: (product) => product.visibleWeb === null || product.visibleWeb === undefined || product.visibleWeb === "",
+  },
+];
+
 const buildStats = (products, language) => {
   const t = missingText[language] || missingText.es;
   const total = products.length;
@@ -176,15 +205,14 @@ const buildStats = (products, language) => {
     .filter(({ product, problems }) => (isActiveProduct(product) || product.visibleWeb) && problems.length);
 
   const activeProducts = products.filter(isActiveProduct);
-  const problemCounts = [
-    { key: "missingPhoto", label: t.missingPhoto, count: activeProducts.filter((p) => !hasPhoto(p)).length },
-    { key: "missingWeight", label: t.missingWeight, count: activeProducts.filter((p) => !hasWeight(p)).length },
-    { key: "missingDescription", label: t.missingDescription, count: activeProducts.filter((p) => !hasText(p.descripcion)).length },
-    { key: "missingLine", label: t.missingLine, count: activeProducts.filter((p) => !hasText(p.linea)).length },
-    { key: "missingProvider", label: t.missingProvider, count: activeProducts.filter((p) => !hasText(getProvider(p, ""))).length },
-    { key: "missingFamily", label: t.missingFamily, count: activeProducts.filter((p) => !hasText(p.familia)).length },
-    { key: "missingGroup", label: t.missingGroup, count: activeProducts.filter((p) => !hasText(p.grupo)).length },
-  ];
+  const issueDefinitions = getIssueDefinitions(t);
+  const problemCounts = issueDefinitions
+    .filter((issue) => issue.key !== "all")
+    .map((issue) => ({ key: issue.key, label: issue.label, count: activeProducts.filter(issue.predicate).length }));
+  const problemReports = issueDefinitions.map((issue) => ({
+    ...issue,
+    products: activeProducts.filter((product) => issue.predicate(product)),
+  }));
 
   const lastUpdate = products
     .map((product) => product.updatedAt || product.createdAt)
@@ -236,6 +264,7 @@ const buildStats = (products, language) => {
     health: total ? Math.round((readyProducts.length / total) * 100) : 0,
     problemProducts,
     problemCounts,
+    problemReports,
     providers: Array.from(providerMap.values()).sort((a, b) => b.total - a.total),
     lastUpdate: lastUpdate ? formatDate(lastUpdate, language) : "",
     createdRecent,
@@ -245,7 +274,11 @@ const buildStats = (products, language) => {
 
 export default function DatabaseHealthDashboard({ products = [], language = "es", loading = false }) {
   const t = missingText[language] || missingText.es;
+  const [selectedReportKey, setSelectedReportKey] = useState("missingPhoto");
   const stats = useMemo(() => buildStats(products, language), [products, language]);
+  const selectedReport = stats.problemReports.find((report) => report.key === selectedReportKey) || stats.problemReports[0];
+  const reportRows = selectedReport?.products || [];
+  const previewRows = reportRows.slice(0, 25);
   const ringStyle = { background: `conic-gradient(var(--color-success) 0 ${stats.health}%, #e8edf5 ${stats.health}% 100%)` };
   const readyWidth = { width: `${Math.min(stats.health, 100)}%` };
   const incompleteWidth = { width: `${stats.total ? Math.min(Math.round((stats.incomplete / stats.total) * 100), 100) : 0}%` };
@@ -262,6 +295,55 @@ export default function DatabaseHealthDashboard({ products = [], language = "es"
       </section>
     );
   }
+
+  const exportReport = async () => {
+    const XLSX = await import("xlsx");
+    const rows = reportRows.map((product) => ({
+      codigo: product.codigo || "",
+      descripcion: product.descripcion || "",
+      proveedor: getProvider(product, t.empty) || t.empty,
+      linea: product.linea || "",
+      familia: product.familia || "",
+      grupo: product.grupo || "",
+      estatus: product.estatus || "",
+      visible_web: product.visibleWeb ? t.yes : t.no,
+      peso_promedio: Number(product.pesoPromedio || 0),
+      foto_url: product.fotoUrl || "",
+      problemas_detectados: getProblems(product, t).join(", "),
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(rows, {
+      header: [
+        "codigo",
+        "descripcion",
+        "proveedor",
+        "linea",
+        "familia",
+        "grupo",
+        "estatus",
+        "visible_web",
+        "peso_promedio",
+        "foto_url",
+        "problemas_detectados",
+      ],
+    });
+    worksheet["!cols"] = [
+      { wch: 18 },
+      { wch: 42 },
+      { wch: 26 },
+      { wch: 14 },
+      { wch: 22 },
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 14 },
+      { wch: 46 },
+      { wch: 42 },
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, language === "en" ? "Missing_Data_Report" : "Reporte_Faltantes");
+    const safeLabel = normalizeText(selectedReport?.label || "reporte").replace(/\s+/g, "_");
+    XLSX.writeFile(workbook, `reporte_productos_${safeLabel}.xlsx`);
+  };
 
   return (
     <section className="database-health-dashboard" aria-label={t.status}>
@@ -350,6 +432,58 @@ export default function DatabaseHealthDashboard({ products = [], language = "es"
           ) : (
             <p className="muted">{t.noProblems}</p>
           )}
+
+          <div className="missing-report-panel">
+            <div className="missing-report-toolbar">
+              <label>
+                <span>{t.reportByMissing}</span>
+                <select value={selectedReportKey} onChange={(event) => setSelectedReportKey(event.target.value)}>
+                  {stats.problemReports.map((report) => (
+                    <option key={report.key} value={report.key}>
+                      {report.label} ({number(report.products.length)})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button className="secondary-button compact-action" type="button" onClick={exportReport} disabled={!reportRows.length}>
+                {t.downloadExcel}
+              </button>
+            </div>
+            <p className="muted">{t.showingReport(number(previewRows.length), number(reportRows.length))}</p>
+            <div className="database-table-wrap">
+              <table className="database-health-table missing-report-table">
+                <thead>
+                  <tr>
+                    <th>{t.sku}</th>
+                    <th>{t.description}</th>
+                    <th>{t.provider}</th>
+                    <th>{t.productStatus}</th>
+                    <th>{t.visibleWeb}</th>
+                    <th>{t.problems}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.length ? previewRows.map((product) => {
+                    const problems = getProblems(product, t);
+                    return (
+                      <tr key={product.id || product.codigo}>
+                        <td><strong>{product.codigo || t.empty}</strong></td>
+                        <td>{product.descripcion || t.empty}</td>
+                        <td>{getProvider(product, t.noProvider) || t.noProvider}</td>
+                        <td>{product.estatus || t.empty}</td>
+                        <td>{product.visibleWeb ? t.yes : t.no}</td>
+                        <td>
+                          {problems.map((problem) => <span className="issue-tag" key={`${product.codigo}-${problem}`}>{problem}</span>)}
+                        </td>
+                      </tr>
+                    );
+                  }) : (
+                    <tr><td colSpan="6" className="empty-row">{t.noReportRows}</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </article>
 
         <article className="database-health-card">
