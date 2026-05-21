@@ -161,6 +161,42 @@ const throwIfError = ({ error }) => {
   if (error) throw error;
 };
 
+const shouldKeepExistingImage = (value) => !String(value || "").trim();
+
+const preserveExistingImages = async (rows, tenantId = "") => {
+  const codes = rows
+    .filter((row) => shouldKeepExistingImage(row.foto_url) || shouldKeepExistingImage(row.foto_url_2) || shouldKeepExistingImage(row.foto_url_3))
+    .map((row) => row.codigo)
+    .filter(Boolean);
+
+  if (!codes.length) return rows;
+
+  const existingByCode = new Map();
+  for (let index = 0; index < codes.length; index += PAGE_SIZE) {
+    const batchCodes = codes.slice(index, index + PAGE_SIZE);
+    let query = supabase
+      .from("products")
+      .select("codigo,foto_url,foto_url_2,foto_url_3")
+      .in("codigo", batchCodes);
+    query = withTenant(query, tenantId);
+
+    const result = await query;
+    throwIfError(result);
+    result.data.forEach((item) => existingByCode.set(item.codigo, item));
+  }
+
+  return rows.map((row) => {
+    const existing = existingByCode.get(row.codigo);
+    if (!existing) return row;
+    return {
+      ...row,
+      foto_url: shouldKeepExistingImage(row.foto_url) ? existing.foto_url || "" : row.foto_url,
+      foto_url_2: shouldKeepExistingImage(row.foto_url_2) ? existing.foto_url_2 || "" : row.foto_url_2,
+      foto_url_3: shouldKeepExistingImage(row.foto_url_3) ? existing.foto_url_3 || "" : row.foto_url_3,
+    };
+  });
+};
+
 export const getSessionAndProfile = async () => {
   const { data: sessionData } = await supabase.auth.getSession();
   const session = sessionData.session;
@@ -203,7 +239,7 @@ export const fetchAdminData = async (profile) => {
 };
 
 export const upsertProducts = async (products, tenantId = "") => {
-  const rows = products.map((product) => productToDb(product, tenantId));
+  const rows = await preserveExistingImages(products.map((product) => productToDb(product, tenantId)), tenantId);
   let result = await supabase
     .from("products")
     .upsert(rows, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" })
