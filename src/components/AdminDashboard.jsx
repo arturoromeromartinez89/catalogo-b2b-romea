@@ -7,7 +7,7 @@ import CompanySettingsPanel from "./CompanySettingsPanel";
 import CatalogPdfPanel from "./CatalogPdfPanel";
 import DatabaseHealthDashboard from "./DatabaseHealthDashboard";
 import PricingPanel from "./PricingPanel";
-import PreorderList from "./PreorderList";
+import PreorderWorkspace from "./PreorderWorkspace";
 import QuoteLinkPanel from "./QuoteLinkPanel";
 import SelectedProductsDrawer from "./SelectedProductsDrawer";
 import { useCompany } from "../contexts/CompanyContext";
@@ -1039,7 +1039,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           <PricingPanel clients={data.clients} products={products} tenantId={tenantId} profile={profile} />
         ) : null}
         {tab === "preorders" ? (
-          <PreorderList clients={data.clients} products={products} profile={profile} tenantId={tenantId} />
+          <PreorderWorkspace clients={data.clients} products={products} profile={profile} tenantId={tenantId} />
         ) : null}
 
         {tab === "company" ? (

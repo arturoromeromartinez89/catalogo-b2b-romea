@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings } from "../services/companySettings";
 import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice, fetchLaborLists, fetchLaborListLines } from "../services/pricingService";
@@ -75,7 +74,7 @@ const Field = ({ label, children }) => (
   </label>
 );
 
-function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, pricingLocked = false, tenantId = "", profile }) {
+function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, pricingLocked = false, tenantId = "", profile }) {
   const { language } = useLanguage();
   const company = useCompany();
   const isNew = !initial?.id;
@@ -136,8 +135,6 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
         }));
       })
       .catch((error) => setMsg(`Error: ${error.message}`));
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
   }, [resolvedTenantId]);
 
   useEffect(() => {
@@ -162,7 +159,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const moneyLabel = po.moneda === "USD" ? "USD" : "MXN";
   const toDisplayMoney = (value) => (useUsd ? Number(value || 0) / exchangeRate : Number(value || 0));
   const fromDisplayMoney = (value) => (useUsd ? Number(value || 0) * exchangeRate : Number(value || 0));
-  const set = (key) => (event) => setPo((current) => ({ ...current, [key]: event.target.value }));
+  const set = (key) => (event) => { onDirty?.(); setPo((current) => ({ ...current, [key]: event.target.value })); };
   const setChecked = (key) => (event) => setPo((current) => ({ ...current, [key]: event.target.checked }));
   const inp = { width: "100%", boxSizing: "border-box" };
   const isProspectMode = po.client_id === PROSPECT_CLIENT_VALUE;
@@ -413,8 +410,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       }, items);
       setPo((current) => ({ ...current, id: savedId }));
       setSaved(true);
-      setMsg("Preorden guardada correctamente. Se cerrara automaticamente y aparecera en el menu Preordenes.");
-      window.setTimeout(() => onSaved?.({ id: savedId }), 900);
+      setMsg("Preorden guardada correctamente.");
+      window.setTimeout(() => onSaved?.({ id: savedId, folio: po.folio }), 900);
     } catch (error) {
       setMsg(`Error: ${error.message}`);
     } finally {
@@ -479,18 +476,19 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   return (
-    <div className="quote-modal-backdrop">
-      <div className="quote-modal">
-        <header className="quote-modal-header">
-          <h2>{isNew ? "Nueva preorden" : `Preorden - ${po.folio}`}</h2>
-          <div className="quote-status-row">
+    <div className="po-editor">
+      <header className="po-editor-toolbar">
+        <div className="po-editor-toolbar-left">
+          <span className="tool-eyebrow">{isNew ? "Nueva preorden" : po.folio}</span>
+          <div className="po-status-pills">
             {Object.entries(STATUS).map(([key, { label, color }]) => (
               <button
                 key={key}
                 type="button"
-                onClick={() => setPo((current) => ({ ...current, status: key }))}
+                className="po-status-pill"
+                onClick={() => !pricingLocked && setPo((current) => ({ ...current, status: key }))}
                 style={{
-                  border: `1.5px solid ${color}`,
+                  borderColor: color,
                   background: po.status === key ? color : "transparent",
                   color: po.status === key ? "#fff" : color,
                 }}
@@ -498,11 +496,35 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 {label}
               </button>
             ))}
-            <button className="icon-button" type="button" onClick={handleClose}>x</button>
           </div>
-        </header>
+          {po.cliente_empresa || po.cliente_nombre ? (
+            <span className="po-client-chip">
+              {po.cliente_empresa || po.cliente_nombre}
+            </span>
+          ) : null}
+        </div>
+        <div className="po-editor-toolbar-right">
+          {msg ? <span className="po-toolbar-msg">{msg}</span> : null}
+          {!isNew ? (
+            <button className="danger-button compact-action" type="button" onClick={handleDelete}>
+              Eliminar
+            </button>
+          ) : null}
+          <button className="secondary-button compact-action" type="button" onClick={handlePdf}>
+            PDF
+          </button>
+          <button
+            className="primary-button compact-action"
+            type="button"
+            onClick={handleSave}
+            disabled={saving || saved}
+          >
+            {saving ? "Guardando..." : saved ? "Guardado ✓" : "Guardar"}
+          </button>
+        </div>
+      </header>
 
-        <main className="quote-modal-body">
+      <main className="po-editor-body">
           <section className="quote-block">
             <h3>Cliente obligatorio</h3>
             <div className="form-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
@@ -728,31 +750,16 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             </div>
           </section>
 
-          <section className="quote-totals-box">
-            <div><span>Total piezas</span><strong>{totals.piezas}</strong></div>
-            <div><span>Total gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
+          <section className="po-totals-bar">
+            <div><span>Piezas</span><strong>{totals.piezas}</strong></div>
+            <div><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
             <div><span>Subtotal {moneyLabel}</span><strong>{fmt(toDisplayMoney(totals.mxn))}</strong></div>
-            <div><span>IVA 16%</span><strong>{po.aplicar_iva ? fmt(toDisplayMoney(ivaMxn)) : "-"}</strong></div>
-            <div><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
+            <div><span>IVA 16%</span><strong>{po.aplicar_iva ? fmt(toDisplayMoney(ivaMxn)) : "—"}</strong></div>
+            <div className="po-total-highlight"><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
           </section>
-        </main>
-
-        <footer className="quote-modal-footer">
-          <div>
-            {!isNew ? <button className="secondary-button compact-action danger-text" type="button" onClick={handleDelete}>Eliminar preorden</button> : null}
-          </div>
-          <div className="quote-footer-actions">
-            <button className="secondary-button compact-action" type="button" onClick={handleClose}>Cancelar</button>
-            <button className="secondary-button compact-action" type="button" onClick={handlePdf}>Generar PDF</button>
-            <button className="primary-button compact-action" type="button" onClick={handleSave} disabled={saving || saved}>{saving ? "Guardando..." : saved ? "Guardado ✓" : "Guardar preorden"}</button>
-          </div>
-        </footer>
-      </div>
+      </main>
     </div>
   );
 }
 
-export default function PreorderEditor(props) {
-  const portalRoot = document.getElementById("portal-root") || document.body;
-  return createPortal(<PreorderEditorContent {...props} />, portalRoot);
-}
+export default PreorderEditorContent;

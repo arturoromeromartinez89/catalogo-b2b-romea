@@ -1540,8 +1540,15 @@ dd {
 .admin-catalog-main {
   display: flex;
   flex-direction: column;
+  min-height: 0;
   min-width: 0;
   overflow: hidden;
+}
+
+/* Preorder workspace fills remaining vertical space in the admin main area */
+.admin-catalog-main .po-workspace {
+  flex: 1;
+  min-height: 0;
 }
 
 .admin-catalog-header {
@@ -4890,6 +4897,355 @@ body > div[data-portal] {
   .superadmin-main {
     overflow: visible;
   }
+}
+
+/* ─── Preorder workspace & tab system ───────────────────────────────────────── */
+
+.po-workspace {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Tab bar */
+.po-tab-bar {
+  align-items: stretch;
+  background: var(--romea-soft);
+  border-bottom: 1px solid var(--romea-line);
+  display: flex;
+  flex-shrink: 0;
+  gap: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.po-tab-bar::-webkit-scrollbar { display: none; }
+
+.po-tab {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-right: 1px solid var(--romea-line);
+  color: var(--romea-muted);
+  cursor: pointer;
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+  padding: 9px 14px;
+  transition: background var(--transition), color var(--transition);
+  white-space: nowrap;
+}
+
+.po-tab:hover {
+  background: #ffffff;
+  color: var(--romea-blue);
+}
+
+.po-tab--active {
+  background: #ffffff;
+  border-bottom-color: var(--romea-blue);
+  color: var(--romea-blue);
+}
+
+.po-tab--dirty .po-tab-label {
+  font-style: italic;
+}
+
+.po-tab-dot {
+  background: #f59e0b;
+  border-radius: 50%;
+  display: block;
+  flex-shrink: 0;
+  height: 6px;
+  width: 6px;
+}
+
+.po-tab-close {
+  border-radius: 4px;
+  color: var(--romea-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  padding: 1px 3px;
+  transition: background var(--transition), color var(--transition);
+}
+
+.po-tab-close:hover {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.po-tab-new {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--romea-line);
+  color: var(--romea-muted);
+  cursor: pointer;
+  display: flex;
+  font-size: 18px;
+  font-weight: 300;
+  justify-content: center;
+  margin-left: auto;
+  padding: 0 14px;
+  transition: color var(--transition), background var(--transition);
+}
+
+.po-tab-new:hover {
+  background: #ffffff;
+  color: var(--romea-blue);
+}
+
+/* Tab content area */
+.po-tab-content {
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── List view ── */
+.po-list-view {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.po-list-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.po-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.po-filter-count {
+  background: rgba(255,255,255,0.25);
+  border-radius: 999px;
+  font-size: 10px;
+  margin-left: 4px;
+  padding: 1px 6px;
+}
+
+.po-list-empty {
+  align-items: center;
+  color: var(--romea-muted);
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  gap: 12px;
+  justify-content: center;
+  padding: 60px 24px;
+}
+
+.po-table-wrap {
+  border: 1px solid var(--romea-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.po-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+}
+
+.po-table th {
+  background: var(--romea-soft);
+  border-bottom: 1px solid var(--romea-line);
+  color: var(--romea-muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  padding: 10px 12px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.po-table .right { text-align: right; }
+
+.po-table-row {
+  border-bottom: 1px solid var(--romea-line);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.po-table-row:last-child { border-bottom: none; }
+
+.po-table-row:hover { background: var(--romea-soft); }
+
+.po-table-row td {
+  padding: 11px 12px;
+  vertical-align: middle;
+}
+
+.po-client-cell {
+  display: grid;
+  gap: 2px;
+}
+
+.po-client-cell small {
+  color: var(--romea-muted);
+  font-size: 11px;
+}
+
+.po-date-cell {
+  color: var(--romea-muted);
+  white-space: nowrap;
+}
+
+.po-status-badge {
+  border: 1px solid;
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+
+/* ── Editor view ── */
+.po-editor {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.po-editor-toolbar {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid var(--romea-line);
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 10px 20px;
+}
+
+.po-editor-toolbar-left {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+
+.po-editor-toolbar-right {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.po-status-pills {
+  display: flex;
+  gap: 5px;
+}
+
+.po-status-pill {
+  border-radius: 999px;
+  border-style: solid;
+  border-width: 1.5px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  transition: background var(--transition), color var(--transition);
+}
+
+.po-client-chip {
+  background: var(--romea-soft);
+  border: 1px solid var(--romea-line);
+  border-radius: 999px;
+  color: var(--romea-blue);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.po-toolbar-msg {
+  color: var(--romea-muted);
+  font-size: 12px;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.po-editor-body {
+  display: grid;
+  gap: 20px;
+  overflow-y: auto;
+  padding: 20px 24px;
+  align-content: start;
+}
+
+/* Totals bar al fondo del body */
+.po-totals-bar {
+  align-items: stretch;
+  background: var(--romea-soft);
+  border: 1px solid var(--romea-line);
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  overflow: hidden;
+}
+
+.po-totals-bar > div {
+  border-right: 1px solid var(--romea-line);
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 100px;
+  padding: 12px 16px;
+}
+
+.po-totals-bar > div:last-child { border-right: none; }
+
+.po-totals-bar span {
+  color: var(--romea-muted);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.po-totals-bar strong {
+  color: var(--romea-blue);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.po-total-highlight {
+  background: var(--romea-blue);
+}
+
+.po-total-highlight span {
+  color: rgba(255,255,255,0.65);
+}
+
+.po-total-highlight strong {
+  color: #ffffff;
+  font-size: 20px;
 }
 
 /* ─── Pricing panel ─────────────────────────────────────────────────────────── */
