@@ -156,10 +156,23 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [quoteLinkOpen, setQuoteLinkOpen] = useState(false);
   const [selectionDrawerOpen, setSelectionDrawerOpen] = useState(false);
   const [tenantForm, setTenantForm] = useState({ name: "", slug: "", status: "active" });
+  const [signingOut, setSigningOut] = useState(false);
 
   const notifyAction = (type, title, message) => {
     setActionNotice({ type, title, message });
     setLastActionMessage(message);
+  };
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      setSigningOut(false);
+      notifyAction("error", "No se pudo salir", error.message || "Intenta de nuevo.");
+    }
   };
 
   const load = async () => {
@@ -676,14 +689,15 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           <button
             className="sidebar-logout"
             type="button"
-            onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }}
+            onClick={handleSignOut}
+            disabled={signingOut}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            {t("logout")}
+            {signingOut ? "Saliendo..." : t("logout")}
           </button>
           {supportMode ? (
             <button className="support-exit-button" type="button" onClick={onExitSupport}>
@@ -1216,6 +1230,15 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       ) : null}
 
       <ActionNotice notice={actionNotice} onClose={() => setActionNotice(null)} />
+      {signingOut ? (
+        <div className="signout-overlay" role="status" aria-live="assertive">
+          <div className="signout-card">
+            <span className="loading-spinner" aria-hidden="true" />
+            <strong>Saliendo...</strong>
+            <p>Cerrando la sesión de forma segura.</p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

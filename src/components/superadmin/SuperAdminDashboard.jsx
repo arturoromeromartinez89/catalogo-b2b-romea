@@ -20,6 +20,17 @@ export default function SuperAdminDashboard({ profile }) {
   const [profiles, setProfiles] = useState([]);
   const [metrics, setMetrics] = useState({});
   const [status, setStatus] = useState("Cargando panel SaaS...");
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setStatus(`Error al salir: ${error.message}`);
+      setSigningOut(false);
+    }
+  };
 
   const load = async () => {
     try {
@@ -59,8 +70,8 @@ export default function SuperAdminDashboard({ profile }) {
             ))}
           </div>
         </section>
-        <button className="secondary-button full compact-action" type="button" onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }}>
-          Salir
+        <button className="secondary-button full compact-action" type="button" onClick={handleSignOut} disabled={signingOut}>
+          {signingOut ? "Saliendo..." : "Salir"}
         </button>
       </aside>
 
@@ -92,6 +103,15 @@ export default function SuperAdminDashboard({ profile }) {
           ) : null}
         </section>
       </main>
+      {signingOut ? (
+        <div className="signout-overlay" role="status" aria-live="assertive">
+          <div className="signout-card">
+            <span className="loading-spinner" aria-hidden="true" />
+            <strong>Saliendo...</strong>
+            <p>Cerrando la sesión de forma segura.</p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

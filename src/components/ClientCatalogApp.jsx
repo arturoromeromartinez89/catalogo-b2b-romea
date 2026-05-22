@@ -55,6 +55,7 @@ export default function ClientCatalogApp({ profile }) {
   const [status, setStatus] = useState("");
   const [addedCodes, setAddedCodes] = useState([]);
   const [visibleProductLimit, setVisibleProductLimit] = useState(PRODUCT_RENDER_BATCH);
+  const [signingOut, setSigningOut] = useState(false);
   const tenantId = profile?.tenant_id || profile?.tenantId || "";
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
 
@@ -159,8 +160,13 @@ export default function ClientCatalogApp({ profile }) {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    window.location.reload();
+    if (signingOut) return;
+    setSigningOut(true);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setStatus(`No se pudo salir: ${error.message}`);
+      setSigningOut(false);
+    }
   };
 
   const clearFilters = () => {
@@ -253,8 +259,9 @@ export default function ClientCatalogApp({ profile }) {
           className="secondary-button full compact-action"
           type="button"
           onClick={handleSignOut}
+          disabled={signingOut}
         >
-          {t("logout")}
+          {signingOut ? "Saliendo..." : t("logout")}
         </button>
       </aside>
 
@@ -395,6 +402,15 @@ export default function ClientCatalogApp({ profile }) {
             setStatus("Preorden guardada. El administrador ya puede verla en el menu Preordenes.");
           }}
         />
+      ) : null}
+      {signingOut ? (
+        <div className="signout-overlay" role="status" aria-live="assertive">
+          <div className="signout-card">
+            <span className="loading-spinner" aria-hidden="true" />
+            <strong>Saliendo...</strong>
+            <p>Cerrando la sesión de forma segura.</p>
+          </div>
+        </div>
       ) : null}
     </div>
   );

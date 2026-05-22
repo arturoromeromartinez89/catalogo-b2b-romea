@@ -1143,8 +1143,55 @@ dd {
   color: var(--color-error);
 }
 
+.sidebar-logout:disabled,
+.compact-action:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
 .sidebar-logout svg {
   flex-shrink: 0;
+}
+
+.signout-overlay {
+  align-items: center;
+  background: rgba(247, 248, 251, 0.72);
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  left: 0;
+  padding: 24px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 10000;
+}
+
+.signout-card {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--romea-line);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(31, 51, 95, 0.14);
+  color: var(--romea-blue);
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  max-width: 280px;
+  padding: 22px 26px;
+  text-align: center;
+  width: min(100%, 280px);
+}
+
+.signout-card strong {
+  font-size: 15px;
+}
+
+.signout-card p {
+  color: var(--romea-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 0;
 }
 
 /* ── Setup screen ── */
