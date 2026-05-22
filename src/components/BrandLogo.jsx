@@ -11,8 +11,8 @@ export default function BrandLogo({ size = "md", company: companyOverride = null
         src={company.logo_url}
         alt={alt}
         style={{
-          maxHeight: size === "sm" ? 36 : 56,
-          maxWidth: size === "sm" ? 120 : 200,
+          maxHeight: size === "sm" ? 36 : 82,
+          maxWidth: size === "sm" ? 120 : 190,
           objectFit: "contain",
         }}
       />

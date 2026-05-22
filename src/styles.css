@@ -131,16 +131,18 @@ input[type="file"] {
 
 .brand-block {
   border-bottom: 1px solid var(--romea-line);
-  padding-bottom: 10px;
+  padding: 6px 0 12px;
   text-align: center;
 }
 
 .brand-block img {
   display: block;
-  height: 36px;
-  margin: 0 auto 4px;
-  max-width: 138px;
+  height: auto;
+  margin: 0 auto 7px;
+  max-height: 82px;
+  max-width: 190px;
   object-fit: contain;
+  width: auto;
 }
 
 .brand-fallback {
@@ -170,9 +172,9 @@ input[type="file"] {
 }
 
 .brand-logo-placeholder {
-  width: 98px;
-  height: 34px;
-  margin: 0 auto 5px;
+  width: 136px;
+  height: 62px;
+  margin: 0 auto 7px;
   border: 1px dashed var(--romea-line);
   border-radius: 8px;
   background: #f7f9fc;
