@@ -50,6 +50,7 @@ const loadImageAsDataUrl = async (url) => {
 };
 
 const page = { w: 216, h: 279, margin: 12, col: 192 };
+const footerReserve = 12;
 
 const txt = (doc, str, x, y, opts = {}) => {
   if (!str && str !== 0) return;
@@ -59,6 +60,26 @@ const txt = (doc, str, x, y, opts = {}) => {
 const money = (n) => {
   if (!n && n !== 0) return "—";
   return `$${Number(n).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const imageFormat = (dataUrl = "") => {
+  const value = String(dataUrl).toLowerCase();
+  if (value.startsWith("data:image/png")) return "PNG";
+  if (value.startsWith("data:image/webp")) return "WEBP";
+  return "JPEG";
+};
+
+const addContainedImage = (doc, dataUrl, x, y, maxW, maxH) => {
+  if (!dataUrl) return;
+  try {
+    const props = doc.getImageProperties(dataUrl);
+    const ratio = props.width && props.height ? Math.min(maxW / props.width, maxH / props.height) : 1;
+    const w = Math.max(1, props.width * ratio);
+    const h = Math.max(1, props.height * ratio);
+    doc.addImage(dataUrl, imageFormat(dataUrl), x + (maxW - w) / 2, y + (maxH - h) / 2, w, h);
+  } catch {
+    try { doc.addImage(dataUrl, imageFormat(dataUrl), x, y, maxW, maxH); } catch {}
+  }
 };
 
 const buildFolio = (customer) => {
@@ -93,9 +114,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   doc.setFillColor(31, 51, 95);
   doc.rect(0, 0, page.w, 32, "F");
 
-  if (logo) {
-    doc.addImage(logo, "JPEG", page.margin, 4, 40, 24);
-  }
+  if (logo) addContainedImage(doc, logo, page.margin, 4, 42, 24);
   doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(180,195,220);
   txt(doc, t("Catálogo B2B · Mayorista", "B2B Catalog · Wholesale"), page.margin, 27);
 
@@ -154,10 +173,11 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     sub:    page.w - page.margin,
   };
 
-  // Header
-  doc.setFillColor(240,244,252);
-  doc.rect(page.margin, y - 2, page.col, 8, "F");
-  doc.setFontSize(5.5); doc.setFont("helvetica","bold"); doc.setTextColor(60,80,120);
+  const drawTableHeader = (headerY) => {
+    doc.setFillColor(240,244,252);
+    doc.rect(page.margin, headerY - 2, page.col, 8, "F");
+    doc.setFontSize(5.5); doc.setFont("helvetica","bold"); doc.setTextColor(60,80,120);
+    const y = headerY;
   txt(doc, t("CÓD.","CODE"),       C.cod,   y+3);
   txt(doc, t("DESCRIPCIÓN","DESC"),C.desc,  y+3);
   txt(doc, t("PZS","QTY"),         C.pzs,   y+3);
@@ -170,8 +190,10 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   } else {
     txt(doc, t("PRECIO/G","PRICE/G"), C.pgr, y+3);
   }
-  txt(doc, t("SUBTOTAL","SUBTOTAL"),C.sub,  y+3, { align: "right" });
-  y += 10;
+    txt(doc, t("SUBTOTAL","SUBTOTAL"),C.sub,  y+3, { align: "right" });
+    return headerY + 10;
+  };
+  y = drawTableHeader(y);
 
   let grandTotal = 0;
   let grandGramos = 0;
@@ -189,13 +211,16 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     grandGramos += gTotal;
     grandPiezas += qty;
 
-    const rowH = 20;
-    if (y + rowH > page.h - 50) { doc.addPage(); y = page.margin; }
+    const rowH = 16;
+    if (y + rowH > page.h - footerReserve) {
+      doc.addPage();
+      y = drawTableHeader(page.margin);
+    }
     doc.setDrawColor(225,230,242); doc.setLineWidth(0.2);
     doc.line(page.margin, y - 1, page.w - page.margin, y - 1);
 
     const imgData = await loadImageAsDataUrl(item.product?.fotoUrl);
-    if (imgData) { try { doc.addImage(imgData, "JPEG", C.img, y+1, 12, 12); } catch {} }
+    if (imgData) addContainedImage(doc, imgData, C.img, y+1, 12, 12);
 
     doc.setFontSize(7); doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
     txt(doc, item.product?.codigo || item.producto_codigo, C.cod, y+5);
@@ -224,6 +249,10 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   }
 
   // ── TOTALES ───────────────────────────────────────────────
+  if (y + 48 > page.h - footerReserve) {
+    doc.addPage();
+    y = page.margin;
+  }
   y += 4;
   doc.setDrawColor(31,51,95); doc.setLineWidth(0.4);
   doc.line(page.margin + 80, y, page.w - page.margin, y); y += 5;
@@ -266,7 +295,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
 
   // ── INSTRUCCIONES ─────────────────────────────────────────
   y += 8;
-  if (y + 35 > page.h - 15) { doc.addPage(); y = page.margin; }
+  if (y + 35 > page.h - footerReserve) { doc.addPage(); y = page.margin; }
   const instructions = Array.isArray(company.order_instructions) && company.order_instructions.length
     ? company.order_instructions
     : [
