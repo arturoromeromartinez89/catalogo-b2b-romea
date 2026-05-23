@@ -10,6 +10,7 @@ import { useCompany } from "../contexts/CompanyContext";
 import BrandLogo from "./BrandLogo";
 import { fetchCompanySettings } from "../services/companySettings";
 import { supabase } from "../lib/supabaseClient";
+import { fastSignOut } from "../services/authService";
 import { fetchClientData } from "../services/supabaseCatalog";
 import { calculateProductQuotePrice, fetchLines, fetchMetalPrices } from "../services/pricingService";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
@@ -162,8 +163,9 @@ export default function ClientCatalogApp({ profile }) {
   const handleSignOut = async () => {
     if (signingOut) return;
     setSigningOut(true);
-    const { error } = await supabase.auth.signOut();
-    if (error) {
+    try {
+      await fastSignOut(supabase);
+    } catch (error) {
       setStatus(`No se pudo salir: ${error.message}`);
       setSigningOut(false);
     }

@@ -24,6 +24,7 @@ import UploadExcel from "./UploadExcel";
 import { sampleProducts } from "../data/sampleProducts";
 import { useLanguage } from "../i18n/LanguageContext";
 import { supabase } from "../lib/supabaseClient";
+import { fastSignOut } from "../services/authService";
 import {
   deleteProduct,
   deleteTenantProducts,
@@ -167,8 +168,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     if (signingOut) return;
     setSigningOut(true);
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await fastSignOut(supabase);
     } catch (error) {
       setSigningOut(false);
       notifyAction("error", "No se pudo salir", error.message || "Intenta de nuevo.");

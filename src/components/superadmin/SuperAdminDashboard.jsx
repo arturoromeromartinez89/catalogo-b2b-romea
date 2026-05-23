@@ -4,6 +4,7 @@ import CompaniesPanel from "./CompaniesPanel";
 import MetricsPanel from "./MetricsPanel";
 import UsersPanel from "./UsersPanel";
 import { supabase } from "../../lib/supabaseClient";
+import { fastSignOut } from "../../services/authService";
 import { fetchProfiles, fetchTenantMetrics, fetchTenants } from "../../services/tenantService";
 import { useImpersonation } from "../../contexts/ImpersonationContext";
 
@@ -25,8 +26,9 @@ export default function SuperAdminDashboard({ profile }) {
   const handleSignOut = async () => {
     if (signingOut) return;
     setSigningOut(true);
-    const { error } = await supabase.auth.signOut();
-    if (error) {
+    try {
+      await fastSignOut(supabase);
+    } catch (error) {
       setStatus(`Error al salir: ${error.message}`);
       setSigningOut(false);
     }
