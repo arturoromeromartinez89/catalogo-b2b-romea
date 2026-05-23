@@ -82,6 +82,7 @@ export const savePreorder = async (preorder, items) => {
   } = { ...preorder };
   if (!clean.client_id) clean.client_id = null;
   if (!clean.created_by) clean.created_by = null;
+  if (!clean.labor_list_id) delete clean.labor_list_id;
   if (!clean.tenant_id && !clean.tenantId) delete clean.tenant_id;
   if (clean.tenantId) {
     clean.tenant_id = clean.tenantId;

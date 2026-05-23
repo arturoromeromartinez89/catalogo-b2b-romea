@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings } from "../services/companySettings";
-import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice, fetchLaborLists, fetchLaborListLines } from "../services/pricingService";
+import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice, fetchLaborLists, fetchLaborListLines, roundUp2, TROY_OUNCE_GRAMS } from "../services/pricingService";
 import { saveClient } from "../services/supabaseCatalog";
 import { savePreorder, deletePreorder } from "../services/preorderService";
 import { generatePdf } from "../utils/pdfGenerator";
@@ -22,7 +22,6 @@ const fmt = (value) =>
     : "-";
 
 const IVA_RATE = 0.16;
-const TROY_OUNCE_GRAMS = 31.1035;
 const PROSPECT_CLIENT_VALUE = "__new_prospect__";
 
 const calcSilverFineFromKitco = (kitcoUsdOz, exchangeRate, premiumPct = 0) => {
@@ -30,7 +29,7 @@ const calcSilverFineFromKitco = (kitcoUsdOz, exchangeRate, premiumPct = 0) => {
   const tc = Number(exchangeRate || 0);
   const premium = Number(premiumPct || 0);
   if (!kitco || !tc) return 0;
-  return (kitco / TROY_OUNCE_GRAMS) * (1 + premium / 100) * tc;
+  return roundUp2((kitco / TROY_OUNCE_GRAMS) * (1 + premium / 100) * tc);
 };
 
 const calcItem = (item) => {
@@ -45,7 +44,10 @@ const productToPreorderItem = (product, quantity = 1, lines = [], plataFinaMxn =
   const piezas = Math.max(1, Number(quantity || 1));
   const gramosPorPieza = Number(product.pesoPromedio || product.peso_promedio || 0);
   const line = lines.find((lineItem) => normalizeText(lineItem.codigo) === normalizeText(product.linea));
-  const price = line && plataFinaMxn
+  const priceListLine = line?._priceListLine;
+  const price = priceListLine?.integrated_price
+    ? { mo_visible: Number(priceListLine.final_labor || 0), integrado: Number(priceListLine.integrated_price || 0) }
+    : line && plataFinaMxn
     ? calcPrecioGramo({ mo_base: line.mo_base, plata_fina_mxn: plataFinaMxn })
     : null;
   const labor = Number(price?.mo_visible || product.quoteLaborPerGram || product.manoObra || product.mano_obra || 0);
@@ -154,9 +156,19 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     if (!pricingLocked) window.setTimeout(() => scannerInputRef.current?.focus(), 120);
   }, [pricingLocked]);
 
+  useEffect(() => {
+    const currentList = laborLists.find((list) => list.id === selectedLaborListId);
+    if (currentList && (currentList.currency || "MXN") !== po.moneda) {
+      setSelectedLaborListId("");
+      setPo((current) => ({ ...current, labor_list_id: "" }));
+      setMsg(`La lista se removio porque la preorden cambio a ${po.moneda}.`);
+    }
+  }, [po.moneda, laborLists, selectedLaborListId]);
+
   const exchangeRate = Number(po.tipo_cambio || metalPrices.tipo_cambio || 0);
   const useUsd = po.moneda === "USD" && exchangeRate > 0;
   const moneyLabel = po.moneda === "USD" ? "USD" : "MXN";
+  const compatibleLaborLists = laborLists.filter((list) => (list.currency || "MXN") === po.moneda && (list.status || "borrador") === "activa");
   const toDisplayMoney = (value) => (useUsd ? Number(value || 0) / exchangeRate : Number(value || 0));
   const fromDisplayMoney = (value) => (useUsd ? Number(value || 0) * exchangeRate : Number(value || 0));
   const set = (key) => (event) => { onDirty?.(); setPo((current) => ({ ...current, [key]: event.target.value })); };
@@ -229,17 +241,36 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       return;
     }
     try {
+      const selectedList = laborLists.find((l) => l.id === listId);
       const listLines = await fetchLaborListLines(listId);
       const lineMap = new Map(listLines.map((l) => [l.line_codigo, Number(l.mo_base || 0)]));
+      const lineDetailMap = new Map(listLines.map((l) => [l.line_codigo, l]));
       const merged = (currentLines || lines).map((line) => ({
         ...line,
         mo_base: lineMap.has(line.codigo) ? lineMap.get(line.codigo) : line.mo_base,
+        _priceListLine: lineDetailMap.get(line.codigo) || null,
       }));
       setLines(merged);
       setSelectedLaborListId(listId);
-      setPo((current) => ({ ...current, labor_list_id: listId }));
-      const listName = laborLists.find((l) => l.id === listId)?.name || listId;
-      setMsg(`Lista "${listName}" aplicada. Presiona "Calcular precios" para actualizar.`);
+      if (selectedList) {
+        const nextSilverDisplay = Number(selectedList.plata_fina_value || 0);
+        const nextSilverMxn = selectedList.currency === "USD"
+          ? nextSilverDisplay * Number(selectedList.tipo_cambio || po.tipo_cambio || 0)
+          : nextSilverDisplay;
+        setPlataFinaMxn(nextSilverMxn);
+        setPo((current) => ({
+          ...current,
+          labor_list_id: listId,
+          tipo_cambio: selectedList.tipo_cambio || current.tipo_cambio,
+          pf_mode: selectedList.pf_mode || current.pf_mode,
+          kitco_usd_oz: selectedList.kitco_usd_oz || current.kitco_usd_oz,
+          premio_pct: selectedList.premio_pct ?? current.premio_pct,
+        }));
+      } else {
+        setPo((current) => ({ ...current, labor_list_id: listId }));
+      }
+      const listName = selectedList?.name || listId;
+      setMsg(`Lista "${listName}" aplicada. Sus valores de TC, PF y labor quedaron precargados.`);
     } catch (err) {
       setMsg(`Error al cargar lista: ${err.message}`);
     }
@@ -253,6 +284,16 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     setItems((current) => current.map((item) => {
       const line = lines.find((lineItem) => lineItem.codigo === item.producto_linea);
       if (!line) return item;
+      if (line._priceListLine?.integrated_price) {
+        const list = laborLists.find((entry) => entry.id === selectedLaborListId);
+        const listExchange = Number(list?.tipo_cambio || po.tipo_cambio || 0) || 1;
+        const factor = list?.currency === "USD" ? listExchange : 1;
+        return calcItem({
+          ...item,
+          labor_mxn: Number(line._priceListLine.final_labor || 0) * factor,
+          precio_gramo_mxn: Number(line._priceListLine.integrated_price || 0) * factor,
+        });
+      }
       const precio = calcPrecioGramo({ mo_base: line.mo_base, plata_fina_mxn: plataFinaMxn });
       return calcItem({ ...item, labor_mxn: precio.mo_visible, precio_gramo_mxn: precio.integrado });
     }));
@@ -279,7 +320,16 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   }, [productSearch, products]);
 
   const addProduct = (product) => {
-    const nextItem = productToPreorderItem(product, 1, lines, plataFinaMxn);
+    const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
+    const factor = selectedList?.currency === "USD" ? Number(selectedList.tipo_cambio || po.tipo_cambio || 0) || 1 : 1;
+    const rawItem = productToPreorderItem(product, 1, lines, plataFinaMxn);
+    const nextItem = selectedList?.currency === "USD"
+      ? calcItem({
+          ...rawItem,
+          labor_mxn: Number(rawItem.labor_mxn || 0) * factor,
+          precio_gramo_mxn: Number(rawItem.precio_gramo_mxn || 0) * factor,
+        })
+      : rawItem;
     setItems((current) => {
       const existing = current.find((item) => item.producto_codigo === nextItem.producto_codigo);
       if (existing) {
@@ -580,20 +630,20 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               {/* Fila 1: referencias de precio */}
               <div className="po-pricing-row">
                 <label className="po-pricing-field">
-                  Lista de labor
+                  Lista de precios {po.moneda}
                   <select
                     value={selectedLaborListId || ""}
                     onChange={(e) => applyLaborList(e.target.value, lines)}
                     disabled={pricingLocked}
                   >
                     <option value="">— Sin lista —</option>
-                    {laborLists.map((list) => (
+                    {compatibleLaborLists.map((list) => (
                       <option key={list.id} value={list.id}>{list.name}</option>
                     ))}
                   </select>
                   {selectedLaborListId
                     ? <span className="po-pricing-hint po-pricing-hint--ok">✓ Lista aplicada</span>
-                    : <span className="po-pricing-hint">Selecciona una lista de labor</span>}
+                    : <span className="po-pricing-hint">Primero selecciona lista compatible con {po.moneda}</span>}
                 </label>
 
                 <label className="po-pricing-field">

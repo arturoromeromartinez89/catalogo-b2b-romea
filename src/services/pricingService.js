@@ -9,6 +9,53 @@ const emptyMetalPrices = {
 };
 
 const normalizeCode = (value) => String(value || "").trim().toLowerCase();
+export const TROY_OUNCE_GRAMS = 31.1;
+
+export const roundUp2 = (value) => {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number)) return 0;
+  return Math.ceil(number * 100) / 100;
+};
+
+export const inferLaborFromLineCode = (code) => {
+  const match = String(code || "").match(/\d+/);
+  return match ? Number.parseInt(match[0], 10) : 0;
+};
+
+export const buildPriceListName = (currency = "MXN", name = "") => {
+  const prefix = String(currency || "MXN").toUpperCase();
+  const clean = String(name || "").trim().replace(/^(USD|MXN)\s*-\s*/i, "");
+  return clean ? `${prefix} - ${clean}` : `${prefix} -`;
+};
+
+export const calculateFineSilver = ({ currency = "MXN", pfMode = "manual", manualValue = 0, kitcoUsdOz = 0, premiumPct = 0, exchangeRate = 1 }) => {
+  if (pfMode === "manual") return roundUp2(manualValue);
+  const baseUsd = Number(kitcoUsdOz || 0) / TROY_OUNCE_GRAMS;
+  const fineUsd = baseUsd * (1 + Number(premiumPct || 0) / 100);
+  return roundUp2(currency === "USD" ? fineUsd : fineUsd * Number(exchangeRate || 0));
+};
+
+export const calculatePriceListLine = ({ line, currency = "USD", exchangeRate = 1, fineSilver = 0, marginPct = 0 }) => {
+  const laborMxn = roundUp2(line.labor_mxn ?? line.mo_base ?? inferLaborFromLineCode(line.codigo));
+  const laborUsd = roundUp2(laborMxn / (Number(exchangeRate || 0) || 1));
+  const silver = roundUp2(fineSilver);
+  const costLabor = currency === "USD" ? laborUsd : laborMxn;
+  const totalCost = roundUp2(costLabor + silver);
+  const margin = Number(marginPct || 0);
+  const integrated = roundUp2(margin >= 100 ? totalCost : totalCost / (1 - margin / 100));
+  const finalLabor = roundUp2(integrated - silver);
+  return {
+    line_codigo: String(line.codigo || line.line_codigo || "").trim(),
+    descripcion: line.descripcion || "",
+    labor_mxn: laborMxn,
+    labor_usd: laborUsd,
+    silver_fine: silver,
+    total_cost: totalCost,
+    margin_pct: margin,
+    integrated_price: integrated,
+    final_labor: finalLabor,
+  };
+};
 
 export const getSilverFinePrice = (metalPrices = emptyMetalPrices) => {
   const stored = Number(metalPrices.plata_fina_mxn || 0);
@@ -19,7 +66,7 @@ export const getSilverFinePrice = (metalPrices = emptyMetalPrices) => {
   const premium = Number(metalPrices.premio_pct || 0);
   if (!kitco || !exchange) return 0;
 
-  return (kitco / 31.1035) * (1 + premium / 100) * exchange;
+  return roundUp2((kitco / TROY_OUNCE_GRAMS) * (1 + premium / 100) * exchange);
 };
 
 export const fetchLines = async (profileOrTenantId = "") => {
@@ -138,19 +185,41 @@ export const saveClientMargin = async (clientId, lineCodigo, margenPct) => {
 
 export const fetchLaborLists = async (profileOrTenantId = "") => {
   const tenantId = getTenantId(profileOrTenantId);
-  let query = supabase.from("labor_lists").select("*").eq("active", true).order("created_at");
+  let query = supabase.from("labor_lists").select("*").eq("active", true).order("created_at", { ascending: false });
   if (tenantId) query = query.eq("tenant_id", tenantId);
   const { data, error } = await query;
   if (error) throw error;
   return data || [];
 };
 
-export const saveLaborList = async ({ id, name }, profileOrTenantId = "") => {
+export const fetchCompatibleLaborLists = async (profileOrTenantId = "", currency = "MXN") => {
+  const lists = await fetchLaborLists(profileOrTenantId);
+  return lists.filter((list) => (list.currency || "MXN") === currency && (list.status || "borrador") === "activa");
+};
+
+export const saveLaborList = async (list, profileOrTenantId = "") => {
   const tenantId = getTenantId(profileOrTenantId);
-  const row = { name: String(name || "").trim(), updated_at: new Date().toISOString() };
+  const currency = String(list.currency || "MXN").toUpperCase();
+  const row = {
+    name: buildPriceListName(currency, list.name),
+    currency,
+    status: list.status || "borrador",
+    pf_mode: list.pf_mode || "manual",
+    kitco_usd_oz: Number(list.kitco_usd_oz || 0),
+    oz_grams: Number(list.oz_grams || TROY_OUNCE_GRAMS),
+    premio_pct: Number(list.premio_pct || 0),
+    tipo_cambio: Number(list.tipo_cambio || 0),
+    plata_fina_value: Number(list.plata_fina_value || 0),
+    exchange_rate_date: list.exchange_rate_date || null,
+    kitco_date: list.kitco_date || null,
+    comments: list.comments || "",
+    source_snapshot: list.source_snapshot || {},
+    updated_at: new Date().toISOString(),
+  };
+  if (row.status === "activa" && !list.activated_at) row.activated_at = new Date().toISOString();
   if (tenantId) row.tenant_id = tenantId;
-  if (id) {
-    const { data, error } = await supabase.from("labor_lists").update(row).eq("id", id).select("*").single();
+  if (list.id) {
+    const { data, error } = await supabase.from("labor_lists").update(row).eq("id", list.id).select("*").single();
     if (error) throw error;
     return data;
   }
@@ -178,12 +247,33 @@ export const upsertLaborListLines = async (laborListId, lines = []) => {
   const rows = lines.map((line) => ({
     labor_list_id: laborListId,
     line_codigo: String(line.line_codigo || line.codigo || "").trim(),
-    mo_base: Number(line.mo_base || 0),
+    descripcion: line.descripcion || "",
+    mo_base: Number(line.mo_base ?? line.labor_mxn ?? 0),
+    labor_mxn: Number(line.labor_mxn ?? line.mo_base ?? 0),
+    labor_usd: Number(line.labor_usd || 0),
+    silver_fine: Number(line.silver_fine || 0),
+    total_cost: Number(line.total_cost || 0),
+    margin_pct: Number(line.margin_pct || 0),
+    integrated_price: Number(line.integrated_price || 0),
+    final_labor: Number(line.final_labor || 0),
   }));
   const { error } = await supabase
     .from("labor_list_lines")
     .upsert(rows, { onConflict: "labor_list_id,line_codigo" });
   if (error) throw error;
+};
+
+export const duplicateLaborList = async (list, profileOrTenantId = "") => {
+  const sourceLines = await fetchLaborListLines(list.id);
+  const copy = await saveLaborList({
+    ...list,
+    id: undefined,
+    name: `${list.name || "Lista"} copia`,
+    status: "borrador",
+    activated_at: null,
+  }, profileOrTenantId);
+  await upsertLaborListLines(copy.id, sourceLines);
+  return copy;
 };
 
 // ─── Precios por gramo ───────────────────────────────────────────────────────
