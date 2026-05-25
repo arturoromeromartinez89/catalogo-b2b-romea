@@ -213,33 +213,47 @@ export const saveLaborList = async (list, profileOrTenantId = "") => {
     exchange_rate_date: list.exchange_rate_date || null,
     kitco_date: list.kitco_date || null,
     comments: list.comments || "",
-    source_snapshot: list.source_snapshot || {},
     updated_at: new Date().toISOString(),
   };
+  if (list.source_snapshot) row.source_snapshot = list.source_snapshot;
   if (row.status === "activa" && !list.activated_at) row.activated_at = new Date().toISOString();
   if (tenantId) row.tenant_id = tenantId;
-  if (list.id) {
-    const { data, error } = await supabase.from("labor_lists").update(row).eq("id", list.id).select("*").single();
-    if (error) throw error;
-    return data;
+
+  const writeList = async (payload) => {
+    if (list.id) {
+      return supabase.from("labor_lists").update(payload).eq("id", list.id).select("*").single();
+    }
+    return supabase.from("labor_lists").insert(payload).select("*").single();
+  };
+
+  let data;
+  let error;
+  try {
+    ({ data, error } = await writeList(row));
+  } catch (requestError) {
+    if (!/Failed to fetch/i.test(requestError.message || "")) throw requestError;
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    ({ data, error } = await writeList(row));
   }
-  const { data, error } = await supabase.from("labor_lists").insert(row).select("*").single();
+  if (error && row.source_snapshot && /source_snapshot|schema cache|column/i.test(error.message || "")) {
+    const { source_snapshot, ...fallbackRow } = row;
+    ({ data, error } = await writeList(fallbackRow));
+  }
   if (error) throw error;
   return data;
 };
 
-export const deleteLaborList = async (id) => {
-  const { error } = await supabase.from("labor_lists").update({ active: false }).eq("id", id);
-  if (error) throw error;
+const chunk = (items, size) => {
+  const chunks = [];
+  for (let index = 0; index < items.length; index += size) chunks.push(items.slice(index, index + size));
+  return chunks;
 };
 
-export const fetchLaborListLines = async (laborListId) => {
-  const { data, error } = await supabase
+const upsertRowsWithRetry = async (rows) => {
+  const { error } = await supabase
     .from("labor_list_lines")
-    .select("*")
-    .eq("labor_list_id", laborListId);
+    .upsert(rows, { onConflict: "labor_list_id,line_codigo" });
   if (error) throw error;
-  return data || [];
 };
 
 export const upsertLaborListLines = async (laborListId, lines = []) => {
@@ -257,10 +271,45 @@ export const upsertLaborListLines = async (laborListId, lines = []) => {
     integrated_price: Number(line.integrated_price || 0),
     final_labor: Number(line.final_labor || 0),
   }));
-  const { error } = await supabase
-    .from("labor_list_lines")
-    .upsert(rows, { onConflict: "labor_list_id,line_codigo" });
+
+  for (const rowsChunk of chunk(rows, 25)) {
+    try {
+      await upsertRowsWithRetry(rowsChunk);
+    } catch (error) {
+      if (!/Failed to fetch/i.test(error.message || "")) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      await upsertRowsWithRetry(rowsChunk);
+    }
+  }
+};
+
+export const deleteLaborList = async (id) => {
+  const { error } = await supabase.from("labor_lists").update({ active: false }).eq("id", id);
   if (error) throw error;
+};
+
+export const fetchLaborListLines = async (laborListId) => {
+  const { data, error } = await supabase
+    .from("labor_list_lines")
+    .select("*")
+    .eq("labor_list_id", laborListId);
+  if (error) throw error;
+  return data || [];
+};
+
+export const fetchLaborListLinesMap = async (laborListIds = []) => {
+  if (!laborListIds.length) return new Map();
+  const { data, error } = await supabase
+    .from("labor_list_lines")
+    .select("*")
+    .in("labor_list_id", laborListIds);
+  if (error) throw error;
+  return (data || []).reduce((map, row) => {
+    const listRows = map.get(row.labor_list_id) || [];
+    listRows.push(row);
+    map.set(row.labor_list_id, listRows);
+    return map;
+  }, new Map());
 };
 
 export const duplicateLaborList = async (list, profileOrTenantId = "") => {

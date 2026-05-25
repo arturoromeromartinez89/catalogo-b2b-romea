@@ -333,17 +333,28 @@ function PriceListEditor({ list, productLines, tenantId, profile, company, onClo
   const handleSave = async (status = draft.status) => {
     setSaving(true);
     try {
-      const saved = await saveLaborList({
-        ...draft,
-        status,
-        plata_fina_value: fineSilver,
-        source_snapshot: {
-          formula: draft.pf_mode === "kitco" ? "PF = (Kitco USD oz / 31.1) * (1 + premio/100)" : "PF manual",
-          generated_at: new Date().toISOString(),
-          prepared_by: draft.prepared_by || profile?.email || "",
-        },
-      }, tenantId);
-      await upsertLaborListLines(saved.id, rows);
+      let saved;
+      try {
+        saved = await saveLaborList({
+          ...draft,
+          status,
+          plata_fina_value: fineSilver,
+          source_snapshot: {
+            formula: draft.pf_mode === "kitco" ? "PF = (Kitco USD oz / 31.1) * (1 + premio/100)" : "PF manual",
+            generated_at: new Date().toISOString(),
+            prepared_by: draft.prepared_by || profile?.email || "",
+          },
+        }, tenantId);
+      } catch (error) {
+        throw new Error(`No se pudo guardar el encabezado de la lista. ${error.message || error}`);
+      }
+
+      try {
+        await upsertLaborListLines(saved.id, rows);
+      } catch (error) {
+        throw new Error(`La lista se guardo, pero fallaron las lineas. ${error.message || error}`);
+      }
+
       setNotice({ type: "success", title: "Lista guardada", message: `${saved.name} guardada correctamente.` });
       onSaved(saved);
     } catch (error) {
