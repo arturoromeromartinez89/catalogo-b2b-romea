@@ -161,6 +161,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     if (currentList && (currentList.currency || "MXN") !== po.moneda) {
       setSelectedLaborListId("");
       setPo((current) => ({ ...current, labor_list_id: "" }));
+      fetchLines(resolvedTenantId)
+        .then((baseLines) => {
+          setLines(baseLines);
+          setItems((current) => current.map((item) => priceItemFromLines(item, baseLines, null, plataFinaMxn)));
+        })
+        .catch(() => {});
       setMsg(`La lista se removio porque la preorden cambio a ${po.moneda}.`);
     }
   }, [po.moneda, laborLists, selectedLaborListId]);
@@ -178,6 +184,34 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const recalcWithPrice = (item, laborMxn = item.labor_mxn, silverMxn = plataFinaMxn) =>
     calcItem({ ...item, labor_mxn: Number(laborMxn || 0), precio_gramo_mxn: Number(laborMxn || 0) + Number(silverMxn || 0) });
+
+  const getListSilverMxn = (list) => {
+    if (!list) return plataFinaMxn;
+    const value = Number(list.plata_fina_value || 0);
+    if ((list.currency || "MXN") === "USD") {
+      return value * (Number(list.tipo_cambio || po.tipo_cambio || 0) || 1);
+    }
+    return value;
+  };
+
+  const priceItemFromLines = (item, sourceLines = lines, list = null, silverMxn = plataFinaMxn) => {
+    const line = sourceLines.find((lineItem) => normalizeText(lineItem.codigo) === normalizeText(item.producto_linea));
+    if (!line) return calcItem(item);
+
+    if (line._priceListLine?.integrated_price) {
+      const factor = (list?.currency || "MXN") === "USD"
+        ? Number(list?.tipo_cambio || po.tipo_cambio || 0) || 1
+        : 1;
+      return calcItem({
+        ...item,
+        labor_mxn: Number(line._priceListLine.final_labor || 0) * factor,
+        precio_gramo_mxn: Number(line._priceListLine.integrated_price || 0) * factor,
+      });
+    }
+
+    const precio = calcPrecioGramo({ mo_base: line.mo_base, plata_fina_mxn: silverMxn });
+    return calcItem({ ...item, labor_mxn: precio.mo_visible, precio_gramo_mxn: precio.integrado });
+  };
 
   const setItem = (idx, key, value) => {
     if (pricingLocked && key !== "piezas") return;
@@ -237,6 +271,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       setLines(baseLines);
       setSelectedLaborListId("");
       setPo((current) => ({ ...current, labor_list_id: "" }));
+      setItems((current) => current.map((item) => priceItemFromLines(item, baseLines, null, plataFinaMxn)));
       setMsg("Lista de labor removida. Usando mano de obra base de líneas.");
       return;
     }
@@ -252,9 +287,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       }));
       setLines(merged);
       setSelectedLaborListId(listId);
+      let nextSilverMxn = plataFinaMxn;
       if (selectedList) {
         const nextSilverDisplay = Number(selectedList.plata_fina_value || 0);
-        const nextSilverMxn = selectedList.currency === "USD"
+        nextSilverMxn = selectedList.currency === "USD"
           ? nextSilverDisplay * Number(selectedList.tipo_cambio || po.tipo_cambio || 0)
           : nextSilverDisplay;
         setPlataFinaMxn(nextSilverMxn);
@@ -269,6 +305,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       } else {
         setPo((current) => ({ ...current, labor_list_id: listId }));
       }
+      setItems((current) => current.map((item) => priceItemFromLines(item, merged, selectedList, nextSilverMxn)));
       const listName = selectedList?.name || listId;
       setMsg(`Lista "${listName}" aplicada. Sus valores de TC, PF y labor quedaron precargados.`);
     } catch (err) {
@@ -276,28 +313,21 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     }
   };
 
+  useEffect(() => {
+    if (!selectedLaborListId || !laborLists.length || !lines.length) return;
+    if (lines.some((line) => line._priceListLine)) return;
+    applyLaborList(selectedLaborListId, lines);
+  }, [selectedLaborListId, laborLists.length, lines.length]);
+
   const precargarPrecios = () => {
     if (!po.client_id) { setMsg("Debes seleccionar un cliente existente."); return; }
     if (!lines.length) { setMsg("No hay lineas configuradas en el menu de precios."); return; }
     if (!plataFinaMxn) { setMsg("Captura primero el precio de plata fina."); return; }
 
-    setItems((current) => current.map((item) => {
-      const line = lines.find((lineItem) => lineItem.codigo === item.producto_linea);
-      if (!line) return item;
-      if (line._priceListLine?.integrated_price) {
-        const list = laborLists.find((entry) => entry.id === selectedLaborListId);
-        const listExchange = Number(list?.tipo_cambio || po.tipo_cambio || 0) || 1;
-        const factor = list?.currency === "USD" ? listExchange : 1;
-        return calcItem({
-          ...item,
-          labor_mxn: Number(line._priceListLine.final_labor || 0) * factor,
-          precio_gramo_mxn: Number(line._priceListLine.integrated_price || 0) * factor,
-        });
-      }
-      const precio = calcPrecioGramo({ mo_base: line.mo_base, plata_fina_mxn: plataFinaMxn });
-      return calcItem({ ...item, labor_mxn: precio.mo_visible, precio_gramo_mxn: precio.integrado });
-    }));
-    setMsg("Precios calculados por linea.");
+    const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
+    const listSilverMxn = getListSilverMxn(selectedList);
+    setItems((current) => current.map((item) => priceItemFromLines(item, lines, selectedList, listSilverMxn)));
+    setMsg(selectedList ? `Precios recalculados con "${selectedList.name}".` : "Precios calculados por linea.");
   };
 
   const totals = {
@@ -321,15 +351,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const addProduct = (product) => {
     const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
-    const factor = selectedList?.currency === "USD" ? Number(selectedList.tipo_cambio || po.tipo_cambio || 0) || 1 : 1;
     const rawItem = productToPreorderItem(product, 1, lines, plataFinaMxn);
-    const nextItem = selectedList?.currency === "USD"
-      ? calcItem({
-          ...rawItem,
-          labor_mxn: Number(rawItem.labor_mxn || 0) * factor,
-          precio_gramo_mxn: Number(rawItem.precio_gramo_mxn || 0) * factor,
-        })
-      : rawItem;
+    const nextItem = priceItemFromLines(rawItem, lines, selectedList, getListSilverMxn(selectedList));
     setItems((current) => {
       const existing = current.find((item) => item.producto_codigo === nextItem.producto_codigo);
       if (existing) {
@@ -622,32 +645,38 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             ) : null}
           </section>
 
-          <section className="quote-block">
-            <h3>Productos cotizados</h3>
+          <section className="quote-block quote-block--pricing">
+            <h3>Lista de precios y costeo</h3>
+            <p className="quote-helper-text">
+              Primero selecciona moneda y lista de precios. Esa lista define tipo de cambio, plata fina y labor por linea para todos los productos de la preorden.
+            </p>
 
-            {/* ── Panel de cálculo de precios ── */}
             <div className="po-pricing-panel">
-              {/* Fila 1: referencias de precio */}
               <div className="po-pricing-row">
-                <label className="po-pricing-field">
+                <label className="po-pricing-field po-pricing-field--featured">
                   Lista de precios {po.moneda}
                   <select
                     value={selectedLaborListId || ""}
                     onChange={(e) => applyLaborList(e.target.value, lines)}
                     disabled={pricingLocked}
                   >
-                    <option value="">— Sin lista —</option>
+                    <option value="">Selecciona una lista activa</option>
                     {compatibleLaborLists.map((list) => (
                       <option key={list.id} value={list.id}>{list.name}</option>
                     ))}
                   </select>
                   {selectedLaborListId
-                    ? <span className="po-pricing-hint po-pricing-hint--ok">✓ Lista aplicada</span>
-                    : <span className="po-pricing-hint">Primero selecciona lista compatible con {po.moneda}</span>}
+                    ? <span className="po-pricing-hint po-pricing-hint--ok">Lista aplicada: los productos usan sus valores por linea.</span>
+                    : <span className="po-pricing-hint">Solo aparecen listas activas en {po.moneda}.</span>}
                 </label>
 
                 <label className="po-pricing-field">
-                  Método plata fina
+                  Tipo de cambio USD
+                  <input type="number" step="0.01" placeholder="Ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio")} readOnly={pricingLocked} />
+                </label>
+
+                <label className="po-pricing-field">
+                  Metodo plata fina
                   <select value={po.pf_mode || "manual"} onChange={set("pf_mode")} disabled={pricingLocked}>
                     <option value="manual">Captura manual</option>
                     <option value="kitco">Calcular desde Kitco</option>
@@ -684,19 +713,18 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     onChange={(event) => setSilverFine(event.target.value)}
                     readOnly={pricingLocked}
                   />
-                  <span className="po-pricing-hint">Se suma a la labor por línea</span>
+                  <span className="po-pricing-hint">Se suma a la labor por linea.</span>
                 </label>
 
                 {!pricingLocked ? (
                   <div className="po-pricing-field po-pricing-field--action">
                     <button className="primary-button compact-action" type="button" onClick={precargarPrecios}>
-                      Calcular precios
+                      Recalcular precios
                     </button>
                   </div>
                 ) : null}
               </div>
 
-              {/* Fila 2: opciones */}
               <div className="po-pricing-options">
                 <label className="po-check-label">
                   <input type="checkbox" checked={Boolean(po.mostrar_desglose)} onChange={setChecked("mostrar_desglose")} />
@@ -708,7 +736,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 </label>
               </div>
             </div>
+          </section>
 
+          <section className="quote-block">
+            <h3>Productos cotizados</h3>
             {msg ? <p className="status info">{msg}</p> : null}
             {!pricingLocked && products.length ? (
               <div className="quote-product-picker">

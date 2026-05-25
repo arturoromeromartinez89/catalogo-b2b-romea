@@ -5615,6 +5615,17 @@ body > div[data-portal] {
   padding: 14px 16px;
 }
 
+.quote-block--pricing {
+  border-color: rgba(31, 51, 95, 0.22);
+}
+
+.quote-helper-text {
+  color: var(--romea-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: -4px 0 12px;
+}
+
 /* Row that holds all field columns */
 .po-pricing-row {
   align-items: end;
@@ -5634,6 +5645,11 @@ body > div[data-portal] {
   letter-spacing: 0.04em;
   min-width: 140px;
   text-transform: uppercase;
+}
+
+.po-pricing-field--featured {
+  flex: 1 1 260px;
+  min-width: 240px;
 }
 
 .po-pricing-field input,
