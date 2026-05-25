@@ -33,6 +33,7 @@ const blankList = {
   exchange_rate_date: today(),
   kitco_date: today(),
   comments: "",
+  prepared_by: "",
 };
 
 const money = (value, currency = "USD") =>
@@ -63,6 +64,18 @@ const loadImageAsDataUrl = (url) =>
     window.setTimeout(() => resolve(null), 3500);
   });
 
+const addContainedImage = (doc, imageData, x, y, maxW, maxH) => {
+  try {
+    const props = doc.getImageProperties(imageData);
+    const ratio = Math.min(maxW / props.width, maxH / props.height);
+    const width = props.width * ratio;
+    const height = props.height * ratio;
+    doc.addImage(imageData, "PNG", x + (maxW - width) / 2, y + (maxH - height) / 2, width, height, undefined, "FAST");
+  } catch {
+    // If the image cannot be read, leave the header clean.
+  }
+};
+
 const normalizeList = (list = {}) => ({
   ...blankList,
   ...list,
@@ -70,6 +83,7 @@ const normalizeList = (list = {}) => ({
   status: list.status || "borrador",
   pf_mode: list.pf_mode || "manual",
   oz_grams: Number(list.oz_grams || TROY_OUNCE_GRAMS),
+  prepared_by: list.prepared_by || list.source_snapshot?.prepared_by || "",
 });
 
 const makeDraftLines = (productLines = [], sourceLines = [], list = blankList) => {
@@ -125,7 +139,7 @@ function PriceListPdfButton({ list, lines, company, profile }) {
     doc.setTextColor(...gray);
     doc.setFontSize(8);
     doc.text(`Fecha de elaboracion: ${createdAt}`, 12, 30);
-    if (logo) doc.addImage(logo, "PNG", 158, 8, 42, 22, undefined, "FAST");
+    if (logo) addContainedImage(doc, logo, 156, 7, 44, 24);
     doc.setDrawColor(...lineGray);
     doc.line(12, 36, 204, 36);
 
@@ -134,25 +148,54 @@ function PriceListPdfButton({ list, lines, company, profile }) {
     doc.setFontSize(12);
     doc.text("Historia del calculo", 12, 46);
 
-    doc.setFillColor(247, 248, 251);
-    doc.roundedRect(12, 52, 86, 38, 2, 2, "F");
-    doc.roundedRect(108, 52, 96, 38, 2, 2, "F");
-    doc.setFontSize(8);
-    doc.setTextColor(...gray);
-    doc.text("TC Y MONEDA", 16, 59);
-    doc.text("DESGLOSE DEL PRECIO DE LA PLATA", 112, 59);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...blue);
-    doc.setFontSize(9);
-    doc.text(`Moneda: ${list.currency || "-"}`, 16, 67);
-    doc.text(`Tipo de cambio: ${list.tipo_cambio || "-"}`, 16, 74);
-    doc.text(`Fecha consulta USD: ${list.exchange_rate_date || "-"}`, 16, 81);
-    doc.text(`KITCO USD/OZ: ${list.kitco_usd_oz || "-"}`, 112, 67);
-    doc.text(`Premio: ${list.premio_pct || 0}%`, 152, 67);
-    doc.text(`Fecha consulta: ${list.kitco_date || "-"}`, 112, 74);
-    doc.setTextColor(...orange);
-    doc.setFontSize(11);
-    doc.text(`Valor PF resultante: ${money(list.plata_fina_value, list.currency)}/g`, 112, 84);
+    const drawInfoTable = (x, y, w, title, rows, accent = blue) => {
+      const headerH = 8;
+      const rowH = 8;
+      doc.setDrawColor(...lineGray);
+      doc.setFillColor(247, 248, 251);
+      doc.roundedRect(x, y, w, headerH + rows.length * rowH, 2, 2, "FD");
+      doc.setFillColor(...accent);
+      doc.rect(x, y, w, headerH, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.5);
+      doc.text(title, x + w / 2, y + 5.3, { align: "center" });
+      rows.forEach((row, index) => {
+        const rowY = y + headerH + index * rowH;
+        doc.setDrawColor(...lineGray);
+        doc.line(x, rowY, x + w, rowY);
+        if (row.length === 2) {
+          doc.line(x + w / 2, rowY, x + w / 2, rowY + rowH);
+          doc.setTextColor(...gray);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(6.5);
+          doc.text(row[0], x + w * 0.25, rowY + 3.2, { align: "center" });
+          doc.setTextColor(...blue);
+          doc.setFontSize(8);
+          doc.text(row[1], x + w * 0.75, rowY + 5.7, { align: "center" });
+        } else {
+          const colW = w / row.length;
+          row.forEach((cell, cellIndex) => {
+            if (cellIndex) doc.line(x + colW * cellIndex, rowY, x + colW * cellIndex, rowY + rowH);
+            doc.setTextColor(cellIndex % 2 === 0 ? gray : blue);
+            doc.setFont("helvetica", cellIndex % 2 === 0 ? "bold" : "normal");
+            doc.setFontSize(6.5);
+            doc.text(cell, x + colW * cellIndex + colW / 2, rowY + 5, { align: "center" });
+          });
+        }
+      });
+    };
+
+    drawInfoTable(12, 52, 86, "TC Y MONEDA", [
+      ["Moneda", list.currency || "-"],
+      ["Tipo de cambio", String(list.tipo_cambio || "-")],
+      ["Fecha consulta USD", list.exchange_rate_date || "-"],
+    ]);
+
+    drawInfoTable(108, 52, 96, "DESGLOSE DEL PRECIO DE LA PLATA", [
+      ["KITCO USD/OZ", String(list.kitco_usd_oz || "-"), "Premio", `${list.premio_pct || 0}%`, "Fecha", list.kitco_date || "-"],
+      ["Valor PF resultante", `${money(list.plata_fina_value, list.currency)}/g`],
+    ], orange);
 
     doc.setTextColor(...gray);
     doc.setFont("helvetica", "normal");
@@ -183,33 +226,25 @@ function PriceListPdfButton({ list, lines, company, profile }) {
       doc.line(12, startY + 5, 204, startY + 5);
     };
 
-    const drawFooter = (pageNumber) => {
+    const drawFooter = () => {
       doc.setTextColor(130, 130, 130);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7);
-      doc.text(`Elaborado por: ${profile?.email || "usuario no identificado"}`, 12, 270);
+      doc.text(`Elaborado por: ${list.prepared_by || profile?.email || "usuario no identificado"}`, 12, 270);
       doc.text("Documento interno. No compartir con cliente final.", 12, 276);
-      doc.text(String(pageNumber), 202, 276, { align: "right" });
+      doc.text("1 / 1", 202, 276, { align: "right" });
     };
 
     let y = 118;
-    let page = 1;
     drawHeader(y);
-    y += 12;
+    y += 10;
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
+    const rowHeight = Math.max(3.8, Math.min(6, (264 - y) / Math.max(lines.length, 1)));
+    doc.setFontSize(rowHeight < 4.4 ? 5.8 : 6.8);
     lines.forEach((line, idx) => {
-      if (y > 258) {
-        drawFooter(page);
-        doc.addPage();
-        page += 1;
-        y = 24;
-        drawHeader(y);
-        y += 12;
-      }
       if (idx % 2 === 1) {
         doc.setFillColor(250, 251, 253);
-        doc.rect(12, y - 5, 192, 7, "F");
+        doc.rect(12, y - rowHeight + 1, 192, rowHeight, "F");
       }
       doc.setTextColor(...blue);
       doc.text(String(line.line_codigo || ""), 14, y);
@@ -221,9 +256,9 @@ function PriceListPdfButton({ list, lines, company, profile }) {
       doc.text(`${Number(line.margin_pct || 0).toFixed(2)}%`, 140, y);
       doc.text(money(line.integrated_price, list.currency), 162, y);
       doc.text(money(line.final_labor, list.currency), 186, y);
-      y += 7;
+      y += rowHeight;
     });
-    drawFooter(page);
+    drawFooter();
     doc.save(`lista-precios-${(list.name || "interna").replace(/[\\/:*?"<>|]/g, "-")}.pdf`);
   };
   return <button className="secondary-button compact-action" type="button" onClick={handlePdf}>PDF interno</button>;
@@ -309,6 +344,7 @@ function PriceListEditor({ list, productLines, tenantId, profile, company, onClo
         source_snapshot: {
           formula: draft.pf_mode === "kitco" ? "PF = (Kitco USD oz / 31.1) * (1 + premio/100)" : "PF manual",
           generated_at: new Date().toISOString(),
+          prepared_by: draft.prepared_by || profile?.email || "",
         },
       }, tenantId);
       await upsertLaborListLines(saved.id, rows);
@@ -359,6 +395,7 @@ function PriceListEditor({ list, productLines, tenantId, profile, company, onClo
           </>
         ) : null}
         <label>PF {draft.currency}/g<input type="number" step="0.01" value={fineSilver || ""} onChange={(e) => setDraftValue("plata_fina_value", e.target.value)} readOnly={frozen || draft.pf_mode === "kitco"} /></label>
+        <label>Elaborado por<input value={draft.prepared_by || ""} onChange={(e) => setDraftValue("prepared_by", e.target.value)} readOnly={frozen} placeholder="Nombre de quien elaboro la lista" /></label>
         <label className="wide-field">Comentarios<input value={draft.comments || ""} onChange={(e) => setDraftValue("comments", e.target.value)} readOnly={frozen} placeholder="Ej. Cotizacion Rosett 01 de junio 2026" /></label>
       </div>
 
