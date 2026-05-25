@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import { useEffect, useMemo, useState } from "react";
 import ActionNotice from "./ActionNotice";
+import { fetchCompanySettings } from "../services/companySettings";
 import {
   buildPriceListName,
   calculateFineSilver,
@@ -39,6 +40,28 @@ const money = (value, currency = "USD") =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+
+const loadImageAsDataUrl = (url) =>
+  new Promise((resolve) => {
+    if (!url) return resolve(null);
+    if (String(url).startsWith("data:image")) return resolve(url);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || 400;
+        canvas.height = img.naturalHeight || 180;
+        canvas.getContext("2d").drawImage(img, 0, 0);
+        resolve(canvas.toDataURL("image/png"));
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+    window.setTimeout(() => resolve(null), 3500);
+  });
 
 const normalizeList = (list = {}) => ({
   ...blankList,
@@ -82,50 +105,115 @@ const makeDraftLines = (productLines = [], sourceLines = [], list = blankList) =
   });
 };
 
-function PriceListPdfButton({ list, lines }) {
-  const handlePdf = () => {
+function PriceListPdfButton({ list, lines, company, profile }) {
+  const handlePdf = async () => {
     const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
     const blue = [31, 51, 95];
-    doc.setFillColor(...blue);
-    doc.rect(0, 0, 216, 28, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("LISTA DE PRECIOS INTERNA", 12, 15);
-    doc.setFontSize(9);
-    doc.text(list.name || "Lista de precios", 12, 22);
-    doc.setTextColor(31, 51, 95);
-    doc.setFontSize(11);
-    doc.text("Historia de calculo", 12, 40);
-    doc.setTextColor(55, 65, 81);
-    doc.setFontSize(8);
-    [
-      `Moneda: ${list.currency}`,
-      `Estado: ${list.status}`,
-      `Tipo de cambio: ${list.tipo_cambio || "-"}`,
-      `Fecha TC: ${list.exchange_rate_date || "-"}`,
-      `Metodo PF: ${list.pf_mode === "kitco" ? "Kitco" : "Manual"}`,
-      `Kitco USD/oz: ${list.kitco_usd_oz || "-"}`,
-      `Oz a gramo: ${list.oz_grams || TROY_OUNCE_GRAMS}`,
-      `Premio: ${list.premio_pct || 0}%`,
-      `PF ${list.currency}/g: ${money(list.plata_fina_value, list.currency)}`,
-      `Fecha Kitco: ${list.kitco_date || "-"}`,
-      `Comentarios: ${list.comments || "-"}`,
-    ].forEach((text, idx) => doc.text(text, 12 + (idx % 2) * 96, 48 + Math.floor(idx / 2) * 5));
+    const orange = [217, 119, 6];
+    const gray = [105, 113, 130];
+    const lineGray = [226, 231, 240];
+    const createdAt = list.created_at ? new Date(list.created_at).toLocaleDateString("es-MX") : new Date().toLocaleDateString("es-MX");
+    const storedLogo = typeof localStorage !== "undefined" ? localStorage.getItem("romea-logo-data") : "";
+    const logo = await loadImageAsDataUrl(company?.logo_url || company?.logoDataUrl || company?.logo_data_url || storedLogo || "");
 
-    let y = 86;
-    doc.setFillColor(240, 244, 252);
-    doc.rect(12, y - 5, 192, 8, "F");
+    doc.setTextColor(...blue);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(6.5);
-    ["Linea", "Labor MXN", "Labor USD", "PF", "Costo", "Utilidad", "Integrado", "Labor final"].forEach((h, i) => {
-      doc.text(h, [14, 38, 64, 90, 116, 140, 162, 186][i], y);
-    });
-    y += 6;
+    doc.setFontSize(17);
+    doc.text("DESGLOSE DE LISTA DE PRECIOS", 12, 16);
+    doc.setFontSize(10);
+    doc.text(`Lista de precios: ${list.name || "Lista de precios"}`, 12, 24);
+    doc.setTextColor(...gray);
+    doc.setFontSize(8);
+    doc.text(`Fecha de elaboracion: ${createdAt}`, 118, 24);
+    if (logo) doc.addImage(logo, "PNG", 162, 8, 38, 18, undefined, "FAST");
+    doc.setDrawColor(...lineGray);
+    doc.line(12, 30, 204, 30);
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...blue);
+    doc.setFontSize(12);
+    doc.text("Historia del calculo", 12, 40);
+
+    doc.setFillColor(247, 248, 251);
+    doc.roundedRect(12, 46, 86, 38, 2, 2, "F");
+    doc.roundedRect(108, 46, 96, 38, 2, 2, "F");
+    doc.setFontSize(8);
+    doc.setTextColor(...gray);
+    doc.text("TC Y MONEDA", 16, 53);
+    doc.text("DESGLOSE DEL PRECIO DE LA PLATA", 112, 53);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...blue);
+    doc.setFontSize(9);
+    doc.text(`Moneda: ${list.currency || "-"}`, 16, 61);
+    doc.text(`Tipo de cambio: ${list.tipo_cambio || "-"}`, 16, 68);
+    doc.text(`Fecha consulta USD: ${list.exchange_rate_date || "-"}`, 16, 75);
+    doc.text(`KITCO USD/OZ: ${list.kitco_usd_oz || "-"}`, 112, 61);
+    doc.text(`Premio: ${list.premio_pct || 0}%`, 152, 61);
+    doc.text(`Fecha consulta: ${list.kitco_date || "-"}`, 112, 68);
+    doc.setTextColor(...orange);
+    doc.setFontSize(11);
+    doc.text(`Valor PF resultante: ${money(list.plata_fina_value, list.currency)}/g`, 112, 78);
+
+    doc.setTextColor(...gray);
     doc.setFont("helvetica", "normal");
-    lines.slice(0, 28).forEach((line) => {
-      if (y > 260) return;
+    doc.setFontSize(8);
+    const comments = doc.splitTextToSize(`Comentarios: ${list.comments || "-"}`, 180);
+    doc.text(comments.slice(0, 2), 12, 94);
+
+    const drawHeader = (startY) => {
+      doc.setFillColor(240, 244, 252);
+      doc.rect(12, startY - 6, 192, 10, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.6);
+      const headers = [
+        { x: 14, text: "Linea", color: blue },
+        { x: 38, text: "Labor MXN\n(costo)", color: orange },
+        { x: 65, text: "Labor USD\n(costo)", color: orange },
+        { x: 92, text: "PF\n(costo)", color: orange },
+        { x: 116, text: "Costo total\n(costo)", color: orange },
+        { x: 143, text: "Margen", color: gray },
+        { x: 162, text: "Precio integrado", color: blue },
+        { x: 188, text: "Precio labor", color: blue },
+      ];
+      headers.forEach((header) => {
+        doc.setTextColor(...header.color);
+        doc.text(header.text, header.x, startY - 1);
+      });
+      doc.setDrawColor(...lineGray);
+      doc.line(12, startY + 5, 204, startY + 5);
+    };
+
+    const drawFooter = (pageNumber) => {
+      doc.setTextColor(130, 130, 130);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.text(`Elaborado por: ${profile?.email || "usuario no identificado"}`, 12, 270);
+      doc.text("Documento interno. No compartir con cliente final.", 12, 276);
+      doc.text(String(pageNumber), 202, 276, { align: "right" });
+    };
+
+    let y = 112;
+    let page = 1;
+    drawHeader(y);
+    y += 12;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    lines.forEach((line, idx) => {
+      if (y > 258) {
+        drawFooter(page);
+        doc.addPage();
+        page += 1;
+        y = 24;
+        drawHeader(y);
+        y += 12;
+      }
+      if (idx % 2 === 1) {
+        doc.setFillColor(250, 251, 253);
+        doc.rect(12, y - 5, 192, 7, "F");
+      }
+      doc.setTextColor(...blue);
       doc.text(String(line.line_codigo || ""), 14, y);
+      doc.setTextColor(35, 45, 65);
       doc.text(money(line.labor_mxn, "MXN"), 38, y);
       doc.text(money(line.labor_usd, "USD"), 64, y);
       doc.text(money(line.silver_fine, list.currency), 90, y);
@@ -133,17 +221,15 @@ function PriceListPdfButton({ list, lines }) {
       doc.text(`${Number(line.margin_pct || 0).toFixed(2)}%`, 140, y);
       doc.text(money(line.integrated_price, list.currency), 162, y);
       doc.text(money(line.final_labor, list.currency), 186, y);
-      y += 6;
+      y += 7;
     });
-    doc.setTextColor(130, 130, 130);
-    doc.setFontSize(7);
-    doc.text("Documento interno. No compartir con cliente final.", 12, 270);
+    drawFooter(page);
     doc.save(`lista-precios-${(list.name || "interna").replace(/[\\/:*?"<>|]/g, "-")}.pdf`);
   };
   return <button className="secondary-button compact-action" type="button" onClick={handlePdf}>PDF interno</button>;
 }
 
-function PriceListEditor({ list, productLines, tenantId, onClose, onSaved, setNotice }) {
+function PriceListEditor({ list, productLines, tenantId, profile, company, onClose, onSaved, setNotice }) {
   const [draft, setDraft] = useState(() => normalizeList(list));
   const [rows, setRows] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -250,7 +336,7 @@ function PriceListEditor({ list, productLines, tenantId, onClose, onSaved, setNo
           {frozen ? <p className="muted">Lista activa congelada. Para modificarla, duplica una nueva version.</p> : <p className="muted">Configura la moneda, plata fina, tipo de cambio y utilidad por linea.</p>}
         </div>
         <div className="price-editor-actions">
-          <PriceListPdfButton list={{ ...draft, plata_fina_value: fineSilver }} lines={rows} />
+          <PriceListPdfButton list={{ ...draft, plata_fina_value: fineSilver }} lines={rows} company={company} profile={profile} />
           {frozen ? <button className="primary-button compact-action" type="button" onClick={duplicate}>Duplicar version</button> : null}
           {!frozen ? <button className="secondary-button compact-action" type="button" onClick={() => handleSave("borrador")} disabled={saving}>Guardar borrador</button> : null}
           {!frozen ? <button className="primary-button compact-action" type="button" onClick={() => handleSave("activa")} disabled={saving}>Activar lista</button> : null}
@@ -317,22 +403,24 @@ function PriceListEditor({ list, productLines, tenantId, onClose, onSaved, setNo
   );
 }
 
-export default function PricingPanel({ products = [], tenantId = "" }) {
+export default function PricingPanel({ products = [], tenantId = "", profile }) {
   const [lists, setLists] = useState([]);
   const [productLines, setProductLines] = useState([]);
   const [openList, setOpenList] = useState(null);
   const [notice, setNotice] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [company, setCompany] = useState({});
 
   const load = async () => {
-    const [nextLists, nextLines] = await Promise.all([fetchLaborLists(tenantId), fetchLines(tenantId)]);
+    const [nextLists, nextLines, nextCompany] = await Promise.all([fetchLaborLists(tenantId), fetchLines(tenantId), fetchCompanySettings(tenantId)]);
     const withCounts = await Promise.all(nextLists.map(async (list) => {
       const rows = await fetchLaborListLines(list.id).catch(() => []);
       return { ...list, _configured: rows.length };
     }));
     setLists(withCounts);
     setProductLines(nextLines);
+    setCompany(nextCompany || {});
   };
 
   useEffect(() => { load().catch((error) => setNotice({ type: "error", title: "Error", message: error.message })); }, [tenantId]);
@@ -368,6 +456,8 @@ export default function PricingPanel({ products = [], tenantId = "" }) {
           list={openList}
           productLines={productLines}
           tenantId={tenantId}
+          profile={profile}
+          company={company}
           onClose={() => setOpenList(null)}
           onSaved={(saved, keepOpen = false) => {
             load();
