@@ -122,43 +122,6 @@ const makeDraftLines = (productLines = [], sourceLines = [], list = blankList) =
 };
 
 function PriceListPdfButton({ list, lines, company, profile }) {
-  const saveFallbackPdf = () => {
-    const fallback = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
-    fallback.setFont("helvetica", "bold");
-    fallback.setFontSize(15);
-    fallback.text("DESGLOSE DE LISTA DE PRECIOS", 12, 16);
-    fallback.setFontSize(10);
-    fallback.text(`Lista de precios: ${pdfText(list.name || "Lista de precios")}`, 12, 24);
-    fallback.text(`Fecha de elaboracion: ${new Date().toLocaleDateString("es-MX")}`, 12, 30);
-    fallback.setFont("helvetica", "normal");
-    fallback.setFontSize(8);
-    fallback.text(`Moneda: ${pdfText(list.currency)}`, 12, 42);
-    fallback.text(`Tipo de cambio: ${pdfText(list.tipo_cambio)}`, 12, 48);
-    fallback.text(`KITCO USD/OZ: ${pdfText(list.kitco_usd_oz)}`, 12, 54);
-    fallback.text(`Premio: ${pdfText(list.premio_pct)}%`, 12, 60);
-    fallback.text(`PF: ${money(list.plata_fina_value, list.currency)}/g`, 12, 66);
-    let y = 82;
-    fallback.setFont("helvetica", "bold");
-    fallback.text("Linea", 12, y);
-    fallback.text("Labor MXN", 42, y);
-    fallback.text("PF", 78, y);
-    fallback.text("Margen", 112, y);
-    fallback.text("Precio integrado", 145, y);
-    fallback.setFont("helvetica", "normal");
-    y += 6;
-    lines.slice(0, 38).forEach((line) => {
-      fallback.text(pdfText(line.line_codigo), 12, y);
-      fallback.text(money(line.labor_mxn, "MXN"), 42, y);
-      fallback.text(money(line.silver_fine, list.currency), 78, y);
-      fallback.text(`${Number(line.margin_pct || 0).toFixed(2)}%`, 112, y);
-      fallback.text(money(line.integrated_price, list.currency), 145, y);
-      y += 5;
-    });
-    fallback.setFontSize(7);
-    fallback.text(`Elaborado por: ${pdfText(list.prepared_by || profile?.email || "usuario no identificado")}`, 12, 270);
-    fallback.save(`lista-precios-${(list.name || "interna").replace(/[\\/:*?"<>|]/g, "-")}.pdf`);
-  };
-
   const handlePdf = () => {
     try {
       const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
@@ -171,141 +134,127 @@ function PriceListPdfButton({ list, lines, company, profile }) {
       const logo = [company?.logoDataUrl, company?.logo_data_url, storedLogo]
         .find((value) => String(value || "").startsWith("data:image"));
 
-    doc.setTextColor(...blue);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(17);
-    doc.text("DESGLOSE DE LISTA DE PRECIOS", 12, 16);
-    doc.setFontSize(10);
-    doc.text(`Lista de precios: ${list.name || "Lista de precios"}`, 12, 24);
-    doc.setTextColor(...gray);
-    doc.setFontSize(8);
-    doc.text(`Fecha de elaboracion: ${createdAt}`, 12, 30);
-    if (logo) addContainedImage(doc, logo, 156, 7, 44, 24);
-    doc.setDrawColor(...lineGray);
-    doc.line(12, 36, 204, 36);
+      const centerText = (text, x, y, width) => {
+        const value = pdfText(text);
+        doc.text(value, x + Math.max(0, (width - doc.getTextWidth(value)) / 2), y);
+      };
+      const valueOrDash = (value) => (value === 0 || value ? pdfText(value) : "-");
 
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...blue);
-    doc.setFontSize(12);
-    doc.text("Historia del calculo", 12, 46);
-
-    const drawInfoTable = (x, y, w, title, rows, accent = blue) => {
-      const headerH = 8;
-      const rowH = 8;
-      doc.setDrawColor(...lineGray);
-      doc.setFillColor(247, 248, 251);
-      doc.rect(x, y, w, headerH + rows.length * rowH, "F");
-      doc.setDrawColor(...lineGray);
-      doc.rect(x, y, w, headerH + rows.length * rowH);
-      doc.setFillColor(...accent);
-      doc.rect(x, y, w, headerH, "F");
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(...blue);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(7.5);
-      doc.text(title, x + w / 2, y + 5.3, { align: "center" });
-      rows.forEach((row, index) => {
-        const rowY = y + headerH + index * rowH;
+      doc.setFontSize(17);
+      doc.text("DESGLOSE DE LISTA DE PRECIOS", 12, 16);
+      doc.setFontSize(10);
+      doc.text(`Lista de precios: ${pdfText(list.name || "Lista de precios")}`, 12, 24);
+      doc.setTextColor(...gray);
+      doc.setFontSize(8);
+      doc.text(`Fecha de elaboracion: ${createdAt}`, 12, 30);
+      if (logo) addContainedImage(doc, logo, 156, 7, 44, 24);
+      doc.setDrawColor(...lineGray);
+      doc.line(12, 36, 204, 36);
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...blue);
+      doc.setFontSize(12);
+      doc.text("Historia del calculo", 12, 46);
+
+      const drawBox = (x, y, w, title, rows, accent) => {
         doc.setDrawColor(...lineGray);
-        doc.line(x, rowY, x + w, rowY);
-        if (row.length === 2) {
-          doc.line(x + w / 2, rowY, x + w / 2, rowY + rowH);
+        doc.setFillColor(247, 248, 251);
+        doc.rect(x, y, w, 34, "F");
+        doc.rect(x, y, w, 34, "S");
+        doc.setFillColor(...accent);
+        doc.rect(x, y, w, 8, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7);
+        centerText(title, x, y + 5.4, w);
+        rows.forEach((row, index) => {
+          const rowY = y + 8 + index * 8;
+          doc.setDrawColor(...lineGray);
+          doc.line(x, rowY, x + w, rowY);
+          doc.line(x + w / 2, rowY, x + w / 2, rowY + 8);
           doc.setTextColor(...gray);
+          doc.setFontSize(6.2);
           doc.setFont("helvetica", "bold");
-          doc.setFontSize(6.5);
-          doc.text(pdfText(row[0]), x + w * 0.25, rowY + 3.2, { align: "center" });
+          centerText(row[0], x, rowY + 3, w / 2);
           doc.setTextColor(...blue);
-          doc.setFontSize(8);
-          doc.text(pdfText(row[1]), x + w * 0.75, rowY + 5.7, { align: "center" });
-        } else {
-          const colW = w / row.length;
-          row.forEach((cell, cellIndex) => {
-            if (cellIndex) doc.line(x + colW * cellIndex, rowY, x + colW * cellIndex, rowY + rowH);
-            doc.setTextColor(cellIndex % 2 === 0 ? gray : blue);
-            doc.setFont("helvetica", cellIndex % 2 === 0 ? "bold" : "normal");
-            doc.setFontSize(6.5);
-            doc.text(pdfText(cell), x + colW * cellIndex + colW / 2, rowY + 5, { align: "center" });
-          });
-        }
-      });
-    };
+          doc.setFontSize(7.5);
+          centerText(row[1], x + w / 2, rowY + 5.7, w / 2);
+        });
+      };
 
-    drawInfoTable(12, 52, 86, "TC Y MONEDA", [
-      ["Moneda", list.currency || "-"],
-      ["Tipo de cambio", String(list.tipo_cambio || "-")],
-      ["Fecha consulta USD", list.exchange_rate_date || "-"],
-    ]);
+      drawBox(12, 52, 86, "TC Y MONEDA", [
+        ["Moneda", valueOrDash(list.currency)],
+        ["Tipo de cambio", valueOrDash(list.tipo_cambio)],
+        ["Fecha consulta USD", valueOrDash(list.exchange_rate_date)],
+      ], blue);
 
-    drawInfoTable(108, 52, 96, "DESGLOSE DEL PRECIO DE LA PLATA", [
-      ["KITCO USD/OZ", String(list.kitco_usd_oz || "-"), "Premio", `${list.premio_pct || 0}%`, "Fecha", list.kitco_date || "-"],
-      ["Valor PF resultante", `${money(list.plata_fina_value, list.currency)}/g`],
-    ], orange);
+      drawBox(108, 52, 96, "DESGLOSE DEL PRECIO DE LA PLATA", [
+        ["KITCO USD/OZ", valueOrDash(list.kitco_usd_oz)],
+        ["Premio / Fecha", `${valueOrDash(list.premio_pct)}% / ${valueOrDash(list.kitco_date)}`],
+        ["Valor PF resultante", `${money(list.plata_fina_value, list.currency)}/g`],
+      ], orange);
 
-    doc.setTextColor(...gray);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    const comments = doc.splitTextToSize(`Comentarios: ${list.comments || "-"}`, 180);
-    doc.text(comments.slice(0, 2), 12, 100);
+      doc.setTextColor(...gray);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      const comments = doc.splitTextToSize(`Comentarios: ${pdfText(list.comments || "-")}`, 180);
+      doc.text(comments.slice(0, 2), 12, 96);
 
-    const drawHeader = (startY) => {
+      const headerY = 112;
       doc.setFillColor(240, 244, 252);
-      doc.rect(12, startY - 6, 192, 10, "F");
+      doc.rect(12, headerY - 6, 192, 10, "F");
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(7.6);
-      const headers = [
-        { x: 14, text: "Linea", color: blue },
-        { x: 38, text: "Labor MXN\n(costo)", color: orange },
-        { x: 65, text: "Labor USD\n(costo)", color: orange },
-        { x: 92, text: "PF\n(costo)", color: orange },
-        { x: 116, text: "Costo total\n(costo)", color: orange },
-        { x: 143, text: "Margen", color: gray },
-        { x: 162, text: "Precio integrado", color: blue },
-        { x: 188, text: "Precio labor", color: blue },
-      ];
-      headers.forEach((header) => {
-        doc.setTextColor(...header.color);
-        doc.text(header.text, header.x, startY - 1);
+      doc.setFontSize(6.6);
+      [
+        ["Linea", 14, blue],
+        ["Labor MXN\n(costo)", 37, orange],
+        ["Labor USD\n(costo)", 63, orange],
+        ["PF\n(costo)", 91, orange],
+        ["Costo total\n(costo)", 115, orange],
+        ["Margen", 142, gray],
+        ["Precio integrado", 160, blue],
+        ["Precio labor", 187, blue],
+      ].forEach(([label, x, color]) => {
+        doc.setTextColor(...color);
+        doc.text(label, x, headerY - 1);
       });
       doc.setDrawColor(...lineGray);
-      doc.line(12, startY + 5, 204, startY + 5);
-    };
+      doc.line(12, headerY + 5, 204, headerY + 5);
 
-    const drawFooter = () => {
+      let y = headerY + 11;
+      const rowHeight = Math.max(3.6, Math.min(5.3, (264 - y) / Math.max(lines.length, 1)));
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(rowHeight < 4.1 ? 5.2 : 6.3);
+      lines.forEach((line, idx) => {
+        if (idx % 2 === 1) {
+          doc.setFillColor(250, 251, 253);
+          doc.rect(12, y - rowHeight + 1, 192, rowHeight, "F");
+        }
+        doc.setTextColor(...blue);
+        doc.text(pdfText(line.line_codigo), 14, y);
+        doc.setTextColor(35, 45, 65);
+        doc.text(money(line.labor_mxn, "MXN"), 37, y);
+        doc.text(money(line.labor_usd, "USD"), 63, y);
+        doc.text(money(line.silver_fine, list.currency), 91, y);
+        doc.text(money(line.total_cost, list.currency), 115, y);
+        doc.text(`${Number(line.margin_pct || 0).toFixed(2)}%`, 142, y);
+        doc.text(money(line.integrated_price, list.currency), 160, y);
+        doc.text(money(line.final_labor, list.currency), 187, y);
+        y += rowHeight;
+      });
+
       doc.setTextColor(130, 130, 130);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7);
-      doc.text(`Elaborado por: ${list.prepared_by || profile?.email || "usuario no identificado"}`, 12, 270);
+      doc.text(`Elaborado por: ${pdfText(list.prepared_by || profile?.email || "usuario no identificado")}`, 12, 270);
       doc.text("Documento interno. No compartir con cliente final.", 12, 276);
-      doc.text("1 / 1", 202, 276, { align: "right" });
-    };
-
-    let y = 118;
-    drawHeader(y);
-    y += 10;
-    doc.setFont("helvetica", "bold");
-    const rowHeight = Math.max(3.8, Math.min(6, (264 - y) / Math.max(lines.length, 1)));
-    doc.setFontSize(rowHeight < 4.4 ? 5.8 : 6.8);
-    lines.forEach((line, idx) => {
-      if (idx % 2 === 1) {
-        doc.setFillColor(250, 251, 253);
-        doc.rect(12, y - rowHeight + 1, 192, rowHeight, "F");
-      }
-      doc.setTextColor(...blue);
-      doc.text(pdfText(line.line_codigo), 14, y);
-      doc.setTextColor(35, 45, 65);
-      doc.text(money(line.labor_mxn, "MXN"), 38, y);
-      doc.text(money(line.labor_usd, "USD"), 64, y);
-      doc.text(money(line.silver_fine, list.currency), 90, y);
-      doc.text(money(line.total_cost, list.currency), 116, y);
-      doc.text(`${Number(line.margin_pct || 0).toFixed(2)}%`, 140, y);
-      doc.text(money(line.integrated_price, list.currency), 162, y);
-      doc.text(money(line.final_labor, list.currency), 186, y);
-      y += rowHeight;
-    });
-    drawFooter();
+      doc.text("1 / 1", 202, 276);
       doc.save(`lista-precios-${(list.name || "interna").replace(/[\\/:*?"<>|]/g, "-")}.pdf`);
     } catch (error) {
       console.error("Error generating price list PDF", error);
-      saveFallbackPdf();
+      window.alert(`No se pudo generar el PDF interno: ${error.message || "error desconocido"}`);
     }
   };
   return <button className="secondary-button compact-action" type="button" onClick={handlePdf}>PDF interno</button>;
