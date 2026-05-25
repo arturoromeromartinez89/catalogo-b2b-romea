@@ -124,41 +124,41 @@ function PriceListPdfButton({ list, lines, company, profile }) {
     doc.text(`Lista de precios: ${list.name || "Lista de precios"}`, 12, 24);
     doc.setTextColor(...gray);
     doc.setFontSize(8);
-    doc.text(`Fecha de elaboracion: ${createdAt}`, 118, 24);
-    if (logo) doc.addImage(logo, "PNG", 162, 8, 38, 18, undefined, "FAST");
+    doc.text(`Fecha de elaboracion: ${createdAt}`, 12, 30);
+    if (logo) doc.addImage(logo, "PNG", 158, 8, 42, 22, undefined, "FAST");
     doc.setDrawColor(...lineGray);
-    doc.line(12, 30, 204, 30);
+    doc.line(12, 36, 204, 36);
 
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...blue);
     doc.setFontSize(12);
-    doc.text("Historia del calculo", 12, 40);
+    doc.text("Historia del calculo", 12, 46);
 
     doc.setFillColor(247, 248, 251);
-    doc.roundedRect(12, 46, 86, 38, 2, 2, "F");
-    doc.roundedRect(108, 46, 96, 38, 2, 2, "F");
+    doc.roundedRect(12, 52, 86, 38, 2, 2, "F");
+    doc.roundedRect(108, 52, 96, 38, 2, 2, "F");
     doc.setFontSize(8);
     doc.setTextColor(...gray);
-    doc.text("TC Y MONEDA", 16, 53);
-    doc.text("DESGLOSE DEL PRECIO DE LA PLATA", 112, 53);
+    doc.text("TC Y MONEDA", 16, 59);
+    doc.text("DESGLOSE DEL PRECIO DE LA PLATA", 112, 59);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...blue);
     doc.setFontSize(9);
-    doc.text(`Moneda: ${list.currency || "-"}`, 16, 61);
-    doc.text(`Tipo de cambio: ${list.tipo_cambio || "-"}`, 16, 68);
-    doc.text(`Fecha consulta USD: ${list.exchange_rate_date || "-"}`, 16, 75);
-    doc.text(`KITCO USD/OZ: ${list.kitco_usd_oz || "-"}`, 112, 61);
-    doc.text(`Premio: ${list.premio_pct || 0}%`, 152, 61);
-    doc.text(`Fecha consulta: ${list.kitco_date || "-"}`, 112, 68);
+    doc.text(`Moneda: ${list.currency || "-"}`, 16, 67);
+    doc.text(`Tipo de cambio: ${list.tipo_cambio || "-"}`, 16, 74);
+    doc.text(`Fecha consulta USD: ${list.exchange_rate_date || "-"}`, 16, 81);
+    doc.text(`KITCO USD/OZ: ${list.kitco_usd_oz || "-"}`, 112, 67);
+    doc.text(`Premio: ${list.premio_pct || 0}%`, 152, 67);
+    doc.text(`Fecha consulta: ${list.kitco_date || "-"}`, 112, 74);
     doc.setTextColor(...orange);
     doc.setFontSize(11);
-    doc.text(`Valor PF resultante: ${money(list.plata_fina_value, list.currency)}/g`, 112, 78);
+    doc.text(`Valor PF resultante: ${money(list.plata_fina_value, list.currency)}/g`, 112, 84);
 
     doc.setTextColor(...gray);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     const comments = doc.splitTextToSize(`Comentarios: ${list.comments || "-"}`, 180);
-    doc.text(comments.slice(0, 2), 12, 94);
+    doc.text(comments.slice(0, 2), 12, 100);
 
     const drawHeader = (startY) => {
       doc.setFillColor(240, 244, 252);
@@ -192,7 +192,7 @@ function PriceListPdfButton({ list, lines, company, profile }) {
       doc.text(String(pageNumber), 202, 276, { align: "right" });
     };
 
-    let y = 112;
+    let y = 118;
     let page = 1;
     drawHeader(y);
     y += 12;
