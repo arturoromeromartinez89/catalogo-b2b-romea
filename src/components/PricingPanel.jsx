@@ -120,15 +120,17 @@ const makeDraftLines = (productLines = [], sourceLines = [], list = blankList) =
 };
 
 function PriceListPdfButton({ list, lines, company, profile }) {
-  const handlePdf = async () => {
-    const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
-    const blue = [31, 51, 95];
-    const orange = [217, 119, 6];
-    const gray = [105, 113, 130];
-    const lineGray = [226, 231, 240];
-    const createdAt = list.created_at ? new Date(list.created_at).toLocaleDateString("es-MX") : new Date().toLocaleDateString("es-MX");
-    const storedLogo = typeof localStorage !== "undefined" ? localStorage.getItem("romea-logo-data") : "";
-    const logo = await loadImageAsDataUrl(company?.logo_url || company?.logoDataUrl || company?.logo_data_url || storedLogo || "");
+  const handlePdf = () => {
+    try {
+      const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
+      const blue = [31, 51, 95];
+      const orange = [217, 119, 6];
+      const gray = [105, 113, 130];
+      const lineGray = [226, 231, 240];
+      const createdAt = list.created_at ? new Date(list.created_at).toLocaleDateString("es-MX") : new Date().toLocaleDateString("es-MX");
+      const storedLogo = typeof localStorage !== "undefined" ? localStorage.getItem("romea-logo-data") : "";
+      const logo = [company?.logoDataUrl, company?.logo_data_url, storedLogo]
+        .find((value) => String(value || "").startsWith("data:image"));
 
     doc.setTextColor(...blue);
     doc.setFont("helvetica", "bold");
@@ -259,7 +261,11 @@ function PriceListPdfButton({ list, lines, company, profile }) {
       y += rowHeight;
     });
     drawFooter();
-    doc.save(`lista-precios-${(list.name || "interna").replace(/[\\/:*?"<>|]/g, "-")}.pdf`);
+      doc.save(`lista-precios-${(list.name || "interna").replace(/[\\/:*?"<>|]/g, "-")}.pdf`);
+    } catch (error) {
+      console.error("Error generating price list PDF", error);
+      window.alert(`No se pudo generar el PDF interno: ${error.message || "error desconocido"}`);
+    }
   };
   return <button className="secondary-button compact-action" type="button" onClick={handlePdf}>PDF interno</button>;
 }
@@ -458,6 +464,13 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
     setLists(withCounts);
     setProductLines(nextLines);
     setCompany(nextCompany || {});
+    if (nextCompany?.logo_url) {
+      loadImageAsDataUrl(nextCompany.logo_url)
+        .then((logoDataUrl) => {
+          if (logoDataUrl) setCompany((current) => ({ ...current, logoDataUrl }));
+        })
+        .catch(() => {});
+    }
   };
 
   useEffect(() => { load().catch((error) => setNotice({ type: "error", title: "Error", message: error.message })); }, [tenantId]);
