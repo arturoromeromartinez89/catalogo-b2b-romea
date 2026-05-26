@@ -646,9 +646,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
       <main className="po-editor-body">
           <section className="po-header-sheet">
-            <div className="po-header-card po-header-card--client">
-              <h3>Fecha y cliente</h3>
-              <div className="po-date-chip">{new Date(initial?.created_at || Date.now()).toLocaleDateString("es-MX")}</div>
+            <div className="po-header-section po-header-section--client">
+              <div className="po-header-line">
+                <strong>Preorden</strong>
+                <span>{new Date(initial?.created_at || Date.now()).toLocaleDateString("es-MX")}</span>
+              </div>
               <Field label="Cliente">
                 <select value={po.client_id} onChange={handleClientSelect} style={inp}>
                   <option value="">Selecciona cliente existente</option>
@@ -664,8 +666,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               <Field label="RFC"><input value={po.cliente_rfc || ""} readOnly style={inp} /></Field>
             </div>
 
-            <div className="po-header-card po-header-card--pricing">
-              <h3>Moneda y lista</h3>
+            <div className="po-header-section po-header-section--pricing">
+              <div className="po-header-line">
+                <strong>Costeo</strong>
+                <span>{selectedLaborListId === CUSTOM_PRICE_LIST_VALUE ? "Personalizada" : po.moneda}</span>
+              </div>
               <Field label="Moneda">
                 <select value={po.moneda} onChange={set("moneda", { pricing: true })} style={inp}>
                   <option value="MXN">MXN</option>
@@ -696,13 +701,17 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               </Field>
             </div>
 
-            <div className="po-header-card po-header-card--notes">
-              <h3>Comentarios</h3>
+            <div className="po-header-section po-header-section--notes">
+              <div className="po-header-line">
+                <strong>Comentarios</strong>
+              </div>
               <textarea value={po.notas || ""} onChange={set("notas")} placeholder="Observaciones generales de la preorden" />
             </div>
 
-            <div className="po-header-card po-header-card--totals">
-              <h3>Totales</h3>
+            <div className="po-header-section po-header-section--totals">
+              <div className="po-header-line">
+                <strong>Totales</strong>
+              </div>
               <div><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
               <div><span>Piezas</span><strong>{totals.piezas}</strong></div>
               <div><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
