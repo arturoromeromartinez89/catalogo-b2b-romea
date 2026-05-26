@@ -593,7 +593,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   return (
     <div className="po-editor">
-      <header className="po-editor-toolbar">
+      <header className="po-editor-toolbar po-editor-toolbar--remission">
         <div className="po-editor-toolbar-left">
           <span className="tool-eyebrow">{isNew ? "Nueva preorden" : po.folio}</span>
           <div className="po-status-pills">
@@ -641,6 +641,75 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           >
             {saving ? "Guardando..." : saved ? "Guardado ✓" : "Guardar"}
           </button>
+        </div>
+        <div className="po-remission-info">
+          <section className="po-remission-group po-remission-group--client">
+            <div className="po-remission-title">Cliente</div>
+            <div className="po-remission-fields po-remission-fields--client">
+              <Field label="Fecha">
+                <input value={new Date(initial?.created_at || Date.now()).toLocaleDateString("es-MX")} readOnly style={inp} />
+              </Field>
+              <Field label="Cliente">
+                <select value={po.client_id} onChange={handleClientSelect} style={inp}>
+                  <option value="">Selecciona cliente existente</option>
+                  <option value={PROSPECT_CLIENT_VALUE}>+ Prospecto nuevo</option>
+                  {(clients || []).map((client) => (
+                    <option key={client.id} value={client.id}>{client.company || client.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Nombre"><input value={po.cliente_nombre || ""} readOnly style={inp} /></Field>
+              <Field label="Empresa"><input value={po.cliente_empresa || ""} readOnly style={inp} /></Field>
+              <Field label="Telefono"><input value={po.cliente_telefono || ""} readOnly style={inp} /></Field>
+              <Field label="RFC"><input value={po.cliente_rfc || ""} readOnly style={inp} /></Field>
+            </div>
+          </section>
+
+          <section className="po-remission-group">
+            <div className="po-remission-title">Moneda y lista</div>
+            <div className="po-remission-fields">
+              <Field label="Moneda">
+                <select value={po.moneda} onChange={set("moneda", { pricing: true })} style={inp}>
+                  <option value="MXN">MXN</option>
+                  <option value="USD">USD</option>
+                </select>
+              </Field>
+              <Field label={`Lista ${po.moneda}`}>
+                <select
+                  value={selectedLaborListId || ""}
+                  onChange={(e) => applyLaborList(e.target.value, lines)}
+                  disabled={pricingLocked}
+                  style={inp}
+                >
+                  <option value="">Selecciona una lista activa</option>
+                  <option value={CUSTOM_PRICE_LIST_VALUE}>Personalizada</option>
+                  {compatibleLaborLists.map((list) => (
+                    <option key={list.id} value={list.id}>{list.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Tipo de cambio">
+                <input type="number" step="0.01" placeholder="Ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
+              </Field>
+              <Field label="Estatus">
+                <select value={po.status || "pendiente"} onChange={set("status")} style={inp}>
+                  {Object.entries(STATUS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
+                </select>
+              </Field>
+            </div>
+          </section>
+
+          <section className="po-remission-group po-remission-group--notes">
+            <div className="po-remission-title">Comentarios</div>
+            <textarea value={po.notas || ""} onChange={set("notas")} placeholder="Observaciones generales de la preorden" />
+          </section>
+
+          <section className="po-remission-group po-remission-group--totals">
+            <div className="po-remission-title">Totales</div>
+            <div className="po-remission-total-row"><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
+            <div className="po-remission-total-row"><span>Piezas</span><strong>{totals.piezas}</strong></div>
+            <div className="po-remission-total-row po-remission-total-row--money"><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
+          </section>
         </div>
       </header>
 
