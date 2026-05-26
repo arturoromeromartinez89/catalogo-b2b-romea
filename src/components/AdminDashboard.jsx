@@ -164,6 +164,16 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     setLastActionMessage(message);
   };
 
+  const changeTab = (nextTab) => {
+    if (tab === "preorders" && nextTab !== "preorders") {
+      if (!window.confirm("Si tienes una preorden abierta, guarda como borrador antes de salir. ¿Deseas cambiar de menú?")) {
+        return;
+      }
+    }
+    setTab(nextTab);
+    setSelectedProductCode("");
+  };
+
   const handleSignOut = async () => {
     if (signingOut) return;
     setSigningOut(true);
@@ -627,10 +637,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           <h3>{t("admin")}</h3>
           <div className="admin-nav-list">
             {tabs.map((id) => (
-              <button className={tab === id ? "active" : ""} key={id} type="button" onClick={() => {
-                setTab(id);
-                setSelectedProductCode("");
-              }}>
+              <button className={tab === id ? "active" : ""} key={id} type="button" onClick={() => changeTab(id)}>
                 {t(tabKeys[id])}
               </button>
             ))}

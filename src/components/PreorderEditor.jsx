@@ -10,7 +10,8 @@ import { buildPlaceholderUrl, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 
 const STATUS = {
-  pendiente: { label: "Pendiente", color: "#d97706" },
+  borrador: { label: "Borrador", color: "#64748b" },
+  pendiente: { label: "Pendiente de revision", color: "#d97706" },
   revision: { label: "En revision", color: "#2563eb" },
   confirmada: { label: "Confirmada", color: "#059669" },
   cancelada: { label: "Cancelada", color: "#dc2626" },
@@ -23,6 +24,7 @@ const fmt = (value) =>
 
 const IVA_RATE = 0.16;
 const PROSPECT_CLIENT_VALUE = "__new_prospect__";
+const CUSTOM_PRICE_LIST_VALUE = "__custom_price_list__";
 
 const calcSilverFineFromKitco = (kitcoUsdOz, exchangeRate, premiumPct = 0) => {
   const kitco = Number(kitcoUsdOz || 0);
@@ -108,6 +110,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [lines, setLines] = useState([]);
   const [laborLists, setLaborLists] = useState([]);
   const [selectedLaborListId, setSelectedLaborListId] = useState(initial?.labor_list_id || "");
+  const [pricingDirty, setPricingDirty] = useState(false);
   const [metalPrices, setMetalPrices] = useState({});
   const [plataFinaMxn, setPlataFinaMxn] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -119,6 +122,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [tenantCompany, setTenantCompany] = useState(null);
   const scannerInputRef = useRef(null);
   const activeCompany = resolvedTenantId ? (tenantCompany || {}) : company;
+  const markEdited = () => {
+    onDirty?.();
+    setSaved(false);
+  };
 
   useEffect(() => {
     if (resolvedTenantId) fetchCompanySettings(resolvedTenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
@@ -177,8 +184,22 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const compatibleLaborLists = laborLists.filter((list) => (list.currency || "MXN") === po.moneda && (list.status || "borrador") === "activa");
   const toDisplayMoney = (value) => (useUsd ? Number(value || 0) / exchangeRate : Number(value || 0));
   const fromDisplayMoney = (value) => (useUsd ? Number(value || 0) * exchangeRate : Number(value || 0));
-  const set = (key) => (event) => { onDirty?.(); setPo((current) => ({ ...current, [key]: event.target.value })); };
-  const setChecked = (key) => (event) => setPo((current) => ({ ...current, [key]: event.target.checked }));
+  const displayFineSilver = roundUp2(toDisplayMoney(plataFinaMxn));
+  const markCustomPricing = () => {
+    if (pricingLocked) return;
+    setPricingDirty(true);
+    setSelectedLaborListId(CUSTOM_PRICE_LIST_VALUE);
+    setPo((current) => ({ ...current, labor_list_id: "" }));
+  };
+  const set = (key, options = {}) => (event) => {
+    markEdited();
+    if (options.pricing) markCustomPricing();
+    setPo((current) => ({ ...current, [key]: event.target.value }));
+  };
+  const setChecked = (key) => (event) => {
+    markEdited();
+    setPo((current) => ({ ...current, [key]: event.target.checked }));
+  };
   const inp = { width: "100%", boxSizing: "border-box" };
   const isProspectMode = po.client_id === PROSPECT_CLIENT_VALUE;
 
@@ -198,7 +219,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     const line = sourceLines.find((lineItem) => normalizeText(lineItem.codigo) === normalizeText(item.producto_linea));
     if (!line) return calcItem(item);
 
-    if (line._priceListLine?.integrated_price) {
+    if (list && line._priceListLine?.integrated_price) {
       const factor = (list?.currency || "MXN") === "USD"
         ? Number(list?.tipo_cambio || po.tipo_cambio || 0) || 1
         : 1;
@@ -215,6 +236,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const setItem = (idx, key, value) => {
     if (pricingLocked && key !== "piezas") return;
+    markEdited();
     setItems((current) => {
       const next = [...current];
       const updated = { ...next[idx], [key]: value };
@@ -226,6 +248,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const setGTotal = (idx, value) => {
     if (pricingLocked) return;
+    markEdited();
     setItems((current) => {
       const next = [...current];
       const item = { ...next[idx], _gt_manual: value };
@@ -238,6 +261,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const setLabor = (idx, value) => {
     if (pricingLocked) return;
+    markEdited();
+    markCustomPricing();
     setItems((current) => {
       const next = [...current];
       next[idx] = recalcWithPrice(next[idx], fromDisplayMoney(value), plataFinaMxn);
@@ -247,6 +272,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const setSilverFine = (value) => {
     if (pricingLocked) return;
+    markEdited();
+    markCustomPricing();
     const nextSilver = fromDisplayMoney(value);
     setPlataFinaMxn(nextSilver);
     setItems((current) => current.map((item) => recalcWithPrice(item, item.labor_mxn, nextSilver)));
@@ -261,15 +288,18 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     }
     setPlataFinaMxn(nextSilver);
     setItems((current) => current.map((item) => recalcWithPrice(item, item.labor_mxn, nextSilver)));
-    setMsg(`Plata fina calculada: $${nextSilver.toFixed(4)} MXN/g.`);
+    setMsg("Plata fina actualizada.");
+    markCustomPricing();
   };
 
   const applyLaborList = async (listId, currentLines) => {
-    if (!listId) {
+    markEdited();
+    if (!listId || listId === CUSTOM_PRICE_LIST_VALUE) {
       // Reset to base product_lines mo_base
       const baseLines = await fetchLines(resolvedTenantId);
       setLines(baseLines);
       setSelectedLaborListId("");
+      setPricingDirty(false);
       setPo((current) => ({ ...current, labor_list_id: "" }));
       setItems((current) => current.map((item) => priceItemFromLines(item, baseLines, null, plataFinaMxn)));
       setMsg("Lista de labor removida. Usando mano de obra base de líneas.");
@@ -287,6 +317,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       }));
       setLines(merged);
       setSelectedLaborListId(listId);
+      setPricingDirty(false);
       let nextSilverMxn = plataFinaMxn;
       if (selectedList) {
         const nextSilverDisplay = Number(selectedList.plata_fina_value || 0);
@@ -307,13 +338,14 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       }
       setItems((current) => current.map((item) => priceItemFromLines(item, merged, selectedList, nextSilverMxn)));
       const listName = selectedList?.name || listId;
-      setMsg(`Lista "${listName}" aplicada. Sus valores de TC, PF y labor quedaron precargados.`);
+      setMsg(`Lista "${listName}" aplicada.`);
     } catch (err) {
       setMsg(`Error al cargar lista: ${err.message}`);
     }
   };
 
   useEffect(() => {
+    if (selectedLaborListId === CUSTOM_PRICE_LIST_VALUE) return;
     if (!selectedLaborListId || !laborLists.length || !lines.length) return;
     if (lines.some((line) => line._priceListLine)) return;
     applyLaborList(selectedLaborListId, lines);
@@ -327,7 +359,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
     const listSilverMxn = getListSilverMxn(selectedList);
     setItems((current) => current.map((item) => priceItemFromLines(item, lines, selectedList, listSilverMxn)));
-    setMsg(selectedList ? `Precios recalculados con "${selectedList.name}".` : "Precios calculados por linea.");
+    setPricingDirty(false);
+    setMsg(selectedList ? `Precios recalculados con "${selectedList.name}".` : "Precios recalculados.");
   };
 
   const totals = {
@@ -335,7 +368,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     gramos: items.reduce((sum, item) => sum + Number(item.gramos_total || 0), 0),
     mxn: items.reduce((sum, item) => sum + Number(item.subtotal_mxn || 0), 0),
   };
-  const ivaMxn = po.aplicar_iva ? totals.mxn * IVA_RATE : 0;
+  const ivaMxn = 0;
   const totalFinalMxn = totals.mxn + ivaMxn;
 
   const productResults = useMemo(() => {
@@ -364,6 +397,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       }
       return [...current, nextItem];
     });
+    markEdited();
     setProductSearch("");
     setMsg(`${product.codigo} agregado a la preorden.`);
     setProductStatus({ type: "success", text: `${product.codigo} agregado. Listo para el siguiente.` });
@@ -403,6 +437,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const adjustQuantity = (idx, delta) => {
+    markEdited();
     setItems((current) => {
       const next = [...current];
       const item = { ...next[idx], piezas: Math.max(1, Number(next[idx]?.piezas || 1) + delta) };
@@ -427,6 +462,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           }
         : {}),
     }));
+    markEdited();
   };
 
   const updateProspect = (key, value) => {
@@ -493,6 +529,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const handlePdf = async () => {
+    if (!po.id) {
+      setMsg("Primero guarda la preorden como borrador antes de generar PDF.");
+      return;
+    }
     if (!po.client_id) { setMsg("Debes seleccionar un cliente o registrar un prospecto para generar el PDF."); return; }
     if (isProspectMode && !prospectForm.name.trim() && !prospectForm.company.trim()) {
       setMsg("Captura nombre o empresa del prospecto antes de generar PDF.");
@@ -508,9 +548,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       rfc: po.cliente_rfc,
       tipoCambio: po.tipo_cambio || metalPrices.tipo_cambio,
       currency: po.moneda,
-      applyIva: po.aplicar_iva,
-      showBreakdown: po.mostrar_desglose,
+      applyIva: false,
+      showBreakdown: true,
       plataFinaMxn,
+      status: po.status,
     };
     const pdfItems = items.map((item) => ({
       product: {
@@ -525,6 +566,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       },
       quantity: item.piezas,
       gramos_total: item.gramos_total,
+      comentarios: item.comentarios,
       labor_mxn: item.labor_mxn,
       plata_fina_mxn: Math.max(0, Number(item.precio_gramo_mxn || 0) - Number(item.labor_mxn || 0)),
       precio_gramo_mxn: item.precio_gramo_mxn,
@@ -532,9 +574,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     }));
     await generatePdf(pdfItems, customer, language, activeCompany, {
       showGramos: true,
-      applyIva: po.aplicar_iva,
-      showBreakdown: po.mostrar_desglose,
+      applyIva: false,
+      showBreakdown: true,
       silverFineMxn: plataFinaMxn,
+      status: po.status,
     });
   };
 
@@ -559,7 +602,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 key={key}
                 type="button"
                 className="po-status-pill"
-                onClick={() => !pricingLocked && setPo((current) => ({ ...current, status: key }))}
+                onClick={() => {
+                  if (pricingLocked) return;
+                  markEdited();
+                  setPo((current) => ({ ...current, status: key }));
+                }}
                 style={{
                   borderColor: color,
                   background: po.status === key ? color : "transparent",
@@ -598,9 +645,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       </header>
 
       <main className="po-editor-body">
-          <section className="quote-block">
-            <h3>Cliente obligatorio</h3>
-            <div className="form-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+          <section className="po-header-sheet">
+            <div className="po-header-card po-header-card--client">
+              <h3>Fecha y cliente</h3>
+              <div className="po-date-chip">{new Date(initial?.created_at || Date.now()).toLocaleDateString("es-MX")}</div>
               <Field label="Cliente">
                 <select value={po.client_id} onChange={handleClientSelect} style={inp}>
                   <option value="">Selecciona cliente existente</option>
@@ -612,22 +660,54 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               </Field>
               <Field label="Nombre"><input value={po.cliente_nombre || ""} readOnly style={inp} /></Field>
               <Field label="Empresa"><input value={po.cliente_empresa || ""} readOnly style={inp} /></Field>
-              <Field label="Correo"><input value={po.cliente_email || ""} readOnly style={inp} /></Field>
               <Field label="Telefono"><input value={po.cliente_telefono || ""} readOnly style={inp} /></Field>
               <Field label="RFC"><input value={po.cliente_rfc || ""} readOnly style={inp} /></Field>
+            </div>
+
+            <div className="po-header-card po-header-card--pricing">
+              <h3>Moneda y lista</h3>
               <Field label="Moneda">
-                <select value={po.moneda} onChange={set("moneda")} style={inp}>
+                <select value={po.moneda} onChange={set("moneda", { pricing: true })} style={inp}>
                   <option value="MXN">MXN</option>
                   <option value="USD">USD</option>
                 </select>
               </Field>
-              <Field label="Tipo de cambio USD">
-                <input type="number" step="0.01" placeholder="Ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio")} style={inp} />
+              <Field label={`Lista de precios ${po.moneda}`}>
+                <select
+                  value={selectedLaborListId || ""}
+                  onChange={(e) => applyLaborList(e.target.value, lines)}
+                  disabled={pricingLocked}
+                  style={inp}
+                >
+                  <option value="">Selecciona una lista activa</option>
+                  <option value={CUSTOM_PRICE_LIST_VALUE}>Personalizada</option>
+                  {compatibleLaborLists.map((list) => (
+                    <option key={list.id} value={list.id}>{list.name}</option>
+                  ))}
+                </select>
               </Field>
-              <Field label="Notas">
-                <input value={po.notas || ""} onChange={set("notas")} style={inp} placeholder="Observaciones" />
+              <Field label="Tipo de cambio USD">
+                <input type="number" step="0.01" placeholder="Ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
+              </Field>
+              <Field label="Estatus">
+                <select value={po.status || "pendiente"} onChange={set("status")} style={inp}>
+                  {Object.entries(STATUS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
+                </select>
               </Field>
             </div>
+
+            <div className="po-header-card po-header-card--notes">
+              <h3>Comentarios</h3>
+              <textarea value={po.notas || ""} onChange={set("notas")} placeholder="Observaciones generales de la preorden" />
+            </div>
+
+            <div className="po-header-card po-header-card--totals">
+              <h3>Totales</h3>
+              <div><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
+              <div><span>Piezas</span><strong>{totals.piezas}</strong></div>
+              <div><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
+            </div>
+          </section>
             {isProspectMode ? (
               <div className="prospect-inline-card">
                 <div>
@@ -643,41 +723,15 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 </div>
               </div>
             ) : null}
-          </section>
 
           <section className="quote-block quote-block--pricing">
-            <h3>Lista de precios y costeo</h3>
-            <p className="quote-helper-text">
-              Primero selecciona moneda y lista de precios. Esa lista define tipo de cambio, plata fina y labor por linea para todos los productos de la preorden.
-            </p>
+            <h3>Costeo de plata fina</h3>
 
             <div className="po-pricing-panel">
               <div className="po-pricing-row">
-                <label className="po-pricing-field po-pricing-field--featured">
-                  Lista de precios {po.moneda}
-                  <select
-                    value={selectedLaborListId || ""}
-                    onChange={(e) => applyLaborList(e.target.value, lines)}
-                    disabled={pricingLocked}
-                  >
-                    <option value="">Selecciona una lista activa</option>
-                    {compatibleLaborLists.map((list) => (
-                      <option key={list.id} value={list.id}>{list.name}</option>
-                    ))}
-                  </select>
-                  {selectedLaborListId
-                    ? <span className="po-pricing-hint po-pricing-hint--ok">Lista aplicada: los productos usan sus valores por linea.</span>
-                    : <span className="po-pricing-hint">Solo aparecen listas activas en {po.moneda}.</span>}
-                </label>
-
-                <label className="po-pricing-field">
-                  Tipo de cambio USD
-                  <input type="number" step="0.01" placeholder="Ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio")} readOnly={pricingLocked} />
-                </label>
-
                 <label className="po-pricing-field">
                   Metodo plata fina
-                  <select value={po.pf_mode || "manual"} onChange={set("pf_mode")} disabled={pricingLocked}>
+                  <select value={po.pf_mode || "manual"} onChange={set("pf_mode", { pricing: true })} disabled={pricingLocked}>
                     <option value="manual">Captura manual</option>
                     <option value="kitco">Calcular desde Kitco</option>
                   </select>
@@ -687,11 +741,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   <>
                     <label className="po-pricing-field">
                       KITCO USD/oz
-                      <input type="number" step="0.01" placeholder="Ej. 31.50" value={po.kitco_usd_oz || ""} onChange={set("kitco_usd_oz")} readOnly={pricingLocked} />
+                      <input type="number" step="0.01" placeholder="Ej. 31.50" value={po.kitco_usd_oz || ""} onChange={set("kitco_usd_oz", { pricing: true })} readOnly={pricingLocked} />
                     </label>
                     <label className="po-pricing-field">
                       Premio Kitco (%)
-                      <input type="number" step="0.1" min="0" placeholder="Ej. 4" value={po.premio_pct ?? 0} onChange={set("premio_pct")} readOnly={pricingLocked} />
+                      <input type="number" step="0.1" min="0" placeholder="Ej. 4" value={po.premio_pct ?? 0} onChange={set("premio_pct", { pricing: true })} readOnly={pricingLocked} />
                     </label>
                     {!pricingLocked ? (
                       <div className="po-pricing-field po-pricing-field--action">
@@ -709,31 +763,19 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     type="number"
                     step="0.0001"
                     placeholder="0.0000"
-                    value={toDisplayMoney(plataFinaMxn) || ""}
+                    value={displayFineSilver || ""}
                     onChange={(event) => setSilverFine(event.target.value)}
                     readOnly={pricingLocked}
                   />
-                  <span className="po-pricing-hint">Se suma a la labor por linea.</span>
                 </label>
 
                 {!pricingLocked ? (
                   <div className="po-pricing-field po-pricing-field--action">
-                    <button className="primary-button compact-action" type="button" onClick={precargarPrecios}>
+                    <button className={`primary-button compact-action ${pricingDirty ? "warning-action" : ""}`} type="button" onClick={precargarPrecios}>
                       Recalcular precios
                     </button>
                   </div>
                 ) : null}
-              </div>
-
-              <div className="po-pricing-options">
-                <label className="po-check-label">
-                  <input type="checkbox" checked={Boolean(po.mostrar_desglose)} onChange={setChecked("mostrar_desglose")} />
-                  Mostrar desglose labor + PF
-                </label>
-                <label className="po-check-label">
-                  <input type="checkbox" checked={Boolean(po.aplicar_iva)} onChange={setChecked("aplicar_iva")} />
-                  Agregar IVA 16%
-                </label>
               </div>
             </div>
           </section>
@@ -801,9 +843,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     <th>Linea</th>
                     <th className="right">Peso unit.</th>
                     <th className="right">Gramos totales</th>
-                    {po.mostrar_desglose ? <th className="right">Labor/g {moneyLabel}</th> : null}
-                    {po.mostrar_desglose ? <th className="right">PF/g {moneyLabel}</th> : null}
+                    <th className="right">Labor/g {moneyLabel}</th>
+                    <th className="right">PF/g {moneyLabel}</th>
                     <th className="right">Labor+PF {moneyLabel}</th>
+                    <th>Comentarios</th>
                     <th className="right">Subtotal</th>
                     <th></th>
                   </tr>
@@ -829,9 +872,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                         <td><strong>{item.producto_linea || "-"}</strong></td>
                         <td><input type="number" step="0.01" value={item.gramos_por_pieza} onChange={(event) => setItem(idx, "gramos_por_pieza", Number(event.target.value))} /></td>
                         <td><input type="number" step="0.01" value={item._gt_manual ?? item.gramos_total} onChange={(event) => setGTotal(idx, event.target.value)} readOnly={pricingLocked} /></td>
-                        {po.mostrar_desglose ? <td><input type="number" step="0.01" value={toDisplayMoney(item.labor_mxn) || ""} onChange={(event) => setLabor(idx, event.target.value)} readOnly={pricingLocked} /></td> : null}
-                        {po.mostrar_desglose ? <td className="right">{fmt(toDisplayMoney(fineSilver))}</td> : null}
+                        <td><input type="number" step="0.01" value={toDisplayMoney(item.labor_mxn) || ""} onChange={(event) => setLabor(idx, event.target.value)} readOnly={pricingLocked} /></td>
+                        <td className="right">{fmt(toDisplayMoney(fineSilver))}</td>
                         <td className="right">{fmt(toDisplayMoney(item.precio_gramo_mxn))}</td>
+                        <td><input value={item.comentarios || ""} onChange={(event) => setItem(idx, "comentarios", event.target.value)} placeholder="Color, piedra, medida..." /></td>
                         <td className="right"><strong>{fmt(toDisplayMoney(item.subtotal_mxn))}</strong></td>
                         <td><button className="table-delete" type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== idx))}>x</button></td>
                       </tr>
@@ -848,7 +892,6 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             <div><span>Piezas</span><strong>{totals.piezas}</strong></div>
             <div><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
             <div><span>Subtotal {moneyLabel}</span><strong>{fmt(toDisplayMoney(totals.mxn))}</strong></div>
-            <div><span>IVA 16%</span><strong>{po.aplicar_iva ? fmt(toDisplayMoney(ivaMxn)) : "—"}</strong></div>
             <div className="po-total-highlight"><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
           </section>
       </main>

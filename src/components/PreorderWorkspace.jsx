@@ -3,7 +3,8 @@ import PreorderEditor from "./PreorderEditor";
 import { fetchAllPreorders } from "../services/preorderService";
 
 const STATUS_LABELS = {
-  pendiente:  { label: "Pendiente",  color: "#f59e0b" },
+  borrador:  { label: "Borrador",  color: "#64748b" },
+  pendiente:  { label: "Pendiente revision",  color: "#f59e0b" },
   revision:   { label: "En revisión", color: "#3b82f6" },
   confirmada: { label: "Confirmada", color: "#10b981" },
   cancelada:  { label: "Cancelada",  color: "#ef4444" },
@@ -56,7 +57,7 @@ function PreorderListView({ clients, products, profile, tenantId, onOpen, onNew,
       {/* Toolbar de la lista */}
       <div className="po-list-toolbar">
         <div className="po-filter-pills">
-          {[["all", "Todas"], ["pendiente", "Pendientes"], ["revision", "En revisión"], ["confirmada", "Confirmadas"]].map(([key, label]) => (
+          {[["all", "Todas"], ["borrador", "Borradores"], ["pendiente", "Pendientes"], ["revision", "En revisión"], ["confirmada", "Confirmadas"]].map(([key, label]) => (
             <button
               key={key}
               type="button"
@@ -192,6 +193,10 @@ export default function PreorderWorkspace({
 
   // Abre una preorden en una pestaña (si ya está abierta, activa esa pestaña)
   const openTab = (preorder) => {
+    const currentActive = tabs.find((t) => t.id === activeId);
+    if (currentActive?.dirty && currentActive.type !== TAB_LIST && !window.confirm("Hay una preorden con cambios sin guardar. Guarda como borrador antes de salir. ¿Quieres cambiar de pestaña sin guardar?")) {
+      return;
+    }
     const tabId = preorder?.id || `new-${Date.now()}`;
     const existing = tabs.find((t) => t.id === tabId);
     if (existing) { setActiveId(tabId); return; }
@@ -217,11 +222,17 @@ export default function PreorderWorkspace({
   const handleSaved = (tabId, savedData) => {
     const tab = tabs.find((item) => item.id === tabId);
     if (tab?.isDraft) {
-      setTabs((prev) => prev.filter((item) => item.id !== tabId));
-      setActiveId(TAB_LIST);
+      setTabs((prev) =>
+        prev.map((item) =>
+          item.id === tabId
+            ? { ...item, label: savedData?.folio || "Preorden guardada", dirty: false, isDraft: false, preorder: { ...(item.preorder || {}), ...savedData } }
+            : item
+        )
+      );
+      setActiveId(tabId);
       onDraftSaved?.(savedData);
       loadPreorders();
-      setListMsg("Preorden guardada.");
+      setListMsg("Preorden guardada. Ya puedes generar PDF.");
       return;
     }
     // Update tab label with folio and mark clean
@@ -247,7 +258,11 @@ export default function PreorderWorkspace({
             key={tab.id}
             tab={tab}
             active={tab.id === activeId}
-            onClick={() => setActiveId(tab.id)}
+            onClick={() => {
+              const currentActive = tabs.find((item) => item.id === activeId);
+              if (currentActive?.dirty && currentActive.id !== tab.id && currentActive.type !== TAB_LIST && !window.confirm("Hay una preorden con cambios sin guardar. Guarda como borrador antes de salir. ¿Quieres cambiar de pestaña sin guardar?")) return;
+              setActiveId(tab.id);
+            }}
             onClose={closeTab}
           />
         ))}

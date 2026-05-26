@@ -106,6 +106,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   const showBreakdown = opts.showBreakdown !== false;
   const applyIva = Boolean(opts.applyIva || customer.applyIva);
   const IVA_RATE = 0.16;
+  const isDraft = (opts.status || customer.status || "").toLowerCase() === "borrador";
 
   // ── HEADER ───────────────────────────────────────────────
   const storedLogo = typeof localStorage !== "undefined" ? localStorage.getItem("romea-logo-data") : "";
@@ -123,6 +124,12 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(180,195,220);
   txt(doc, t("Preorden", "Preorder"), page.w - page.margin, 22, { align: "right" });
   txt(doc, today, page.w - page.margin, 27, { align: "right" });
+  if (isDraft) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(52);
+    doc.setTextColor(235, 240, 248);
+    doc.text("BORRADOR", page.w / 2, page.h / 2, { align: "center", angle: 35 });
+  }
 
   let y = 38;
 
@@ -228,6 +235,11 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40); doc.setFontSize(7);
     const descLines = doc.splitTextToSize(item.product?.descripcion || item.producto_descripcion || "", 58);
     txt(doc, descLines.slice(0,2), C.desc, y+5);
+    if (item.comentarios) {
+      doc.setFontSize(5.6);
+      doc.setTextColor(120, 80, 40);
+      txt(doc, doc.splitTextToSize(`Nota: ${item.comentarios}`, 58).slice(0, 1), C.desc, y + 12);
+    }
 
     doc.setFontSize(6); doc.setTextColor(110,110,110);
     const metalLine = [item.product?.metal || item.producto_metal, item.product?.kilataje || item.producto_kilataje].filter(Boolean).join(" ");
