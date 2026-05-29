@@ -42,16 +42,18 @@ import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters
 import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 
-const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", active: true };
+const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", comentarios: "", type: "cliente", active: true };
+const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", comentarios: "", type: "prospecto", active: true };
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
 const PRODUCT_RENDER_BATCH = 120;
-const baseTabs = ["catalog", "preorders", "clients", "prices", "company", "database"];
+const baseTabs = ["catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
 const tabKeys = {
   tenants: "tenants",
   catalog: "catalog",
   preorders: "preorders",
   clients: "clients",
+  prospects: "prospects",
   prices: "priceMenu",
   company: "company",
   database: "database",
@@ -61,6 +63,7 @@ const titleKeys = {
   catalog: "adminCatalog",
   preorders: "preorders",
   clients: "clients",
+  prospects: "prospects",
   prices: "priceMenu",
   company: "company",
   database: "database",
@@ -132,10 +135,15 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productModal, setProductModal] = useState({ open: false, product: null, mode: "create" });
   const [clientForm, setClientForm] = useState(blankClient);
+  const [prospectForm, setProspectForm] = useState(blankProspect);
   const [savingClient, setSavingClient] = useState(false);
+  const [savingProspect, setSavingProspect] = useState(false);
   const [isClientFormOpen, setIsClientFormOpen] = useState(false);
+  const [isProspectFormOpen, setIsProspectFormOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
   const [clientStatusFilter, setClientStatusFilter] = useState("all");
+  const [prospectSearch, setProspectSearch] = useState("");
+  const [prospectStatusFilter, setProspectStatusFilter] = useState("all");
   const [priceListForm, setPriceListForm] = useState(blankPriceList);
   const [priceItemForm, setPriceItemForm] = useState(blankPriceItem);
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -268,14 +276,27 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const filteredClients = useMemo(() => {
     const term = normalizeText(clientSearch);
     return (data?.clients || []).filter((client) => {
+      if ((client.type || "cliente") === "prospecto") return false;
       const activeMatch =
         clientStatusFilter === "all" ||
         (clientStatusFilter === "active" && client.active !== false) ||
         (clientStatusFilter === "inactive" && client.active === false);
-      const text = normalizeText([client.name, client.company, client.rfc, client.phone, client.email].join(" "));
+      const text = normalizeText([client.name, client.company, client.rfc, client.phone, client.email, client.ciudad].join(" "));
       return activeMatch && (!term || text.includes(term));
     });
   }, [clientSearch, clientStatusFilter, data?.clients]);
+  const filteredProspects = useMemo(() => {
+    const term = normalizeText(prospectSearch);
+    return (data?.clients || []).filter((client) => {
+      if ((client.type || "cliente") !== "prospecto") return false;
+      const activeMatch =
+        prospectStatusFilter === "all" ||
+        (prospectStatusFilter === "active" && client.active !== false) ||
+        (prospectStatusFilter === "inactive" && client.active === false);
+      const text = normalizeText([client.name, client.company, client.rfc, client.phone, client.email, client.ciudad, client.comentarios].join(" "));
+      return activeMatch && (!term || text.includes(term));
+    });
+  }, [prospectSearch, prospectStatusFilter, data?.clients]);
   const checkedProducts = useMemo(
     () => products.filter((product) => checkedIds.has(product.codigo)),
     [products, checkedIds]
@@ -446,7 +467,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     setSavingClient(true);
     setStatus("Guardando cliente...");
     try {
-      const saved = await saveClient(clientForm, tenantId);
+      const saved = await saveClient({ ...clientForm, type: "cliente" }, tenantId);
       setClientForm(blankClient);
       setIsClientFormOpen(false);
       await load();
@@ -462,6 +483,52 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       notifyAction("error", "No se pudo guardar", `Error creando cliente: ${error.message}`);
     } finally {
       setSavingClient(false);
+    }
+  };
+
+  const handleSaveProspect = async () => {
+    if (!tenantId) {
+      setStatus("Primero selecciona una empresa para crear prospectos.");
+      notifyAction("warning", "Falta empresa", "Primero selecciona una empresa para crear prospectos.");
+      return;
+    }
+    if (!prospectForm.name.trim() && !prospectForm.company.trim()) {
+      notifyAction("warning", "Datos incompletos", "Captura al menos nombre o empresa antes de guardar el prospecto.");
+      return;
+    }
+    setSavingProspect(true);
+    setStatus("Guardando prospecto...");
+    try {
+      const saved = await saveClient({ ...prospectForm, type: "prospecto" }, tenantId);
+      setProspectForm(blankProspect);
+      setIsProspectFormOpen(false);
+      await load();
+      setStatus("Prospecto guardado correctamente.");
+      notifyAction(
+        "success",
+        prospectForm.id ? "Prospecto actualizado" : "Prospecto creado",
+        `${saved.company || saved.name || "Prospecto"} se guardo correctamente.`
+      );
+    } catch (error) {
+      setStatus(`Error creando prospecto: ${error.message}`);
+      notifyAction("error", "No se pudo guardar", `Error creando prospecto: ${error.message}`);
+    } finally {
+      setSavingProspect(false);
+    }
+  };
+
+  const handleConvertProspectToClient = async (prospect) => {
+    if (!window.confirm(`Convertir ${prospect.company || prospect.name || "este prospecto"} a cliente?`)) return;
+    setStatus("Convirtiendo prospecto a cliente...");
+    try {
+      await saveClient({ ...prospect, type: "cliente" }, tenantId);
+      await load();
+      setStatus("Prospecto convertido a cliente.");
+      notifyAction("success", "Convertido a cliente", "El prospecto ahora aparece en el menu Clientes.");
+      changeTab("clients");
+    } catch (error) {
+      setStatus(`Error convirtiendo prospecto: ${error.message}`);
+      notifyAction("error", "No se pudo convertir", error.message);
     }
   };
 
@@ -1091,6 +1158,139 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                     <button className="secondary-button" type="button" onClick={() => setIsClientFormOpen(false)}>Cancelar</button>
                     <button className="new-client-button" type="button" onClick={handleSaveClient} disabled={savingClient}>
                       {savingClient ? "Guardando..." : "Guardar"}
+                    </button>
+                  </footer>
+                </section>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {tab === "prospects" ? (
+          <section className="admin-workspace clients-workspace">
+            <div className="clients-page-header">
+              <div>
+                <h2>Prospectos</h2>
+                <p>{filteredProspects.length.toLocaleString()} de {(data.clients || []).filter((client) => (client.type || "cliente") === "prospecto").length.toLocaleString()} prospectos</p>
+              </div>
+              <button
+                className="new-client-button"
+                type="button"
+                onClick={() => {
+                  setProspectForm(blankProspect);
+                  setIsProspectFormOpen(true);
+                }}
+              >
+                + Nuevo prospecto
+              </button>
+            </div>
+
+            <div className="clients-filter-card">
+              <div className="client-search-box">
+                <span aria-hidden="true">?</span>
+                <input
+                  value={prospectSearch}
+                  onChange={(event) => setProspectSearch(event.target.value)}
+                  placeholder="Buscar por nombre, empresa, ciudad, gafete, celular o email..."
+                />
+              </div>
+              <select value={prospectStatusFilter} onChange={(event) => setProspectStatusFilter(event.target.value)}>
+                <option value="all">Todos</option>
+                <option value="active">Activos</option>
+                <option value="inactive">Inactivos</option>
+              </select>
+            </div>
+
+            <div className="clients-table-card">
+              <div className="responsive-table">
+                <table className="simple-admin-table clients-directory-table">
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Ciudad</th>
+                      <th>Celular</th>
+                      <th>Email</th>
+                      <th>Comentarios</th>
+                      <th>Estado</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProspects.length ? filteredProspects.map((prospect) => {
+                      const initials = (prospect.company || prospect.name || "?").trim().slice(0, 1).toUpperCase();
+                      return (
+                        <tr key={prospect.id}>
+                          <td>
+                            <div className="client-name-cell">
+                              <span>{initials}</span>
+                              <strong>{prospect.company || prospect.name || "Sin nombre"}</strong>
+                              {prospect.company && prospect.name ? <small>{prospect.name}</small> : null}
+                            </div>
+                          </td>
+                          <td>{prospect.ciudad || "-"}</td>
+                          <td>{prospect.phone || "-"}</td>
+                          <td>{prospect.email || "-"}</td>
+                          <td>{prospect.comentarios || "-"}</td>
+                          <td><span className={`client-status-pill ${prospect.active === false ? "inactive" : "active"}`}>{prospect.active === false ? "Inactivo" : "Activo"}</span></td>
+                          <td>
+                            <div className="client-action-row">
+                              <button
+                                className="secondary-button compact-action"
+                                type="button"
+                                onClick={() => {
+                                  setProspectForm({ ...blankProspect, ...prospect, type: "prospecto" });
+                                  setIsProspectFormOpen(true);
+                                }}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                className="primary-button compact-action success-action"
+                                type="button"
+                                onClick={() => handleConvertProspectToClient(prospect)}
+                              >
+                                Convertir
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }) : (
+                      <tr><td colSpan="7" className="empty-row">No hay prospectos con esos filtros.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {isProspectFormOpen ? (
+              <div className="client-modal-backdrop">
+                <section className="client-modal">
+                  <header>
+                    <h2>{prospectForm.id ? "Editar prospecto" : "Nuevo prospecto"}</h2>
+                    <button className="icon-button" type="button" onClick={() => setIsProspectFormOpen(false)}>x</button>
+                  </header>
+                  <div className="client-modal-body">
+                    <label className="wide-field">Nombre <span>*</span><input value={prospectForm.name} onChange={(event) => setProspectForm({ ...prospectForm, name: event.target.value })} /></label>
+                    <label>RFC / Tax ID<input value={prospectForm.rfc} onChange={(event) => setProspectForm({ ...prospectForm, rfc: event.target.value })} /></label>
+                    <label>Celular<input value={prospectForm.phone} onChange={(event) => setProspectForm({ ...prospectForm, phone: event.target.value })} /></label>
+                    <label className="wide-field">Empresa<input value={prospectForm.company} onChange={(event) => setProspectForm({ ...prospectForm, company: event.target.value })} /></label>
+                    <label className="wide-field">Email<input value={prospectForm.email} onChange={(event) => setProspectForm({ ...prospectForm, email: event.target.value })} /></label>
+                    <label>Ciudad<input value={prospectForm.ciudad || ""} onChange={(event) => setProspectForm({ ...prospectForm, ciudad: event.target.value })} /></label>
+                    <label>Estado
+                      <select value={prospectForm.active === false ? "inactive" : "active"} onChange={(event) => setProspectForm({ ...prospectForm, active: event.target.value === "active" })}>
+                        <option value="active">Activo</option>
+                        <option value="inactive">Inactivo</option>
+                      </select>
+                    </label>
+                    <label className="wide-field">Comentarios / datos del gafete
+                      <textarea value={prospectForm.comentarios || ""} onChange={(event) => setProspectForm({ ...prospectForm, comentarios: event.target.value })} placeholder="Aquí podremos guardar datos leídos del gafete." />
+                    </label>
+                  </div>
+                  <footer>
+                    <button className="secondary-button" type="button" onClick={() => setIsProspectFormOpen(false)}>Cancelar</button>
+                    <button className="new-client-button" type="button" onClick={handleSaveProspect} disabled={savingProspect}>
+                      {savingProspect ? "Guardando..." : "Guardar prospecto"}
                     </button>
                   </footer>
                 </section>

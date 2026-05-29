@@ -274,7 +274,14 @@ export const deleteTenantProducts = async (tenantId = "") => {
 export const saveClient = async (client, tenantId = "") => {
   const row = { ...client };
   if (tenantId) row.tenant_id = tenantId;
-  const result = await supabase.from("clients").upsert(row).select("*").single();
+  let result = await supabase.from("clients").upsert(row).select("*").single();
+  if (
+    result.error &&
+    ["type", "ciudad", "comentarios"].some((field) => String(result.error.message || "").toLowerCase().includes(field))
+  ) {
+    const { type, ciudad, comentarios, ...fallbackRow } = row;
+    result = await supabase.from("clients").upsert(fallbackRow).select("*").single();
+  }
   throwIfError(result);
   if (result.data?.email) {
     const profileUpdate = { client_id: result.data.id, role: "client" };
