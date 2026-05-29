@@ -10,6 +10,12 @@ alter table public.clients
 alter table public.clients
   add column if not exists comentarios text;
 
+alter table public.clients
+  add column if not exists badge_raw text;
+
+alter table public.clients
+  add column if not exists obtenido_en text default 'JCK';
+
 update public.clients
 set type = 'cliente'
 where type is null or trim(type) = '';

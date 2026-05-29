@@ -43,7 +43,7 @@ import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "..
 import { normalizeText } from "../utils/textNormalizer";
 
 const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", comentarios: "", type: "cliente", active: true };
-const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", comentarios: "", type: "prospecto", active: true };
+const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", comentarios: "", badge_raw: "", obtenido_en: "JCK", type: "prospecto", active: true };
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
 const PRODUCT_RENDER_BATCH = 120;
@@ -117,6 +117,27 @@ const productToPreorderItem = (product, quantity = 1) => {
   };
 };
 
+const parseBadgeScan = (rawValue) => {
+  const raw = String(rawValue || "").trim();
+  const [, badgeNumber = "", restValue = raw] = raw.match(/^(\d+)(.*)$/) || [];
+  const words = String(restValue || "")
+    .replace(/([a-zÃ¡Ã©Ã­Ã³ÃºÃ±])([A-ZÃ�Ã‰Ã�Ã“ÃšÃ‘])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+  const badgeCode = words.length > 2 && /^[A-Z]{1,4}$/.test(words[words.length - 1]) ? words.pop() : "";
+  const nameWords = words.slice(0, Math.min(2, words.length));
+  const companyWords = words.slice(nameWords.length);
+  return {
+    badgeNumber,
+    badgeCode,
+    name: nameWords.join(" "),
+    company: companyWords.join(" "),
+    raw,
+  };
+};
+
 export default function AdminDashboard({ profile, tenantOverride = "", supportMode = false, supportTenantName = "", onExitSupport }) {
   const { t, language } = useLanguage();
   const company = useCompany();
@@ -144,6 +165,9 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [clientStatusFilter, setClientStatusFilter] = useState("all");
   const [prospectSearch, setProspectSearch] = useState("");
   const [prospectStatusFilter, setProspectStatusFilter] = useState("all");
+  const [badgeScanInput, setBadgeScanInput] = useState("");
+  const [badgeComment, setBadgeComment] = useState("");
+  const [badgeObtainedIn, setBadgeObtainedIn] = useState("JCK");
   const [priceListForm, setPriceListForm] = useState(blankPriceList);
   const [priceItemForm, setPriceItemForm] = useState(blankPriceItem);
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -293,7 +317,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
         prospectStatusFilter === "all" ||
         (prospectStatusFilter === "active" && client.active !== false) ||
         (prospectStatusFilter === "inactive" && client.active === false);
-      const text = normalizeText([client.name, client.company, client.rfc, client.phone, client.email, client.ciudad, client.comentarios].join(" "));
+      const text = normalizeText([client.name, client.company, client.rfc, client.phone, client.email, client.ciudad, client.comentarios, client.badge_raw, client.obtenido_en].join(" "));
       return activeMatch && (!term || text.includes(term));
     });
   }, [prospectSearch, prospectStatusFilter, data?.clients]);
@@ -530,6 +554,57 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       setStatus(`Error convirtiendo prospecto: ${error.message}`);
       notifyAction("error", "No se pudo convertir", error.message);
     }
+  };
+
+  const handleSaveBadgeProspect = async () => {
+    const scan = badgeScanInput.trim();
+    if (!scan) {
+      notifyAction("warning", "Sin lectura", "Escanea o escribe la información del gafete antes de guardar.");
+      return;
+    }
+    if (!tenantId) {
+      notifyAction("warning", "Falta empresa", "Primero selecciona una empresa para registrar prospectos.");
+      return;
+    }
+    const parsed = parseBadgeScan(scan);
+    if (!parsed.name && !parsed.company) {
+      notifyAction("warning", "Lectura no interpretada", "No pude separar nombre o empresa; revisa la lectura del gafete.");
+      return;
+    }
+    setSavingProspect(true);
+    setStatus("Guardando prospecto desde gafete...");
+    try {
+      const notes = [
+        badgeComment.trim(),
+        parsed.badgeNumber ? `Folio gafete: ${parsed.badgeNumber}` : "",
+        parsed.badgeCode ? `Código gafete: ${parsed.badgeCode}` : "",
+        `Lectura original: ${parsed.raw}`,
+      ].filter(Boolean).join("\n");
+      const saved = await saveClient({
+        ...blankProspect,
+        name: parsed.name,
+        company: parsed.company,
+        comentarios: notes,
+        badge_raw: parsed.raw,
+        obtenido_en: badgeObtainedIn || "JCK",
+      }, tenantId);
+      setBadgeScanInput("");
+      setBadgeComment("");
+      await load();
+      setStatus("Prospecto guardado con éxito.");
+      notifyAction("success", "Prospecto guardado con éxito", `${saved.company || saved.name || "Prospecto"} quedó registrado en Prospectos.`);
+    } catch (error) {
+      setStatus(`Error guardando prospecto: ${error.message}`);
+      notifyAction("error", "No se pudo guardar", error.message);
+    } finally {
+      setSavingProspect(false);
+    }
+  };
+
+  const handleBadgeScanKeyDown = (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    handleSaveBadgeProspect();
   };
 
   const clearCatalogFilters = () => {
@@ -1201,6 +1276,38 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               </select>
             </div>
 
+            <section className="prospect-scan-card">
+              <div className="prospect-scan-head">
+                <div>
+                  <span className="tool-eyebrow">Registro rápido de feria</span>
+                  <h3>Escanear gafete</h3>
+                  <p>Coloca el cursor aquí y lee el gafete. El lector enviará Enter y se guardará como prospecto.</p>
+                </div>
+                <label>
+                  Obtenido en
+                  <input value={badgeObtainedIn} onChange={(event) => setBadgeObtainedIn(event.target.value)} placeholder="JCK" />
+                </label>
+              </div>
+              <input
+                className="prospect-scan-input"
+                value={badgeScanInput}
+                onChange={(event) => setBadgeScanInput(event.target.value)}
+                onKeyDown={handleBadgeScanKeyDown}
+                placeholder="Escanear gafete aquí. Ej. 9477926915224ArturoRomeroRapana JewelersPF"
+                autoComplete="off"
+              />
+              <div className="prospect-scan-bottom">
+                <textarea
+                  value={badgeComment}
+                  onChange={(event) => setBadgeComment(event.target.value)}
+                  placeholder='Comentarios. Ej. "Enviar información de vírgenes"'
+                />
+                <button className="new-client-button prospect-save-button" type="button" onClick={handleSaveBadgeProspect} disabled={savingProspect}>
+                  {savingProspect ? "Guardando..." : "+ Registrar prospecto"}
+                </button>
+              </div>
+            </section>
+
             <div className="clients-table-card">
               <div className="responsive-table">
                 <table className="simple-admin-table clients-directory-table">
@@ -1210,6 +1317,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                       <th>Ciudad</th>
                       <th>Celular</th>
                       <th>Email</th>
+                      <th>Obtenido en</th>
                       <th>Comentarios</th>
                       <th>Estado</th>
                       <th>Acciones</th>
@@ -1230,6 +1338,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                           <td>{prospect.ciudad || "-"}</td>
                           <td>{prospect.phone || "-"}</td>
                           <td>{prospect.email || "-"}</td>
+                          <td>{prospect.obtenido_en || "JCK"}</td>
                           <td>{prospect.comentarios || "-"}</td>
                           <td><span className={`client-status-pill ${prospect.active === false ? "inactive" : "active"}`}>{prospect.active === false ? "Inactivo" : "Activo"}</span></td>
                           <td>
@@ -1256,7 +1365,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                         </tr>
                       );
                     }) : (
-                      <tr><td colSpan="7" className="empty-row">No hay prospectos con esos filtros.</td></tr>
+                      <tr><td colSpan="8" className="empty-row">No hay prospectos con esos filtros.</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -1277,6 +1386,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                     <label className="wide-field">Empresa<input value={prospectForm.company} onChange={(event) => setProspectForm({ ...prospectForm, company: event.target.value })} /></label>
                     <label className="wide-field">Email<input value={prospectForm.email} onChange={(event) => setProspectForm({ ...prospectForm, email: event.target.value })} /></label>
                     <label>Ciudad<input value={prospectForm.ciudad || ""} onChange={(event) => setProspectForm({ ...prospectForm, ciudad: event.target.value })} /></label>
+                    <label>Obtenido en<input value={prospectForm.obtenido_en || "JCK"} onChange={(event) => setProspectForm({ ...prospectForm, obtenido_en: event.target.value })} /></label>
+                    <label className="wide-field">Lectura de gafete<input value={prospectForm.badge_raw || ""} onChange={(event) => setProspectForm({ ...prospectForm, badge_raw: event.target.value })} /></label>
                     <label>Estado
                       <select value={prospectForm.active === false ? "inactive" : "active"} onChange={(event) => setProspectForm({ ...prospectForm, active: event.target.value === "active" })}>
                         <option value="active">Activo</option>

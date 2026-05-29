@@ -277,9 +277,9 @@ export const saveClient = async (client, tenantId = "") => {
   let result = await supabase.from("clients").upsert(row).select("*").single();
   if (
     result.error &&
-    ["type", "ciudad", "comentarios"].some((field) => String(result.error.message || "").toLowerCase().includes(field))
+    ["type", "ciudad", "comentarios", "badge_raw", "obtenido_en"].some((field) => String(result.error.message || "").toLowerCase().includes(field))
   ) {
-    const { type, ciudad, comentarios, ...fallbackRow } = row;
+    const { type, ciudad, comentarios, badge_raw, obtenido_en, ...fallbackRow } = row;
     result = await supabase.from("clients").upsert(fallbackRow).select("*").single();
   }
   throwIfError(result);
