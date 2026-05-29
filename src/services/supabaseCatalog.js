@@ -273,14 +273,31 @@ export const deleteTenantProducts = async (tenantId = "") => {
 
 export const saveClient = async (client, tenantId = "") => {
   const row = { ...client };
+  row.email = String(row.email || "").trim();
+  if (!row.email) {
+    const seed = String(row.badge_raw || row.phone || row.name || row.company || Date.now())
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 72) || `prospect-${Date.now()}`;
+    row.email = `${seed}@prospect.local`;
+  }
   if (tenantId) row.tenant_id = tenantId;
-  let result = await supabase.from("clients").upsert(row).select("*").single();
+  let result = await supabase
+    .from("clients")
+    .upsert(row, { onConflict: row.id ? "id" : "email" })
+    .select("*")
+    .single();
   if (
     result.error &&
     ["type", "ciudad", "comentarios", "badge_raw", "obtenido_en"].some((field) => String(result.error.message || "").toLowerCase().includes(field))
   ) {
     const { type, ciudad, comentarios, badge_raw, obtenido_en, ...fallbackRow } = row;
-    result = await supabase.from("clients").upsert(fallbackRow).select("*").single();
+    result = await supabase
+      .from("clients")
+      .upsert(fallbackRow, { onConflict: fallbackRow.id ? "id" : "email" })
+      .select("*")
+      .single();
   }
   throwIfError(result);
   if (result.data?.email) {

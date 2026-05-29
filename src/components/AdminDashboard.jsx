@@ -138,6 +138,8 @@ const parseBadgeScan = (rawValue) => {
   };
 };
 
+const displayContactEmail = (email) => String(email || "").endsWith("@prospect.local") ? "-" : email || "-";
+
 export default function AdminDashboard({ profile, tenantOverride = "", supportMode = false, supportTenantName = "", onExitSupport }) {
   const { t, language } = useLanguage();
   const company = useCompany();
@@ -1142,7 +1144,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                           </td>
                           <td>{client.rfc || "-"}</td>
                           <td>{client.phone || "-"}</td>
-                          <td>{client.email || "-"}</td>
+                          <td>{displayContactEmail(client.email)}</td>
                           <td>{priceList?.name || "Sin lista"}</td>
                           <td><span className={`client-status-pill ${client.active === false ? "inactive" : "active"}`}>{client.active === false ? "Inactivo" : "Activo"}</span></td>
                           <td>
@@ -1337,7 +1339,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                           </td>
                           <td>{prospect.ciudad || "-"}</td>
                           <td>{prospect.phone || "-"}</td>
-                          <td>{prospect.email || "-"}</td>
+                          <td>{displayContactEmail(prospect.email)}</td>
                           <td>{prospect.obtenido_en || "JCK"}</td>
                           <td>{prospect.comentarios || "-"}</td>
                           <td><span className={`client-status-pill ${prospect.active === false ? "inactive" : "active"}`}>{prospect.active === false ? "Inactivo" : "Activo"}</span></td>
