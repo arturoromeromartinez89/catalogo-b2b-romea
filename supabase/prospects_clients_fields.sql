@@ -8,6 +8,9 @@ alter table public.clients
   add column if not exists ciudad text;
 
 alter table public.clients
+  add column if not exists domicilio text;
+
+alter table public.clients
   add column if not exists comentarios text;
 
 alter table public.clients

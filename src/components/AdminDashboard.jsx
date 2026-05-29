@@ -42,8 +42,8 @@ import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters
 import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 
-const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", comentarios: "", type: "cliente", active: true };
-const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", comentarios: "", badge_raw: "", obtenido_en: "JCK", type: "prospecto", active: true };
+const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", domicilio: "", comentarios: "", type: "cliente", active: true };
+const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", domicilio: "", comentarios: "", badge_raw: "", obtenido_en: "JCK", type: "prospecto", active: true };
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
 const PRODUCT_RENDER_BATCH = 120;
@@ -139,6 +139,16 @@ const parseBadgeScan = (rawValue) => {
 };
 
 const displayContactEmail = (email) => String(email || "").endsWith("@prospect.local") ? "-" : email || "-";
+const isProspectRecord = (client) =>
+  (client.type || "") === "prospecto" ||
+  String(client.email || "").endsWith("@prospect.local") ||
+  Boolean(client.badge_raw);
+const prospectForForm = (prospect) => ({
+  ...blankProspect,
+  ...prospect,
+  email: String(prospect.email || "").endsWith("@prospect.local") ? "" : prospect.email || "",
+  type: "prospecto",
+});
 
 export default function AdminDashboard({ profile, tenantOverride = "", supportMode = false, supportTenantName = "", onExitSupport }) {
   const { t, language } = useLanguage();
@@ -302,7 +312,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const filteredClients = useMemo(() => {
     const term = normalizeText(clientSearch);
     return (data?.clients || []).filter((client) => {
-      if ((client.type || "cliente") === "prospecto") return false;
+      if (isProspectRecord(client)) return false;
       const activeMatch =
         clientStatusFilter === "all" ||
         (clientStatusFilter === "active" && client.active !== false) ||
@@ -314,7 +324,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const filteredProspects = useMemo(() => {
     const term = normalizeText(prospectSearch);
     return (data?.clients || []).filter((client) => {
-      if ((client.type || "cliente") !== "prospecto") return false;
+      if (!isProspectRecord(client)) return false;
       const activeMatch =
         prospectStatusFilter === "all" ||
         (prospectStatusFilter === "active" && client.active !== false) ||
@@ -593,8 +603,10 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       setBadgeScanInput("");
       setBadgeComment("");
       await load();
-      setStatus("Prospecto guardado con éxito.");
-      notifyAction("success", "Prospecto guardado con éxito", `${saved.company || saved.name || "Prospecto"} quedó registrado en Prospectos.`);
+      setProspectForm(prospectForForm(saved));
+      setIsProspectFormOpen(true);
+      setStatus("Prospecto guardado con éxito. Completa la ficha si necesitas más datos.");
+      notifyAction("success", "Prospecto guardado con éxito", "Se abrió la ficha para completar email, domicilio y comentarios.");
     } catch (error) {
       setStatus(`Error guardando prospecto: ${error.message}`);
       notifyAction("error", "No se pudo guardar", error.message);
@@ -1248,7 +1260,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             <div className="clients-page-header">
               <div>
                 <h2>Prospectos</h2>
-                <p>{filteredProspects.length.toLocaleString()} de {(data.clients || []).filter((client) => (client.type || "cliente") === "prospecto").length.toLocaleString()} prospectos</p>
+                <p>{filteredProspects.length.toLocaleString()} de {(data.clients || []).filter(isProspectRecord).length.toLocaleString()} prospectos</p>
               </div>
               <button
                 className="new-client-button"
@@ -1349,7 +1361,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                                 className="secondary-button compact-action"
                                 type="button"
                                 onClick={() => {
-                                  setProspectForm({ ...blankProspect, ...prospect, type: "prospecto" });
+                                  setProspectForm(prospectForForm(prospect));
                                   setIsProspectFormOpen(true);
                                 }}
                               >
@@ -1389,6 +1401,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                     <label className="wide-field">Email<input value={prospectForm.email} onChange={(event) => setProspectForm({ ...prospectForm, email: event.target.value })} /></label>
                     <label>Ciudad<input value={prospectForm.ciudad || ""} onChange={(event) => setProspectForm({ ...prospectForm, ciudad: event.target.value })} /></label>
                     <label>Obtenido en<input value={prospectForm.obtenido_en || "JCK"} onChange={(event) => setProspectForm({ ...prospectForm, obtenido_en: event.target.value })} /></label>
+                    <label className="wide-field">Domicilio<input value={prospectForm.domicilio || ""} onChange={(event) => setProspectForm({ ...prospectForm, domicilio: event.target.value })} placeholder="Dirección, ciudad, estado, país" /></label>
                     <label className="wide-field">Lectura de gafete<input value={prospectForm.badge_raw || ""} onChange={(event) => setProspectForm({ ...prospectForm, badge_raw: event.target.value })} /></label>
                     <label>Estado
                       <select value={prospectForm.active === false ? "inactive" : "active"} onChange={(event) => setProspectForm({ ...prospectForm, active: event.target.value === "active" })}>

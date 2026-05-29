@@ -290,9 +290,9 @@ export const saveClient = async (client, tenantId = "") => {
     .single();
   if (
     result.error &&
-    ["type", "ciudad", "comentarios", "badge_raw", "obtenido_en"].some((field) => String(result.error.message || "").toLowerCase().includes(field))
+    ["type", "ciudad", "domicilio", "comentarios", "badge_raw", "obtenido_en"].some((field) => String(result.error.message || "").toLowerCase().includes(field))
   ) {
-    const { type, ciudad, comentarios, badge_raw, obtenido_en, ...fallbackRow } = row;
+    const { type, ciudad, domicilio, comentarios, badge_raw, obtenido_en, ...fallbackRow } = row;
     result = await supabase
       .from("clients")
       .upsert(fallbackRow, { onConflict: fallbackRow.id ? "id" : "email" })
