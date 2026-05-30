@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ActionNotice from "./ActionNotice";
 import AdvancedSearch from "./AdvancedSearch";
 import BrandLogo from "./BrandLogo";
@@ -180,6 +180,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [badgeScanInput, setBadgeScanInput] = useState("");
   const [badgeComment, setBadgeComment] = useState("");
   const [badgeObtainedIn, setBadgeObtainedIn] = useState("JCK");
+  const [cameraScannerOpen, setCameraScannerOpen] = useState(false);
+  const [cameraStatus, setCameraStatus] = useState("");
   const [priceListForm, setPriceListForm] = useState(blankPriceList);
   const [priceItemForm, setPriceItemForm] = useState(blankPriceItem);
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -202,6 +204,9 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [selectionDrawerOpen, setSelectionDrawerOpen] = useState(false);
   const [tenantForm, setTenantForm] = useState({ name: "", slug: "", status: "active" });
   const [signingOut, setSigningOut] = useState(false);
+  const cameraVideoRef = useRef(null);
+  const cameraControlsRef = useRef(null);
+  const cameraDetectedRef = useRef(false);
 
   const notifyAction = (type, title, message) => {
     setActionNotice({ type, title, message });
@@ -568,8 +573,9 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     }
   };
 
-  const handleSaveBadgeProspect = async () => {
-    const scan = badgeScanInput.trim();
+  const handleSaveBadgeProspect = async (scanOverride = "", commentOverride = "") => {
+    const scan = String(scanOverride || badgeScanInput).trim();
+    const comment = String(commentOverride || badgeComment).trim();
     if (!scan) {
       notifyAction("warning", "Sin lectura", "Escanea o escribe la información del gafete antes de guardar.");
       return;
@@ -587,7 +593,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     setStatus("Guardando prospecto desde gafete...");
     try {
       const notes = [
-        badgeComment.trim(),
+        comment,
         parsed.badgeNumber ? `Folio gafete: ${parsed.badgeNumber}` : "",
         parsed.badgeCode ? `Código gafete: ${parsed.badgeCode}` : "",
         `Lectura original: ${parsed.raw}`,
@@ -614,6 +620,58 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       setSavingProspect(false);
     }
   };
+
+  const stopCameraScanner = () => {
+    try {
+      cameraControlsRef.current?.stop?.();
+    } catch {
+      // ignore camera cleanup errors
+    }
+    cameraControlsRef.current = null;
+    if (cameraVideoRef.current?.srcObject) {
+      cameraVideoRef.current.srcObject.getTracks?.().forEach((track) => track.stop());
+      cameraVideoRef.current.srcObject = null;
+    }
+  };
+
+  const closeCameraScanner = () => {
+    stopCameraScanner();
+    setCameraScannerOpen(false);
+    setCameraStatus("");
+  };
+
+  const startCameraScanner = async () => {
+    setCameraScannerOpen(true);
+    setCameraStatus("Abriendo camara...");
+    cameraDetectedRef.current = false;
+    try {
+      const { BrowserMultiFormatReader } = await import("@zxing/browser");
+      await new Promise((resolve) => {
+        window.requestAnimationFrame(() => window.requestAnimationFrame(resolve));
+      });
+      if (!cameraVideoRef.current) throw new Error("No se pudo preparar la vista de camara.");
+
+      const reader = new BrowserMultiFormatReader();
+      const controls = await reader.decodeFromVideoDevice(undefined, cameraVideoRef.current, async (result) => {
+        const text = result?.getText?.();
+        if (!text || cameraDetectedRef.current) return;
+        cameraDetectedRef.current = true;
+        setCameraStatus(`Gafete detectado: ${text}`);
+        setBadgeScanInput(text);
+        stopCameraScanner();
+        setCameraScannerOpen(false);
+        await handleSaveBadgeProspect(text, badgeComment);
+      });
+      cameraControlsRef.current = controls;
+      setCameraStatus("Apunta la camara al codigo del gafete.");
+    } catch (error) {
+      stopCameraScanner();
+      setCameraStatus(`No se pudo abrir la camara: ${error.message}`);
+      notifyAction("error", "Camara no disponible", "Revisa permisos de camara o usa el lector fisico Bluetooth.");
+    }
+  };
+
+  useEffect(() => () => stopCameraScanner(), []);
 
   const handleBadgeScanKeyDown = (event) => {
     if (event.key !== "Enter") return;
@@ -1306,6 +1364,9 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                   Obtenido en
                   <input value={badgeObtainedIn} onChange={(event) => setBadgeObtainedIn(event.target.value)} placeholder="JCK" />
                 </label>
+                <button className="secondary-button camera-scan-button" type="button" onClick={startCameraScanner}>
+                  Escanear con camara
+                </button>
               </div>
               <input
                 className="prospect-scan-input"
@@ -1326,6 +1387,31 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                 </button>
               </div>
             </section>
+
+            {cameraScannerOpen ? (
+              <div className="camera-scanner-backdrop">
+                <section className="camera-scanner-modal">
+                  <header>
+                    <div>
+                      <span className="tool-eyebrow">Camara iPad</span>
+                      <h2>Escanear gafete</h2>
+                      <p>Permite el acceso a la camara y apunta al codigo del gafete.</p>
+                    </div>
+                    <button className="icon-button" type="button" onClick={closeCameraScanner}>x</button>
+                  </header>
+                  <div className="camera-scanner-frame">
+                    <video ref={cameraVideoRef} className="camera-scanner-video" muted playsInline autoPlay />
+                    <div className="camera-scanner-guide" aria-hidden="true" />
+                  </div>
+                  <p className="camera-scanner-status">{cameraStatus || "Preparando camara..."}</p>
+                  <footer>
+                    <button className="secondary-button" type="button" onClick={closeCameraScanner}>
+                      Cerrar camara
+                    </button>
+                  </footer>
+                </section>
+              </div>
+            ) : null}
 
             <div className="clients-table-card">
               <div className="responsive-table">
