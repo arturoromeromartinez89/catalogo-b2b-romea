@@ -138,6 +138,55 @@ const parseBadgeScan = (rawValue) => {
   };
 };
 
+const cleanBadgeField = (value) =>
+  String(value || "")
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const isReadableBadgeField = (value) => {
+  const text = cleanBadgeField(value);
+  if (!text) return false;
+  const unreadable = text.replace(/[A-Za-z0-9 .,/#&'()_-]/g, "");
+  return unreadable.length / text.length < 0.25;
+};
+
+const parseBadgeScanReadable = (rawValue) => {
+  const raw = String(rawValue || "").trim();
+  const controlParts = raw
+    .split(/[\u001D\u001E\u001F]+/g)
+    .map(cleanBadgeField)
+    .filter(Boolean);
+
+  if (controlParts.length >= 4) {
+    const [badgeNumber = "", firstName = "", lastName = "", company = "", codeCandidate = ""] = controlParts;
+    const badgeCode = isReadableBadgeField(codeCandidate) && /^[A-Za-z0-9 -]{1,12}$/.test(codeCandidate) ? codeCandidate : "";
+    return {
+      badgeNumber: badgeNumber.replace(/\D/g, "") || badgeNumber,
+      badgeCode,
+      name: [firstName, lastName].filter(Boolean).join(" "),
+      company,
+      raw,
+    };
+  }
+
+  const [, badgeNumber = "", restValue = raw] = raw.match(/^(\d+)(.*)$/) || [];
+  const words = cleanBadgeField(restValue)
+    .replace(/([a-záéíóúñ])([A-ZÁÉÍÓÚÑ])/g, "$1 $2")
+    .split(" ")
+    .filter(Boolean);
+  const badgeCode = words.length > 2 && /^[A-Z]{1,4}$/.test(words[words.length - 1]) ? words.pop() : "";
+  const nameWords = words.slice(0, Math.min(2, words.length));
+  const companyWords = words.slice(nameWords.length);
+  return {
+    badgeNumber,
+    badgeCode,
+    name: nameWords.join(" "),
+    company: companyWords.join(" "),
+    raw,
+  };
+};
+
 const displayContactEmail = (email) => String(email || "").endsWith("@prospect.local") ? "-" : email || "-";
 const isProspectRecord = (client) =>
   (client.type || "") === "prospecto" ||
@@ -584,7 +633,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       notifyAction("warning", "Falta empresa", "Primero selecciona una empresa para registrar prospectos.");
       return;
     }
-    const parsed = parseBadgeScan(scan);
+    const parsed = parseBadgeScanReadable(scan);
     if (!parsed.name && !parsed.company) {
       notifyAction("warning", "Lectura no interpretada", "No pude separar nombre o empresa; revisa la lectura del gafete.");
       return;
