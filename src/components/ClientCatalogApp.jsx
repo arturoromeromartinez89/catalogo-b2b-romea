@@ -223,48 +223,52 @@ export default function ClientCatalogApp({ profile }) {
           <p>{t("b2bCatalog")}</p>
         </div>
 
-        <section className="sidebar-section">
-          <h3>{t("productBase")}</h3>
-          <div className="mini-summary">
-            <div><span>{t("totalLabel")}</span><strong>{products.length}</strong></div>
-            <div><span>Filtrados</span><strong>{filteredProducts.length}</strong></div>
-            <div><span>{t("preorder")}</span><strong>{preorderPieces}</strong></div>
-            <div><span>{t("models")}</span><strong>{cartItems.length}</strong></div>
-          </div>
-          {status ? <p className="status info">{status}</p> : null}
-          <button
-            className="primary-button full compact-action"
-            type="button"
-            onClick={() => setIsCartOpen(true)}
-          >
-            {t("openPreorder")}
+        <div className="client-sidebar-scroll">
+          <section className="sidebar-section">
+            <h3>{t("productBase")}</h3>
+            <div className="mini-summary">
+              <div><span>{t("totalLabel")}</span><strong>{products.length}</strong></div>
+              <div><span>Filtrados</span><strong>{filteredProducts.length}</strong></div>
+              <div><span>{t("preorder")}</span><strong>{preorderPieces}</strong></div>
+              <div><span>{t("models")}</span><strong>{cartItems.length}</strong></div>
+            </div>
+            {status ? <p className="status info">{status}</p> : null}
+            <button
+              className="primary-button full compact-action"
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+            >
+              {t("openPreorder")}
+            </button>
+          </section>
+
+          <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
+
+          <QuickFilters
+            activeFilters={quickFilters}
+            onToggle={(id) =>
+              setQuickFilters((current) =>
+                current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+              )
+            }
+            onRemove={(id) => setQuickFilters((current) => current.filter((item) => item !== id))}
+          />
+
+          <button className="secondary-button full compact-action" type="button" onClick={clearFilters}>
+            {t("clearFilters")}
           </button>
-        </section>
+        </div>
 
-        <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
-
-        <QuickFilters
-          activeFilters={quickFilters}
-          onToggle={(id) =>
-            setQuickFilters((current) =>
-              current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
-            )
-          }
-          onRemove={(id) => setQuickFilters((current) => current.filter((item) => item !== id))}
-        />
-
-        <button className="secondary-button full compact-action" type="button" onClick={clearFilters}>
-          {t("clearFilters")}
-        </button>
-
-        <button
-          className="secondary-button full compact-action"
-          type="button"
-          onClick={handleSignOut}
-          disabled={signingOut}
-        >
-          {signingOut ? "Saliendo..." : t("logout")}
-        </button>
+        <div className="sidebar-bottom-actions client-sidebar-actions">
+          <button
+            className="sidebar-logout"
+            type="button"
+            onClick={handleSignOut}
+            disabled={signingOut}
+          >
+            {signingOut ? "Saliendo..." : t("logout")}
+          </button>
+        </div>
       </aside>
 
       <main className="admin-catalog-main">
@@ -274,7 +278,12 @@ export default function ClientCatalogApp({ profile }) {
             <h1>Catálogo mayorista</h1>
             <span>{profile?.email}</span>
           </div>
-          <LanguageToggle />
+          <div className="admin-header-actions">
+            <LanguageToggle />
+            <button className="header-logout-button" type="button" onClick={handleSignOut} disabled={signingOut}>
+              {signingOut ? "Saliendo..." : t("logout")}
+            </button>
+          </div>
         </header>
 
         <section className="admin-workspace">

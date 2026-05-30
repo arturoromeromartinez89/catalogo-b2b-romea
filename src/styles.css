@@ -1153,6 +1153,40 @@ dd {
   flex-shrink: 0;
 }
 
+.admin-header-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.header-logout-button {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--romea-line);
+  border-radius: 999px;
+  color: var(--romea-blue);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 900;
+  min-height: 32px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
+.header-logout-button:hover {
+  background: var(--color-error-bg);
+  border-color: var(--color-error-border);
+  color: var(--color-error);
+}
+
+.header-logout-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .signout-overlay {
   align-items: center;
   background: rgba(247, 248, 251, 0.72);
@@ -1547,6 +1581,14 @@ dd {
   overflow-x: hidden;
   overflow-y: hidden;
   padding: 12px 12px;
+}
+
+.client-sidebar-scroll {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .admin-nav-list {
@@ -4218,6 +4260,12 @@ body > div[data-portal] {
   gap: 8px;
   grid-template-columns: 1fr 1fr;
   margin-top: 8px;
+}
+
+.client-sidebar-actions,
+.superadmin-sidebar-actions {
+  grid-template-columns: 1fr;
+  margin-top: auto;
 }
 
 .sidebar-bottom-actions .sidebar-logout,

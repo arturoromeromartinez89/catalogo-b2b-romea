@@ -72,9 +72,11 @@ export default function SuperAdminDashboard({ profile }) {
             ))}
           </div>
         </section>
-        <button className="secondary-button full compact-action" type="button" onClick={handleSignOut} disabled={signingOut}>
-          {signingOut ? "Saliendo..." : "Salir"}
-        </button>
+        <div className="sidebar-bottom-actions superadmin-sidebar-actions">
+          <button className="sidebar-logout" type="button" onClick={handleSignOut} disabled={signingOut}>
+            {signingOut ? "Saliendo..." : "Salir"}
+          </button>
+        </div>
       </aside>
 
       <main className="superadmin-main">
@@ -84,7 +86,12 @@ export default function SuperAdminDashboard({ profile }) {
             <h1>Administración global</h1>
             <span>{profile?.email} · no estás operando ningún catálogo de empresa.</span>
           </div>
-          <LanguageToggle />
+          <div className="admin-header-actions">
+            <LanguageToggle />
+            <button className="header-logout-button" type="button" onClick={handleSignOut} disabled={signingOut}>
+              {signingOut ? "Saliendo..." : "Salir"}
+            </button>
+          </div>
         </header>
 
         <section className="admin-workspace">

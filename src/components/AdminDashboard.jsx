@@ -876,7 +876,12 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             {superadmin && activeTenant ? <span>Empresa activa: {activeTenant.name}</span> : null}
             {status && tab !== "catalog" ? <span className="header-status-text">{status}</span> : null}
           </div>
-          <LanguageToggle />
+          <div className="admin-header-actions">
+            <LanguageToggle />
+            <button className="header-logout-button" type="button" onClick={handleSignOut} disabled={signingOut}>
+              {signingOut ? "Saliendo..." : t("logout")}
+            </button>
+          </div>
         </header>
 
         {tab === "tenants" && superadmin ? (
