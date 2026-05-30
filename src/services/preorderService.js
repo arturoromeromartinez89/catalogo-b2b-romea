@@ -4,7 +4,8 @@ import { getTenantId, isSuperAdmin, withTenant } from "./tenantUtils";
 const buildFolio = () => {
   const d = new Date();
   const pad = (v) => String(v).padStart(2, "0");
-  return `PRE-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `PRE-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-${suffix}`;
 };
 
 const calcTotals = (items, preorder = {}) => ({

@@ -1640,7 +1640,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           onDelete={async (code) => {
             try {
               const product = data.products.find((item) => item.codigo === code);
-              if (product) await deleteProduct(product.id);
+              if (product) await deleteProduct(product.id, tenantId);
               setProductModal({ open: false, product: null, mode: "create" });
               await load();
               setStatus(`Producto ${code} eliminado correctamente.`);

@@ -93,10 +93,15 @@ export const saveLine = async (line, profileOrTenantId = "") => {
     updated_at: new Date().toISOString(),
   };
   if (tenantId) row.tenant_id = tenantId;
-  const { error } = await supabase
+  let result = await supabase
     .from("product_lines")
-    .upsert(row, { onConflict: "codigo" });
-  if (error) throw error;
+    .upsert(row, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" });
+  if (result.error && tenantId) {
+    result = await supabase
+      .from("product_lines")
+      .upsert(row, { onConflict: "codigo" });
+  }
+  if (result.error) throw result.error;
 };
 
 export const syncProductLinesFromProducts = async (products = [], profileOrTenantId = "") => {
@@ -126,8 +131,13 @@ export const syncProductLinesFromProducts = async (products = [], profileOrTenan
   if (!rows.length) return [];
   if (tenantId) rows.forEach((row) => { row.tenant_id = tenantId; });
 
-  const { error } = await supabase.from("product_lines").upsert(rows, { onConflict: "codigo" });
-  if (error) throw error;
+  let result = await supabase
+    .from("product_lines")
+    .upsert(rows, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" });
+  if (result.error && tenantId) {
+    result = await supabase.from("product_lines").upsert(rows, { onConflict: "codigo" });
+  }
+  if (result.error) throw result.error;
   return fetchLines(tenantId);
 };
 

@@ -18,6 +18,10 @@
   --color-error: #9f2d2d;
   --color-error-bg: #fff0f0;
   --color-error-border: #f0cccc;
+  --color-text-danger: var(--color-error);
+  --color-background-danger: var(--color-error-bg);
+  --color-background-secondary: #f4f7fb;
+  --color-border-tertiary: var(--romea-line);
   --color-info-bg: #edf3ff;
   --color-info-text: #244373;
   /* Tipografía */

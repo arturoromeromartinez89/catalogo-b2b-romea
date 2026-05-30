@@ -19,7 +19,6 @@ const COLUMN_ALIASES = {
   monedaPrecioMin: ["mon precio min", "moneda precio min", "moneda_precio_min", "currency", "moneda"],
   manoObra: ["m de obra 1", "mano de obra", "mano_obra", "labor price", "labor_price", "labor cost"],
   numProveed: ["num proveed", "núm proveed", "num prov", "número proveedor"],
-  proveedor: ["proveedor", "proveedor principal", "supplier", "fabricante", "marca"],
 };
 
 const LINEAS_OMITIR = [

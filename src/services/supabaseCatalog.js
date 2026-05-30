@@ -76,7 +76,6 @@ export const dbProductToProduct = (row) => ({
   fotoUrl3: resolveImageUrl(row.foto_url_3),
   visibleWeb: Boolean(row.visible_web),
   ordenWeb: Number(row.orden_web || 0),
-  proveedor: row.proveedor || "",
   tagsBusqueda: row.tags_busqueda || "",
   searchText:
     row.search_text ||
@@ -148,7 +147,6 @@ export const productToDb = (product, tenantId = "") => {
     foto_url_3: resolveImageUrl(firstValue(product.fotoUrl3, product.foto_url_3, product.photo_url_3, "")),
     visible_web: toDbBoolean(product.visibleWeb, product.visible_web),
     orden_web: toDbNumber(product.ordenWeb, product.orden_web, product.web_order),
-    proveedor: firstValue(product.proveedor, ""),
     tags_busqueda: firstValue(product.tagsBusqueda, product.tags_busqueda, product.search_tags, ""),
     search_text: searchText,
     updated_at: new Date().toISOString(),
@@ -257,8 +255,10 @@ export const upsertProducts = async (products, tenantId = "") => {
   return result.data.map(dbProductToProduct);
 };
 
-export const deleteProduct = async (id) => {
-  throwIfError(await supabase.from("products").delete().eq("id", id));
+export const deleteProduct = async (id, tenantId = "") => {
+  let query = supabase.from("products").delete().eq("id", id);
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  throwIfError(await query);
 };
 
 export const deleteTenantProducts = async (tenantId = "") => {

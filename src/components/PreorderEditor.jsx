@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings } from "../services/companySettings";
-import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice, fetchLaborLists, fetchLaborListLines, roundUp2, TROY_OUNCE_GRAMS } from "../services/pricingService";
+import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice, fetchLaborLists, fetchLaborListLines, roundUp2 } from "../services/pricingService";
 import { saveClient } from "../services/supabaseCatalog";
 import { savePreorder, deletePreorder } from "../services/preorderService";
 import { generatePdf } from "../utils/pdfGenerator";
@@ -25,14 +25,6 @@ const fmt = (value) =>
 const IVA_RATE = 0.16;
 const PROSPECT_CLIENT_VALUE = "__new_prospect__";
 const CUSTOM_PRICE_LIST_VALUE = "__custom_price_list__";
-
-const calcSilverFineFromKitco = (kitcoUsdOz, exchangeRate, premiumPct = 0) => {
-  const kitco = Number(kitcoUsdOz || 0);
-  const tc = Number(exchangeRate || 0);
-  const premium = Number(premiumPct || 0);
-  if (!kitco || !tc) return 0;
-  return roundUp2((kitco / TROY_OUNCE_GRAMS) * (1 + premium / 100) * tc);
-};
 
 const calcItem = (item) => {
   const piezas = Number(item.piezas || 0);
@@ -281,7 +273,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const calculateSilverFineByKitco = () => {
     if (pricingLocked) return;
-    const nextSilver = calcSilverFineFromKitco(po.kitco_usd_oz, po.tipo_cambio || metalPrices.tipo_cambio, po.premio_pct || 0);
+    const nextSilver = getSilverFinePrice({
+      kitco_usd_oz: po.kitco_usd_oz,
+      tipo_cambio: po.tipo_cambio || metalPrices.tipo_cambio,
+      premio_pct: po.premio_pct || 0,
+    });
     if (!nextSilver) {
       setMsg("Captura KITCO USD/oz y tipo de cambio para calcular la plata fina.");
       return;
