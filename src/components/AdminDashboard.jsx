@@ -41,6 +41,7 @@ import { normalizeProduct, parseExcelFile } from "../utils/excelParser";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
+import { buildPreorderItemFromProduct } from "../utils/preorderUtils";
 
 const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", domicilio: "", comentarios: "", type: "cliente", active: true };
 const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", domicilio: "", comentarios: "", badge_raw: "", obtenido_en: "JCK", type: "prospecto", active: true };
@@ -96,47 +97,6 @@ const formProductToRow = (product) => ({
   orden_web: product.ordenWeb,
   tags_busqueda: product.tagsBusqueda,
 });
-
-const productToPreorderItem = (product, quantity = 1) => {
-  const piezas = Math.max(1, Number(quantity || 1));
-  const gramosPorPieza = Number(product.pesoPromedio || 0);
-  const precioGramo = Number(product.quotePricePerGram || product.precioMinimo || 0);
-  return {
-    producto_codigo: product.codigo,
-    producto_descripcion: product.descripcion,
-    producto_metal: product.metal,
-    producto_kilataje: product.kilataje,
-    producto_linea: product.linea,
-    producto_foto_url: product.fotoUrl,
-    piezas,
-    gramos_por_pieza: gramosPorPieza,
-    gramos_total: piezas * gramosPorPieza,
-    labor_mxn: Number(product.quoteLaborPerGram || 0),
-    precio_gramo_mxn: precioGramo,
-    subtotal_mxn: piezas * gramosPorPieza * precioGramo,
-  };
-};
-
-const parseBadgeScan = (rawValue) => {
-  const raw = String(rawValue || "").trim();
-  const [, badgeNumber = "", restValue = raw] = raw.match(/^(\d+)(.*)$/) || [];
-  const words = String(restValue || "")
-    .replace(/([a-zÃ¡Ã©Ã­Ã³ÃºÃ±])([A-ZÃ�Ã‰Ã�Ã“ÃšÃ‘])/g, "$1 $2")
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(" ")
-    .filter(Boolean);
-  const badgeCode = words.length > 2 && /^[A-Z]{1,4}$/.test(words[words.length - 1]) ? words.pop() : "";
-  const nameWords = words.slice(0, Math.min(2, words.length));
-  const companyWords = words.slice(nameWords.length);
-  return {
-    badgeNumber,
-    badgeCode,
-    name: nameWords.join(" "),
-    company: companyWords.join(" "),
-    raw,
-  };
-};
 
 const cleanBadgeField = (value) =>
   String(value || "")
@@ -515,14 +475,14 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       setStatus("Primero selecciona una empresa para crear preórdenes.");
       return;
     }
-    const nextItem = productToPreorderItem(product, quantity);
+    const nextItem = buildPreorderItemFromProduct(product, quantity);
     setDraftPreorder((current) => {
       const preorder = current || { status: "pendiente", tenant_id: tenantId, created_by: profile?.id || "", preorder_items: [] };
       const existing = preorder.preorder_items.find((item) => item.producto_codigo === product.codigo);
       const preorderItems = existing
         ? preorder.preorder_items.map((item) =>
             item.producto_codigo === product.codigo
-              ? productToPreorderItem(product, Number(item.piezas || 0) + Number(nextItem.piezas || 0))
+              ? buildPreorderItemFromProduct(product, Number(item.piezas || 0) + Number(nextItem.piezas || 0))
               : item
           )
         : [...preorder.preorder_items, nextItem];

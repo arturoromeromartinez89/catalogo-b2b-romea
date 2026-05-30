@@ -9,7 +9,7 @@ const emptyMetalPrices = {
 };
 
 const normalizeCode = (value) => String(value || "").trim().toLowerCase();
-export const TROY_OUNCE_GRAMS = 31.1;
+export const TROY_OUNCE_GRAMS = 31.1035;
 
 export const roundUp2 = (value) => {
   const number = Number(value || 0);
@@ -93,15 +93,10 @@ export const saveLine = async (line, profileOrTenantId = "") => {
     updated_at: new Date().toISOString(),
   };
   if (tenantId) row.tenant_id = tenantId;
-  let result = await supabase
+  const { error } = await supabase
     .from("product_lines")
     .upsert(row, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" });
-  if (result.error && tenantId) {
-    result = await supabase
-      .from("product_lines")
-      .upsert(row, { onConflict: "codigo" });
-  }
-  if (result.error) throw result.error;
+  if (error) throw error;
 };
 
 export const syncProductLinesFromProducts = async (products = [], profileOrTenantId = "") => {
@@ -131,13 +126,10 @@ export const syncProductLinesFromProducts = async (products = [], profileOrTenan
   if (!rows.length) return [];
   if (tenantId) rows.forEach((row) => { row.tenant_id = tenantId; });
 
-  let result = await supabase
+  const { error } = await supabase
     .from("product_lines")
     .upsert(rows, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" });
-  if (result.error && tenantId) {
-    result = await supabase.from("product_lines").upsert(rows, { onConflict: "codigo" });
-  }
-  if (result.error) throw result.error;
+  if (error) throw error;
   return fetchLines(tenantId);
 };
 

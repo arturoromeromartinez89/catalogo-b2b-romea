@@ -8,6 +8,7 @@ import { generatePdf } from "../utils/pdfGenerator";
 import { useLanguage } from "../i18n/LanguageContext";
 import { buildPlaceholderUrl, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
+import { buildPreorderItemFromProduct } from "../utils/preorderUtils";
 
 const STATUS = {
   borrador: { label: "Borrador", color: "#64748b" },
@@ -32,35 +33,6 @@ const calcItem = (item) => {
   const gTotal = item._gt_manual != null ? Number(item._gt_manual) : piezas * gPieza;
   const pGramo = Number(item.precio_gramo_mxn || 0);
   return { ...item, gramos_total: gTotal, subtotal_mxn: gTotal * pGramo };
-};
-
-const productToPreorderItem = (product, quantity = 1, lines = [], plataFinaMxn = 0) => {
-  const piezas = Math.max(1, Number(quantity || 1));
-  const gramosPorPieza = Number(product.pesoPromedio || product.peso_promedio || 0);
-  const line = lines.find((lineItem) => normalizeText(lineItem.codigo) === normalizeText(product.linea));
-  const priceListLine = line?._priceListLine;
-  const price = priceListLine?.integrated_price
-    ? { mo_visible: Number(priceListLine.final_labor || 0), integrado: Number(priceListLine.integrated_price || 0) }
-    : line && plataFinaMxn
-    ? calcPrecioGramo({ mo_base: line.mo_base, plata_fina_mxn: plataFinaMxn })
-    : null;
-  const labor = Number(price?.mo_visible || product.quoteLaborPerGram || product.manoObra || product.mano_obra || 0);
-  const precioGramo = Number(price?.integrado || product.quotePricePerGram || product.precioMinimo || product.precio_minimo || 0);
-
-  return {
-    producto_codigo: product.codigo,
-    producto_descripcion: product.descripcion,
-    producto_metal: product.metal,
-    producto_kilataje: product.kilataje,
-    producto_linea: product.linea,
-    producto_foto_url: product.fotoUrl || product.foto_url || "",
-    piezas,
-    gramos_por_pieza: gramosPorPieza,
-    gramos_total: piezas * gramosPorPieza,
-    labor_mxn: labor,
-    precio_gramo_mxn: precioGramo,
-    subtotal_mxn: piezas * gramosPorPieza * precioGramo,
-  };
 };
 
 const Field = ({ label, children }) => (
@@ -364,7 +336,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     gramos: items.reduce((sum, item) => sum + Number(item.gramos_total || 0), 0),
     mxn: items.reduce((sum, item) => sum + Number(item.subtotal_mxn || 0), 0),
   };
-  const ivaMxn = 0;
+  const ivaMxn = po.aplicar_iva ? totals.mxn * IVA_RATE : 0;
   const totalFinalMxn = totals.mxn + ivaMxn;
 
   const productResults = useMemo(() => {
@@ -380,7 +352,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const addProduct = (product) => {
     const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
-    const rawItem = productToPreorderItem(product, 1, lines, plataFinaMxn);
+    const rawItem = buildPreorderItemFromProduct(product, 1, lines, plataFinaMxn);
     const nextItem = priceItemFromLines(rawItem, lines, selectedList, getListSilverMxn(selectedList));
     setItems((current) => {
       const existing = current.find((item) => item.producto_codigo === nextItem.producto_codigo);

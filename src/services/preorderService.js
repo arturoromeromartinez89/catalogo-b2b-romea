@@ -11,7 +11,7 @@ const buildFolio = () => {
 const calcTotals = (items, preorder = {}) => ({
   total_piezas: items.reduce((s, i) => s + Number(i.piezas || 0), 0),
   total_gramos: items.reduce((s, i) => s + Number(i.gramos_total || 0), 0),
-  total_mxn: preorder.total_mxn ?? items.reduce((s, i) => s + Number(i.subtotal_mxn || 0), 0),
+  total_mxn: items.reduce((s, i) => s + Number(i.subtotal_mxn || 0), 0),
 });
 
 const toDbNumber = (value, fallback = 0) => {
