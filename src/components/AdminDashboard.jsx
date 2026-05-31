@@ -515,9 +515,15 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     }
     setStatus("Guardando producto...");
     try {
-      await upsertProducts([normalizeProduct(formProductToRow(product))], tenantId);
+      const saved = await upsertProducts([normalizeProduct(formProductToRow(product))], tenantId);
       setProductModal({ open: false, product: null, mode: "create" });
-      await load();
+      setData((current) => {
+        if (!current) return current;
+        const savedMap = new Map(saved.map((p) => [p.codigo, p]));
+        const updated = current.products.map((p) => savedMap.get(p.codigo) || p);
+        saved.forEach((p) => { if (!current.products.some((ex) => ex.codigo === p.codigo)) updated.push(p); });
+        return { ...current, products: updated };
+      });
       setStatus(`Producto ${product.codigo} guardado correctamente.`);
       notifyAction("success", "Producto guardado", `Producto ${product.codigo} guardado correctamente.`);
     } catch (error) {
@@ -579,7 +585,12 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       const saved = await saveClient({ ...clientForm, type: "cliente" }, tenantId);
       setClientForm(blankClient);
       setIsClientFormOpen(false);
-      await load();
+      setData((current) => {
+        if (!current) return current;
+        const exists = current.clients.some((c) => c.id === saved.id);
+        const clients = exists ? current.clients.map((c) => c.id === saved.id ? saved : c) : [...current.clients, saved];
+        return { ...current, clients };
+      });
       setSelectedClientId(saved.id);
       setStatus("Cliente guardado correctamente.");
       notifyAction(
@@ -611,7 +622,12 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       const saved = await saveClient({ ...prospectForm, type: "prospecto" }, tenantId);
       setProspectForm(blankProspect);
       setIsProspectFormOpen(false);
-      await load();
+      setData((current) => {
+        if (!current) return current;
+        const exists = current.clients.some((c) => c.id === saved.id);
+        const clients = exists ? current.clients.map((c) => c.id === saved.id ? saved : c) : [...current.clients, saved];
+        return { ...current, clients };
+      });
       setStatus("Prospecto guardado correctamente.");
       notifyAction(
         "success",
@@ -630,8 +646,12 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     if (!window.confirm(`Convertir ${prospect.company || prospect.name || "este prospecto"} a cliente?`)) return;
     setStatus("Convirtiendo prospecto a cliente...");
     try {
-      await saveClient({ ...prospect, type: "cliente" }, tenantId);
-      await load();
+      const saved = await saveClient({ ...prospect, type: "cliente" }, tenantId);
+      setData((current) => {
+        if (!current) return current;
+        const clients = current.clients.map((c) => c.id === saved.id ? saved : c);
+        return { ...current, clients };
+      });
       setStatus("Prospecto convertido a cliente.");
       notifyAction("success", "Convertido a cliente", "El prospecto ahora aparece en el menu Clientes.");
       changeTab("clients");
@@ -676,7 +696,12 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       }, tenantId);
       setBadgeScanInput("");
       setBadgeComment("");
-      await load();
+      setData((current) => {
+        if (!current) return current;
+        const exists = current.clients.some((c) => c.id === saved.id);
+        const clients = exists ? current.clients.map((c) => c.id === saved.id ? saved : c) : [...current.clients, saved];
+        return { ...current, clients };
+      });
       setProspectForm(prospectForForm(saved));
       setIsProspectFormOpen(true);
       setStatus("Prospecto guardado con éxito. Completa la ficha si necesitas más datos.");
@@ -1335,10 +1360,24 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                         type="checkbox"
                         checked={isClientPriceActive(priceList.id)}
                         onChange={async (event) => {
+                          const active = event.target.checked;
                           setStatus("Actualizando lista de precios...");
                           try {
-                            await setClientPriceList(selectedClientId, priceList.id, event.target.checked);
-                            await load();
+                            await setClientPriceList(selectedClientId, priceList.id, active);
+                            setData((current) => {
+                              if (!current) return current;
+                              const exists = current.clientPriceLists.some(
+                                (item) => item.client_id === selectedClientId && item.price_list_id === priceList.id
+                              );
+                              const clientPriceLists = exists
+                                ? current.clientPriceLists.map((item) =>
+                                    item.client_id === selectedClientId && item.price_list_id === priceList.id
+                                      ? { ...item, active }
+                                      : item
+                                  )
+                                : [...current.clientPriceLists, { client_id: selectedClientId, price_list_id: priceList.id, active }];
+                              return { ...current, clientPriceLists };
+                            });
                             setStatus("Lista de precios actualizada correctamente.");
                             notifyAction("success", "Permiso actualizado", "La lista de precios del cliente quedo actualizada.");
                           } catch (error) {
@@ -1599,11 +1638,10 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               if (updatedDraft) setDraftPreorder(updatedDraft);
               setIsDraftOpen(false);
             }}
-            onDraftSaved={async () => {
+            onDraftSaved={() => {
               setDraftPreorder(null);
               setAddedCodes([]);
               setIsDraftOpen(false);
-              await load();
               setStatus("Preorden guardada correctamente. Puedes verla en el menu Preordenes.");
             }}
           />
@@ -1661,7 +1699,11 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               const product = data.products.find((item) => item.codigo === code);
               if (product) await deleteProduct(product.id, tenantId);
               setProductModal({ open: false, product: null, mode: "create" });
-              await load();
+              setData((current) => {
+                if (!current) return current;
+                return { ...current, products: current.products.filter((p) => p.codigo !== code) };
+              });
+              setSelectedProductCode((current) => current === code ? "" : current);
               setStatus(`Producto ${code} eliminado correctamente.`);
               notifyAction("success", "Producto eliminado", `Producto ${code} eliminado correctamente.`);
             } catch (error) {
