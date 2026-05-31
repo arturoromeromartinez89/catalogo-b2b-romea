@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ActionNotice from "./ActionNotice";
 import AdvancedSearch from "./AdvancedSearch";
 import BrandLogo from "./BrandLogo";
@@ -210,7 +210,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [tenants, setTenants] = useState([]);
   const [selectedTenantId, setSelectedTenantId] = useState(() => localStorage.getItem("catalogo-b2b-selected-tenant") || profile?.tenant_id || profile?.tenantId || "");
   const tenantId = tenantOverride || (superadmin ? selectedTenantId : profile?.tenant_id || profile?.tenantId || "");
-  const activeTenant = tenants.find((tenant) => tenant.id === tenantId);
+  const activeTenant = useMemo(() => tenants.find((tenant) => tenant.id === tenantId), [tenants, tenantId]);
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
   const tabs = superadmin ? ["tenants", ...baseTabs] : baseTabs;
   const [tab, setTab] = useState("catalog");
@@ -260,20 +260,22 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const cameraControlsRef = useRef(null);
   const cameraDetectedRef = useRef(false);
 
-  const notifyAction = (type, title, message) => {
+  const notifyAction = useCallback((type, title, message) => {
     setActionNotice({ type, title, message });
     setLastActionMessage(message);
-  };
+  }, []);
 
-  const changeTab = (nextTab) => {
-    if (tab === "preorders" && nextTab !== "preorders") {
-      if (!window.confirm("Si tienes una preorden abierta, guarda como borrador antes de salir. ¿Deseas cambiar de menú?")) {
-        return;
+  const changeTab = useCallback((nextTab) => {
+    setTab((current) => {
+      if (current === "preorders" && nextTab !== "preorders") {
+        if (!window.confirm("Si tienes una preorden abierta, guarda como borrador antes de salir. ¿Deseas cambiar de menú?")) {
+          return current;
+        }
       }
-    }
-    setTab(nextTab);
+      return nextTab;
+    });
     setSelectedProductCode("");
-  };
+  }, []);
 
   const handleSignOut = async () => {
     if (signingOut) return;
@@ -355,8 +357,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   }, [tenantId]);
 
   const products = data ? data.products : sampleProducts;
-  const selectedClient = data?.clients.find((client) => client.id === selectedClientId);
-  const selectedProduct = products.find((product) => product.codigo === selectedProductCode);
+  const selectedClient = useMemo(() => data?.clients.find((client) => client.id === selectedClientId), [data?.clients, selectedClientId]);
+  const selectedProduct = useMemo(() => products.find((product) => product.codigo === selectedProductCode), [products, selectedProductCode]);
   const filterOptions = useMemo(() => buildFilterOptions(products), [products]);
   const filteredProducts = useMemo(
     () => applyFilters(products, productQuery, filters, quickFilters, searchChips),
@@ -366,10 +368,18 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     () => filteredProducts.slice(0, visibleProductLimit),
     [filteredProducts, visibleProductLimit]
   );
+  const { realClients, prospects } = useMemo(() => {
+    const realClients = [];
+    const prospects = [];
+    for (const client of (data?.clients || [])) {
+      (isProspectRecord(client) ? prospects : realClients).push(client);
+    }
+    return { realClients, prospects };
+  }, [data?.clients]);
+
   const filteredClients = useMemo(() => {
     const term = normalizeText(clientSearch);
-    return (data?.clients || []).filter((client) => {
-      if (isProspectRecord(client)) return false;
+    return realClients.filter((client) => {
       const activeMatch =
         clientStatusFilter === "all" ||
         (clientStatusFilter === "active" && client.active !== false) ||
@@ -377,11 +387,11 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       const text = normalizeText([client.name, client.company, client.rfc, client.phone, client.email, client.ciudad].join(" "));
       return activeMatch && (!term || text.includes(term));
     });
-  }, [clientSearch, clientStatusFilter, data?.clients]);
+  }, [clientSearch, clientStatusFilter, realClients]);
+
   const filteredProspects = useMemo(() => {
     const term = normalizeText(prospectSearch);
-    return (data?.clients || []).filter((client) => {
-      if (!isProspectRecord(client)) return false;
+    return prospects.filter((client) => {
       const activeMatch =
         prospectStatusFilter === "all" ||
         (prospectStatusFilter === "active" && client.active !== false) ||
@@ -389,7 +399,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       const text = normalizeText([client.name, client.company, client.rfc, client.phone, client.email, client.ciudad, client.comentarios, client.badge_raw, client.obtenido_en].join(" "));
       return activeMatch && (!term || text.includes(term));
     });
-  }, [prospectSearch, prospectStatusFilter, data?.clients]);
+  }, [prospectSearch, prospectStatusFilter, prospects]);
   const checkedProducts = useMemo(
     () => products.filter((product) => checkedIds.has(product.codigo)),
     [products, checkedIds]
@@ -409,8 +419,14 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     })),
     [draftPreorder]
   );
-  const allRenderedChecked = renderedProducts.length > 0 && renderedProducts.every((product) => checkedIds.has(product.codigo));
-  const allFilteredChecked = filteredProducts.length > 0 && filteredProducts.every((product) => checkedIds.has(product.codigo));
+  const allRenderedChecked = useMemo(
+    () => renderedProducts.length > 0 && renderedProducts.every((product) => checkedIds.has(product.codigo)),
+    [renderedProducts, checkedIds]
+  );
+  const allFilteredChecked = useMemo(
+    () => filteredProducts.length > 0 && filteredProducts.every((product) => checkedIds.has(product.codigo)),
+    [filteredProducts, checkedIds]
+  );
   useEffect(() => {
     setVisibleProductLimit(PRODUCT_RENDER_BATCH);
   }, [productQuery, searchChips, filters, quickFilters]);

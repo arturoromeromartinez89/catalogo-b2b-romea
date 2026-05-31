@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
 import { useLanguage } from "../i18n/LanguageContext";
 
-export default function ProductCard({ product, onAdd, onOpenDetail }) {
+function ProductCard({ product, onAdd, onOpenDetail }) {
   const { t } = useLanguage();
   const imageUrl = product.fotoUrl || buildPlaceholderUrl(t("noPhoto"));
 
@@ -37,3 +38,5 @@ export default function ProductCard({ product, onAdd, onOpenDetail }) {
     </article>
   );
 }
+
+export default memo(ProductCard);

@@ -3,7 +3,7 @@ import { resolveImageUrl } from "../utils/formatters";
 import { getTenantId, withTenant } from "./tenantUtils";
 import { normalizeText } from "../utils/textNormalizer";
 
-const PAGE_SIZE = 500;
+const PAGE_SIZE = 2000;
 
 const firstValue = (...values) => values.find((value) => value !== undefined && value !== null);
 
@@ -217,11 +217,11 @@ export const fetchAdminData = async (profile) => {
       { data: allProducts, error: null },
       clientsQuery,
       catalogsQuery,
-      supabase.from("catalog_products").select("*"),
+      withTenant(supabase.from("catalog_products").select("*"), tenantId),
       priceListsQuery,
       supabase.from("price_list_items").select("*").order("metal"),
-      supabase.from("client_catalogs").select("*"),
-      supabase.from("client_price_lists").select("*"),
+      withTenant(supabase.from("client_catalogs").select("*"), tenantId),
+      withTenant(supabase.from("client_price_lists").select("*"), tenantId),
     ]);
 
   [products, clients, catalogs, catalogProducts, priceLists, priceItems, clientCatalogs, clientPriceLists].forEach(throwIfError);
