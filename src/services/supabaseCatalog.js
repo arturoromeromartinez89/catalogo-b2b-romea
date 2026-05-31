@@ -3,7 +3,8 @@ import { resolveImageUrl } from "../utils/formatters";
 import { getTenantId, withTenant } from "./tenantUtils";
 import { normalizeText } from "../utils/textNormalizer";
 
-const PAGE_SIZE = 2000;
+const PAGE_SIZE = 500;
+const UPSERT_BATCH_SIZE = 500;
 
 const firstValue = (...values) => values.find((value) => value !== undefined && value !== null);
 
@@ -240,19 +241,29 @@ export const fetchAdminData = async (profile) => {
 
 export const upsertProducts = async (products, tenantId = "") => {
   const rows = await preserveExistingImages(products.map((product) => productToDb(product, tenantId)), tenantId);
-  let result = await supabase
-    .from("products")
-    .upsert(rows, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" })
-    .select("*");
-  if (result.error && String(result.error.message || "").toLowerCase().includes("proveedor")) {
-    const fallbackRows = rows.map(({ proveedor, ...row }) => row);
-    result = await supabase
+  if (!rows.length) return [];
+  const savedRows = [];
+
+  for (let index = 0; index < rows.length; index += UPSERT_BATCH_SIZE) {
+    const batch = rows.slice(index, index + UPSERT_BATCH_SIZE);
+    let result = await supabase
       .from("products")
-      .upsert(fallbackRows, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" })
+      .upsert(batch, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" })
       .select("*");
+
+    if (result.error && String(result.error.message || "").toLowerCase().includes("proveedor")) {
+      const fallbackRows = batch.map(({ proveedor, ...row }) => row);
+      result = await supabase
+        .from("products")
+        .upsert(fallbackRows, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" })
+        .select("*");
+    }
+
+    throwIfError(result);
+    savedRows.push(...(result.data || []));
   }
-  throwIfError(result);
-  return result.data.map(dbProductToProduct);
+
+  return savedRows.map(dbProductToProduct);
 };
 
 export const deleteProduct = async (id, tenantId = "") => {
