@@ -119,28 +119,6 @@ const buildBaseDraftItem = (product, quantity = 1) => {
   };
 };
 
-const parseBadgeScan = (rawValue) => {
-  const raw = String(rawValue || “”).trim();
-  const [, badgeNumber = “”, restValue = raw] = raw.match(/^(\d+)(.*)$/) || [];
-  const words = String(restValue || “”)
-    // CamelCase split — UTF-8 correcto con acentos en español
-    .replace(/([a-záéíóúñ])([A-ZÁÉÍÓÚÑ])/g, “$1 $2”)
-    .replace(/\s+/g, “ “)
-    .trim()
-    .split(“ “)
-    .filter(Boolean);
-  const badgeCode = words.length > 2 && /^[A-Z]{1,4}$/.test(words[words.length - 1]) ? words.pop() : “”;
-  const nameWords = words.slice(0, Math.min(2, words.length));
-  const companyWords = words.slice(nameWords.length);
-  return {
-    badgeNumber,
-    badgeCode,
-    name: nameWords.join(“ “),
-    company: companyWords.join(“ “),
-    raw,
-  };
-};
-
 const cleanBadgeField = (value) =>
   String(value || "")
     .replace(/[\u0000-\u001F\u007F]/g, " ")
