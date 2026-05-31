@@ -3,7 +3,7 @@ import BrandLogo from "./BrandLogo";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useCompany } from "../contexts/CompanyContext";
 import { calculateCartTotals } from "../utils/filters";
-import { formatCurrency, formatWeight, shortText } from "../utils/formatters";
+import { formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 
 const generalFields = [
   ["serie", "series", "PRE"],
@@ -185,8 +185,10 @@ export default function CartDrawer({
                           <td>{index + 1}</td>
                           <td>
                             <img
-                              src={product.fotoUrl}
+                              src={imageUrlForSize(product.fotoUrl, 120)}
                               alt={product.codigo}
+                              loading="lazy"
+                              decoding="async"
                               style={{ width: 42, height: 42, objectFit: "contain", borderRadius: 6 }}
                             />
                           </td>

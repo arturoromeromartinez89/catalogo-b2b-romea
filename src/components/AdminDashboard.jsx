@@ -39,14 +39,14 @@ import { fetchTenants, makeTenantSlug, saveTenant } from "../services/tenantServ
 import { isSuperAdmin } from "../services/tenantUtils";
 import { normalizeProduct, parseExcelFile } from "../utils/excelParser";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
-import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
+import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 
 const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", domicilio: "", comentarios: "", type: "cliente", active: true };
 const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", domicilio: "", comentarios: "", badge_raw: "", obtenido_en: "JCK", type: "prospecto", active: true };
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
-const PRODUCT_RENDER_BATCH = 120;
+const PRODUCT_RENDER_BATCH = 60;
 const baseTabs = ["catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
 const tabKeys = {
   tenants: "tenants",
@@ -1170,9 +1170,11 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                     {catalogSelectionIds.has(product.codigo) ? <span className="catalog-added-badge">✓ Catálogo</span> : null}
                     <button className="admin-product-image" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
                       <img
-                        src={product.fotoUrl || buildPlaceholderUrl(t("noPhoto"))}
+                        src={imageUrlForSize(product.fotoUrl, 360) || buildPlaceholderUrl(t("noPhoto"))}
                         alt={product.descripcion}
                         loading="lazy"
+                        decoding="async"
+                        fetchPriority="low"
                         onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(t("noPhoto")); }}
                       />
                     </button>

@@ -56,6 +56,25 @@ export const resolveImageUrl = (value) => {
   }
 };
 
+export const imageUrlForSize = (value, width = 360) => {
+  const url = resolveImageUrl(value);
+  if (!url || url.startsWith("data:image/") || url.startsWith("/") || url.startsWith("blob:")) return url;
+
+  try {
+    const parsed = new URL(url);
+    const size = Math.max(80, Math.min(1600, Number(width) || 360));
+
+    if (parsed.hostname.includes("drive.google.com") && parsed.pathname.includes("/thumbnail")) {
+      parsed.searchParams.set("sz", `w${size}`);
+      return parsed.toString();
+    }
+
+    return url;
+  } catch {
+    return url;
+  }
+};
+
 export const buildPlaceholderUrl = () => {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">

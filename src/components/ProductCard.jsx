@@ -1,10 +1,10 @@
 import { memo } from "react";
-import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
+import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { useLanguage } from "../i18n/LanguageContext";
 
 function ProductCard({ product, onAdd, onOpenDetail }) {
   const { t } = useLanguage();
-  const imageUrl = product.fotoUrl || buildPlaceholderUrl(t("noPhoto"));
+  const imageUrl = imageUrlForSize(product.fotoUrl, 360) || buildPlaceholderUrl(t("noPhoto"));
 
   return (
     <article className="product-card">
@@ -12,6 +12,9 @@ function ProductCard({ product, onAdd, onOpenDetail }) {
         <img
           src={imageUrl}
           alt={product.descripcion || product.codigo}
+          loading="lazy"
+          decoding="async"
+          fetchPriority="low"
           onError={(event) => {
                 event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
           }}

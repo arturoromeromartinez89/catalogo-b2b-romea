@@ -14,14 +14,14 @@ import { fastSignOut } from "../services/authService";
 import { fetchClientData } from "../services/supabaseCatalog";
 import { calculateProductQuotePrice, fetchLines, fetchMetalPrices } from "../services/pricingService";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
-import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
+import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 
 const orderDefaults = {
   es: { concept: "Preorden mayorista", status: "Pendiente" },
   en: { concept: "Wholesale preorder", status: "Pending" },
 };
-const PRODUCT_RENDER_BATCH = 120;
+const PRODUCT_RENDER_BATCH = 60;
 
 const makeDefaultCustomer = (language = "es") => ({
   serie: "PRE",
@@ -325,9 +325,11 @@ export default function ClientCatalogApp({ profile }) {
                     onClick={() => setSelectedCode(product.codigo)}
                   >
                     <img
-                      src={product.fotoUrl || buildPlaceholderUrl(t("noPhoto"))}
+                      src={imageUrlForSize(product.fotoUrl, 360) || buildPlaceholderUrl(t("noPhoto"))}
                       alt={product.descripcion}
                       loading="lazy"
+                      decoding="async"
+                      fetchPriority="low"
                       onError={(event) => {
                         event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
                       }}

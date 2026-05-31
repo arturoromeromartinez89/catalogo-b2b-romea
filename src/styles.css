@@ -2536,6 +2536,11 @@ dd {
   width: 100%;
 }
 
+.admin-product-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 360px 520px;
+}
+
 .admin-product-info {
   display: grid;
   gap: 7px;

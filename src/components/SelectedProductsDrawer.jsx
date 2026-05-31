@@ -1,11 +1,13 @@
-import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
+import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { useLanguage } from "../i18n/LanguageContext";
 
 const ProductMiniRow = ({ product, onRemove, mode }) => (
   <article className="selection-drawer-item">
     <img
-      src={product.fotoUrl || buildPlaceholderUrl()}
+      src={imageUrlForSize(product.fotoUrl, 120) || buildPlaceholderUrl()}
       alt={product.descripcion}
+      loading="lazy"
+      decoding="async"
       onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
     />
     <div>

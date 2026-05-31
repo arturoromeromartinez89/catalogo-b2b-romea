@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { buildPlaceholderUrl, formatCurrency, formatWeight } from "../utils/formatters";
+import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize } from "../utils/formatters";
 import { useLanguage } from "../i18n/LanguageContext";
 
 export default function ProductDetail({
@@ -35,7 +35,7 @@ export default function ProductDetail({
     );
   }
 
-  const mainImage = selectedImage || images[0] || buildPlaceholderUrl(t("noPhoto"));
+  const mainImage = imageUrlForSize(selectedImage || images[0], 1200) || buildPlaceholderUrl(t("noPhoto"));
 
   return (
     <section className="product-detail">
@@ -61,6 +61,7 @@ export default function ProductDetail({
             <img
               src={mainImage}
               alt={product.descripcion || product.codigo}
+              decoding="async"
               onError={(event) => {
                 event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
               }}
@@ -75,7 +76,12 @@ export default function ProductDetail({
                   type="button"
                   onClick={() => setSelectedImage(image)}
                 >
-                  <img src={image} alt={product.codigo} />
+                  <img
+                    src={imageUrlForSize(image, 160) || buildPlaceholderUrl(t("noPhoto"))}
+                    alt={product.codigo}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </button>
               ))}
             </div>

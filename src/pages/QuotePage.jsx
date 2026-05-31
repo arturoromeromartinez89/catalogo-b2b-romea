@@ -4,7 +4,7 @@ import LanguageToggle from "../components/LanguageToggle";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings } from "../services/companySettings";
 import { fetchQuoteLinkByToken, submitQuoteLinkSelection } from "../services/quoteLinkService";
-import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "../utils/formatters";
+import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 
 const readToken = () => {
   const match = window.location.pathname.match(/\/cotizacion\/([^/]+)/);
@@ -104,8 +104,10 @@ export default function QuotePage() {
           {products.map((product) => (
             <article className="quote-public-card" key={product.codigo}>
               <img
-                src={product.fotoUrl || buildPlaceholderUrl()}
+                src={imageUrlForSize(product.fotoUrl, 360) || buildPlaceholderUrl()}
                 alt={product.descripcion}
+                loading="lazy"
+                decoding="async"
                 onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
               />
               <div>

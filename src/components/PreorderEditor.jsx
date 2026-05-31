@@ -6,7 +6,7 @@ import { saveClient } from "../services/supabaseCatalog";
 import { savePreorder, deletePreorder } from "../services/preorderService";
 import { generatePdf } from "../utils/pdfGenerator";
 import { useLanguage } from "../i18n/LanguageContext";
-import { buildPlaceholderUrl, shortText } from "../utils/formatters";
+import { buildPlaceholderUrl, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 import { buildPreorderItemFromProduct } from "../utils/preorderUtils";
 
@@ -862,8 +862,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     {productResults.map((product) => (
                       <button key={product.id || product.codigo} type="button" onClick={() => addProduct(product)}>
                         <img
-                          src={product.fotoUrl || buildPlaceholderUrl()}
+                          src={imageUrlForSize(product.fotoUrl, 120) || buildPlaceholderUrl()}
                           alt={product.descripcion}
+                          loading="lazy"
+                          decoding="async"
                           onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
                         />
                         <span>
@@ -902,7 +904,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     const fineSilver = Math.max(0, Number(item.precio_gramo_mxn || 0) - Number(item.labor_mxn || 0));
                     return (
                       <tr key={`${item.producto_codigo}-${idx}`}>
-                        <td>{item.producto_foto_url ? <img src={item.producto_foto_url} alt={item.producto_codigo} /> : "-"}</td>
+                        <td>{item.producto_foto_url ? <img src={imageUrlForSize(item.producto_foto_url, 120)} alt={item.producto_codigo} loading="lazy" decoding="async" /> : "-"}</td>
                         <td><strong>{item.producto_codigo}</strong></td>
                         <td>
                           <div className="qty-stepper">
