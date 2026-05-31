@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import FilterPanel from "./FilterPanel";
 import LanguageToggle from "./LanguageToggle";
 import ProductDetail from "./ProductDetail";
@@ -51,6 +51,10 @@ export default function ClientCatalogApp({ profile }) {
   const [searchChips, setSearchChips] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
   const [quickFilters, setQuickFilters] = useState([]);
+  const deferredQuery = useDeferredValue(query);
+  const deferredSearchChips = useDeferredValue(searchChips);
+  const deferredFilters = useDeferredValue(filters);
+  const deferredQuickFilters = useDeferredValue(quickFilters);
   const [selectedCode, setSelectedCode] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [status, setStatus] = useState("");
@@ -121,8 +125,8 @@ export default function ClientCatalogApp({ profile }) {
 
   const filterOptions = useMemo(() => buildFilterOptions(products), [products]);
   const filteredProducts = useMemo(
-    () => applyFilters(products, query, filters, quickFilters, searchChips),
-    [products, query, filters, quickFilters, searchChips]
+    () => applyFilters(products, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips),
+    [products, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips]
   );
   const renderedProducts = useMemo(
     () => filteredProducts.slice(0, visibleProductLimit),
@@ -133,7 +137,7 @@ export default function ClientCatalogApp({ profile }) {
 
   useEffect(() => {
     setVisibleProductLimit(PRODUCT_RENDER_BATCH);
-  }, [query, searchChips, filters, quickFilters]);
+  }, [deferredQuery, deferredSearchChips, deferredFilters, deferredQuickFilters]);
 
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();

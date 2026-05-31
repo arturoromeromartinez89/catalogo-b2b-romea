@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import ActionNotice from "./ActionNotice";
 import AdvancedSearch from "./AdvancedSearch";
 import BrandLogo from "./BrandLogo";
@@ -229,6 +229,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [clientStatusFilter, setClientStatusFilter] = useState("all");
   const [prospectSearch, setProspectSearch] = useState("");
   const [prospectStatusFilter, setProspectStatusFilter] = useState("all");
+  const deferredClientSearch = useDeferredValue(clientSearch);
+  const deferredProspectSearch = useDeferredValue(prospectSearch);
   const [badgeScanInput, setBadgeScanInput] = useState("");
   const [badgeComment, setBadgeComment] = useState("");
   const [badgeObtainedIn, setBadgeObtainedIn] = useState("JCK");
@@ -242,6 +244,10 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [searchChips, setSearchChips] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
   const [quickFilters, setQuickFilters] = useState([]);
+  const deferredProductQuery = useDeferredValue(productQuery);
+  const deferredSearchChips = useDeferredValue(searchChips);
+  const deferredFilters = useDeferredValue(filters);
+  const deferredQuickFilters = useDeferredValue(quickFilters);
   const [selectedProductCode, setSelectedProductCode] = useState("");
   const [draftPreorder, setDraftPreorder] = useState(null);
   const [isDraftOpen, setIsDraftOpen] = useState(false);
@@ -361,8 +367,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const selectedProduct = useMemo(() => products.find((product) => product.codigo === selectedProductCode), [products, selectedProductCode]);
   const filterOptions = useMemo(() => buildFilterOptions(products), [products]);
   const filteredProducts = useMemo(
-    () => applyFilters(products, productQuery, filters, quickFilters, searchChips),
-    [products, productQuery, filters, quickFilters, searchChips]
+    () => applyFilters(products, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips),
+    [products, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips]
   );
   const renderedProducts = useMemo(
     () => filteredProducts.slice(0, visibleProductLimit),
@@ -378,7 +384,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   }, [data?.clients]);
 
   const filteredClients = useMemo(() => {
-    const term = normalizeText(clientSearch);
+    const term = normalizeText(deferredClientSearch);
     return realClients.filter((client) => {
       const activeMatch =
         clientStatusFilter === "all" ||
@@ -387,10 +393,10 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       const text = normalizeText([client.name, client.company, client.rfc, client.phone, client.email, client.ciudad].join(" "));
       return activeMatch && (!term || text.includes(term));
     });
-  }, [clientSearch, clientStatusFilter, realClients]);
+  }, [deferredClientSearch, clientStatusFilter, realClients]);
 
   const filteredProspects = useMemo(() => {
-    const term = normalizeText(prospectSearch);
+    const term = normalizeText(deferredProspectSearch);
     return prospects.filter((client) => {
       const activeMatch =
         prospectStatusFilter === "all" ||
@@ -399,7 +405,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       const text = normalizeText([client.name, client.company, client.rfc, client.phone, client.email, client.ciudad, client.comentarios, client.badge_raw, client.obtenido_en].join(" "));
       return activeMatch && (!term || text.includes(term));
     });
-  }, [prospectSearch, prospectStatusFilter, prospects]);
+  }, [deferredProspectSearch, prospectStatusFilter, prospects]);
   const checkedProducts = useMemo(
     () => products.filter((product) => checkedIds.has(product.codigo)),
     [products, checkedIds]
@@ -429,7 +435,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   );
   useEffect(() => {
     setVisibleProductLimit(PRODUCT_RENDER_BATCH);
-  }, [productQuery, searchChips, filters, quickFilters]);
+  }, [deferredProductQuery, deferredSearchChips, deferredFilters, deferredQuickFilters]);
 
   useEffect(() => {
     if (!catalogSelectionIds.size && !preorderProducts.length) setSelectionDrawerOpen(false);
@@ -963,7 +969,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               <div className="sidebar-filter-stack">
                 <div className="sidebar-mini-metrics">
                   <div><span>Total</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
-                  <div><span>Filtrados</span><strong>{filteredProducts.length.toLocaleString()}</strong></div>
+                  <div><span>Filtrados</span><strong>{productQuery !== deferredProductQuery ? "…" : filteredProducts.length.toLocaleString()}</strong></div>
                 </div>
                 <AdvancedSearch
                   value={productQuery}
