@@ -893,7 +893,16 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   };
 
   if (!data) {
-    return <section className="setup-screen"><div className="setup-card">{t("loadingAdmin")}</div></section>;
+    return (
+      <section className="setup-screen">
+        <div className="setup-card">
+          {status && status !== "Cargando catálogo..." ? (
+            <p style={{ color: "var(--romea-danger, #c0392b)", marginBottom: "0.5rem" }}>{status}</p>
+          ) : null}
+          {t("loadingAdmin")}
+        </div>
+      </section>
+    );
   }
 
   return (
