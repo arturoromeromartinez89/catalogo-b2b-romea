@@ -3,6 +3,13 @@ import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "./
 
 const page = { w: 216, h: 279, margin: 14 };
 
+const getImageFormat = (dataUrl) => {
+  const match = String(dataUrl || "").match(/^data:image\/([^;]+)/i);
+  const format = match?.[1]?.toUpperCase();
+  if (format === "JPG") return "JPEG";
+  return format || "JPEG";
+};
+
 const loadImageAsDataUrl = (url) =>
   new Promise((resolve) => {
     const source = url || buildPlaceholderUrl();
@@ -14,7 +21,11 @@ const loadImageAsDataUrl = (url) =>
         canvas.width = img.naturalWidth || 320;
         canvas.height = img.naturalHeight || 320;
         canvas.getContext("2d").drawImage(img, 0, 0);
-        resolve(canvas.toDataURL("image/jpeg", 0.82));
+        resolve({
+          dataUrl: canvas.toDataURL("image/png"),
+          height: canvas.height,
+          width: canvas.width,
+        });
       } catch {
         resolve(null);
       }
@@ -22,6 +33,17 @@ const loadImageAsDataUrl = (url) =>
     img.onerror = () => resolve(null);
     img.src = source;
   });
+
+const addContainedImage = (doc, image, x, y, boxW, boxH) => {
+  if (!image?.dataUrl) return false;
+  const ratio = Math.min(boxW / Math.max(1, image.width), boxH / Math.max(1, image.height));
+  const drawW = Math.max(1, image.width * ratio);
+  const drawH = Math.max(1, image.height * ratio);
+  const drawX = x + (boxW - drawW) / 2;
+  const drawY = y + (boxH - drawH) / 2;
+  doc.addImage(image.dataUrl, getImageFormat(image.dataUrl), drawX, drawY, drawW, drawH);
+  return true;
+};
 
 const drawFooter = (doc, companyName) => {
   const totalPages = doc.getNumberOfPages();
@@ -42,7 +64,7 @@ const drawCover = async (doc, { catalogName, company }) => {
   doc.rect(0, 0, page.w, 64, "F");
 
   if (logo) {
-    doc.addImage(logo, "JPEG", page.margin, 12, 48, 28);
+    addContainedImage(doc, logo, page.margin, 10, 48, 34);
   }
 
   doc.setFont("helvetica", "bold");
@@ -94,7 +116,7 @@ export const generateCatalogPdf = async (products, options = {}, company = {}) =
     const img = images[index];
     if (img) {
       try {
-        doc.addImage(img, "JPEG", x + 3, y + 3, cardW - 6, imgH - 6);
+        addContainedImage(doc, img, x + 3, y + 3, cardW - 6, imgH - 6);
       } catch {
         doc.setFontSize(8);
         doc.setTextColor(145, 153, 171);
@@ -114,8 +136,15 @@ export const generateCatalogPdf = async (products, options = {}, company = {}) =
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(47, 55, 74);
-    const desc = doc.splitTextToSize(shortText(product.descripcion || "", 82), cardW - 8);
-    doc.text(desc.slice(0, 2), x + 4, y + imgH + 11);
+    const descriptionLines = doc.splitTextToSize(shortText(product.descripcion || "", 70), cardW - 8);
+    doc.text(descriptionLines.slice(0, 2), x + 4, y + imgH + 11);
+
+    if (product.linea) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(6.5);
+      doc.setTextColor(94, 105, 127);
+      doc.text(`Linea: ${String(product.linea)}`, x + 4, y + imgH + 22);
+    }
 
     const meta = [];
     if (showWeight) meta.push(formatWeight(product.pesoPromedio));
