@@ -57,7 +57,40 @@ const drawFooter = (doc, companyName) => {
   }
 };
 
-const drawCover = async (doc, { catalogName, company }) => {
+const drawClientBlock = (doc, client, x, y, w) => {
+  if (!client) return;
+  const rows = [
+    ["Cliente", client.name],
+    ["Empresa", client.company],
+    ["RFC", client.rfc],
+    ["Telefono", client.phone],
+    ["Correo", client.email],
+    ["Ciudad", client.ciudad],
+  ].filter(([, value]) => String(value || "").trim());
+
+  if (!rows.length) return;
+
+  doc.setDrawColor(224, 230, 241);
+  doc.setFillColor(247, 248, 251);
+  doc.roundedRect(x, y, w, 44, 2, 2, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(31, 51, 95);
+  doc.text("CLIENTE", x + 4, y + 7);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.2);
+  doc.setTextColor(47, 55, 74);
+  rows.slice(0, 5).forEach(([label, value], index) => {
+    const rowY = y + 14 + index * 5.2;
+    doc.setFont("helvetica", "bold");
+    doc.text(`${label}:`, x + 4, rowY);
+    doc.setFont("helvetica", "normal");
+    doc.text(shortText(String(value), 48), x + 25, rowY);
+  });
+};
+
+const drawCover = async (doc, { catalogName, company, client }) => {
   const brandName = company.brand_name || company.legal_name || "";
   const logo = await loadImageAsDataUrl(company.logo_url);
   doc.setFillColor(31, 51, 95);
@@ -76,6 +109,7 @@ const drawCover = async (doc, { catalogName, company }) => {
   doc.setTextColor(94, 105, 127);
   if (brandName) doc.text(brandName, page.margin, 102);
   doc.text(new Date().toLocaleDateString("es-MX"), page.margin, brandName ? 109 : 102);
+  drawClientBlock(doc, client, page.margin, 122, page.w - page.margin * 2);
 };
 
 export const generateCatalogPdf = async (products, options = {}, company = {}) => {
@@ -85,8 +119,9 @@ export const generateCatalogPdf = async (products, options = {}, company = {}) =
   const showPrice = options.showPrice !== false;
   const showWeight = options.showWeight !== false;
   const brandName = company.brand_name || company.legal_name || "";
+  const client = options.client || null;
 
-  await drawCover(doc, { catalogName, company });
+  await drawCover(doc, { catalogName, company, client });
   doc.addPage();
 
   const usableW = page.w - page.margin * 2;

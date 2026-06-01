@@ -1724,7 +1724,12 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       />
 
       {catalogPdfOpen ? (
-        <CatalogPdfPanel products={catalogSelectionProducts} company={activeCompany} onClose={() => setCatalogPdfOpen(false)} />
+        <CatalogPdfPanel
+          products={catalogSelectionProducts}
+          company={activeCompany}
+          clients={realClients}
+          onClose={() => setCatalogPdfOpen(false)}
+        />
       ) : null}
 
       {quoteLinkOpen ? (

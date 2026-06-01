@@ -2,8 +2,9 @@ import { useState } from "react";
 import ActionNotice from "./ActionNotice";
 import { generateCatalogPdf } from "../utils/catalogPdfGenerator";
 
-export default function CatalogPdfPanel({ products, company, onClose }) {
+export default function CatalogPdfPanel({ products, company, clients = [], onClose }) {
   const [catalogName, setCatalogName] = useState("Catalogo seleccionado");
+  const [clientId, setClientId] = useState("");
   const [showPrice, setShowPrice] = useState(true);
   const [showWeight, setShowWeight] = useState(true);
   const [columns, setColumns] = useState(3);
@@ -11,11 +12,13 @@ export default function CatalogPdfPanel({ products, company, onClose }) {
   const [notice, setNotice] = useState(null);
   const [generating, setGenerating] = useState(false);
 
+  const selectedClient = clients.find((client) => client.id === clientId) || null;
+
   const handleGenerate = async () => {
     setGenerating(true);
     setStatus("Generando PDF...");
     try {
-      await generateCatalogPdf(products, { catalogName, showPrice, showWeight, columns }, company);
+      await generateCatalogPdf(products, { catalogName, showPrice, showWeight, columns, client: selectedClient }, company);
       setStatus("PDF generado correctamente.");
       setNotice({ type: "success", title: "PDF generado", message: "El catalogo PDF se genero correctamente y ya se descargo." });
     } catch (error) {
@@ -54,6 +57,17 @@ export default function CatalogPdfPanel({ products, company, onClose }) {
             <label>
               Nombre del catalogo
               <input value={catalogName} onChange={(event) => setCatalogName(event.target.value)} />
+            </label>
+            <label>
+              Cliente
+              <select value={clientId} onChange={(event) => setClientId(event.target.value)}>
+                <option value="">Sin cliente asignado</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {[client.company, client.name, client.email].filter(Boolean).join(" - ") || "Cliente sin nombre"}
+                  </option>
+                ))}
+              </select>
             </label>
           </section>
 
