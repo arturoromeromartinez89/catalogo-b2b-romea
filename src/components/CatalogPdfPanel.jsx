@@ -18,7 +18,24 @@ export default function CatalogPdfPanel({ products, company, clients = [], onClo
     setGenerating(true);
     setStatus("Generando PDF...");
     try {
-      await generateCatalogPdf(products, { catalogName, showPrice, showWeight, columns, client: selectedClient }, company);
+      await generateCatalogPdf(
+        products,
+        {
+          catalogName,
+          showPrice,
+          showWeight,
+          columns,
+          client: selectedClient,
+          onProgress: (stage, current, total) => {
+            if (stage === "cover") setStatus("Preparando portada...");
+            if (stage === "images") setStatus("Cargando imagenes del catalogo...");
+            if (stage === "image" && total) setStatus(`Cargando imagenes ${current}/${total}...`);
+            if (stage === "pages") setStatus("Armando paginas del catalogo...");
+            if (stage === "download") setStatus("Descargando PDF...");
+          },
+        },
+        company
+      );
       setStatus("PDF generado correctamente.");
       setNotice({ type: "success", title: "PDF generado", message: "El catalogo PDF se genero correctamente y ya se descargo." });
     } catch (error) {

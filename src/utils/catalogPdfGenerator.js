@@ -2,6 +2,8 @@ import jsPDF from "jspdf";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "./formatters";
 
 const page = { w: 216, h: 279, margin: 14 };
+const IMAGE_TIMEOUT_MS = 900;
+const IMAGE_CONCURRENCY = 10;
 
 const getImageFormat = (dataUrl) => {
   const match = String(dataUrl || "").match(/^data:image\/([^;]+)/i);
@@ -10,10 +12,23 @@ const getImageFormat = (dataUrl) => {
   return format || "JPEG";
 };
 
-const loadImageAsDataUrl = (url) =>
+const loadImageAsDataUrl = (url, timeoutMs = IMAGE_TIMEOUT_MS) =>
   new Promise((resolve) => {
     const source = url || buildPlaceholderUrl();
     const img = new Image();
+    let done = false;
+    const finish = (value) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => {
+      img.onload = null;
+      img.onerror = null;
+      finish(null);
+    }, timeoutMs);
+
     img.crossOrigin = "anonymous";
     img.onload = () => {
       try {
@@ -21,18 +36,40 @@ const loadImageAsDataUrl = (url) =>
         canvas.width = img.naturalWidth || 320;
         canvas.height = img.naturalHeight || 320;
         canvas.getContext("2d").drawImage(img, 0, 0);
-        resolve({
+        finish({
           dataUrl: canvas.toDataURL("image/png"),
           height: canvas.height,
           width: canvas.width,
         });
       } catch {
-        resolve(null);
+        finish(null);
       }
     };
-    img.onerror = () => resolve(null);
+    img.onerror = () => finish(null);
     img.src = source;
   });
+
+const mapWithConcurrency = async (items, limit, mapper, onProgress) => {
+  const results = new Array(items.length).fill(null);
+  let nextIndex = 0;
+  let completed = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      try {
+        results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+      } catch {
+        results[currentIndex] = null;
+      } finally {
+        completed += 1;
+        onProgress?.(completed, items.length);
+      }
+    }
+  });
+  await Promise.all(workers);
+  return results;
+};
 
 const addContainedImage = (doc, image, x, y, boxW, boxH) => {
   if (!image?.dataUrl) return false;
@@ -120,7 +157,9 @@ export const generateCatalogPdf = async (products, options = {}, company = {}) =
   const showWeight = options.showWeight !== false;
   const brandName = company.brand_name || company.legal_name || "";
   const client = options.client || null;
+  const onProgress = typeof options.onProgress === "function" ? options.onProgress : null;
 
+  onProgress?.("cover", products.length);
   await drawCover(doc, { catalogName, company, client });
   doc.addPage();
 
@@ -133,9 +172,15 @@ export const generateCatalogPdf = async (products, options = {}, company = {}) =
   let y = page.margin;
   let col = 0;
 
-  const imageResults = await Promise.allSettled(products.map((product) => loadImageAsDataUrl(product.fotoUrl)));
-  const images = imageResults.map((result) => (result.status === "fulfilled" ? result.value : null));
+  onProgress?.("images", products.length);
+  const images = await mapWithConcurrency(
+    products,
+    IMAGE_CONCURRENCY,
+    (product) => loadImageAsDataUrl(product.fotoUrl),
+    (loaded, total) => onProgress?.("image", loaded, total)
+  );
 
+  onProgress?.("pages", products.length);
   products.forEach((product, index) => {
     if (y + cardH > page.h - 16) {
       doc.addPage();
@@ -200,5 +245,6 @@ export const generateCatalogPdf = async (products, options = {}, company = {}) =
   });
 
   drawFooter(doc, brandName);
+  onProgress?.("download", products.length);
   doc.save(`${catalogName.replace(/[\\/:*?"<>|]/g, "-")}.pdf`);
 };
