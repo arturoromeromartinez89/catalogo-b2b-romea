@@ -94,14 +94,15 @@ const drawFooter = (doc, companyName) => {
   }
 };
 
-const drawClientBlock = (doc, client, x, y, w) => {
+const drawClientBlock = (doc, client, x, y, w, recipientType = "cliente") => {
   if (!client) return;
+  const visibleEmail = String(client.email || "").endsWith("@prospect.local") ? "" : client.email;
   const rows = [
     ["Cliente", client.name],
     ["Empresa", client.company],
     ["RFC", client.rfc],
     ["Telefono", client.phone],
-    ["Correo", client.email],
+    ["Correo", visibleEmail],
     ["Ciudad", client.ciudad],
   ].filter(([, value]) => String(value || "").trim());
 
@@ -113,7 +114,7 @@ const drawClientBlock = (doc, client, x, y, w) => {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.setTextColor(31, 51, 95);
-  doc.text("CLIENTE", x + 4, y + 7);
+  doc.text(recipientType === "prospecto" ? "PROSPECTO" : "CLIENTE", x + 4, y + 7);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.2);
@@ -127,7 +128,7 @@ const drawClientBlock = (doc, client, x, y, w) => {
   });
 };
 
-const drawCover = async (doc, { catalogName, company, client }) => {
+const drawCover = async (doc, { catalogName, company, client, recipientType }) => {
   const brandName = company.brand_name || company.legal_name || "";
   const logo = await loadImageAsDataUrl(company.logo_url);
   doc.setFillColor(31, 51, 95);
@@ -146,7 +147,7 @@ const drawCover = async (doc, { catalogName, company, client }) => {
   doc.setTextColor(94, 105, 127);
   if (brandName) doc.text(brandName, page.margin, 102);
   doc.text(new Date().toLocaleDateString("es-MX"), page.margin, brandName ? 109 : 102);
-  drawClientBlock(doc, client, page.margin, 122, page.w - page.margin * 2);
+  drawClientBlock(doc, client, page.margin, 122, page.w - page.margin * 2, recipientType);
 };
 
 export const generateCatalogPdf = async (products, options = {}, company = {}) => {
@@ -157,10 +158,11 @@ export const generateCatalogPdf = async (products, options = {}, company = {}) =
   const showWeight = options.showWeight !== false;
   const brandName = company.brand_name || company.legal_name || "";
   const client = options.client || null;
+  const recipientType = options.recipientType || "cliente";
   const onProgress = typeof options.onProgress === "function" ? options.onProgress : null;
 
   onProgress?.("cover", products.length);
-  await drawCover(doc, { catalogName, company, client });
+  await drawCover(doc, { catalogName, company, client, recipientType });
   doc.addPage();
 
   const usableW = page.w - page.margin * 2;

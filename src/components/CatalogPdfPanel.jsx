@@ -4,6 +4,7 @@ import { generateCatalogPdf } from "../utils/catalogPdfGenerator";
 
 export default function CatalogPdfPanel({ products, company, clients = [], onClose }) {
   const [catalogName, setCatalogName] = useState("Catalogo seleccionado");
+  const [recipientType, setRecipientType] = useState("cliente");
   const [clientId, setClientId] = useState("");
   const [showPrice, setShowPrice] = useState(true);
   const [showWeight, setShowWeight] = useState(true);
@@ -12,7 +13,17 @@ export default function CatalogPdfPanel({ products, company, clients = [], onClo
   const [notice, setNotice] = useState(null);
   const [generating, setGenerating] = useState(false);
 
-  const selectedClient = clients.find((client) => client.id === clientId) || null;
+  const isProspect = (client) =>
+    (client.type || "") === "prospecto" ||
+    String(client.email || "").endsWith("@prospect.local") ||
+    Boolean(client.badge_raw);
+  const recipientOptions = clients.filter((client) => recipientType === "prospecto" ? isProspect(client) : !isProspect(client));
+  const selectedClient = recipientOptions.find((client) => client.id === clientId) || null;
+  const displayEmail = (email) => String(email || "").endsWith("@prospect.local") ? "" : email || "";
+  const optionLabel = (client) =>
+    [client.company, client.name, displayEmail(client.email), client.phone]
+      .filter(Boolean)
+      .join(" - ") || "Contacto sin nombre";
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -26,6 +37,7 @@ export default function CatalogPdfPanel({ products, company, clients = [], onClo
           showWeight,
           columns,
           client: selectedClient,
+          recipientType,
           onProgress: (stage, current, total) => {
             if (stage === "cover") setStatus("Preparando portada...");
             if (stage === "images") setStatus("Cargando imagenes del catalogo...");
@@ -76,15 +88,28 @@ export default function CatalogPdfPanel({ products, company, clients = [], onClo
               <input value={catalogName} onChange={(event) => setCatalogName(event.target.value)} />
             </label>
             <label>
-              Cliente
+              Tipo de destinatario
+              <select value={recipientType} onChange={(event) => {
+                setRecipientType(event.target.value);
+                setClientId("");
+              }}>
+                <option value="cliente">Cliente</option>
+                <option value="prospecto">Prospecto</option>
+              </select>
+            </label>
+            <label>
+              {recipientType === "prospecto" ? "Prospecto" : "Cliente"}
               <select value={clientId} onChange={(event) => setClientId(event.target.value)}>
-                <option value="">Sin cliente asignado</option>
-                {clients.map((client) => (
+                <option value="">Sin {recipientType === "prospecto" ? "prospecto" : "cliente"} asignado</option>
+                {recipientOptions.map((client) => (
                   <option key={client.id} value={client.id}>
-                    {[client.company, client.name, client.email].filter(Boolean).join(" - ") || "Cliente sin nombre"}
+                    {optionLabel(client)}
                   </option>
                 ))}
               </select>
+              {!recipientOptions.length ? (
+                <small>No hay {recipientType === "prospecto" ? "prospectos" : "clientes"} registrados para esta empresa.</small>
+              ) : null}
             </label>
           </section>
 
