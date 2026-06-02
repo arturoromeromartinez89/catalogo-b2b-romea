@@ -1,45 +1,19 @@
+/*
+ * Los tokens del sistema de diseño viven en src/styles/tokens.css
+ * Los botones unificados viven en src/styles/buttons.css
+ * Ambos se importan desde main.jsx antes que este archivo.
+ *
+ * Este :root solo contiene aliases de compatibilidad que no están
+ * en tokens.css, y las propiedades de rendering global.
+ */
 :root {
-  --romea-blue: #1f335f;
-  --romea-blue-2: #294575;
-  --romea-ink: #1d2433;
-  --romea-muted: #6f7787;
-  --romea-line: #e6eaf1;
-  --romea-soft: #f7f8fb;
-  --romea-cream: #f7f5f2;
-  --shadow-soft: 0 12px 34px rgba(31, 51, 95, 0.07);
-  --shadow-md: 0 14px 34px rgba(31, 51, 95, 0.12);
-  /* Estados semánticos */
-  --color-success: #22a66a;
-  --color-success-bg: #edf7f0;
-  --color-success-text: #247044;
-  --color-warning-bg: #fff7e8;
-  --color-warning-border: #e3c64d;
-  --color-warning-text: #946318;
-  --color-error: #9f2d2d;
-  --color-error-bg: #fff0f0;
-  --color-error-border: #f0cccc;
-  --color-text-danger: var(--color-error);
-  --color-background-danger: var(--color-error-bg);
-  --color-background-secondary: #f4f7fb;
-  --color-border-tertiary: var(--romea-line);
-  --color-info-bg: #edf3ff;
-  --color-info-text: #244373;
-  /* Tipografía */
-  --font-serif: Georgia, "Times New Roman", serif;
-  --font-sans: Inter, "Segoe UI", Arial, sans-serif;
-  --text-xs: 11px;
-  --text-sm: 12px;
-  --text-base: 13px;
-  --text-md: 14px;
-  --text-lg: 16px;
-  --text-xl: 22px;
-  --heading-h1: clamp(28px, 3.8vw, 42px);
+  /* Compatibilidad heading legacy */
+  --heading-h1: var(--text-4xl);
   --heading-h2: clamp(22px, 2.4vw, 32px);
-  --heading-h3: 16px;
-  /* Transición estándar */
-  --transition: 0.16s ease;
-  color: var(--romea-ink);
-  background: var(--romea-soft);
+  --heading-h3: var(--text-lg);
+  /* Rendering global */
+  color: var(--color-text-primary);
+  background: var(--color-bg-app);
   font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -311,128 +285,27 @@ input[type="file"] {
   text-transform: uppercase;
 }
 
-.primary-button,
-.secondary-button,
-.link-button,
-.icon-button,
+/* ── Botones base — definidos en src/styles/buttons.css ───────────────── */
+/* Aquí solo ajustes de contexto que no están en el sistema base           */
+
 .menu-button {
   align-items: center;
-  border-radius: 8px;
+  background: var(--neutral-0);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
   display: inline-flex;
-  font-weight: 800;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
   justify-content: center;
-  min-height: 40px;
-  padding: 9px 13px;
-  text-decoration: none;
-  transition: background var(--transition), border-color var(--transition), color var(--transition), opacity var(--transition), transform var(--transition);
+  padding: var(--sp-2) var(--sp-3);
+  transition: background var(--transition), border-color var(--transition);
 }
-
-.primary-button {
-  background: var(--romea-blue);
-  border: 1px solid var(--romea-blue);
-  color: #ffffff;
-}
-.primary-button:hover {
-  background: var(--romea-blue-2);
-  border-color: var(--romea-blue-2);
-}
-.primary-button:active {
-  transform: scale(0.97);
-}
-.primary-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.primary-button:hover {
-  background: var(--romea-blue-2);
-  border-color: var(--romea-blue-2);
-}
-
-.primary-button:active {
-  transform: scale(0.98);
-}
-
-.primary-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.48;
-  transform: none;
-}
-
-.secondary-button {
-  background: #ffffff;
-  border: 1px solid rgba(31, 51, 95, 0.28);
-  color: var(--romea-blue);
-}
-.secondary-button:hover {
-  background: var(--romea-soft);
-  border-color: var(--romea-blue);
-}
-.secondary-button:active {
-  transform: scale(0.97);
-}
-.secondary-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.secondary-button:hover {
-  background: var(--romea-soft);
-  border-color: var(--romea-blue);
-}
-
-.secondary-button:active {
-  transform: scale(0.98);
-}
-
-.secondary-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.48;
-  transform: none;
-}
-
-.link-button {
-  background: transparent;
-  border: 0;
-  color: var(--romea-blue);
-  font-weight: 600;
-  justify-self: start;
-  min-height: 30px;
-  padding: 0;
-}
-.link-button:hover {
-  text-decoration: underline;
-}
-
-.link-button:hover {
-  text-decoration: underline;
-}
-
-.icon-button,
-.menu-button {
-  background: #ffffff;
-  border: 1px solid var(--romea-line);
-  color: var(--romea-blue);
-}
-.icon-button:hover,
 .menu-button:hover {
-  background: var(--romea-soft);
-  border-color: var(--romea-blue);
-}
-
-.icon-button:hover,
-.menu-button:hover {
-  background: var(--romea-soft);
-  border-color: var(--romea-blue);
-}
-
-.icon-button {
-  font-size: 22px;
-  height: 38px;
-  padding: 0;
-  width: 38px;
+  background: var(--color-bg-subtle);
+  border-color: var(--color-border-strong);
 }
 
 .full {
@@ -1122,28 +995,9 @@ dd {
   max-width: 300px;
 }
 
-/* ── Logout button ── */
-.sidebar-logout {
-  align-items: center;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--romea-muted);
-  cursor: pointer;
-  display: flex;
-  font-size: 11px;
-  font-weight: 700;
-  gap: 5px;
-  justify-content: center;
-  min-height: 28px;
-  padding: 4px 10px;
-  transition: background var(--transition), color var(--transition), border-color var(--transition);
-  width: 100%;
-}
-
+/* ── Logout button — definido en buttons.css, aquí solo ajuste de hover ── */
 .sidebar-logout:hover {
-  background: var(--color-error-bg);
-  border-color: var(--color-error-border);
+  background: var(--color-error-light);
   color: var(--color-error);
 }
 
@@ -1165,24 +1019,10 @@ dd {
   justify-content: flex-end;
 }
 
-.header-logout-button {
-  align-items: center;
-  background: #ffffff;
-  border: 1px solid var(--romea-line);
-  border-radius: 999px;
-  color: var(--romea-blue);
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 11px;
-  font-weight: 900;
-  min-height: 32px;
-  padding: 6px 12px;
-  white-space: nowrap;
-}
-
+/* header-logout-button — definido en buttons.css, hover especial aquí */
 .header-logout-button:hover {
-  background: var(--color-error-bg);
-  border-color: var(--color-error-border);
+  background: var(--color-error-light);
+  border-color: var(--color-error-light);
   color: var(--color-error);
 }
 
@@ -2585,39 +2425,11 @@ dd {
   min-width: 0;
 }
 
+/* action-button — definido en buttons.css */
+/* Ajuste de tamaño mínimo para las tarjetas de producto */
 .action-button {
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 1.15;
   min-height: 34px;
-  padding: 7px 9px;
   white-space: normal;
-}
-
-.action-button.preorder {
-  background: #eaf8f1;
-  border: 1px solid #8ed7b3;
-  color: #087a45;
-}
-
-.action-button.catalog {
-  background: #edf5ff;
-  border: 1px solid #b9d4ff;
-  color: #1f4f8f;
-}
-
-.action-button.done {
-  background: #f1f3f7;
-  border-color: #d5dbe7;
-  color: #7a8496;
-  cursor: default;
-}
-
-.action-button.undo {
-  background: #fff2f2;
-  border: 1px solid #efb5b5;
-  color: #b42323;
 }
 
 .two-column-admin {
@@ -6396,58 +6208,5 @@ body > div[data-portal] {
   .prospect-scan-bottom {
     grid-template-columns: 1fr;
   }
-}
-
-/* ─── D-06: Tablas usables en mobile e iPad ─────────────────────────────── */
-/* El contenedor ya tiene overflow-x: auto. Aquí optimizamos el contenido.  */
-
-/* Truncar celdas largas con tooltip implícito (title del elemento padre)   */
-.clients-directory-table td {
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* La columna de nombre puede ser más ancha — tiene layout propio            */
-.clients-directory-table td:first-child {
-  max-width: 220px;
-}
-
-/* Comentarios de prospectos pueden ser largos — truncar con más espacio    */
-.clients-directory-table td:nth-child(6) {
-  max-width: 140px;
-}
-
-/* Botones de acción: no colapsar en mobile                                 */
-.clients-directory-table .client-action-row {
-  flex-wrap: nowrap;
-  gap: 4px;
-  white-space: nowrap;
-}
-
-/* En pantallas pequeñas (< 600px): reducir padding de celdas              */
-@media (max-width: 600px) {
-  .simple-admin-table th,
-  .simple-admin-table td {
-    font-size: 11px;
-    padding: 7px 6px;
-  }
-
-  .clients-directory-table td {
-    max-width: 120px;
-  }
-
-  .client-action-row .secondary-button,
-  .client-action-row .primary-button {
-    font-size: 11px;
-    padding: 4px 8px;
-  }
-}
-
-/* Indicador visual de scroll horizontal cuando la tabla desborda           */
-.responsive-table {
-  -webkit-overflow-scrolling: touch; /* scroll suave en iOS                 */
-  scrollbar-width: thin;
 }
 

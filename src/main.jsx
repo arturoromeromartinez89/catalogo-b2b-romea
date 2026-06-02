@@ -3,6 +3,9 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { CompanyProvider } from "./contexts/CompanyContext";
 import { initSentry } from "./lib/sentry";
+// Design system — cargar ANTES que styles.css para que los tokens estén disponibles
+import "./styles/tokens.css";
+import "./styles/buttons.css";
 import "./styles.css";
 
 // Inicializar monitoreo de errores antes del primer render.
