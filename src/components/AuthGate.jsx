@@ -30,13 +30,33 @@ const copy = {
     createClientAccount: "Crear cuenta de cliente",
     welcome: "Bienvenido",
     loginHelp: "Ingresa tus credenciales para continuar",
-    loginProductName: "Catalogo B2B",
-    loginProductHelp: "Sistema comercial para catalogos, clientes, preordenes y cotizaciones.",
-    loginFeature1: "Gestion de catalogos y productos",
-    loginFeature2: "Preordenes y cotizaciones B2B",
+    loginProductName: "Catálogo B2B",
+    loginProductHelp: "Sistema comercial para catálogos, clientes, preórdenes y cotizaciones.",
+    loginFeature1: "Gestión de catálogos y productos",
+    loginFeature2: "Preórdenes y cotizaciones B2B",
     loginFeature3: "Clientes, precios y permisos",
     loginFeature4: "PDFs y ligas comerciales",
-    appCopyright: "Catalogo B2B",
+    appCopyright: "Catálogo B2B",
+    // Recuperación de contraseña
+    forgotPassword: "¿Olvidaste tu contraseña?",
+    resetPassword: "Recuperar contraseña",
+    resetHelp: "Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.",
+    resetEmailRequired: "El correo es obligatorio para recuperar la contraseña.",
+    resetSend: "Enviar enlace de recuperación",
+    resetSent: "Listo. Revisa tu correo para restablecer tu contraseña.",
+    resetError: "No se pudo enviar el correo de recuperación.",
+    backToLogin: "Volver al inicio de sesión",
+    sending: "Enviando...",
+    // Nueva contraseña (flujo al volver desde el link de Supabase)
+    newPasswordTitle: "Crear nueva contraseña",
+    newPasswordHelp: "Escribe tu nueva contraseña para completar el restablecimiento.",
+    newPassword: "Nueva contraseña",
+    confirmPassword: "Confirmar contraseña",
+    passwordMismatch: "Las contraseñas no coinciden.",
+    passwordTooShort: "La contraseña debe tener al menos 6 caracteres.",
+    savePassword: "Guardar nueva contraseña",
+    passwordSaved: "Contraseña actualizada correctamente. Ya puedes iniciar sesión.",
+    saving: "Guardando...",
   },
   en: {
     timeout: "Supabase took too long to respond. Check that the SQL ran completely.",
@@ -71,6 +91,26 @@ const copy = {
     loginFeature3: "Customers, pricing and permissions",
     loginFeature4: "PDFs and commercial links",
     appCopyright: "B2B Catalog",
+    // Password recovery
+    forgotPassword: "Forgot your password?",
+    resetPassword: "Reset password",
+    resetHelp: "Enter your email and we will send you a link to reset your password.",
+    resetEmailRequired: "Email is required to recover your password.",
+    resetSend: "Send recovery link",
+    resetSent: "Done. Check your email to reset your password.",
+    resetError: "Could not send the recovery email.",
+    backToLogin: "Back to sign in",
+    sending: "Sending...",
+    // New password (flow when returning from Supabase link)
+    newPasswordTitle: "Create new password",
+    newPasswordHelp: "Enter your new password to complete the reset.",
+    newPassword: "New password",
+    confirmPassword: "Confirm password",
+    passwordMismatch: "Passwords do not match.",
+    passwordTooShort: "Password must be at least 6 characters.",
+    savePassword: "Save new password",
+    passwordSaved: "Password updated successfully. You can now sign in.",
+    saving: "Saving...",
   },
 };
 
@@ -85,13 +125,18 @@ const withTimeout = (promise, ms = 9000, message = copy.es.timeout) =>
 export default function AuthGate({ children }) {
   const { language, t } = useLanguage();
   const text = copy[language] || copy.es;
+  // modos: "signin" | "signup" | "reset" | "new-password"
   const [mode, setMode] = useState("signin");
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState({ email: "", password: "" });
+  const [newPasswordForm, setNewPasswordForm] = useState({ password: "", confirm: "" });
   const [loading, setLoading] = useState(true);
   const [showSlowHint, setShowSlowHint] = useState(false);
   const [message, setMessage] = useState("");
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
     if (!loading) { setShowSlowHint(false); return undefined; }
@@ -124,7 +169,14 @@ export default function AuthGate({ children }) {
 
     refreshSession();
 
-    const { data } = supabase.auth.onAuthStateChange(async () => {
+    const { data } = supabase.auth.onAuthStateChange(async (event) => {
+      // Supabase emite PASSWORD_RECOVERY cuando el usuario vuelve desde el link de restablecimiento.
+      // En ese momento tiene sesión temporal — mostramos el formulario de nueva contraseña.
+      if (event === "PASSWORD_RECOVERY") {
+        setMode("new-password");
+        setLoading(false);
+        return;
+      }
       try {
         const next = await withTimeout(getSessionAndProfile(), 9000, text.timeout);
         setSession(next.session);
@@ -157,6 +209,62 @@ export default function AuthGate({ children }) {
       setMessage(error.message || text.noSignin);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const goToMode = (nextMode) => {
+    setMode(nextMode);
+    setMessage("");
+    setResetSent(false);
+    setNewPasswordForm({ password: "", confirm: "" });
+  };
+
+  const resetPassword = async (event) => {
+    event.preventDefault();
+    if (!form.email.trim()) {
+      setMessage(text.resetEmailRequired);
+      return;
+    }
+    setResetLoading(true);
+    setMessage("");
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(form.email.trim(), {
+        redirectTo: `${window.location.origin}/`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+      setMessage(text.resetSent);
+    } catch (error) {
+      setMessage(error.message || text.resetError);
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const saveNewPassword = async (event) => {
+    event.preventDefault();
+    const { password, confirm } = newPasswordForm;
+    if (password.length < 6) {
+      setMessage(text.passwordTooShort);
+      return;
+    }
+    if (password !== confirm) {
+      setMessage(text.passwordMismatch);
+      return;
+    }
+    setSavingPassword(true);
+    setMessage("");
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      setMessage(text.passwordSaved);
+      // Cerrar sesión temporal y volver al login para que el usuario entre con la nueva contraseña
+      await supabase.auth.signOut();
+      goToMode("signin");
+    } catch (error) {
+      setMessage(error.message || text.resetError);
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -201,6 +309,62 @@ export default function AuthGate({ children }) {
     );
   }
 
+  // Pantalla de nueva contraseña — se activa cuando Supabase emite PASSWORD_RECOVERY
+  if (mode === "new-password") {
+    return (
+      <section className="login-shell">
+        <aside className="login-brand-panel">
+          <div className="login-brand-orb one" />
+          <div className="login-brand-orb two" />
+          <div className="login-brand-content">
+            <div className="login-icon-box" aria-hidden="true">▥</div>
+            <h1>{text.loginProductName}</h1>
+            <p>{text.loginProductHelp}</p>
+          </div>
+        </aside>
+        <main className="login-form-panel">
+          <form className="login-form-card" onSubmit={saveNewPassword}>
+            <div>
+              <h2>{text.newPasswordTitle}</h2>
+              <p>{text.newPasswordHelp}</p>
+            </div>
+            <label>
+              {text.newPassword}
+              <div className="login-input-wrap">
+                <span aria-hidden="true">□</span>
+                <input
+                  type="password"
+                  value={newPasswordForm.password}
+                  onChange={(event) => setNewPasswordForm({ ...newPasswordForm, password: event.target.value })}
+                  required
+                  minLength={6}
+                />
+              </div>
+            </label>
+            <label>
+              {text.confirmPassword}
+              <div className="login-input-wrap">
+                <span aria-hidden="true">□</span>
+                <input
+                  type="password"
+                  value={newPasswordForm.confirm}
+                  onChange={(event) => setNewPasswordForm({ ...newPasswordForm, confirm: event.target.value })}
+                  required
+                  minLength={6}
+                />
+              </div>
+            </label>
+            {message ? <p className="status info">{message}</p> : null}
+            <button className="primary-button full login-submit" type="submit" disabled={savingPassword}>
+              {savingPassword ? text.saving : text.savePassword}
+            </button>
+            <small>{text.appCopyright} © 2026</small>
+          </form>
+        </main>
+      </section>
+    );
+  }
+
   if (!session) {
     return (
       <section className="login-shell">
@@ -221,34 +385,71 @@ export default function AuthGate({ children }) {
         </aside>
 
         <main className="login-form-panel">
-          <form className="login-form-card" onSubmit={submit}>
-            <div>
-              <h2>{mode === "signup" ? text.createAccess : text.welcome}</h2>
-              <p>{text.loginHelp}</p>
-            </div>
-            <label>
-              {text.email}
-              <div className="login-input-wrap">
-                <span aria-hidden="true">✉</span>
-                <input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
+          {mode === "reset" ? (
+            <form className="login-form-card" onSubmit={resetPassword}>
+              <div>
+                <h2>{text.resetPassword}</h2>
+                <p>{text.resetHelp}</p>
               </div>
-            </label>
-            <label>
-              {text.password}
-              <div className="login-input-wrap">
-                <span aria-hidden="true">□</span>
-                <input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />
+              <label>
+                {text.email}
+                <div className="login-input-wrap">
+                  <span aria-hidden="true">✉</span>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(event) => setForm({ ...form, email: event.target.value })}
+                    required
+                    disabled={resetSent}
+                  />
+                </div>
+              </label>
+              {message ? <p className={`status ${resetSent ? "success" : "info"}`}>{message}</p> : null}
+              {!resetSent ? (
+                <button className="primary-button full login-submit" type="submit" disabled={resetLoading}>
+                  {resetLoading ? text.sending : text.resetSend}
+                </button>
+              ) : null}
+              <button className="link-button" type="button" onClick={() => goToMode("signin")}>
+                {text.backToLogin}
+              </button>
+              <small>{text.appCopyright} © 2026</small>
+            </form>
+          ) : (
+            <form className="login-form-card" onSubmit={submit}>
+              <div>
+                <h2>{mode === "signup" ? text.createAccess : text.welcome}</h2>
+                <p>{text.loginHelp}</p>
               </div>
-            </label>
-            {message ? <p className="status info">{message}</p> : null}
-            <button className="primary-button full login-submit" type="submit">
-              {mode === "signup" ? text.createAccount : text.signIn}
-            </button>
-            <button className="link-button" type="button" onClick={() => setMode(mode === "signup" ? "signin" : "signup")}>
-              {mode === "signup" ? text.haveAccount : text.createClientAccount}
-            </button>
-            <small>{text.appCopyright} © 2026</small>
-          </form>
+              <label>
+                {text.email}
+                <div className="login-input-wrap">
+                  <span aria-hidden="true">✉</span>
+                  <input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
+                </div>
+              </label>
+              <label>
+                {text.password}
+                <div className="login-input-wrap">
+                  <span aria-hidden="true">□</span>
+                  <input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />
+                </div>
+              </label>
+              {message ? <p className="status info">{message}</p> : null}
+              <button className="primary-button full login-submit" type="submit">
+                {mode === "signup" ? text.createAccount : text.signIn}
+              </button>
+              <button className="link-button" type="button" onClick={() => goToMode(mode === "signup" ? "signin" : "signup")}>
+                {mode === "signup" ? text.haveAccount : text.createClientAccount}
+              </button>
+              {mode === "signin" ? (
+                <button className="link-button" type="button" onClick={() => goToMode("reset")}>
+                  {text.forgotPassword}
+                </button>
+              ) : null}
+              <small>{text.appCopyright} © 2026</small>
+            </form>
+          )}
         </main>
       </section>
     );
