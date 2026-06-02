@@ -6398,3 +6398,56 @@ body > div[data-portal] {
   }
 }
 
+/* ─── D-06: Tablas usables en mobile e iPad ─────────────────────────────── */
+/* El contenedor ya tiene overflow-x: auto. Aquí optimizamos el contenido.  */
+
+/* Truncar celdas largas con tooltip implícito (title del elemento padre)   */
+.clients-directory-table td {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* La columna de nombre puede ser más ancha — tiene layout propio            */
+.clients-directory-table td:first-child {
+  max-width: 220px;
+}
+
+/* Comentarios de prospectos pueden ser largos — truncar con más espacio    */
+.clients-directory-table td:nth-child(6) {
+  max-width: 140px;
+}
+
+/* Botones de acción: no colapsar en mobile                                 */
+.clients-directory-table .client-action-row {
+  flex-wrap: nowrap;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+/* En pantallas pequeñas (< 600px): reducir padding de celdas              */
+@media (max-width: 600px) {
+  .simple-admin-table th,
+  .simple-admin-table td {
+    font-size: 11px;
+    padding: 7px 6px;
+  }
+
+  .clients-directory-table td {
+    max-width: 120px;
+  }
+
+  .client-action-row .secondary-button,
+  .client-action-row .primary-button {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+}
+
+/* Indicador visual de scroll horizontal cuando la tabla desborda           */
+.responsive-table {
+  -webkit-overflow-scrolling: touch; /* scroll suave en iOS                 */
+  scrollbar-width: thin;
+}
+
