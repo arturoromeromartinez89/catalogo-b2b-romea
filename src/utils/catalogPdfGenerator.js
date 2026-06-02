@@ -156,6 +156,13 @@ export const generateCatalogPdf = async (products, options = {}, company = {}) =
   const columns = Number(options.columns || 3);
   const showPrice = options.showPrice !== false;
   const showWeight = options.showWeight !== false;
+  const visibleFields = {
+    description: true,
+    line: true,
+    family: false,
+    group: false,
+    ...(options.visibleFields || {}),
+  };
   const brandName = company.brand_name || company.legal_name || "";
   const client = options.client || null;
   const recipientType = options.recipientType || "cliente";
@@ -169,7 +176,7 @@ export const generateCatalogPdf = async (products, options = {}, company = {}) =
   const gap = 5;
   const cardW = (usableW - gap * (columns - 1)) / columns;
   const imgH = Math.min(cardW, 48);
-  const cardH = imgH + 35;
+  const cardH = imgH + 46;
   let x = page.margin;
   let y = page.margin;
   let col = 0;
@@ -215,17 +222,26 @@ export const generateCatalogPdf = async (products, options = {}, company = {}) =
     doc.setTextColor(31, 51, 95);
     doc.text(String(product.codigo || ""), x + 4, y + imgH + 5);
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(47, 55, 74);
-    const descriptionLines = doc.splitTextToSize(shortText(product.descripcion || "", 70), cardW - 8);
-    doc.text(descriptionLines.slice(0, 2), x + 4, y + imgH + 11);
+    let textY = y + imgH + 11;
+    if (visibleFields.description) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(47, 55, 74);
+      const descriptionLines = doc.splitTextToSize(shortText(product.descripcion || "", 70), cardW - 8);
+      const visibleDescription = descriptionLines.slice(0, 2);
+      doc.text(visibleDescription, x + 4, textY);
+      textY += visibleDescription.length * 4 + 2;
+    }
 
-    if (product.linea) {
+    const detailLines = [];
+    if (visibleFields.line && product.linea) detailLines.push(`Linea: ${product.linea}`);
+    if (visibleFields.family && product.familia) detailLines.push(`Familia: ${product.familia}`);
+    if (visibleFields.group && product.grupo) detailLines.push(`Grupo: ${product.grupo}`);
+    if (detailLines.length) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(6.5);
       doc.setTextColor(94, 105, 127);
-      doc.text(`Linea: ${String(product.linea)}`, x + 4, y + imgH + 22);
+      doc.text(doc.splitTextToSize(detailLines.join("  |  "), cardW - 8).slice(0, 2), x + 4, textY);
     }
 
     const meta = [];

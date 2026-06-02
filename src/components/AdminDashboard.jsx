@@ -1421,7 +1421,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
         ) : null}
 
         {tab === "prospects" ? (
-          <section className="admin-workspace clients-workspace">
+          <section className="admin-workspace clients-workspace prospects-workspace">
             <div className="clients-page-header">
               <div>
                 <h2>Prospectos</h2>

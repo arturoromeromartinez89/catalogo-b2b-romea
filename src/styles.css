@@ -4923,6 +4923,15 @@ body > div[data-portal] {
   padding: 12px;
 }
 
+.tool-switch.active {
+  background: #eef5ff;
+  border-color: #8fb8ff;
+}
+
+.tool-switch.active input {
+  accent-color: var(--romea-blue);
+}
+
 .tool-switch input {
   margin-top: 3px;
   min-height: auto;
@@ -4936,6 +4945,23 @@ body > div[data-portal] {
 
 .tool-switch strong {
   color: var(--romea-blue);
+}
+
+.prospects-workspace {
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: 96px;
+}
+
+.prospects-workspace .clients-table-card {
+  max-height: none;
+  overflow: visible;
+}
+
+.prospects-workspace .responsive-table {
+  max-height: none;
+  overflow: auto;
+  padding-bottom: 8px;
 }
 
 .segmented-control {

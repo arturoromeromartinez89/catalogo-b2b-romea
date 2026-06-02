@@ -8,6 +8,12 @@ export default function CatalogPdfPanel({ products, company, clients = [], onClo
   const [clientId, setClientId] = useState("");
   const [showPrice, setShowPrice] = useState(true);
   const [showWeight, setShowWeight] = useState(true);
+  const [visibleFields, setVisibleFields] = useState({
+    description: true,
+    line: true,
+    family: false,
+    group: false,
+  });
   const [columns, setColumns] = useState(3);
   const [status, setStatus] = useState("");
   const [notice, setNotice] = useState(null);
@@ -24,6 +30,9 @@ export default function CatalogPdfPanel({ products, company, clients = [], onClo
     [client.company, client.name, displayEmail(client.email), client.phone]
       .filter(Boolean)
       .join(" - ") || "Contacto sin nombre";
+  const toggleField = (field) => {
+    setVisibleFields((current) => ({ ...current, [field]: !current[field] }));
+  };
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -38,6 +47,7 @@ export default function CatalogPdfPanel({ products, company, clients = [], onClo
           columns,
           client: selectedClient,
           recipientType,
+          visibleFields,
           onProgress: (stage, current, total) => {
             if (stage === "cover") setStatus("Preparando portada...");
             if (stage === "images") setStatus("Cargando imagenes del catalogo...");
@@ -116,14 +126,42 @@ export default function CatalogPdfPanel({ products, company, clients = [], onClo
           <section className="tool-section">
             <h3>2. Informacion del producto</h3>
             <div className="tool-option-grid">
-              <label className="tool-switch">
+              <label className={`tool-switch ${visibleFields.description ? "active" : ""}`}>
+                <input type="checkbox" checked={visibleFields.description} onChange={() => toggleField("description")} />
+                <span>
+                  <strong>Descripcion</strong>
+                  <small>Muestra el nombre o descripcion comercial.</small>
+                </span>
+              </label>
+              <label className={`tool-switch ${visibleFields.line ? "active" : ""}`}>
+                <input type="checkbox" checked={visibleFields.line} onChange={() => toggleField("line")} />
+                <span>
+                  <strong>Linea</strong>
+                  <small>Incluye la linea del producto.</small>
+                </span>
+              </label>
+              <label className={`tool-switch ${visibleFields.family ? "active" : ""}`}>
+                <input type="checkbox" checked={visibleFields.family} onChange={() => toggleField("family")} />
+                <span>
+                  <strong>Familia</strong>
+                  <small>Incluye familia comercial.</small>
+                </span>
+              </label>
+              <label className={`tool-switch ${visibleFields.group ? "active" : ""}`}>
+                <input type="checkbox" checked={visibleFields.group} onChange={() => toggleField("group")} />
+                <span>
+                  <strong>Grupo</strong>
+                  <small>Incluye grupo o subclasificacion.</small>
+                </span>
+              </label>
+              <label className={`tool-switch ${showPrice ? "active" : ""}`}>
                 <input type="checkbox" checked={showPrice} onChange={(event) => setShowPrice(event.target.checked)} />
                 <span>
                   <strong>Mostrar precio</strong>
                   <small>Incluye precio integrado cuando exista.</small>
                 </span>
               </label>
-              <label className="tool-switch">
+              <label className={`tool-switch ${showWeight ? "active" : ""}`}>
                 <input type="checkbox" checked={showWeight} onChange={(event) => setShowWeight(event.target.checked)} />
                 <span>
                   <strong>Mostrar peso</strong>
