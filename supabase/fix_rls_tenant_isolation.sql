@@ -2,39 +2,41 @@
 -- Migración: Corrección de aislamiento RLS por tenant
 -- Archivo:   supabase/fix_rls_tenant_isolation.sql
 -- Fecha:     2026-06-01
--- Autor:     Claude (revisado por Codex antes de ejecutar)
+-- Revisión:  Codex (ajustes aplicados post-revisión)
 --
 -- PROPÓSITO:
---   Corregir dos vulnerabilidades críticas identificadas en auditoría:
+--   Corregir vulnerabilidades críticas de aislamiento entre tenants:
 --   1. catalog_products tenía using(true) — cualquier usuario autenticado
 --      podía leer datos de catálogo de TODOS los tenants.
 --   2. Las políticas admin en todas las tablas usaban is_admin() sin filtro
---      de tenant — un tenant_admin de Empresa A podía leer/escribir datos
---      de Empresa B.
+--      de tenant — un tenant_admin de Empresa A podía operar datos de Empresa B.
+--   3. company_settings quedaba abierta a todos los usuarios autenticados.
+--   4. labor_lists y labor_list_lines no tenían aislamiento por tenant.
+--   5. Políticas "clients read own" sin defensa doble de tenant.
 --
--- DEPENDENCIAS:
---   Requiere que ya estén ejecutadas:
+-- DEPENDENCIAS (deben estar ejecutadas antes):
 --   - supabase/schema.sql
---   - supabase/multi_tenant_migration.sql  (define tenants, current_tenant_id,
---                                           is_superadmin, is_tenant_admin)
+--   - supabase/multi_tenant_migration.sql
 --   - supabase/quote_links.sql
+--   - supabase/labor_lists.sql
 --
--- REGLAS DE ESTE SCRIPT:
+-- REGLAS:
 --   - Solo SQL. Cero cambios en código de aplicación.
---   - Idempotente: usa DROP POLICY IF EXISTS antes de CREATE.
---   - No modifica datos. Solo funciones y políticas.
+--   - Idempotente: DROP POLICY IF EXISTS antes de cada CREATE.
+--   - No modifica datos. Solo funciones, políticas e índices.
 --   - Reversible: ver sección ROLLBACK al final.
 --
 -- INSTRUCCIONES:
---   Ejecutar en Supabase SQL Editor, sección a sección, verificando
---   que no haya errores antes de continuar con la siguiente.
+--   Ejecutar en Supabase SQL Editor, sección a sección.
+--   Verificar que cada sección no genera errores antes de continuar.
 -- =============================================================================
 
 
 -- =============================================================================
--- SECCIÓN 1 — Función auxiliar: is_admin_of_tenant(t_id uuid)
--- Permite verificar si el usuario actual es admin del tenant especificado.
--- Útil para validaciones puntuales en lógica de aplicación.
+-- SECCIÓN 1 — Función: is_admin_of_tenant(t_id uuid)
+--
+-- Incluye superadmin para uso como helper general sin confusión futura.
+-- Codex: "si se va a usar como helper general, debe incluir superadmin".
 -- =============================================================================
 
 create or replace function public.is_admin_of_tenant(t_id uuid)
@@ -48,20 +50,45 @@ as $$
     select 1
     from public.profiles
     where id = auth.uid()
-      and role in ('tenant_admin', 'admin')
-      and tenant_id = t_id
+      and (
+        role = 'superadmin'
+        or (
+          role in ('tenant_admin', 'admin')
+          and tenant_id = t_id
+        )
+      )
   );
 $$;
 
--- Verificación: debe retornar true solo para admins del tenant correcto.
--- select public.is_admin_of_tenant('uuid-del-tenant-aqui');
+-- Verificación:
+-- select public.is_admin_of_tenant('uuid-del-tenant');
 
 
 -- =============================================================================
--- SECCIÓN 2 — CORRECCIÓN CRÍTICA: catalog_products
--- ANTES: using(true) — cualquier usuario autenticado veía todos los registros.
--- DESPUÉS: superadmin ve todo; tenant_admin/admin ven su tenant; clients solo
---          los catálogos asignados a ellos.
+-- SECCIÓN 2 — Índices en columnas puente (junction tables)
+--
+-- Necesarios para que los subqueries de las políticas RLS no hagan seq scans.
+-- Codex: "siempre que existan índices en las columnas puente".
+-- =============================================================================
+
+create index if not exists idx_catalog_products_catalog_id   on public.catalog_products(catalog_id);
+create index if not exists idx_catalog_products_product_id   on public.catalog_products(product_id);
+create index if not exists idx_price_list_items_pricelist_id on public.price_list_items(price_list_id);
+create index if not exists idx_preorder_items_preorder_id    on public.preorder_items(preorder_id);
+create index if not exists idx_client_catalogs_client_id     on public.client_catalogs(client_id);
+create index if not exists idx_client_pricelists_client_id   on public.client_price_lists(client_id);
+create index if not exists idx_client_line_margins_client_id on public.client_line_margins(client_id);
+create index if not exists idx_labor_list_lines_list_id      on public.labor_list_lines(labor_list_id);
+
+
+-- =============================================================================
+-- SECCIÓN 3 — CORRECCIÓN CRÍTICA: catalog_products
+--
+-- ANTES: using(true) — cualquier usuario autenticado leía todos los registros.
+-- DESPUÉS:
+--   superadmin → todo
+--   tenant_admin/admin → catálogos de su tenant
+--   client → solo catálogos asignados a su client_id
 -- =============================================================================
 
 drop policy if exists "admins manage catalog products" on public.catalog_products;
@@ -89,19 +116,19 @@ for all using (
 drop policy if exists "clients read catalog products" on public.catalog_products;
 create policy "clients read catalog products" on public.catalog_products
 for select using (
-  -- Clientes solo ven productos de catálogos asignados a ellos
   catalog_id in (
     select cc.catalog_id
     from public.client_catalogs cc
     join public.profiles p on p.client_id = cc.client_id
     where p.id = auth.uid()
+      and p.tenant_id = public.current_tenant_id()
       and cc.active = true
   )
 );
 
 
 -- =============================================================================
--- SECCIÓN 3 — Tabla: products
+-- SECCIÓN 4 — Tabla: products
 -- =============================================================================
 
 drop policy if exists "admins manage products" on public.products;
@@ -114,7 +141,6 @@ for all using (
   or (public.is_tenant_admin() and tenant_id = public.current_tenant_id())
 );
 
--- Política de clientes: sin cambio funcional, solo reescrita para claridad.
 drop policy if exists "clients read visible products" on public.products;
 create policy "clients read visible products" on public.products
 for select using (
@@ -124,12 +150,13 @@ for select using (
     select 1 from public.profiles
     where profiles.id = auth.uid()
       and profiles.role = 'client'
+      and profiles.tenant_id = public.current_tenant_id()
   )
 );
 
 
 -- =============================================================================
--- SECCIÓN 4 — Tabla: clients
+-- SECCIÓN 5 — Tabla: clients
 -- =============================================================================
 
 drop policy if exists "admins manage clients" on public.clients;
@@ -142,18 +169,20 @@ for all using (
   or (public.is_tenant_admin() and tenant_id = public.current_tenant_id())
 );
 
--- Clientes leen su propio registro: sin cambio.
+-- Codex: defensa doble — validar client_id Y tenant_id del perfil.
 drop policy if exists "clients read own client" on public.clients;
 create policy "clients read own client" on public.clients
 for select using (
   id in (
-    select client_id from public.profiles where id = auth.uid()
+    select client_id from public.profiles
+    where id = auth.uid()
+      and tenant_id = public.current_tenant_id()
   )
 );
 
 
 -- =============================================================================
--- SECCIÓN 5 — Tabla: catalogs
+-- SECCIÓN 6 — Tabla: catalogs
 -- =============================================================================
 
 drop policy if exists "admins manage catalogs" on public.catalogs;
@@ -166,7 +195,6 @@ for all using (
   or (public.is_tenant_admin() and tenant_id = public.current_tenant_id())
 );
 
--- Clientes: sin cambio funcional.
 drop policy if exists "clients read assigned catalogs" on public.catalogs;
 create policy "clients read assigned catalogs" on public.catalogs
 for select using (
@@ -175,13 +203,15 @@ for select using (
   and id in (
     select cc.catalog_id from public.client_catalogs cc
     join public.profiles p on p.client_id = cc.client_id
-    where p.id = auth.uid() and cc.active = true
+    where p.id = auth.uid()
+      and p.tenant_id = public.current_tenant_id()
+      and cc.active = true
   )
 );
 
 
 -- =============================================================================
--- SECCIÓN 6 — Tabla: price_lists
+-- SECCIÓN 7 — Tabla: price_lists
 -- =============================================================================
 
 drop policy if exists "admins manage price lists" on public.price_lists;
@@ -201,14 +231,15 @@ for select using (
   and id in (
     select cpl.price_list_id from public.client_price_lists cpl
     join public.profiles p on p.client_id = cpl.client_id
-    where p.id = auth.uid() and cpl.active = true
+    where p.id = auth.uid()
+      and p.tenant_id = public.current_tenant_id()
+      and cpl.active = true
   )
 );
 
 
 -- =============================================================================
--- SECCIÓN 7 — Tabla: price_list_items
--- (Deriva tenant desde price_list)
+-- SECCIÓN 8 — Tabla: price_list_items (deriva tenant desde price_lists)
 -- =============================================================================
 
 drop policy if exists "admins manage price items" on public.price_list_items;
@@ -239,14 +270,15 @@ for select using (
   price_list_id in (
     select cpl.price_list_id from public.client_price_lists cpl
     join public.profiles p on p.client_id = cpl.client_id
-    where p.id = auth.uid() and cpl.active = true
+    where p.id = auth.uid()
+      and p.tenant_id = public.current_tenant_id()
+      and cpl.active = true
   )
 );
 
 
 -- =============================================================================
--- SECCIÓN 8 — Tabla: client_catalogs
--- (Deriva tenant desde clients)
+-- SECCIÓN 9 — Tabla: client_catalogs (deriva tenant desde clients)
 -- =============================================================================
 
 drop policy if exists "admins manage client catalogs" on public.client_catalogs;
@@ -271,18 +303,20 @@ for all using (
   )
 );
 
+-- Codex: defensa doble con tenant_id en el perfil.
 drop policy if exists "clients read own catalog assignments" on public.client_catalogs;
 create policy "clients read own catalog assignments" on public.client_catalogs
 for select using (
   client_id in (
-    select client_id from public.profiles where id = auth.uid()
+    select client_id from public.profiles
+    where id = auth.uid()
+      and tenant_id = public.current_tenant_id()
   )
 );
 
 
 -- =============================================================================
--- SECCIÓN 9 — Tabla: client_price_lists
--- (Deriva tenant desde clients)
+-- SECCIÓN 10 — Tabla: client_price_lists (deriva tenant desde clients)
 -- =============================================================================
 
 drop policy if exists "admins manage client price lists" on public.client_price_lists;
@@ -307,19 +341,26 @@ for all using (
   )
 );
 
+-- Codex: defensa doble con tenant_id en el perfil.
 drop policy if exists "clients read own price assignments" on public.client_price_lists;
 create policy "clients read own price assignments" on public.client_price_lists
 for select using (
   client_id in (
-    select client_id from public.profiles where id = auth.uid()
+    select client_id from public.profiles
+    where id = auth.uid()
+      and tenant_id = public.current_tenant_id()
   )
 );
 
 
 -- =============================================================================
--- SECCIÓN 10 — Tabla: company_settings
--- Lectura pública autenticada se mantiene (QuotePage la necesita sin auth).
--- Solo se restringe la escritura por tenant.
+-- SECCIÓN 11 — Tabla: company_settings
+--
+-- ANTES: lectura abierta a cualquier usuario autenticado (auth.uid() is not null)
+--        exponía RFC, cuentas bancarias, términos de todos los tenants.
+-- DESPUÉS: lectura restringida por tenant. Acceso público del QuotePage
+--          debe usar función RPC segura, no RLS directo.
+-- Codex: "Debe quedar por tenant; no abrir toda la tabla".
 -- =============================================================================
 
 drop policy if exists "admins manage company settings" on public.company_settings;
@@ -332,14 +373,22 @@ for all using (
   or (public.is_tenant_admin() and tenant_id = public.current_tenant_id())
 );
 
--- Lectura: cualquier usuario autenticado puede leer (necesario para logo/brand en UI).
+-- NOTA PARA EL EQUIPO: QuotePage pública carga company_settings vía
+-- fetchCompanySettings(tenant_id). Con esta política, esa llamada fallará
+-- para usuarios no autenticados. Migrar a función RPC como:
+-- get_company_settings_public_by_tenant(p_tenant_id uuid) SECURITY DEFINER
+-- que exponga solo: brand_name, logo_url, city, state, country.
+-- Mientras tanto, se mantiene lectura para autenticados por tenant.
 drop policy if exists "authenticated read company settings" on public.company_settings;
 create policy "authenticated read company settings" on public.company_settings
-for select using (auth.uid() is not null);
+for select using (
+  public.is_superadmin()
+  or tenant_id = public.current_tenant_id()
+);
 
 
 -- =============================================================================
--- SECCIÓN 11 — Tabla: product_lines
+-- SECCIÓN 12 — Tabla: product_lines
 -- =============================================================================
 
 drop policy if exists "admins manage product lines" on public.product_lines;
@@ -361,7 +410,8 @@ for select using (
 
 
 -- =============================================================================
--- SECCIÓN 12 — Tabla: metal_prices
+-- SECCIÓN 13 — Tabla: metal_prices
+-- Codex: "está bien restringida, debe quedarse así".
 -- =============================================================================
 
 drop policy if exists "admins manage metal prices" on public.metal_prices;
@@ -383,8 +433,7 @@ for select using (
 
 
 -- =============================================================================
--- SECCIÓN 13 — Tabla: client_line_margins
--- (Deriva tenant desde clients)
+-- SECCIÓN 14 — Tabla: client_line_margins (deriva tenant desde clients)
 -- =============================================================================
 
 drop policy if exists "admins manage client line margins" on public.client_line_margins;
@@ -409,17 +458,20 @@ for all using (
   )
 );
 
+-- Codex: defensa doble con tenant_id en el perfil.
 drop policy if exists "clients read own line margins" on public.client_line_margins;
 create policy "clients read own line margins" on public.client_line_margins
 for select using (
   client_id in (
-    select client_id from public.profiles where id = auth.uid()
+    select client_id from public.profiles
+    where id = auth.uid()
+      and tenant_id = public.current_tenant_id()
   )
 );
 
 
 -- =============================================================================
--- SECCIÓN 14 — Tabla: preorders
+-- SECCIÓN 15 — Tabla: preorders
 -- =============================================================================
 
 drop policy if exists "admins manage preorders" on public.preorders;
@@ -437,19 +489,22 @@ create policy "clients manage own preorders" on public.preorders
 for all using (
   tenant_id = public.current_tenant_id()
   and client_id in (
-    select client_id from public.profiles where id = auth.uid()
+    select client_id from public.profiles
+    where id = auth.uid()
+      and tenant_id = public.current_tenant_id()
   )
 ) with check (
   tenant_id = public.current_tenant_id()
   and client_id in (
-    select client_id from public.profiles where id = auth.uid()
+    select client_id from public.profiles
+    where id = auth.uid()
+      and tenant_id = public.current_tenant_id()
   )
 );
 
 
 -- =============================================================================
--- SECCIÓN 15 — Tabla: preorder_items
--- (Deriva tenant desde preorders)
+-- SECCIÓN 16 — Tabla: preorder_items (deriva tenant desde preorders)
 -- =============================================================================
 
 drop policy if exists "admins manage preorder items" on public.preorder_items;
@@ -481,6 +536,7 @@ for all using (
     select po.id from public.preorders po
     join public.profiles p on p.client_id = po.client_id
     where p.id = auth.uid()
+      and p.tenant_id = public.current_tenant_id()
       and po.tenant_id = public.current_tenant_id()
   )
 ) with check (
@@ -488,13 +544,14 @@ for all using (
     select po.id from public.preorders po
     join public.profiles p on p.client_id = po.client_id
     where p.id = auth.uid()
+      and p.tenant_id = public.current_tenant_id()
       and po.tenant_id = public.current_tenant_id()
   )
 );
 
 
 -- =============================================================================
--- SECCIÓN 16 — Tabla: quote_links
+-- SECCIÓN 17 — Tabla: quote_links
 -- =============================================================================
 
 drop policy if exists "admins manage quote links" on public.quote_links;
@@ -507,45 +564,106 @@ for all using (
   or (public.is_tenant_admin() and tenant_id = public.current_tenant_id())
 );
 
+-- NOTA PARA EL EQUIPO: las funciones SECURITY DEFINER de quote_links.sql
+-- (get_quote_link_by_token, submit_quote_link_preorder) ya validan expiración
+-- y token. Revisar en iteración futura que exponen solo datos necesarios
+-- y que el tenant_id del resultado se valida correctamente en la aplicación.
+
+
+-- =============================================================================
+-- SECCIÓN 18 — Tablas: labor_lists y labor_list_lines
+--
+-- FALTABAN en la primera versión del PR.
+-- Codex: "punto más importante que falta — parte central del negocio".
+-- =============================================================================
+
+drop policy if exists "admins manage labor lists" on public.labor_lists;
+create policy "admins manage labor lists" on public.labor_lists
+for all using (
+  public.is_superadmin()
+  or (public.is_tenant_admin() and tenant_id = public.current_tenant_id())
+) with check (
+  public.is_superadmin()
+  or (public.is_tenant_admin() and tenant_id = public.current_tenant_id())
+);
+
+-- Clientes autenticados pueden leer listas de su propio tenant para calcular precios.
+create policy "clients read tenant labor lists" on public.labor_lists
+for select using (
+  public.is_superadmin()
+  or tenant_id = public.current_tenant_id()
+);
+
+drop policy if exists "admins manage labor list lines" on public.labor_list_lines;
+create policy "admins manage labor list lines" on public.labor_list_lines
+for all using (
+  public.is_superadmin()
+  or (
+    public.is_tenant_admin()
+    and labor_list_id in (
+      select id from public.labor_lists
+      where tenant_id = public.current_tenant_id()
+    )
+  )
+) with check (
+  public.is_superadmin()
+  or (
+    public.is_tenant_admin()
+    and labor_list_id in (
+      select id from public.labor_lists
+      where tenant_id = public.current_tenant_id()
+    )
+  )
+);
+
+-- Clientes pueden leer líneas de listas de su tenant.
+create policy "clients read tenant labor list lines" on public.labor_list_lines
+for select using (
+  labor_list_id in (
+    select id from public.labor_lists
+    where tenant_id = public.current_tenant_id()
+  )
+);
+
 
 -- =============================================================================
 -- VERIFICACIÓN FINAL
--- Ejecutar estas queries después de aplicar la migración para confirmar que
--- no hay políticas con using(true) ni políticas admin sin filtro de tenant.
+-- Ejecutar después de aplicar la migración.
 -- =============================================================================
 
--- Query 1: Buscar políticas con using(true) — resultado esperado: 0 filas.
+-- Query 1: No debe retornar ninguna fila.
 -- select tablename, policyname, qual
 -- from pg_policies
 -- where schemaname = 'public'
 --   and qual = 'true';
 
--- Query 2: Listar todas las políticas activas para revisión manual.
--- select tablename, policyname, cmd, qual, with_check
+-- Query 2: Todas las políticas activas para revisión manual.
+-- select tablename, policyname, cmd, qual
 -- from pg_policies
 -- where schemaname = 'public'
 -- order by tablename, policyname;
 
--- Query 3: Confirmar que is_admin_of_tenant existe.
--- select proname, prosecdef from pg_proc
+-- Query 3: Confirmar función is_admin_of_tenant.
+-- select proname from pg_proc
 -- where proname = 'is_admin_of_tenant'
 --   and pronamespace = 'public'::regnamespace;
 
+-- Query 4: Confirmar índices de columnas puente.
+-- select indexname, tablename from pg_indexes
+-- where schemaname = 'public'
+--   and indexname like 'idx_%'
+-- order by tablename;
+
 
 -- =============================================================================
--- ROLLBACK — Solo ejecutar si algo falla y hay que revertir.
--- Restaura las políticas originales de schema.sql + multi_tenant_migration.sql.
--- NO ejecutar en producción sin validar primero en staging.
+-- ROLLBACK
+--
+-- IMPORTANTE: el rollback NO restaura using(true) porque esa es la
+-- vulnerabilidad que se está corrigiendo.
+-- Para revertir, re-ejecutar las políticas de la migración anterior validada:
+--   - supabase/multi_tenant_migration.sql  (sección de políticas)
+--   - supabase/labor_lists.sql             (políticas de labor)
+-- Hacerlo sección a sección en Supabase SQL Editor.
+-- Nunca hacer rollback completo con un solo comando sin verificar el estado
+-- actual de las tablas.
 -- =============================================================================
-
-/*
--- Restaurar catalog_products a estado ANTERIOR (VULNERABLE — solo para rollback):
-drop policy if exists "admins manage catalog products" on public.catalog_products;
-drop policy if exists "clients read catalog products" on public.catalog_products;
-create policy "admins manage catalog products" on public.catalog_products for all using (public.is_admin()) with check (public.is_admin());
-create policy "clients read catalog products" on public.catalog_products for select using (true);
-
--- Para restaurar el resto de tablas a su estado anterior, re-ejecutar:
--- supabase/schema.sql (solo la sección de políticas, no la de tablas)
--- supabase/multi_tenant_migration.sql (solo la sección de políticas)
-*/
