@@ -1,45 +1,19 @@
+/*
+ * Los tokens del sistema de diseño viven en src/styles/tokens.css
+ * Los botones unificados viven en src/styles/buttons.css
+ * Ambos se importan desde main.jsx antes que este archivo.
+ *
+ * Este :root solo contiene aliases de compatibilidad que no están
+ * en tokens.css, y las propiedades de rendering global.
+ */
 :root {
-  --romea-blue: #1f335f;
-  --romea-blue-2: #294575;
-  --romea-ink: #1d2433;
-  --romea-muted: #6f7787;
-  --romea-line: #e6eaf1;
-  --romea-soft: #f7f8fb;
-  --romea-cream: #f7f5f2;
-  --shadow-soft: 0 12px 34px rgba(31, 51, 95, 0.07);
-  --shadow-md: 0 14px 34px rgba(31, 51, 95, 0.12);
-  /* Estados semánticos */
-  --color-success: #22a66a;
-  --color-success-bg: #edf7f0;
-  --color-success-text: #247044;
-  --color-warning-bg: #fff7e8;
-  --color-warning-border: #e3c64d;
-  --color-warning-text: #946318;
-  --color-error: #9f2d2d;
-  --color-error-bg: #fff0f0;
-  --color-error-border: #f0cccc;
-  --color-text-danger: var(--color-error);
-  --color-background-danger: var(--color-error-bg);
-  --color-background-secondary: #f4f7fb;
-  --color-border-tertiary: var(--romea-line);
-  --color-info-bg: #edf3ff;
-  --color-info-text: #244373;
-  /* Tipografía */
-  --font-serif: Georgia, "Times New Roman", serif;
-  --font-sans: Inter, "Segoe UI", Arial, sans-serif;
-  --text-xs: 11px;
-  --text-sm: 12px;
-  --text-base: 13px;
-  --text-md: 14px;
-  --text-lg: 16px;
-  --text-xl: 22px;
-  --heading-h1: clamp(28px, 3.8vw, 42px);
+  /* Compatibilidad heading legacy */
+  --heading-h1: var(--text-4xl);
   --heading-h2: clamp(22px, 2.4vw, 32px);
-  --heading-h3: 16px;
-  /* Transición estándar */
-  --transition: 0.16s ease;
-  color: var(--romea-ink);
-  background: var(--romea-soft);
+  --heading-h3: var(--text-lg);
+  /* Rendering global */
+  color: var(--color-text-primary);
+  background: var(--color-bg-app);
   font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;

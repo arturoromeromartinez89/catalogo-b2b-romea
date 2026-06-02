@@ -1,0 +1,374 @@
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ * CATÁLOGO B2B — SISTEMA DE BOTONES v1.0
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * 5 tipos de botón, todos consistentes.
+ * Antes había 15 clases distintas que hacían lo mismo con diferente aspecto.
+ *
+ * TIPOS:
+ *   .primary-button    — acción principal (navy #0f172a)
+ *   .secondary-button  — acción secundaria (borde + texto oscuro)
+ *   .danger-button     — acción destructiva (rojo)
+ *   .link-button       — acción terciaria (sin fondo, solo texto)
+ *   .icon-button       — solo ícono (cuadrado)
+ *
+ * MODIFICADORES:
+ *   .compact-action    — tamaño reducido (ya existía en el sistema)
+ *   .full              — ancho completo
+ *   .success-action    — variante verde sobre primary
+ *
+ * ALIASES (para no romper código existente):
+ *   .new-client-button    → primary-button
+ *   .prospect-save-button → primary-button
+ *   .upload-button        → secondary-button
+ *   .header-logout-button → secondary-button (pequeño)
+ *   .sidebar-logout       → link-button (sidebar)
+ *   .camera-scan-button   → secondary-button
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/* ── Base compartida (todos los botones heredan esto) ─────────────────── */
+.primary-button,
+.secondary-button,
+.danger-button,
+.link-button,
+.icon-button,
+.action-button,
+.new-client-button,
+.prospect-save-button,
+.upload-button,
+.camera-scan-button,
+.support-exit-button,
+.header-logout-button {
+  align-items: center;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  gap: var(--sp-2);
+  justify-content: center;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  outline-offset: 2px;
+  text-decoration: none;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition),
+    color var(--transition),
+    opacity var(--transition);
+  white-space: nowrap;
+}
+
+/* ── Estados focus accesibles ─────────────────────────────────────────── */
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.danger-button:focus-visible,
+.link-button:focus-visible,
+.icon-button:focus-visible,
+.action-button:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 3px;
+}
+
+/* ── Estados disabled ─────────────────────────────────────────────────── */
+.primary-button:disabled,
+.secondary-button:disabled,
+.danger-button:disabled,
+.action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+
+/* ── PRIMARY BUTTON ───────────────────────────────────────────────────── */
+.primary-button {
+  background: var(--brand-900);
+  border-radius: var(--radius-sm);
+  color: var(--neutral-0);
+  padding: var(--sp-2) var(--sp-4);
+}
+
+.primary-button:hover:not(:disabled) {
+  background: var(--brand-800);
+  box-shadow: var(--shadow-sm);
+}
+
+.primary-button:active:not(:disabled) {
+  background: var(--brand-950);
+  box-shadow: none;
+  transform: translateY(1px);
+}
+
+/* Variante verde (para "Convertir prospecto", acciones de éxito) */
+.primary-button.success-action {
+  background: var(--color-success);
+}
+.primary-button.success-action:hover:not(:disabled) {
+  background: var(--color-success-hover);
+}
+
+
+/* ── SECONDARY BUTTON ─────────────────────────────────────────────────── */
+.secondary-button {
+  background: var(--neutral-0);
+  border: 1.5px solid var(--neutral-200);
+  border-radius: var(--radius-sm);
+  color: var(--neutral-800);
+  padding: calc(var(--sp-2) - 1.5px) calc(var(--sp-4) - 1.5px);
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: var(--neutral-50);
+  border-color: var(--neutral-300);
+  box-shadow: var(--shadow-xs);
+}
+
+.secondary-button:active:not(:disabled) {
+  background: var(--neutral-100);
+  transform: translateY(1px);
+}
+
+
+/* ── DANGER BUTTON ────────────────────────────────────────────────────── */
+.danger-button {
+  background: var(--color-error);
+  border-radius: var(--radius-sm);
+  color: var(--neutral-0);
+  padding: var(--sp-2) var(--sp-4);
+}
+
+.danger-button:hover:not(:disabled) {
+  background: var(--color-error-hover);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+.danger-button:active:not(:disabled) {
+  background: #991b1b;
+  transform: translateY(1px);
+}
+
+
+/* ── LINK BUTTON ──────────────────────────────────────────────────────── */
+.link-button {
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--brand-600);
+  font-size: var(--text-sm);
+  padding: var(--sp-1) var(--sp-2);
+}
+
+.link-button:hover {
+  background: var(--brand-50);
+  color: var(--brand-700);
+}
+
+
+/* ── ICON BUTTON ──────────────────────────────────────────────────────── */
+.icon-button {
+  background: transparent;
+  border: 1.5px solid var(--neutral-200);
+  border-radius: var(--radius-sm);
+  color: var(--neutral-500);
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0;
+  width: 32px;
+}
+
+.icon-button:hover {
+  background: var(--neutral-50);
+  border-color: var(--neutral-300);
+  color: var(--neutral-800);
+}
+
+
+/* ── MODIFICADOR: compact-action ──────────────────────────────────────── */
+.compact-action {
+  font-size: var(--text-sm);
+  padding: var(--sp-1) var(--sp-3);
+}
+
+.secondary-button.compact-action {
+  padding: calc(var(--sp-1) - 1.5px) calc(var(--sp-3) - 1.5px);
+}
+
+/* ── MODIFICADOR: full width ──────────────────────────────────────────── */
+.primary-button.full,
+.secondary-button.full {
+  width: 100%;
+}
+
+
+/* ── ACTION BUTTON (selector/catalog/preorder cards) ─────────────────── */
+.action-button {
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  padding: var(--sp-1) var(--sp-3);
+}
+
+.action-button.preorder {
+  background: var(--brand-900);
+  color: var(--neutral-0);
+}
+.action-button.preorder:hover:not(:disabled) {
+  background: var(--brand-800);
+}
+.action-button.preorder.done {
+  background: var(--color-success-light);
+  color: var(--color-success);
+  cursor: default;
+}
+
+.action-button.catalog {
+  background: var(--brand-100);
+  color: var(--brand-700);
+}
+.action-button.catalog:hover:not(:disabled) {
+  background: var(--brand-150);
+}
+.action-button.catalog.done {
+  background: var(--color-success-light);
+  color: var(--color-success);
+  cursor: default;
+}
+
+.action-button.undo {
+  background: var(--neutral-100);
+  color: var(--neutral-600);
+}
+.action-button.undo:hover {
+  background: var(--neutral-150);
+}
+
+
+/* ── ALIASES — compatibilidad con código existente ────────────────────── */
+
+/* new-client-button → primary */
+.new-client-button {
+  background: var(--brand-900);
+  border-radius: var(--radius-sm);
+  color: var(--neutral-0);
+  padding: var(--sp-2) var(--sp-4);
+}
+.new-client-button:hover:not(:disabled) {
+  background: var(--brand-800);
+  box-shadow: var(--shadow-sm);
+}
+.new-client-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* prospect-save-button → primary (mismo estilo) */
+.prospect-save-button {
+  background: var(--brand-900);
+  border-radius: var(--radius-sm);
+  color: var(--neutral-0);
+  padding: var(--sp-2) var(--sp-4);
+}
+
+/* camera-scan-button → secondary */
+.camera-scan-button {
+  background: var(--neutral-0);
+  border: 1.5px solid var(--neutral-200);
+  border-radius: var(--radius-sm);
+  color: var(--neutral-800);
+  padding: calc(var(--sp-2) - 1.5px) calc(var(--sp-3) - 1.5px);
+}
+.camera-scan-button:hover {
+  background: var(--neutral-50);
+  border-color: var(--neutral-300);
+}
+
+/* support-exit-button → secondary small */
+.support-exit-button {
+  background: var(--neutral-0);
+  border: 1.5px solid var(--neutral-200);
+  border-radius: var(--radius-sm);
+  color: var(--neutral-800);
+  font-size: var(--text-sm);
+  padding: calc(var(--sp-1) - 1.5px) calc(var(--sp-3) - 1.5px);
+}
+.support-exit-button:hover {
+  background: var(--neutral-50);
+}
+
+/* header-logout-button → secondary small */
+.header-logout-button {
+  background: transparent;
+  border: 1.5px solid var(--neutral-200);
+  border-radius: var(--radius-sm);
+  color: var(--neutral-600);
+  font-size: var(--text-sm);
+  padding: calc(var(--sp-1) - 1.5px) calc(var(--sp-3) - 1.5px);
+}
+.header-logout-button:hover {
+  background: var(--neutral-50);
+  color: var(--neutral-800);
+}
+
+/* sidebar-logout → ghost dark */
+.sidebar-logout {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--neutral-500);
+  cursor: pointer;
+  display: flex;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  transition: background var(--transition), color var(--transition);
+  width: 100%;
+}
+.sidebar-logout:hover {
+  background: var(--neutral-100);
+  color: var(--neutral-800);
+}
+
+
+/* ── SELECTION ACTIONS (bulk select en catálogo) ──────────────────────── */
+.selection-action {
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  padding: var(--sp-1) var(--sp-3);
+  transition: background var(--transition), color var(--transition);
+}
+
+.selection-action.catalog {
+  background: var(--brand-100);
+  border: 1px solid var(--brand-200);
+  color: var(--brand-700);
+}
+.selection-action.catalog:hover {
+  background: var(--brand-150);
+}
+
+.selection-action.preorder {
+  background: var(--brand-900);
+  border: 1px solid transparent;
+  color: var(--neutral-0);
+}
+.selection-action.preorder:hover {
+  background: var(--brand-800);
+}
+
+.selection-action.all-filtered {
+  background: var(--neutral-100);
+  border: 1px solid var(--neutral-200);
+  color: var(--neutral-700);
+}
+.selection-action.all-filtered.selected {
+  background: var(--color-warning-light);
+  border-color: #e3c64d;
+  color: var(--color-warning-text);
+}

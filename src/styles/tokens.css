@@ -1,0 +1,240 @@
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ * CATÁLOGO B2B — DESIGN SYSTEM TOKENS v1.0
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Este archivo es la fuente de verdad del sistema de diseño.
+ * NUNCA uses valores hardcodeados en otros archivos CSS — usa estos tokens.
+ *
+ * ESTRUCTURA:
+ *   1. Colores de marca (escala completa)
+ *   2. Colores neutrales
+ *   3. Colores semánticos (éxito, error, warning, info)
+ *   4. Tipografía
+ *   5. Escala de espaciado (base 4px)
+ *   6. Border radius
+ *   7. Sombras
+ *   8. Transiciones
+ *   9. Breakpoints (como variables CSS)
+ *  10. Aliases semánticos (los más usados en la UI)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+:root {
+
+  /* ── 1. COLORES DE MARCA ───────────────────────────────────────────────── */
+  /*
+   * Primario: #0f172a — casi negro, muy premium. Perfecto para joyería B2B.
+   * La escala va de 950 (más oscuro) a 50 (más claro).
+   */
+  --brand-950: #060c18;
+  --brand-900: #0f172a;   /* ← color primario de marca */
+  --brand-800: #1a2844;
+  --brand-700: #1f335f;   /* ex --romea-blue (se conserva como alias) */
+  --brand-600: #294575;   /* ex --romea-blue-2 */
+  --brand-500: #3566c9;
+  --brand-400: #4f80e8;
+  --brand-300: #7ba8f5;
+  --brand-200: #b8cffc;
+  --brand-150: #d5e2fb;
+  --brand-100: #e9f2ff;
+  --brand-50:  #f5f8ff;
+
+  /* ── 2. NEUTRALES ─────────────────────────────────────────────────────── */
+  --neutral-950: #07080d;
+  --neutral-900: #111827;
+  --neutral-800: #1d2433;  /* ex --romea-ink (texto principal) */
+  --neutral-700: #3d4760;
+  --neutral-600: #5a6480;
+  --neutral-500: #6f7787;  /* ex --romea-muted (texto secundario) */
+  --neutral-400: #8491a6;
+  --neutral-300: #b8c2d4;
+  --neutral-200: #e6eaf1;  /* ex --romea-line (bordes) */
+  --neutral-150: #eef1f6;
+  --neutral-100: #f1f3f7;
+  --neutral-50:  #f7f8fb;  /* ex --romea-soft (fondos) */
+  --neutral-0:   #ffffff;
+
+  /* ── 3. COLORES SEMÁNTICOS ────────────────────────────────────────────── */
+
+  /* Éxito */
+  --color-success:        #16a34a;
+  --color-success-hover:  #15803d;
+  --color-success-light:  #dcfce7;
+  --color-success-text:   #14532d;
+
+  /* Error / Peligro */
+  --color-error:          #dc2626;
+  --color-error-hover:    #b91c1c;
+  --color-error-light:    #fee2e2;
+  --color-error-text:     #7f1d1d;
+
+  /* Warning */
+  --color-warning:        #d97706;
+  --color-warning-hover:  #b45309;
+  --color-warning-light:  #fef3c7;
+  --color-warning-text:   #78350f;
+
+  /* Info */
+  --color-info:           #2563eb;
+  --color-info-light:     #eff6ff;
+  --color-info-text:      #1e3a8a;
+
+  /* ── 4. TIPOGRAFÍA ────────────────────────────────────────────────────── */
+
+  /* Fuentes */
+  --font-sans:   "Plus Jakarta Sans", Inter, "Segoe UI", system-ui, sans-serif;
+  --font-serif:  Georgia, "Times New Roman", serif;
+  --font-mono:   "Fira Code", "Cascadia Code", Consolas, monospace;
+
+  /* Escala de tamaños — 7 valores (vs 22 anteriores) */
+  --text-xs:   11px;   /* etiquetas, metadatos */
+  --text-sm:   12px;   /* texto secundario, tablas */
+  --text-base: 13px;   /* texto base de la app */
+  --text-md:   14px;   /* texto ligeramente prominente */
+  --text-lg:   16px;   /* subtítulos, nombres */
+  --text-xl:   20px;   /* títulos de sección */
+  --text-2xl:  24px;   /* títulos de página */
+  --text-3xl:  30px;   /* headings grandes */
+  --text-4xl:  clamp(28px, 3.5vw, 40px);  /* hero / landing */
+
+  /* Pesos */
+  --weight-normal:   400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+  --weight-black:    900;
+
+  /* Interlineado */
+  --leading-tight:  1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+
+  /* ── 5. ESCALA DE ESPACIADO (base 4px) ───────────────────────────────── */
+  /*
+   * Sistema de 12 pasos. Todos los paddings, margins y gaps deben
+   * usar estos valores. No inventes 13px ni 22px.
+   *
+   * --sp-1  = 4px
+   * --sp-2  = 8px
+   * --sp-3  = 12px
+   * --sp-4  = 16px   ← el más usado (padding estándar de card/panel)
+   * --sp-5  = 20px
+   * --sp-6  = 24px
+   * --sp-8  = 32px
+   * --sp-10 = 40px
+   * --sp-12 = 48px
+   * --sp-16 = 64px
+   * --sp-20 = 80px
+   * --sp-24 = 96px
+   */
+  --sp-px: 1px;
+  --sp-0:  0px;
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-8:  32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+  --sp-20: 80px;
+  --sp-24: 96px;
+
+  /* ── 6. BORDER RADIUS (estilo corporativo — 4-6px) ───────────────────── */
+  --radius-none: 0px;
+  --radius-xs:   2px;   /* tabla interna, chips muy pequeños */
+  --radius-sm:   4px;   /* ← botones, inputs, badges */
+  --radius-md:   6px;   /* ← cards, panels, dropdowns */
+  --radius-lg:   8px;   /* modales, drawers */
+  --radius-xl:   12px;  /* solo para login/landing */
+  --radius-full: 9999px; /* pills, avatares */
+
+  /* ── 7. SOMBRAS ───────────────────────────────────────────────────────── */
+  --shadow-none: none;
+  --shadow-xs:   0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-sm:   0 2px 8px rgba(15, 23, 42, 0.08);
+  --shadow-md:   0 8px 24px rgba(15, 23, 42, 0.10);
+  --shadow-lg:   0 16px 40px rgba(15, 23, 42, 0.14);
+  --shadow-xl:   0 24px 64px rgba(15, 23, 42, 0.18);
+
+  /* ── 8. TRANSICIONES ──────────────────────────────────────────────────── */
+  --transition-fast:   0.1s ease;
+  --transition:        0.16s ease;
+  --transition-slow:   0.28s ease;
+  --transition-bounce: 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── 9. BREAKPOINTS (para usar en JS si necesario) ───────────────────── */
+  /*
+   * Solo 4 breakpoints — vs 8 anteriores.
+   * Usar en @media (max-width: var(--bp-*)) NO funciona en CSS nativo,
+   * pero se documentan aquí como referencia canónica.
+   *
+   * --bp-sm:  600px   mobile
+   * --bp-md:  900px   tablet
+   * --bp-lg:  1200px  desktop
+   * --bp-xl:  1440px  wide
+   */
+  --bp-sm:  600px;
+  --bp-md:  900px;
+  --bp-lg:  1200px;
+  --bp-xl:  1440px;
+
+  /* ── 10. ALIASES SEMÁNTICOS ───────────────────────────────────────────── */
+  /*
+   * Estos son los nombres que usa el CSS de la app.
+   * Apuntan a los tokens primitivos de arriba.
+   * Cambiar el tema = cambiar solo estos aliases.
+   */
+
+  /* Colores de texto */
+  --color-text-primary:   var(--neutral-800);   /* texto principal */
+  --color-text-secondary: var(--neutral-500);   /* texto de apoyo */
+  --color-text-disabled:  var(--neutral-400);   /* texto inactivo */
+  --color-text-inverse:   var(--neutral-0);     /* texto sobre fondos oscuros */
+  --color-text-brand:     var(--brand-700);     /* texto de acento/enlace */
+  --color-text-danger:    var(--color-error);
+
+  /* Fondos */
+  --color-bg-app:       var(--neutral-50);      /* fondo de la app */
+  --color-bg-surface:   var(--neutral-0);       /* cards, paneles */
+  --color-bg-subtle:    var(--neutral-100);     /* fondos alternativos */
+  --color-bg-hover:     var(--neutral-150);     /* hover sobre elementos */
+  --color-bg-brand:     var(--brand-900);       /* fondo de sidebar, headers */
+  --color-bg-brand-hover: var(--brand-800);     /* hover sobre brand */
+  --color-bg-danger:    var(--color-error-light);
+  --color-bg-secondary: var(--neutral-50);
+
+  /* Bordes */
+  --color-border:         var(--neutral-200);   /* borde estándar */
+  --color-border-strong:  var(--neutral-300);   /* borde más visible */
+  --color-border-brand:   var(--brand-500);     /* borde de acento */
+  --color-border-tertiary: var(--neutral-200);
+
+  /* Compatibilidad con variables antiguas (para no romper CSS existente) */
+  --romea-blue:   var(--brand-700);
+  --romea-blue-2: var(--brand-600);
+  --romea-ink:    var(--neutral-800);
+  --romea-muted:  var(--neutral-500);
+  --romea-line:   var(--neutral-200);
+  --romea-soft:   var(--neutral-50);
+  --romea-cream:  #f7f5f2;
+  --shadow-soft:  var(--shadow-sm);
+  --shadow-md:    var(--shadow-md);
+
+  /* Compatibilidad con variables semánticas antiguas */
+  --color-success-bg:         var(--color-success-light);
+  --color-success-text:       var(--color-success-text);
+  --color-warning-bg:         var(--color-warning-light);
+  --color-warning-border:     #e3c64d;
+  --color-warning-text:       var(--color-warning-text);
+  --color-error:              var(--color-error);
+  --color-error-bg:           var(--color-error-light);
+  --color-error-border:       #f0cccc;
+  --color-info-bg:            var(--color-info-light);
+  --color-info-text:          var(--color-info-text);
+  --color-background-danger:  var(--color-error-light);
+  --color-background-secondary: var(--neutral-50);
+}
