@@ -1,7 +1,7 @@
 import ProductDetail from "../ProductDetail";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../../utils/formatters";
 
-const PRODUCT_RENDER_BATCH = 120;
+const PRODUCT_RENDER_BATCH = 60; // debe coincidir con AdminDashboard
 
 export default function CatalogTab({
   t,
