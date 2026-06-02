@@ -15,7 +15,7 @@ const dsn = import.meta.env.VITE_SENTRY_DSN;
 
 // Campos que nunca deben enviarse a Sentry por contener PII o datos comerciales.
 const SENSITIVE_KEYS = new Set([
-  "email", "correo", "phone", "telefono", "telefono", "rfc",
+  "email", "correo", "phone", "telefono", "rfc",
   "name", "nombre", "customer", "cliente", "token",
   "password", "contraseña", "newPassword",
 ]);
