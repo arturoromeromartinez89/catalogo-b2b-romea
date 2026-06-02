@@ -285,128 +285,27 @@ input[type="file"] {
   text-transform: uppercase;
 }
 
-.primary-button,
-.secondary-button,
-.link-button,
-.icon-button,
+/* ── Botones base — definidos en src/styles/buttons.css ───────────────── */
+/* Aquí solo ajustes de contexto que no están en el sistema base           */
+
 .menu-button {
   align-items: center;
-  border-radius: 8px;
+  background: var(--neutral-0);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
   display: inline-flex;
-  font-weight: 800;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
   justify-content: center;
-  min-height: 40px;
-  padding: 9px 13px;
-  text-decoration: none;
-  transition: background var(--transition), border-color var(--transition), color var(--transition), opacity var(--transition), transform var(--transition);
+  padding: var(--sp-2) var(--sp-3);
+  transition: background var(--transition), border-color var(--transition);
 }
-
-.primary-button {
-  background: var(--romea-blue);
-  border: 1px solid var(--romea-blue);
-  color: #ffffff;
-}
-.primary-button:hover {
-  background: var(--romea-blue-2);
-  border-color: var(--romea-blue-2);
-}
-.primary-button:active {
-  transform: scale(0.97);
-}
-.primary-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.primary-button:hover {
-  background: var(--romea-blue-2);
-  border-color: var(--romea-blue-2);
-}
-
-.primary-button:active {
-  transform: scale(0.98);
-}
-
-.primary-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.48;
-  transform: none;
-}
-
-.secondary-button {
-  background: #ffffff;
-  border: 1px solid rgba(31, 51, 95, 0.28);
-  color: var(--romea-blue);
-}
-.secondary-button:hover {
-  background: var(--romea-soft);
-  border-color: var(--romea-blue);
-}
-.secondary-button:active {
-  transform: scale(0.97);
-}
-.secondary-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.secondary-button:hover {
-  background: var(--romea-soft);
-  border-color: var(--romea-blue);
-}
-
-.secondary-button:active {
-  transform: scale(0.98);
-}
-
-.secondary-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.48;
-  transform: none;
-}
-
-.link-button {
-  background: transparent;
-  border: 0;
-  color: var(--romea-blue);
-  font-weight: 600;
-  justify-self: start;
-  min-height: 30px;
-  padding: 0;
-}
-.link-button:hover {
-  text-decoration: underline;
-}
-
-.link-button:hover {
-  text-decoration: underline;
-}
-
-.icon-button,
-.menu-button {
-  background: #ffffff;
-  border: 1px solid var(--romea-line);
-  color: var(--romea-blue);
-}
-.icon-button:hover,
 .menu-button:hover {
-  background: var(--romea-soft);
-  border-color: var(--romea-blue);
-}
-
-.icon-button:hover,
-.menu-button:hover {
-  background: var(--romea-soft);
-  border-color: var(--romea-blue);
-}
-
-.icon-button {
-  font-size: 22px;
-  height: 38px;
-  padding: 0;
-  width: 38px;
+  background: var(--color-bg-subtle);
+  border-color: var(--color-border-strong);
 }
 
 .full {
@@ -1096,28 +995,9 @@ dd {
   max-width: 300px;
 }
 
-/* ── Logout button ── */
-.sidebar-logout {
-  align-items: center;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--romea-muted);
-  cursor: pointer;
-  display: flex;
-  font-size: 11px;
-  font-weight: 700;
-  gap: 5px;
-  justify-content: center;
-  min-height: 28px;
-  padding: 4px 10px;
-  transition: background var(--transition), color var(--transition), border-color var(--transition);
-  width: 100%;
-}
-
+/* ── Logout button — definido en buttons.css, aquí solo ajuste de hover ── */
 .sidebar-logout:hover {
-  background: var(--color-error-bg);
-  border-color: var(--color-error-border);
+  background: var(--color-error-light);
   color: var(--color-error);
 }
 
@@ -1139,24 +1019,10 @@ dd {
   justify-content: flex-end;
 }
 
-.header-logout-button {
-  align-items: center;
-  background: #ffffff;
-  border: 1px solid var(--romea-line);
-  border-radius: 999px;
-  color: var(--romea-blue);
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 11px;
-  font-weight: 900;
-  min-height: 32px;
-  padding: 6px 12px;
-  white-space: nowrap;
-}
-
+/* header-logout-button — definido en buttons.css, hover especial aquí */
 .header-logout-button:hover {
-  background: var(--color-error-bg);
-  border-color: var(--color-error-border);
+  background: var(--color-error-light);
+  border-color: var(--color-error-light);
   color: var(--color-error);
 }
 
@@ -2559,39 +2425,11 @@ dd {
   min-width: 0;
 }
 
+/* action-button — definido en buttons.css */
+/* Ajuste de tamaño mínimo para las tarjetas de producto */
 .action-button {
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 1.15;
   min-height: 34px;
-  padding: 7px 9px;
   white-space: normal;
-}
-
-.action-button.preorder {
-  background: #eaf8f1;
-  border: 1px solid #8ed7b3;
-  color: #087a45;
-}
-
-.action-button.catalog {
-  background: #edf5ff;
-  border: 1px solid #b9d4ff;
-  color: #1f4f8f;
-}
-
-.action-button.done {
-  background: #f1f3f7;
-  border-color: #d5dbe7;
-  color: #7a8496;
-  cursor: default;
-}
-
-.action-button.undo {
-  background: #fff2f2;
-  border: 1px solid #efb5b5;
-  color: #b42323;
 }
 
 .two-column-admin {
