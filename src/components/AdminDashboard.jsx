@@ -227,8 +227,16 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const deferredFilters = useDeferredValue(filters);
   const deferredQuickFilters = useDeferredValue(quickFilters);
   const [selectedProductCode, setSelectedProductCode] = useState("");
-  const [draftPreorder, setDraftPreorder] = useState(null);
+  const [draftPreorder, setDraftPreorder] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("draft-preorder");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isDraftOpen, setIsDraftOpen] = useState(false);
+  const [tabChangeModal, setTabChangeModal] = useState({ open: false, nextTab: null });
   const [addedCodes, setAddedCodes] = useState([]);
   const [visibleProductLimit, setVisibleProductLimit] = useState(PRODUCT_RENDER_BATCH);
   const [checkedIds, setCheckedIds] = useState(() => new Set());
@@ -251,15 +259,21 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
 
   const changeTab = useCallback((nextTab) => {
     setTab((current) => {
-      if (current === "preorders" && nextTab !== "preorders") {
-        if (!window.confirm("Si tienes una preorden abierta, guarda como borrador antes de salir. ¿Deseas cambiar de menú?")) {
-          return current;
-        }
+      if (current === "preorders" && nextTab !== "preorders" && draftPreorder?.preorder_items?.length) {
+        setTabChangeModal({ open: true, nextTab });
+        return current; // espera confirmación del modal
       }
       return nextTab;
     });
     setSelectedProductCode("");
-  }, []);
+  }, [draftPreorder]);
+
+  const confirmTabChange = useCallback(() => {
+    const { nextTab } = tabChangeModal;
+    setTabChangeModal({ open: false, nextTab: null });
+    setTab(nextTab);
+    setSelectedProductCode("");
+  }, [tabChangeModal]);
 
   const handleSignOut = async () => {
     if (signingOut) return;
@@ -430,6 +444,20 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     const timer = window.setTimeout(() => setActionNotice(null), actionNotice.type === "error" ? 9000 : 5200);
     return () => window.clearTimeout(timer);
   }, [actionNotice]);
+
+  // Persiste el borrador de preorden en sessionStorage para sobrevivir recargas.
+  useEffect(() => {
+    try {
+      if (draftPreorder) {
+        sessionStorage.setItem("draft-preorder", JSON.stringify(draftPreorder));
+      } else {
+        sessionStorage.removeItem("draft-preorder");
+      }
+    } catch {
+      // sessionStorage puede fallar en modo privado o sin espacio.
+    }
+  }, [draftPreorder]);
+
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();
     if (!trimmed) return;
@@ -1764,6 +1792,36 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       ) : null}
 
       <ActionNotice notice={actionNotice} onClose={() => setActionNotice(null)} />
+
+      {tabChangeModal.open ? (
+        <div className="client-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="tab-change-modal-title">
+          <section className="client-modal">
+            <header>
+              <h2 id="tab-change-modal-title">¿Cambiar de menú?</h2>
+            </header>
+            <div className="client-modal-body">
+              <p>Tienes una preorden con productos en proceso. Si cambias de menú sin guardar, los productos permanecerán en el borrador.</p>
+              <p className="muted">Puedes volver a Preórdenes cuando quieras para continuar.</p>
+            </div>
+            <footer>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => setTabChangeModal({ open: false, nextTab: null })}
+              >
+                Quedarme aquí
+              </button>
+              <button
+                className="primary-button"
+                type="button"
+                onClick={confirmTabChange}
+              >
+                Sí, cambiar de menú
+              </button>
+            </footer>
+          </section>
+        </div>
+      ) : null}
       {signingOut ? (
         <div className="signout-overlay" role="status" aria-live="assertive">
           <div className="signout-card">

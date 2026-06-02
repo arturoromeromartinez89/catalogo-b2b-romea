@@ -44,7 +44,14 @@ export default function ClientCatalogApp({ profile }) {
   const company = useCompany();
   const [tenantCompany, setTenantCompany] = useState(null);
   const [products, setProducts] = useState([]);
-  const [cartItems, setCartItems] = useState([]);
+  const [cartItems, setCartItems] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("client-cart-items");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [clientData, setClientData] = useState(null);
   const [customer, setCustomer] = useState(() => makeDefaultCustomer(language));
   const [query, setQuery] = useState("");
@@ -138,6 +145,19 @@ export default function ClientCatalogApp({ profile }) {
   useEffect(() => {
     setVisibleProductLimit(PRODUCT_RENDER_BATCH);
   }, [deferredQuery, deferredSearchChips, deferredFilters, deferredQuickFilters]);
+
+  // Persiste el carrito en sessionStorage para sobrevivir recargas accidentales.
+  useEffect(() => {
+    try {
+      if (cartItems.length > 0) {
+        sessionStorage.setItem("client-cart-items", JSON.stringify(cartItems));
+      } else {
+        sessionStorage.removeItem("client-cart-items");
+      }
+    } catch {
+      // sessionStorage puede fallar en modo privado o sin espacio.
+    }
+  }, [cartItems]);
 
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();
