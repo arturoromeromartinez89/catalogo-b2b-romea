@@ -227,14 +227,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const deferredFilters = useDeferredValue(filters);
   const deferredQuickFilters = useDeferredValue(quickFilters);
   const [selectedProductCode, setSelectedProductCode] = useState("");
-  const [draftPreorder, setDraftPreorder] = useState(() => {
-    try {
-      const saved = sessionStorage.getItem("draft-preorder");
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [draftPreorder, setDraftPreorder] = useState(null);
   const [isDraftOpen, setIsDraftOpen] = useState(false);
   const [tabChangeModal, setTabChangeModal] = useState({ open: false, nextTab: null });
   const [addedCodes, setAddedCodes] = useState([]);
@@ -445,18 +438,42 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     return () => window.clearTimeout(timer);
   }, [actionNotice]);
 
-  // Persiste el borrador de preorden en sessionStorage para sobrevivir recargas.
+  // Clave con namespace para evitar mezcla entre tenants/usuarios en el mismo navegador.
+  const draftStorageKey = tenantId && profile?.id ? `draft-preorder:${tenantId}:${profile.id}` : null;
+
+  // Carga el borrador desde sessionStorage cuando cambia el tenant o el usuario.
+  // También reconstruye addedCodes para que las señales visuales del catálogo sean correctas.
   useEffect(() => {
+    if (!draftStorageKey) {
+      setDraftPreorder(null);
+      setAddedCodes([]);
+      return;
+    }
+    try {
+      const saved = sessionStorage.getItem(draftStorageKey);
+      const parsed = saved ? JSON.parse(saved) : null;
+      setDraftPreorder(parsed);
+      setAddedCodes(parsed?.preorder_items?.map((item) => item.producto_codigo) || []);
+    } catch {
+      setDraftPreorder(null);
+      setAddedCodes([]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftStorageKey]);
+
+  // Persiste el borrador en sessionStorage en cada cambio, bajo la clave del tenant/usuario activo.
+  useEffect(() => {
+    if (!draftStorageKey) return;
     try {
       if (draftPreorder) {
-        sessionStorage.setItem("draft-preorder", JSON.stringify(draftPreorder));
+        sessionStorage.setItem(draftStorageKey, JSON.stringify(draftPreorder));
       } else {
-        sessionStorage.removeItem("draft-preorder");
+        sessionStorage.removeItem(draftStorageKey);
       }
     } catch {
       // sessionStorage puede fallar en modo privado o sin espacio.
     }
-  }, [draftPreorder]);
+  }, [draftPreorder, draftStorageKey]);
 
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();
