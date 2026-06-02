@@ -44,7 +44,7 @@ export default function ClientsTab({
 
       <div className="clients-filter-card">
         <div className="client-search-box">
-          <span aria-hidden="true">?</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input
             value={clientSearch}
             onChange={(event) => setClientSearch(event.target.value)}
@@ -153,7 +153,7 @@ export default function ClientsTab({
           <section className="client-modal">
             <header>
               <h2>{clientForm.id ? "Editar cliente" : "Nuevo cliente"}</h2>
-              <button className="icon-button" type="button" onClick={() => setIsClientFormOpen(false)}>x</button>
+              <button className="icon-button" type="button" aria-label="Cerrar" onClick={() => setIsClientFormOpen(false)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </header>
             <div className="client-modal-body">
               <label className="wide-field">Nombre <span>*</span>
