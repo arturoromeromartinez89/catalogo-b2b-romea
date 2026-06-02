@@ -587,12 +587,11 @@ for all using (
   or (public.is_tenant_admin() and tenant_id = public.current_tenant_id())
 );
 
--- Clientes autenticados pueden leer listas de su propio tenant para calcular precios.
-create policy "clients read tenant labor lists" on public.labor_lists
-for select using (
-  public.is_superadmin()
-  or tenant_id = public.current_tenant_id()
-);
+-- NOTA: clientes NO deben leer labor_lists directamente.
+-- Las tablas contienen información sensible: mano de obra, costos, plata fina,
+-- márgenes y estructura interna de precio. Si la vista cliente necesita precios,
+-- debe recibirlos ya calculados o via RPC segura que exponga solo el precio final.
+-- (Codex: retirar lectura directa client, 2026-06-01)
 
 drop policy if exists "admins manage labor list lines" on public.labor_list_lines;
 create policy "admins manage labor list lines" on public.labor_list_lines
@@ -616,14 +615,8 @@ for all using (
   )
 );
 
--- Clientes pueden leer líneas de listas de su tenant.
-create policy "clients read tenant labor list lines" on public.labor_list_lines
-for select using (
-  labor_list_id in (
-    select id from public.labor_lists
-    where tenant_id = public.current_tenant_id()
-  )
-);
+-- NOTA: clientes NO deben leer labor_list_lines directamente por las mismas
+-- razones que labor_lists. Solo admins y superadmin tienen acceso.
 
 
 -- =============================================================================
