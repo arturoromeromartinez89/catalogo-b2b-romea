@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import BrandLogo from "../components/BrandLogo";
 import LanguageToggle from "../components/LanguageToggle";
 import { useCompany } from "../contexts/CompanyContext";
+import { useLanguage } from "../i18n/LanguageContext";
 import { fetchCompanySettings } from "../services/companySettings";
 import { fetchQuoteLinkByToken, submitQuoteLinkSelection } from "../services/quoteLinkService";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
@@ -12,13 +13,14 @@ const readToken = () => {
 };
 
 export default function QuotePage() {
+  const { t } = useLanguage();
   const company = useCompany();
   const token = readToken();
   const [quote, setQuote] = useState(null);
   const [tenantCompany, setTenantCompany] = useState(null);
   const [quantities, setQuantities] = useState({});
   const [customer, setCustomer] = useState({ name: "", company: "", email: "", phone: "", rfc: "" });
-  const [status, setStatus] = useState("Cargando cotizacion...");
+  const [status, setStatus] = useState(() => t("quoteLoading"));
   const [submitting, setSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState("");
 
@@ -28,7 +30,7 @@ export default function QuotePage() {
         setQuote(data);
         setStatus("");
       })
-      .catch(() => setStatus("La liga no existe o ya expiro."));
+      .catch(() => setStatus(t("quoteNotFound")));
   }, [token]);
 
   useEffect(() => {
@@ -53,25 +55,25 @@ export default function QuotePage() {
 
   const submit = async () => {
     if (!customer.name && !customer.company) {
-      setStatus("Captura nombre o empresa para enviar la seleccion.");
+      setStatus(t("quoteValidateName"));
       return;
     }
     if (!customer.email && !customer.phone) {
-      setStatus("Captura correo o telefono para poder contactarte.");
+      setStatus(t("quoteValidateContact"));
       return;
     }
     if (!selectedItems.length) {
-      setStatus("Selecciona al menos una pieza.");
+      setStatus(t("quoteValidateItems"));
       return;
     }
     setSubmitting(true);
-    setStatus("Enviando seleccion...");
+    setStatus(t("quoteSending"));
     try {
       const id = await submitQuoteLinkSelection({ token, customer, items: selectedItems });
       setSubmittedId(id);
-      setStatus("Seleccion enviada correctamente. Un asesor revisara disponibilidad y precio final.");
+      setStatus(t("quoteSentStatus"));
     } catch (error) {
-      setStatus(`Error: ${error.message}`);
+      setStatus(`${t("quoteErrorPrefix")} ${error.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -88,16 +90,16 @@ export default function QuotePage() {
       <header className="quote-public-header">
         <div>
           <BrandLogo company={activeCompany} />
-          <p>Cotizacion</p>
+          <p>{t("quoteHeader")}</p>
         </div>
         <LanguageToggle />
       </header>
 
       <main className="quote-public-main">
         <section className="quote-public-title">
-          <p className="eyebrow">Cotizacion seleccionada</p>
-          <h1>Selecciona cantidades</h1>
-          <span>{products.length.toLocaleString()} productos disponibles en esta liga.</span>
+          <p className="eyebrow">{t("quoteEyebrow")}</p>
+          <h1>{t("quoteTitle")}</h1>
+          <span>{t("quoteProductsAvailable", products.length.toLocaleString())}</span>
         </section>
 
         <section className="quote-public-grid">
@@ -114,28 +116,60 @@ export default function QuotePage() {
                 <strong>{product.codigo}</strong>
                 <h3>{shortText(product.descripcion, 78)}</h3>
                 <p>{[product.metal, product.kilataje, quote.show_weight ? formatWeight(product.pesoPromedio) : ""].filter(Boolean).join(" / ")}</p>
-                {quote.show_price ? <span>{product.precioMinimo ? formatCurrency(product.precioMinimo, product.monedaPrecioMin) : "Precio por confirmar"}</span> : null}
+                {quote.show_price ? (
+                  <span>
+                    {product.precioMinimo
+                      ? formatCurrency(product.precioMinimo, product.monedaPrecioMin)
+                      : t("quotePriceToConfirm")}
+                  </span>
+                ) : null}
               </div>
               <label>
-                Cantidad
-                <input type="number" min="0" value={quantities[product.codigo] || ""} onChange={(event) => setQuantity(product.codigo, event.target.value)} />
+                {t("quoteQuantity")}
+                <input
+                  type="number"
+                  min="0"
+                  value={quantities[product.codigo] || ""}
+                  onChange={(event) => setQuantity(product.codigo, event.target.value)}
+                />
               </label>
             </article>
           ))}
         </section>
 
         <section className="quote-public-form">
-          <h2>Enviar mi seleccion</h2>
+          <h2>{t("quoteSendTitle")}</h2>
           <div className="form-grid">
-            <input placeholder="Nombre" value={customer.name} onChange={(event) => setCustomer({ ...customer, name: event.target.value })} />
-            <input placeholder="Empresa" value={customer.company} onChange={(event) => setCustomer({ ...customer, company: event.target.value })} />
-            <input placeholder="Correo" value={customer.email} onChange={(event) => setCustomer({ ...customer, email: event.target.value })} />
-            <input placeholder="Telefono" value={customer.phone} onChange={(event) => setCustomer({ ...customer, phone: event.target.value })} />
+            <input
+              placeholder={t("quotePlaceholderName")}
+              value={customer.name}
+              onChange={(event) => setCustomer({ ...customer, name: event.target.value })}
+            />
+            <input
+              placeholder={t("quotePlaceholderCompany")}
+              value={customer.company}
+              onChange={(event) => setCustomer({ ...customer, company: event.target.value })}
+            />
+            <input
+              placeholder={t("quotePlaceholderEmail")}
+              value={customer.email}
+              onChange={(event) => setCustomer({ ...customer, email: event.target.value })}
+            />
+            <input
+              placeholder={t("quotePlaceholderPhone")}
+              value={customer.phone}
+              onChange={(event) => setCustomer({ ...customer, phone: event.target.value })}
+            />
           </div>
           {status ? <p className="status info">{status}</p> : null}
-          {submittedId ? <p className="status success">Folio interno creado. Gracias.</p> : null}
-          <button className="primary-button compact-action" type="button" onClick={submit} disabled={submitting || Boolean(submittedId)}>
-            {submitting ? "Enviando..." : "Enviar mi seleccion"}
+          {submittedId ? <p className="status success">{t("quoteSentConfirm")}</p> : null}
+          <button
+            className="primary-button compact-action"
+            type="button"
+            onClick={submit}
+            disabled={submitting || Boolean(submittedId)}
+          >
+            {submitting ? t("quoteSending") : t("quoteSendButton")}
           </button>
         </section>
       </main>
