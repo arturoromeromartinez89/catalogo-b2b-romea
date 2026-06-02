@@ -577,6 +577,10 @@ for all using (
 -- Codex: "punto más importante que falta — parte central del negocio".
 -- =============================================================================
 
+-- Limpiar políticas de lectura cliente si quedaron de una ejecución anterior.
+drop policy if exists "clients read tenant labor lists"      on public.labor_lists;
+drop policy if exists "clients read tenant labor list lines" on public.labor_list_lines;
+
 drop policy if exists "admins manage labor lists" on public.labor_lists;
 create policy "admins manage labor lists" on public.labor_lists
 for all using (
