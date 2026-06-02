@@ -228,6 +228,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const deferredQuickFilters = useDeferredValue(quickFilters);
   const [selectedProductCode, setSelectedProductCode] = useState("");
   const [draftPreorder, setDraftPreorder] = useState(null);
+  const [draftStorageReadyKey, setDraftStorageReadyKey] = useState(null);
   const [isDraftOpen, setIsDraftOpen] = useState(false);
   const [tabChangeModal, setTabChangeModal] = useState({ open: false, nextTab: null });
   const [addedCodes, setAddedCodes] = useState([]);
@@ -442,28 +443,33 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const draftStorageKey = tenantId && profile?.id ? `draft-preorder:${tenantId}:${profile.id}` : null;
 
   // Carga el borrador desde sessionStorage cuando cambia el tenant o el usuario.
-  // También reconstruye addedCodes para que las señales visuales del catálogo sean correctas.
+  // Activa draftStorageReadyKey solo DESPUÉS de leer, para que el efecto de guardado
+  // no borre lo que acaba de cargar (bug de hidratación).
   useEffect(() => {
     if (!draftStorageKey) {
       setDraftPreorder(null);
       setAddedCodes([]);
+      setDraftStorageReadyKey(null);
       return;
     }
     try {
       const saved = sessionStorage.getItem(draftStorageKey);
       const parsed = saved ? JSON.parse(saved) : null;
       setDraftPreorder(parsed);
-      setAddedCodes(parsed?.preorder_items?.map((item) => item.producto_codigo) || []);
+      setAddedCodes(parsed?.preorder_items?.map((item) => item.producto_codigo).filter(Boolean) || []);
     } catch {
       setDraftPreorder(null);
       setAddedCodes([]);
+    } finally {
+      setDraftStorageReadyKey(draftStorageKey);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftStorageKey]);
 
-  // Persiste el borrador en sessionStorage en cada cambio, bajo la clave del tenant/usuario activo.
+  // Persiste el borrador solo cuando la hidratación ya terminó para esta clave.
+  // Previene que draftPreorder === null borre sessionStorage antes de restaurarse.
   useEffect(() => {
-    if (!draftStorageKey) return;
+    if (!draftStorageKey || draftStorageReadyKey !== draftStorageKey) return;
     try {
       if (draftPreorder) {
         sessionStorage.setItem(draftStorageKey, JSON.stringify(draftPreorder));
@@ -473,7 +479,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     } catch {
       // sessionStorage puede fallar en modo privado o sin espacio.
     }
-  }, [draftPreorder, draftStorageKey]);
+  }, [draftPreorder, draftStorageKey, draftStorageReadyKey]);
 
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();

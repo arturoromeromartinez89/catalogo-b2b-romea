@@ -45,6 +45,7 @@ export default function ClientCatalogApp({ profile }) {
   const [tenantCompany, setTenantCompany] = useState(null);
   const [products, setProducts] = useState([]);
   const [cartItems, setCartItems] = useState([]);
+  const [cartStorageReadyKey, setCartStorageReadyKey] = useState(null);
   const [clientData, setClientData] = useState(null);
   const [customer, setCustomer] = useState(() => makeDefaultCustomer(language));
   const [query, setQuery] = useState("");
@@ -143,11 +144,13 @@ export default function ClientCatalogApp({ profile }) {
   const cartStorageKey = tenantId && profile?.id ? `client-cart-items:${tenantId}:${profile.id}` : null;
 
   // Carga el carrito desde sessionStorage cuando el tenant o el usuario cambia.
-  // También reconstruye addedCodes para mantener las señales visuales del catálogo.
+  // Activa cartStorageReadyKey solo DESPUÉS de leer, para que el efecto de guardado
+  // no borre lo que acaba de cargar (bug de hidratación).
   useEffect(() => {
     if (!cartStorageKey) {
       setCartItems([]);
       setAddedCodes([]);
+      setCartStorageReadyKey(null);
       return;
     }
     try {
@@ -158,13 +161,16 @@ export default function ClientCatalogApp({ profile }) {
     } catch {
       setCartItems([]);
       setAddedCodes([]);
+    } finally {
+      setCartStorageReadyKey(cartStorageKey);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartStorageKey]);
 
-  // Persiste el carrito en sessionStorage en cada cambio, bajo la clave del tenant/usuario activo.
+  // Persiste el carrito solo cuando la hidratación ya terminó para esta clave.
+  // Previene que cartItems = [] borre sessionStorage antes de restaurarse.
   useEffect(() => {
-    if (!cartStorageKey) return;
+    if (!cartStorageKey || cartStorageReadyKey !== cartStorageKey) return;
     try {
       if (cartItems.length > 0) {
         sessionStorage.setItem(cartStorageKey, JSON.stringify(cartItems));
@@ -174,7 +180,7 @@ export default function ClientCatalogApp({ profile }) {
     } catch {
       // sessionStorage puede fallar en modo privado o sin espacio.
     }
-  }, [cartItems, cartStorageKey]);
+  }, [cartItems, cartStorageKey, cartStorageReadyKey]);
 
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();
