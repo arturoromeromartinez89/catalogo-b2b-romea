@@ -6210,3 +6210,534 @@ body > div[data-portal] {
   }
 }
 
+/* --------------------------------------------------------------------------
+   Visible design-system application
+   This layer uses existing class names so logic, Supabase, PDFs and pricing
+   formulas remain untouched.
+-------------------------------------------------------------------------- */
+
+body {
+  background: var(--color-bg-app);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+.admin-catalog-shell {
+  background: var(--color-bg-app);
+  grid-template-columns: 268px minmax(0, 1fr);
+}
+
+.admin-romea-sidebar,
+.superadmin-sidebar {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0)),
+    var(--brand-900);
+  border-right: 0;
+  box-shadow: 10px 0 30px rgba(15, 23, 42, 0.16);
+  color: var(--neutral-0);
+  padding: 14px 12px;
+}
+
+.admin-romea-sidebar .brand-block,
+.superadmin-sidebar .brand-block {
+  background: rgba(255,255,255,0.98);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 8px;
+  padding: 12px 10px;
+}
+
+.admin-romea-sidebar .brand-block p,
+.superadmin-sidebar .brand-block p {
+  color: var(--neutral-600);
+  font-weight: var(--weight-medium);
+}
+
+.admin-romea-sidebar .brand-logo-placeholder,
+.superadmin-sidebar .brand-logo-placeholder {
+  background: var(--neutral-50);
+  border-color: var(--neutral-200);
+}
+
+.sidebar-menu-section h3,
+.sidebar-tool-heading h3,
+.sidebar-catalog-tools .sidebar-section h3 {
+  color: rgba(255,255,255,0.74);
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-nav-list {
+  gap: 6px;
+}
+
+.admin-nav-list button {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: var(--radius-md);
+  color: rgba(255,255,255,0.84);
+  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  min-height: 32px;
+  padding: 7px 10px;
+}
+
+.admin-nav-list button:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.2);
+  color: #ffffff;
+}
+
+.admin-nav-list button.active {
+  background: #ffffff;
+  border-color: #ffffff;
+  box-shadow: var(--shadow-sm);
+  color: var(--brand-900);
+}
+
+.sidebar-catalog-tools {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: var(--radius-lg);
+  padding: 10px;
+}
+
+.sidebar-collapse-link {
+  color: rgba(255,255,255,0.78);
+}
+
+.sidebar-filter-stack {
+  padding-right: 2px;
+}
+
+.sidebar-mini-metrics div,
+.sidebar-catalog-tools .sidebar-section {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.12);
+  border-radius: var(--radius-md);
+}
+
+.sidebar-mini-metrics span,
+.sidebar-catalog-tools label,
+.sidebar-catalog-tools .side-filter-list label {
+  color: rgba(255,255,255,0.68);
+}
+
+.sidebar-mini-metrics strong {
+  color: #ffffff;
+}
+
+.sidebar-catalog-tools select,
+.sidebar-catalog-tools input,
+.sidebar-catalog-tools .search-token-box {
+  background: #ffffff;
+  border-color: rgba(255,255,255,0.18);
+  color: var(--neutral-800);
+}
+
+.sidebar-catalog-tools .quick-filter,
+.sidebar-catalog-tools .chip,
+.sidebar-catalog-tools .search-chip {
+  background: rgba(255,255,255,0.92);
+  border-color: rgba(255,255,255,0.95);
+  color: var(--brand-800);
+}
+
+.sidebar-support-card {
+  background: rgba(254, 243, 199, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.42);
+  color: #fff7d6;
+}
+
+.sidebar-support-card strong,
+.sidebar-support-card span {
+  color: inherit;
+}
+
+.sidebar-bottom-actions {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: var(--radius-lg);
+  padding: 8px;
+}
+
+.sidebar-bottom-actions .sidebar-logout,
+.support-exit-button,
+.superadmin-sidebar .sidebar-logout {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.82);
+  min-height: 30px;
+}
+
+.sidebar-bottom-actions .sidebar-logout:hover,
+.superadmin-sidebar .sidebar-logout:hover {
+  background: rgba(220,38,38,0.18);
+  border-color: rgba(248,113,113,0.42);
+  color: #ffffff;
+}
+
+.support-exit-button:hover {
+  background: #ffffff;
+  color: var(--brand-900);
+}
+
+.admin-catalog-header.minimal {
+  background: rgba(255,255,255,0.92);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+.admin-workspace {
+  background: var(--color-bg-app);
+  padding-top: 20px;
+}
+
+.catalog-page-topbar,
+.clients-filter-card,
+.clients-table-card,
+.clients-pricing-panel,
+.prospect-scan-card,
+.admin-soft-panel,
+.database-admin-card,
+.company-config-card,
+.price-editor-page,
+.price-lines-wrap,
+.po-table-wrap,
+.po-pricing-panel,
+.po-header-sheet {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.catalog-page-topbar {
+  background: #ffffff;
+  padding: 16px 18px;
+}
+
+.catalog-page-topbar h2,
+.clients-page-header h2,
+.admin-soft-panel h2,
+.company-settings-title h2,
+.price-editor-toolbar h2,
+.po-list-toolbar h2,
+.selection-drawer-header h2 {
+  color: var(--brand-900);
+  font-family: var(--font-sans);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.tool-eyebrow {
+  color: var(--neutral-500);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+}
+
+.catalog-select-visible,
+.selection-action,
+.tray-action,
+.compact-action,
+.admin-product-actions button {
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  min-height: 30px;
+}
+
+.catalog-select-visible {
+  background: var(--neutral-50);
+  border-color: var(--neutral-200);
+  color: var(--brand-900);
+}
+
+.admin-product-grid {
+  gap: 18px;
+}
+
+.admin-product-card.enabled {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
+}
+
+.admin-product-card.enabled:hover {
+  border-color: var(--brand-300);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.admin-product-card.in-preorder {
+  border-color: rgba(22, 163, 74, 0.56);
+}
+
+.admin-product-info {
+  gap: 6px;
+  padding: 13px 14px;
+}
+
+.admin-product-info strong,
+.admin-product-info span {
+  color: var(--brand-900);
+}
+
+.admin-product-info h3 {
+  color: var(--neutral-900);
+  font-size: 13px;
+  font-weight: var(--weight-bold);
+  line-height: 1.28;
+}
+
+.admin-product-info p {
+  color: var(--neutral-500);
+  font-size: 11px;
+}
+
+.admin-product-actions {
+  background: var(--neutral-50);
+  border-top: 1px solid var(--color-border);
+  gap: 7px;
+  padding: 9px;
+}
+
+.admin-product-actions .compact-action,
+.admin-product-actions .action-button {
+  min-height: 28px;
+  padding: 5px 8px;
+}
+
+.preorder-added-badge,
+.catalog-added-badge {
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-xs);
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+}
+
+.preorder-added-badge {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #ffffff;
+}
+
+.catalog-added-badge {
+  background: var(--brand-100);
+  border-color: var(--brand-200);
+  color: var(--brand-800);
+}
+
+.simple-admin-table {
+  background: #ffffff;
+}
+
+.simple-admin-table th,
+.po-table th,
+.price-list-table th {
+  background: var(--neutral-50);
+  color: var(--neutral-500);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.06em;
+}
+
+.simple-admin-table td,
+.po-table-row td {
+  color: var(--neutral-800);
+  font-size: 12px;
+}
+
+.simple-admin-table tbody tr:hover,
+.po-table-row:hover {
+  background: var(--brand-50);
+}
+
+.client-name-cell span {
+  background: var(--brand-100);
+  color: var(--brand-800);
+}
+
+.clients-page-header {
+  align-items: center;
+  background: transparent;
+}
+
+.clients-page-header h2 {
+  font-size: var(--text-3xl);
+}
+
+.client-modal {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+}
+
+.client-modal header,
+.client-modal footer {
+  background: #ffffff;
+}
+
+.client-modal header h2 {
+  color: var(--brand-900);
+  font-family: var(--font-sans);
+  font-weight: var(--weight-bold);
+}
+
+.client-modal-body {
+  background: var(--neutral-50);
+}
+
+.client-modal-body label,
+.po-pricing-field,
+.po-remission-group label,
+.price-config-grid label {
+  color: var(--neutral-600);
+  font-size: 11px;
+}
+
+input,
+select,
+textarea {
+  border-color: var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--brand-400);
+  box-shadow: 0 0 0 3px rgba(79, 128, 232, 0.14);
+}
+
+.selection-drawer {
+  border-left: 1px solid var(--color-border);
+  box-shadow: -18px 0 48px rgba(15, 23, 42, 0.18);
+}
+
+.selection-drawer-header {
+  background: #ffffff;
+  padding: 16px;
+}
+
+.work-tray-section-head {
+  background: #ffffff;
+}
+
+.selection-drawer-actions {
+  background: var(--neutral-50);
+}
+
+.selection-drawer-item {
+  border-color: var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.tray-action.catalog-pdf {
+  background: var(--color-success-light);
+  border-color: rgba(22, 163, 74, 0.32);
+  color: var(--color-success-text);
+}
+
+.tray-action.quote-link {
+  background: var(--color-warning-light);
+  border-color: rgba(217, 119, 6, 0.28);
+  color: var(--color-warning-text);
+}
+
+.tray-action.clear {
+  background: #ffffff;
+  border-color: var(--color-border);
+  color: var(--brand-900);
+}
+
+.po-tab-bar {
+  background: #ffffff;
+  border-bottom-color: var(--color-border);
+}
+
+.po-tab {
+  border-right-color: var(--color-border);
+  color: var(--neutral-500);
+}
+
+.po-tab--active {
+  border-bottom-color: var(--brand-900);
+  color: var(--brand-900);
+}
+
+.po-editor-toolbar,
+.price-editor-toolbar {
+  background: #ffffff;
+  border-bottom-color: var(--color-border);
+}
+
+.po-status-pill {
+  font-weight: var(--weight-bold);
+}
+
+.po-remission-group,
+.po-pricing-panel {
+  background: #ffffff;
+}
+
+.po-remission-title {
+  color: var(--neutral-500);
+}
+
+.po-remission-total-row strong,
+.po-header-section--totals strong,
+.po-total-highlight strong {
+  color: var(--brand-900);
+}
+
+.price-editor-page {
+  background: #ffffff;
+}
+
+.price-config-grid,
+.price-bulk-tools {
+  background: var(--neutral-50);
+  border-radius: var(--radius-lg);
+}
+
+.action-notice {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 900px) {
+  .admin-catalog-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-romea-sidebar,
+  .superadmin-sidebar {
+    min-height: auto;
+  }
+
+  .catalog-page-topbar {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-topbar-actions {
+    justify-content: flex-start;
+  }
+
+  .selection-drawer {
+    width: min(100vw, 420px);
+  }
+}
+
