@@ -169,14 +169,14 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   // ── COLUMNAS ──────────────────────────────────────────────
   const C = {
     img:    page.margin,
-    cod:    page.margin + 14,
-    desc:   page.margin + 35,
-    pzs:    page.margin + 80,
-    gpz:    page.margin + 93,
-    gtot:   page.margin + 108,
-    labor:  page.margin + 124,
-    pf:     page.margin + 141,
-    pgr:    page.margin + 158,
+    cod:    page.margin + 28,
+    desc:   page.margin + 47,
+    pzs:    page.margin + 86,
+    gpz:    page.margin + 99,
+    gtot:   page.margin + 114,
+    labor:  page.margin + 130,
+    pf:     page.margin + 145,
+    pgr:    page.margin + 160,
     sub:    page.w - page.margin,
   };
 
@@ -185,6 +185,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     doc.rect(page.margin, headerY - 2, page.col, 8, "F");
     doc.setFontSize(5.5); doc.setFont("helvetica","bold"); doc.setTextColor(60,80,120);
     const y = headerY;
+  txt(doc, t("FOTO","PHOTO"),       C.img,   y+3);
   txt(doc, t("CÓD.","CODE"),       C.cod,   y+3);
   txt(doc, t("DESCRIPCIÓN","DESC"),C.desc,  y+3);
   txt(doc, t("PZS","QTY"),         C.pzs,   y+3);
@@ -218,7 +219,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     grandGramos += gTotal;
     grandPiezas += qty;
 
-    const rowH = 16;
+    const rowH = 28;
     if (y + rowH > page.h - footerReserve) {
       doc.addPage();
       y = drawTableHeader(page.margin);
@@ -226,37 +227,48 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     doc.setDrawColor(225,230,242); doc.setLineWidth(0.2);
     doc.line(page.margin, y - 1, page.w - page.margin, y - 1);
 
-    const imgData = await loadImageAsDataUrl(item.product?.fotoUrl);
-    if (imgData) addContainedImage(doc, imgData, C.img, y+1, 12, 12);
+    const imgData = await loadImageAsDataUrl(item.product?.fotoUrl || item.producto_foto_url);
+    if (imgData) {
+      addContainedImage(doc, imgData, C.img, y + 2, 24, 24);
+    } else {
+      doc.setDrawColor(225,230,242);
+      doc.setFillColor(248,250,252);
+      doc.roundedRect(C.img, y + 2, 24, 24, 1.5, 1.5, "FD");
+      doc.setFontSize(5.2);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(120,130,150);
+      txt(doc, t("Sin imagen", "No image"), C.img + 12, y + 15, { align: "center" });
+    }
 
     doc.setFontSize(7); doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
-    txt(doc, item.product?.codigo || item.producto_codigo, C.cod, y+5);
+    txt(doc, item.product?.codigo || item.producto_codigo, C.cod, y+6);
 
     doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40); doc.setFontSize(7);
-    const descLines = doc.splitTextToSize(item.product?.descripcion || item.producto_descripcion || "", 58);
-    txt(doc, descLines.slice(0,2), C.desc, y+5);
+    const descLines = doc.splitTextToSize(item.product?.descripcion || item.producto_descripcion || "", 38);
+    txt(doc, descLines.slice(0,3), C.desc, y+6);
     if (item.comentarios) {
       doc.setFontSize(5.6);
       doc.setTextColor(120, 80, 40);
-      txt(doc, doc.splitTextToSize(`Nota: ${item.comentarios}`, 58).slice(0, 1), C.desc, y + 12);
+      txt(doc, doc.splitTextToSize(`Nota: ${item.comentarios}`, 38).slice(0, 2), C.desc, y + 19);
     }
 
     doc.setFontSize(6); doc.setTextColor(110,110,110);
     const metalLine = [item.product?.metal || item.producto_metal, item.product?.kilataje || item.producto_kilataje].filter(Boolean).join(" ");
-    if (metalLine) txt(doc, metalLine, C.desc, y+14);
+    if (metalLine) txt(doc, metalLine, C.desc, y+25);
 
     doc.setFontSize(6.4); doc.setTextColor(50,50,50);
-    txt(doc, String(qty),                    C.pzs,   y+9);
-    txt(doc, `${gPieza.toFixed(2)}g`,        C.gpz,   y+9);
-    txt(doc, `${gTotal.toFixed(2)}g`,        C.gtot,  y+9);
+    const rowMidY = y + 14;
+    txt(doc, String(qty),                    C.pzs,   rowMidY);
+    txt(doc, `${gPieza.toFixed(2)}g`,        C.gpz,   rowMidY);
+    txt(doc, `${gTotal.toFixed(2)}g`,        C.gtot,  rowMidY);
     if (showBreakdown) {
-    txt(doc, labor ? money(displayMoney(labor)) : "—", C.labor, y+9);
-    txt(doc, plataFina ? money(displayMoney(plataFina)) : "—", C.pf, y+9);
+    txt(doc, labor ? money(displayMoney(labor)) : "—", C.labor, rowMidY);
+    txt(doc, plataFina ? money(displayMoney(plataFina)) : "—", C.pf, rowMidY);
     }
-    txt(doc, pGramo ? money(displayMoney(pGramo)) : "—", C.pgr, y+9);
+    txt(doc, pGramo ? money(displayMoney(pGramo)) : "—", C.pgr, rowMidY);
 
     doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
-    txt(doc, subtotal ? money(displayMoney(subtotal)) : "—", C.sub, y+9, { align: "right" });
+    txt(doc, subtotal ? money(displayMoney(subtotal)) : "—", C.sub, rowMidY, { align: "right" });
     y += rowH;
   }
 
