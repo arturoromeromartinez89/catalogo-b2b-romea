@@ -3458,12 +3458,46 @@ dd {
   font-size: 12px;
 }
 
-.quote-items-table img {
+.quote-items-table .quote-item-photo,
+.order-table .quote-item-photo {
+  aspect-ratio: 1 / 1;
+  background: #ffffff;
   border: 1px solid var(--romea-line);
   border-radius: 6px;
-  height: 42px;
+  display: block;
+  height: 84px;
   object-fit: contain;
-  width: 42px;
+  width: 84px;
+}
+
+.quote-item-photo-cell {
+  min-width: 96px;
+  width: 96px;
+}
+
+.quote-item-photo-placeholder {
+  align-items: center;
+  aspect-ratio: 1 / 1;
+  background: var(--romea-soft);
+  border: 1px dashed var(--romea-line);
+  border-radius: 6px;
+  color: var(--romea-muted);
+  display: flex;
+  font-size: 11px;
+  font-weight: 800;
+  height: 84px;
+  justify-content: center;
+  text-align: center;
+  width: 84px;
+}
+
+.quote-items-table td {
+  vertical-align: middle;
+}
+
+.order-table .quote-item-photo {
+  height: 84px;
+  width: 84px;
 }
 
 .quote-items-table input {
@@ -6185,6 +6219,18 @@ body > div[data-portal] {
 }
 
 @media (max-width: 1100px) {
+  .quote-items-table .quote-item-photo,
+  .order-table .quote-item-photo,
+  .quote-item-photo-placeholder {
+    height: 72px;
+    width: 72px;
+  }
+
+  .quote-item-photo-cell {
+    min-width: 84px;
+    width: 84px;
+  }
+
   .po-editor-toolbar--remission {
     grid-template-columns: 1fr;
   }
@@ -6207,6 +6253,20 @@ body > div[data-portal] {
   .prospect-scan-head,
   .prospect-scan-bottom {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .quote-items-table .quote-item-photo,
+  .order-table .quote-item-photo,
+  .quote-item-photo-placeholder {
+    height: 60px;
+    width: 60px;
+  }
+
+  .quote-item-photo-cell {
+    min-width: 70px;
+    width: 70px;
   }
 }
 

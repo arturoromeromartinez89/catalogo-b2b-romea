@@ -185,11 +185,11 @@ export default function CartDrawer({
                           <td>{index + 1}</td>
                           <td>
                             <img
-                              src={imageUrlForSize(product.fotoUrl, 120)}
+                              className="quote-item-photo"
+                              src={imageUrlForSize(product.fotoUrl, 240)}
                               alt={product.codigo}
                               loading="lazy"
                               decoding="async"
-                              style={{ width: 42, height: 42, objectFit: "contain", borderRadius: 6 }}
                             />
                           </td>
                           <td><strong>{product.codigo}</strong></td>
