@@ -36,8 +36,6 @@ const cleanItemNumbers = (item, idx) => ({
   labor_mxn: toDbNumber(item.labor_mxn, 0),
   precio_gramo_mxn: toDbNumber(item.precio_gramo_mxn, 0),
   precio_pieza_mxn: toDbNumber(item.precio_pieza_mxn, 0),
-  costo_pieza_mxn: toDbNumber(item.costo_pieza_mxn, 0),
-  margen_pieza_pct: toDbNumber(item.margen_pieza_pct, 0),
   subtotal_mxn: toDbNumber(item.subtotal_mxn, 0),
   sort_order: toDbNumber(item.sort_order, idx),
 });
@@ -123,7 +121,16 @@ export const savePreorder = async (preorder, items) => {
 
   if (items.length > 0) {
     const itemsData = items.map((item, idx) => {
-      const { id, preorder_id, created_at, _gt_manual, comentarios, ...cleanItem } = item;
+      const {
+        id,
+        preorder_id,
+        created_at,
+        _gt_manual,
+        comentarios,
+        costo_pieza_mxn,
+        margen_pieza_pct,
+        ...cleanItem
+      } = item;
       if (comentarios) {
         cleanItem.producto_descripcion = [cleanItem.producto_descripcion, `Nota: ${comentarios}`].filter(Boolean).join("\n");
       }

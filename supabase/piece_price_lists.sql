@@ -47,8 +47,12 @@ alter table public.preorders add column if not exists piece_price_list_id uuid r
 alter table public.preorder_items add column if not exists pricing_mode text not null default 'gram';
 alter table public.preorder_items add column if not exists piece_price_list_id uuid references public.piece_price_lists(id) on delete set null;
 alter table public.preorder_items add column if not exists precio_pieza_mxn numeric not null default 0;
-alter table public.preorder_items add column if not exists costo_pieza_mxn numeric not null default 0;
-alter table public.preorder_items add column if not exists margen_pieza_pct numeric not null default 0;
+
+-- Seguridad comercial:
+-- Los costos y margenes por pieza se guardan solo en piece_price_list_items,
+-- nunca en preorder_items, porque los clientes pueden leer sus preordenes.
+alter table public.preorder_items drop column if exists costo_pieza_mxn;
+alter table public.preorder_items drop column if exists margen_pieza_pct;
 
 alter table public.preorders drop constraint if exists preorders_pricing_mode_check;
 alter table public.preorders

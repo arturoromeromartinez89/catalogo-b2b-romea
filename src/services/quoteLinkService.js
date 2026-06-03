@@ -16,7 +16,6 @@ export const productToQuoteSnapshot = (product) => ({
   grupo: product.grupo || "",
   pesoPromedio: cleanNumber(product.pesoPromedio),
   precioMinimo: cleanNumber(product.quotePricePerGram || product.precioMinimo),
-  manoObra: cleanNumber(product.quoteLaborPerGram || product.manoObra),
   monedaPrecioMin: product.monedaPrecioMin || "MXN",
   fotoUrl: product.fotoUrl || "",
   tagsBusqueda: product.tagsBusqueda || "",

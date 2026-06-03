@@ -134,7 +134,9 @@ begin
       g_piece := coalesce((item->>'pesoPromedio')::numeric, 0);
       g_total := qty * g_piece;
       price := coalesce((item->>'precioMinimo')::numeric, 0);
-      labor := coalesce((item->>'manoObra')::numeric, 0);
+      -- La liga publica no recibe desglose de mano de obra.
+      -- El cliente/prospecto solo debe enviar precio final.
+      labor := 0;
       subtotal := g_total * price;
 
       insert into public.preorder_items (

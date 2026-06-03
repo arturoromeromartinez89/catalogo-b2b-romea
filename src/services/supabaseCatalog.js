@@ -5,6 +5,38 @@ import { normalizeText } from "../utils/textNormalizer";
 
 const PAGE_SIZE = 500;
 const UPSERT_BATCH_SIZE = 500;
+const PUBLIC_PRODUCT_COLUMNS = [
+  "id",
+  "tenant_id",
+  "created_at",
+  "updated_at",
+  "codigo",
+  "modelo",
+  "descripcion",
+  "metal",
+  "kilataje",
+  "linea",
+  "familia",
+  "grupo",
+  "proveedor",
+  "genero",
+  "acabado",
+  "piedra",
+  "medida",
+  "estatus",
+  "peso_promedio",
+  "unidad_venta",
+  "clave_venta",
+  "precio_minimo",
+  "moneda_precio_min",
+  "foto_url",
+  "foto_url_2",
+  "foto_url_3",
+  "visible_web",
+  "orden_web",
+  "tags_busqueda",
+  "search_text",
+].join(",");
 
 const firstValue = (...values) => values.find((value) => value !== undefined && value !== null);
 
@@ -22,14 +54,14 @@ const toDbBoolean = (...values) => {
   return ["1", "si", "sí", "yes", "true", "activo", "active", "alta"].includes(normalizeText(value));
 };
 
-export const fetchAllProducts = async ({ visibleOnly = false, tenantId = "" } = {}) => {
+export const fetchAllProducts = async ({ visibleOnly = false, tenantId = "", columns = "*" } = {}) => {
   const rows = [];
   let from = 0;
 
   while (true) {
     let query = supabase
       .from("products")
-      .select("*")
+      .select(columns)
       .order("codigo")
       .range(from, from + PAGE_SIZE - 1);
 
@@ -99,6 +131,18 @@ export const dbProductToProduct = (row) => ({
       ].join(" ")
     ),
 });
+
+const sanitizeProductForClient = (product) => {
+  const {
+    manoObra,
+    mano_obra,
+    quoteLaborPerGram,
+    laborPrice,
+    labor_price,
+    ...safeProduct
+  } = product;
+  return safeProduct;
+};
 
 export const productToDb = (product, tenantId = "") => {
   const searchText =
@@ -365,7 +409,7 @@ export const setClientPriceList = async (clientId, priceListId, active) => {
 
 export const fetchClientData = async (profile) => {
   const tenantId = getTenantId(profile);
-  const visibleProducts = await fetchAllProducts({ visibleOnly: true, tenantId });
+  const visibleProducts = await fetchAllProducts({ visibleOnly: true, tenantId, columns: PUBLIC_PRODUCT_COLUMNS });
   const products = { data: visibleProducts, error: null };
   throwIfError(products);
   const client =
@@ -375,7 +419,7 @@ export const fetchClientData = async (profile) => {
   throwIfError(client);
 
   return {
-    products: products.data.map(dbProductToProduct),
+    products: products.data.map(dbProductToProduct).map(sanitizeProductForClient),
     priceItems: [],
     client: client.data,
   };
