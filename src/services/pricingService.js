@@ -57,6 +57,26 @@ export const calculatePriceListLine = ({ line, currency = "USD", exchangeRate = 
   };
 };
 
+export const calculatePiecePriceListItem = ({ item, currency = "MXN", exchangeRate = 1, marginPct = 0 }) => {
+  const costMxn = roundUp2(item.cost_mxn ?? item.costo_pieza_mxn ?? item.cost ?? 0);
+  const tc = Number(exchangeRate || 0) || 1;
+  const margin = Number(marginPct ?? item.margin_pct ?? 0);
+  const costUsd = roundUp2(costMxn / tc);
+  const baseCost = currency === "USD" ? costUsd : costMxn;
+  const unitPrice = roundUp2(margin >= 100 ? baseCost : baseCost / (1 - margin / 100));
+  const unitPriceMxn = roundUp2(currency === "USD" ? unitPrice * tc : unitPrice);
+
+  return {
+    codigo: String(item.codigo || item.sku || "").trim(),
+    descripcion: item.descripcion || item.description || "",
+    cost_mxn: costMxn,
+    cost_usd: costUsd,
+    margin_pct: margin,
+    unit_price: unitPrice,
+    unit_price_mxn: unitPriceMxn,
+  };
+};
+
 export const getSilverFinePrice = (metalPrices = emptyMetalPrices) => {
   const stored = Number(metalPrices.plata_fina_mxn || 0);
   if (stored > 0) return stored;
@@ -324,6 +344,127 @@ export const duplicateLaborList = async (list, profileOrTenantId = "") => {
     activated_at: null,
   }, profileOrTenantId);
   await upsertLaborListLines(copy.id, sourceLines);
+  return copy;
+};
+
+// Listas de precio por pieza
+
+export const fetchPiecePriceLists = async (profileOrTenantId = "") => {
+  const tenantId = getTenantId(profileOrTenantId);
+  let query = supabase
+    .from("piece_price_lists")
+    .select("*")
+    .eq("active", true)
+    .order("created_at", { ascending: false });
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+};
+
+export const fetchPiecePriceListItems = async (piecePriceListId) => {
+  if (!piecePriceListId) return [];
+  const { data, error } = await supabase
+    .from("piece_price_list_items")
+    .select("*")
+    .eq("piece_price_list_id", piecePriceListId)
+    .order("codigo");
+  if (error) throw error;
+  return data || [];
+};
+
+export const fetchPiecePriceListItemsMap = async (piecePriceListIds = []) => {
+  if (!piecePriceListIds.length) return new Map();
+  const { data, error } = await supabase
+    .from("piece_price_list_items")
+    .select("*")
+    .in("piece_price_list_id", piecePriceListIds);
+  if (error) throw error;
+  return (data || []).reduce((map, row) => {
+    const rows = map.get(row.piece_price_list_id) || [];
+    rows.push(row);
+    map.set(row.piece_price_list_id, rows);
+    return map;
+  }, new Map());
+};
+
+export const savePiecePriceList = async (list, profileOrTenantId = "") => {
+  const tenantId = getTenantId(profileOrTenantId);
+  const currency = String(list.currency || "MXN").toUpperCase();
+  const row = {
+    name: buildPriceListName(currency, list.name),
+    currency,
+    status: list.status || "borrador",
+    margin_pct: Number(list.margin_pct || 0),
+    tipo_cambio: Number(list.tipo_cambio || 0),
+    comments: list.comments || "",
+    prepared_by: list.prepared_by || "",
+    updated_at: new Date().toISOString(),
+  };
+  if (list.source_snapshot) row.source_snapshot = list.source_snapshot;
+  if (row.status === "activa" && !list.activated_at) row.activated_at = new Date().toISOString();
+  if (tenantId) row.tenant_id = tenantId;
+
+  const writeList = (payload) => list.id
+    ? supabase.from("piece_price_lists").update(payload).eq("id", list.id).select("*").single()
+    : supabase.from("piece_price_lists").insert(payload).select("*").single();
+
+  let { data, error } = await writeList(row);
+  if (error && row.source_snapshot && /source_snapshot|schema cache|column/i.test(error.message || "")) {
+    const { source_snapshot, ...fallbackRow } = row;
+    ({ data, error } = await writeList(fallbackRow));
+  }
+  if (error) throw error;
+  return data;
+};
+
+export const upsertPiecePriceListItems = async (piecePriceListId, items = [], list = {}) => {
+  if (!items.length) return;
+  const rows = items
+    .filter((item) => String(item.codigo || "").trim())
+    .map((item) => {
+      const calculated = calculatePiecePriceListItem({
+        item,
+        currency: list.currency || "MXN",
+        exchangeRate: list.tipo_cambio || 1,
+        marginPct: item.margin_pct ?? list.margin_pct ?? 0,
+      });
+      return {
+        piece_price_list_id: piecePriceListId,
+        codigo: calculated.codigo,
+        descripcion: calculated.descripcion,
+        cost_mxn: Number(calculated.cost_mxn || 0),
+        cost_usd: Number(calculated.cost_usd || 0),
+        margin_pct: Number(calculated.margin_pct || 0),
+        unit_price: Number(calculated.unit_price || 0),
+        unit_price_mxn: Number(calculated.unit_price_mxn || 0),
+        updated_at: new Date().toISOString(),
+      };
+    });
+
+  for (const rowsChunk of chunk(rows, 50)) {
+    const { error } = await supabase
+      .from("piece_price_list_items")
+      .upsert(rowsChunk, { onConflict: "piece_price_list_id,codigo" });
+    if (error) throw error;
+  }
+};
+
+export const deletePiecePriceList = async (id) => {
+  const { error } = await supabase.from("piece_price_lists").update({ active: false }).eq("id", id);
+  if (error) throw error;
+};
+
+export const duplicatePiecePriceList = async (list, profileOrTenantId = "") => {
+  const sourceItems = await fetchPiecePriceListItems(list.id);
+  const copy = await savePiecePriceList({
+    ...list,
+    id: undefined,
+    name: `${list.name || "Lista"} copia`,
+    status: "borrador",
+    activated_at: null,
+  }, profileOrTenantId);
+  await upsertPiecePriceListItems(copy.id, sourceItems, copy);
   return copy;
 };
 

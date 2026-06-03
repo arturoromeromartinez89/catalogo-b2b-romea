@@ -104,6 +104,9 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   const displayMoney = (value) => (useUsd ? Number(value || 0) / exchangeRate : Number(value || 0));
   const showGramos = opts.showGramos !== false;
   const showBreakdown = opts.showBreakdown !== false;
+  const isPiecePricing = opts.pricingMode === "piece"
+    || customer.pricingMode === "piece"
+    || cartItems.some((item) => (item.pricing_mode || item.product?.pricing_mode) === "piece");
   const applyIva = Boolean(opts.applyIva || customer.applyIva);
   const IVA_RATE = 0.16;
   const isDraft = (opts.status || customer.status || "").toLowerCase() === "borrador";
@@ -189,13 +192,17 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   txt(doc, t("CÓD.","CODE"),       C.cod,   y+3);
   txt(doc, t("DESCRIPCIÓN","DESC"),C.desc,  y+3);
   txt(doc, t("PZS","QTY"),         C.pzs,   y+3);
-  txt(doc, t("G/PZA","G/PC"),      C.gpz,   y+3);
-  txt(doc, t("G.TOTAL","G.TOTAL"), C.gtot,  y+3);
-  if (showBreakdown) {
+  if (isPiecePricing) {
+    txt(doc, t("PRECIO/PZA","PRICE/PC"), C.gtot, y+3);
+  } else {
+    txt(doc, t("G/PZA","G/PC"),      C.gpz,   y+3);
+    txt(doc, t("G.TOTAL","G.TOTAL"), C.gtot,  y+3);
+  }
+  if (!isPiecePricing && showBreakdown) {
     txt(doc, t("LABOR","LABOR"),     C.labor, y+3);
     txt(doc, t("PF","FS"),           C.pf,    y+3);
     txt(doc, t("LAB+PF","LAB+FS"),   C.pgr,  y+3);
-  } else {
+  } else if (!isPiecePricing) {
     txt(doc, t("PRECIO/G","PRICE/G"), C.pgr, y+3);
   }
     txt(doc, t("SUBTOTAL","SUBTOTAL"),C.sub,  y+3, { align: "right" });
@@ -213,8 +220,9 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     const gTotal = Number(item.gramos_total || (gPieza * qty));
     const labor = Number(item.labor_mxn || item.product?.quoteLaborPerGram || 0);
     const pGramo = Number(item.precio_gramo_mxn || item.product?.precioMinimo || 0);
+    const pPieza = Number(item.precio_pieza_mxn || item.product?.precioPieza || 0);
     const plataFina = Number(item.plata_fina_mxn || Math.max(0, pGramo - labor));
-    const subtotal = Number(item.subtotal_mxn || (gTotal * pGramo));
+    const subtotal = Number(item.subtotal_mxn || (isPiecePricing ? qty * pPieza : gTotal * pGramo));
     grandTotal += subtotal;
     grandGramos += gTotal;
     grandPiezas += qty;
@@ -259,13 +267,17 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     doc.setFontSize(6.4); doc.setTextColor(50,50,50);
     const rowMidY = y + 14;
     txt(doc, String(qty),                    C.pzs,   rowMidY);
-    txt(doc, `${gPieza.toFixed(2)}g`,        C.gpz,   rowMidY);
-    txt(doc, `${gTotal.toFixed(2)}g`,        C.gtot,  rowMidY);
-    if (showBreakdown) {
-    txt(doc, labor ? money(displayMoney(labor)) : "—", C.labor, rowMidY);
-    txt(doc, plataFina ? money(displayMoney(plataFina)) : "—", C.pf, rowMidY);
+    if (isPiecePricing) {
+      txt(doc, pPieza ? money(displayMoney(pPieza)) : "—", C.gtot, rowMidY);
+    } else {
+      txt(doc, `${gPieza.toFixed(2)}g`,        C.gpz,   rowMidY);
+      txt(doc, `${gTotal.toFixed(2)}g`,        C.gtot,  rowMidY);
+      if (showBreakdown) {
+        txt(doc, labor ? money(displayMoney(labor)) : "—", C.labor, rowMidY);
+        txt(doc, plataFina ? money(displayMoney(plataFina)) : "—", C.pf, rowMidY);
+      }
+      txt(doc, pGramo ? money(displayMoney(pGramo)) : "—", C.pgr, rowMidY);
     }
-    txt(doc, pGramo ? money(displayMoney(pGramo)) : "—", C.pgr, rowMidY);
 
     doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
     txt(doc, subtotal ? money(displayMoney(subtotal)) : "—", C.sub, rowMidY, { align: "right" });

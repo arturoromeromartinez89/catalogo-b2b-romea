@@ -35,6 +35,9 @@ const cleanItemNumbers = (item, idx) => ({
   gramos_total: toDbNumber(item.gramos_total, 0),
   labor_mxn: toDbNumber(item.labor_mxn, 0),
   precio_gramo_mxn: toDbNumber(item.precio_gramo_mxn, 0),
+  precio_pieza_mxn: toDbNumber(item.precio_pieza_mxn, 0),
+  costo_pieza_mxn: toDbNumber(item.costo_pieza_mxn, 0),
+  margen_pieza_pct: toDbNumber(item.margen_pieza_pct, 0),
   subtotal_mxn: toDbNumber(item.subtotal_mxn, 0),
   sort_order: toDbNumber(item.sort_order, idx),
 });
@@ -84,6 +87,7 @@ export const savePreorder = async (preorder, items) => {
   if (!clean.client_id) clean.client_id = null;
   if (!clean.created_by) clean.created_by = null;
   if (!clean.labor_list_id) delete clean.labor_list_id;
+  if (!clean.piece_price_list_id) delete clean.piece_price_list_id;
   if (!clean.tenant_id && !clean.tenantId) delete clean.tenant_id;
   if (clean.tenantId) {
     clean.tenant_id = clean.tenantId;

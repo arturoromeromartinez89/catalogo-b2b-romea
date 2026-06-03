@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings } from "../services/companySettings";
-import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice, fetchLaborLists, fetchLaborListLines, roundUp2 } from "../services/pricingService";
+import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice, fetchLaborLists, fetchLaborListLines, fetchPiecePriceLists, fetchPiecePriceListItems, roundUp2 } from "../services/pricingService";
 import { saveClient } from "../services/supabaseCatalog";
 import { savePreorder, deletePreorder } from "../services/preorderService";
 import { generatePdf } from "../utils/pdfGenerator";
@@ -31,6 +31,10 @@ const calcItem = (item) => {
   const piezas = Number(item.piezas || 0);
   const gPieza = Number(item.gramos_por_pieza || 0);
   const gTotal = item._gt_manual != null ? Number(item._gt_manual) : piezas * gPieza;
+  if ((item.pricing_mode || "gram") === "piece") {
+    const pPieza = Number(item.precio_pieza_mxn || 0);
+    return { ...item, gramos_total: gTotal, subtotal_mxn: piezas * pPieza };
+  }
   const pGramo = Number(item.precio_gramo_mxn || 0);
   return { ...item, gramos_total: gTotal, subtotal_mxn: gTotal * pGramo };
 };
@@ -62,6 +66,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     tipo_cambio: "",
     moneda: "MXN",
     notas: "",
+    pricing_mode: initial?.pricing_mode || "gram",
     pf_mode: "manual",
     kitco_usd_oz: "",
     premio_pct: 0,
@@ -73,7 +78,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [items, setItems] = useState((initial?.preorder_items || []).map((item) => ({ ...item })));
   const [lines, setLines] = useState([]);
   const [laborLists, setLaborLists] = useState([]);
+  const [piecePriceLists, setPiecePriceLists] = useState([]);
   const [selectedLaborListId, setSelectedLaborListId] = useState(initial?.labor_list_id || "");
+  const [selectedPiecePriceListId, setSelectedPiecePriceListId] = useState(initial?.piece_price_list_id || "");
+  const [piecePriceItems, setPiecePriceItems] = useState([]);
   const [pricingDirty, setPricingDirty] = useState(false);
   const [metalPrices, setMetalPrices] = useState({});
   const [plataFinaMxn, setPlataFinaMxn] = useState(0);
@@ -96,6 +104,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     else setTenantCompany(null);
     fetchLines(resolvedTenantId).then(setLines).catch((error) => setMsg(`Error: ${error.message}`));
     fetchLaborLists(resolvedTenantId).then(setLaborLists).catch(() => setLaborLists([]));
+    fetchPiecePriceLists(resolvedTenantId)
+      .then(setPiecePriceLists)
+      .catch((error) => {
+        if (/piece_price_lists|schema cache|does not exist/i.test(error.message || "")) setPiecePriceLists([]);
+        else setMsg(`Error: ${error.message}`);
+      });
     fetchMetalPrices(resolvedTenantId)
       .then((prices) => {
         setMetalPrices(prices);
@@ -127,9 +141,15 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     if (!pricingLocked) window.setTimeout(() => scannerInputRef.current?.focus(), 120);
   }, [pricingLocked]);
 
+  const exchangeRate = Number(po.tipo_cambio || metalPrices.tipo_cambio || 0);
+  const useUsd = po.moneda === "USD" && exchangeRate > 0;
+  const moneyLabel = po.moneda === "USD" ? "USD" : "MXN";
+  const pricingMode = po.pricing_mode || "gram";
+  const isPieceMode = pricingMode === "piece";
+
   useEffect(() => {
     const currentList = laborLists.find((list) => list.id === selectedLaborListId);
-    if (currentList && (currentList.currency || "MXN") !== po.moneda) {
+    if (!isPieceMode && currentList && (currentList.currency || "MXN") !== po.moneda) {
       setSelectedLaborListId("");
       setPo((current) => ({ ...current, labor_list_id: "" }));
       fetchLines(resolvedTenantId)
@@ -140,20 +160,31 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
         .catch(() => {});
       setMsg(`La lista se removio porque la preorden cambio a ${po.moneda}.`);
     }
-  }, [po.moneda, laborLists, selectedLaborListId]);
+    const currentPieceList = piecePriceLists.find((list) => list.id === selectedPiecePriceListId);
+    if (isPieceMode && currentPieceList && (currentPieceList.currency || "MXN") !== po.moneda) {
+      setSelectedPiecePriceListId("");
+      setPiecePriceItems([]);
+      setPo((current) => ({ ...current, piece_price_list_id: "" }));
+      setItems((current) => current.map((item) => calcItem({ ...item, precio_pieza_mxn: 0 })));
+      setMsg(`La lista por pieza se removio porque la preorden cambio a ${po.moneda}.`);
+    }
+  }, [po.moneda, laborLists, selectedLaborListId, piecePriceLists, selectedPiecePriceListId, isPieceMode]);
 
-  const exchangeRate = Number(po.tipo_cambio || metalPrices.tipo_cambio || 0);
-  const useUsd = po.moneda === "USD" && exchangeRate > 0;
-  const moneyLabel = po.moneda === "USD" ? "USD" : "MXN";
   const compatibleLaborLists = laborLists.filter((list) => (list.currency || "MXN") === po.moneda && (list.status || "borrador") === "activa");
+  const compatiblePiecePriceLists = piecePriceLists.filter((list) => (list.currency || "MXN") === po.moneda && (list.status || "borrador") === "activa");
   const toDisplayMoney = (value) => (useUsd ? Number(value || 0) / exchangeRate : Number(value || 0));
   const fromDisplayMoney = (value) => (useUsd ? Number(value || 0) * exchangeRate : Number(value || 0));
   const displayFineSilver = roundUp2(toDisplayMoney(plataFinaMxn));
   const markCustomPricing = () => {
     if (pricingLocked) return;
     setPricingDirty(true);
-    setSelectedLaborListId(CUSTOM_PRICE_LIST_VALUE);
-    setPo((current) => ({ ...current, labor_list_id: "" }));
+    if (isPieceMode) {
+      setSelectedPiecePriceListId(CUSTOM_PRICE_LIST_VALUE);
+      setPo((current) => ({ ...current, piece_price_list_id: "" }));
+    } else {
+      setSelectedLaborListId(CUSTOM_PRICE_LIST_VALUE);
+      setPo((current) => ({ ...current, labor_list_id: "" }));
+    }
   };
   const set = (key, options = {}) => (event) => {
     markEdited();
@@ -169,6 +200,30 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const recalcWithPrice = (item, laborMxn = item.labor_mxn, silverMxn = plataFinaMxn) =>
     calcItem({ ...item, labor_mxn: Number(laborMxn || 0), precio_gramo_mxn: Number(laborMxn || 0) + Number(silverMxn || 0) });
+
+  const pricePieceItemFromList = (item, listItems = piecePriceItems, list = null) => {
+    const match = listItems.find((row) => normalizeText(row.codigo) === normalizeText(item.producto_codigo));
+    if (!match) {
+      return calcItem({
+        ...item,
+        pricing_mode: "piece",
+        piece_price_list_id: list?.id || selectedPiecePriceListId || "",
+        precio_pieza_mxn: Number(item.precio_pieza_mxn || 0),
+        precio_gramo_mxn: 0,
+        labor_mxn: 0,
+      });
+    }
+    return calcItem({
+      ...item,
+      pricing_mode: "piece",
+      piece_price_list_id: list?.id || selectedPiecePriceListId || "",
+      precio_pieza_mxn: Number(match.unit_price_mxn || 0),
+      costo_pieza_mxn: Number(match.cost_mxn || 0),
+      margen_pieza_pct: Number(match.margin_pct || 0),
+      precio_gramo_mxn: 0,
+      labor_mxn: 0,
+    });
+  };
 
   const getListSilverMxn = (list) => {
     if (!list) return plataFinaMxn;
@@ -201,6 +256,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const setItem = (idx, key, value) => {
     if (pricingLocked && key !== "piezas") return;
     markEdited();
+    if (key === "precio_pieza_mxn") markCustomPricing();
     setItems((current) => {
       const next = [...current];
       const updated = { ...next[idx], [key]: value };
@@ -312,15 +368,81 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     }
   };
 
+  const applyPiecePriceList = async (listId) => {
+    markEdited();
+    if (!listId || listId === CUSTOM_PRICE_LIST_VALUE) {
+      setSelectedPiecePriceListId("");
+      setPiecePriceItems([]);
+      setPricingDirty(false);
+      setPo((current) => ({ ...current, piece_price_list_id: "" }));
+      setItems((current) => current.map((item) => calcItem({ ...item, pricing_mode: "piece", precio_pieza_mxn: Number(item.precio_pieza_mxn || 0) })));
+      setMsg("Lista por pieza removida. Usando precios por pieza personalizados.");
+      return;
+    }
+    try {
+      const selectedList = piecePriceLists.find((list) => list.id === listId);
+      const listItems = await fetchPiecePriceListItems(listId);
+      setSelectedPiecePriceListId(listId);
+      setPiecePriceItems(listItems);
+      setPricingDirty(false);
+      setPo((current) => ({
+        ...current,
+        pricing_mode: "piece",
+        piece_price_list_id: listId,
+        tipo_cambio: selectedList?.tipo_cambio || current.tipo_cambio,
+      }));
+      setItems((current) => current.map((item) => pricePieceItemFromList({ ...item, pricing_mode: "piece" }, listItems, selectedList)));
+      setMsg(`Lista por pieza "${selectedList?.name || listId}" aplicada.`);
+    } catch (error) {
+      setMsg(`Error al cargar lista por pieza: ${error.message}`);
+    }
+  };
+
+  const changePricingMode = (mode) => {
+    if (pricingLocked) return;
+    markEdited();
+    setPo((current) => ({
+      ...current,
+      pricing_mode: mode,
+      labor_list_id: mode === "gram" ? current.labor_list_id : "",
+      piece_price_list_id: mode === "piece" ? current.piece_price_list_id : "",
+    }));
+    setPricingDirty(false);
+    if (mode === "gram") {
+      setSelectedPiecePriceListId("");
+      setPiecePriceItems([]);
+      setItems((current) => current.map((item) => priceItemFromLines({ ...item, pricing_mode: "gram" }, lines, laborLists.find((entry) => entry.id === selectedLaborListId), plataFinaMxn)));
+    } else {
+      setSelectedLaborListId("");
+      setItems((current) => current.map((item) => calcItem({ ...item, pricing_mode: "piece", precio_pieza_mxn: Number(item.precio_pieza_mxn || 0), precio_gramo_mxn: 0, labor_mxn: 0 })));
+    }
+  };
+
   useEffect(() => {
     if (selectedLaborListId === CUSTOM_PRICE_LIST_VALUE) return;
     if (!selectedLaborListId || !laborLists.length || !lines.length) return;
+    if (isPieceMode) return;
     if (lines.some((line) => line._priceListLine)) return;
     applyLaborList(selectedLaborListId, lines);
   }, [selectedLaborListId, laborLists.length, lines.length]);
 
+  useEffect(() => {
+    if (!isPieceMode) return;
+    if (!selectedPiecePriceListId || !piecePriceLists.length || piecePriceItems.length) return;
+    applyPiecePriceList(selectedPiecePriceListId);
+  }, [isPieceMode, selectedPiecePriceListId, piecePriceLists.length]);
+
   const precargarPrecios = () => {
     if (!po.client_id) { setMsg("Debes seleccionar un cliente existente."); return; }
+    if (isPieceMode) {
+      const selectedList = piecePriceLists.find((entry) => entry.id === selectedPiecePriceListId);
+      if (!selectedList) { setMsg("Selecciona una lista por pieza activa."); return; }
+      if (!piecePriceItems.length) { setMsg("La lista por pieza no tiene SKUs cargados."); return; }
+      setItems((current) => current.map((item) => pricePieceItemFromList(item, piecePriceItems, selectedList)));
+      setPricingDirty(false);
+      setMsg(`Precios por pieza recalculados con "${selectedList.name}".`);
+      return;
+    }
     if (!lines.length) { setMsg("No hay lineas configuradas en el menu de precios."); return; }
     if (!plataFinaMxn) { setMsg("Captura primero el precio de plata fina."); return; }
 
@@ -352,8 +474,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const addProduct = (product) => {
     const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
+    const selectedPieceList = piecePriceLists.find((entry) => entry.id === selectedPiecePriceListId);
     const rawItem = buildPreorderItemFromProduct(product, 1, lines, plataFinaMxn);
-    const nextItem = priceItemFromLines(rawItem, lines, selectedList, getListSilverMxn(selectedList));
+    const nextItem = isPieceMode
+      ? pricePieceItemFromList({ ...rawItem, pricing_mode: "piece" }, piecePriceItems, selectedPieceList)
+      : priceItemFromLines(rawItem, lines, selectedList, getListSilverMxn(selectedList));
     setItems((current) => {
       const existing = current.find((item) => item.producto_codigo === nextItem.producto_codigo);
       if (existing) {
@@ -480,6 +605,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       if (!resolvedClientId) { setMsg("Debes seleccionar un cliente o registrar un prospecto para guardar la preorden."); return; }
       const savedId = await savePreorder({
         ...po,
+        pricing_mode: pricingMode,
+        labor_list_id: isPieceMode ? "" : selectedLaborListId,
+        piece_price_list_id: isPieceMode ? selectedPiecePriceListId : "",
         client_id: resolvedClientId,
         total_mxn: totalFinalMxn,
         tenant_id: resolvedTenantId,
@@ -516,8 +644,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       rfc: po.cliente_rfc,
       tipoCambio: po.tipo_cambio || metalPrices.tipo_cambio,
       currency: po.moneda,
+      pricingMode,
       applyIva: false,
-      showBreakdown: true,
+      showBreakdown: !isPieceMode,
       plataFinaMxn,
       status: po.status,
     };
@@ -535,15 +664,18 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       quantity: item.piezas,
       gramos_total: item.gramos_total,
       comentarios: item.comentarios,
+      pricing_mode: item.pricing_mode || pricingMode,
       labor_mxn: item.labor_mxn,
       plata_fina_mxn: Math.max(0, Number(item.precio_gramo_mxn || 0) - Number(item.labor_mxn || 0)),
       precio_gramo_mxn: item.precio_gramo_mxn,
+      precio_pieza_mxn: item.precio_pieza_mxn,
       subtotal_mxn: item.subtotal_mxn,
     }));
     await generatePdf(pdfItems, customer, language, activeCompany, {
       showGramos: true,
       applyIva: false,
-      showBreakdown: true,
+      showBreakdown: !isPieceMode,
+      pricingMode,
       silverFineMxn: plataFinaMxn,
       status: po.status,
     });
@@ -642,19 +774,40 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   <option value="USD">USD</option>
                 </select>
               </Field>
-              <Field label={`Lista ${po.moneda}`}>
-                <select
-                  value={selectedLaborListId || ""}
-                  onChange={(e) => applyLaborList(e.target.value, lines)}
-                  disabled={pricingLocked}
-                  style={inp}
-                >
-                  <option value="">Selecciona una lista activa</option>
-                  <option value={CUSTOM_PRICE_LIST_VALUE}>Personalizada</option>
-                  {compatibleLaborLists.map((list) => (
-                    <option key={list.id} value={list.id}>{list.name}</option>
-                  ))}
+              <Field label="Tipo">
+                <select value={pricingMode} onChange={(e) => changePricingMode(e.target.value)} disabled={pricingLocked} style={inp}>
+                  <option value="gram">Por gramo</option>
+                  <option value="piece">Por pieza</option>
                 </select>
+              </Field>
+              <Field label={isPieceMode ? `Lista por pieza ${po.moneda}` : `Lista por gramo ${po.moneda}`}>
+                {isPieceMode ? (
+                  <select
+                    value={selectedPiecePriceListId || ""}
+                    onChange={(e) => applyPiecePriceList(e.target.value)}
+                    disabled={pricingLocked}
+                    style={inp}
+                  >
+                    <option value="">Selecciona una lista activa</option>
+                    <option value={CUSTOM_PRICE_LIST_VALUE}>Personalizada</option>
+                    {compatiblePiecePriceLists.map((list) => (
+                      <option key={list.id} value={list.id}>{list.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <select
+                    value={selectedLaborListId || ""}
+                    onChange={(e) => applyLaborList(e.target.value, lines)}
+                    disabled={pricingLocked}
+                    style={inp}
+                  >
+                    <option value="">Selecciona una lista activa</option>
+                    <option value={CUSTOM_PRICE_LIST_VALUE}>Personalizada</option>
+                    {compatibleLaborLists.map((list) => (
+                      <option key={list.id} value={list.id}>{list.name}</option>
+                    ))}
+                  </select>
+                )}
               </Field>
               <Field label="Tipo de cambio">
                 <input type="number" step="0.01" placeholder="Ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
@@ -706,7 +859,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             <div className="po-header-section po-header-section--pricing">
               <div className="po-header-line">
                 <strong>Costeo</strong>
-                <span>{selectedLaborListId === CUSTOM_PRICE_LIST_VALUE ? "Personalizada" : po.moneda}</span>
+                <span>{isPieceMode ? "Por pieza" : selectedLaborListId === CUSTOM_PRICE_LIST_VALUE ? "Personalizada" : "Por gramo"}</span>
               </div>
               <Field label="Moneda">
                 <select value={po.moneda} onChange={set("moneda", { pricing: true })} style={inp}>
@@ -714,19 +867,40 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   <option value="USD">USD</option>
                 </select>
               </Field>
-              <Field label={`Lista de precios ${po.moneda}`}>
-                <select
-                  value={selectedLaborListId || ""}
-                  onChange={(e) => applyLaborList(e.target.value, lines)}
-                  disabled={pricingLocked}
-                  style={inp}
-                >
-                  <option value="">Selecciona una lista activa</option>
-                  <option value={CUSTOM_PRICE_LIST_VALUE}>Personalizada</option>
-                  {compatibleLaborLists.map((list) => (
-                    <option key={list.id} value={list.id}>{list.name}</option>
-                  ))}
+              <Field label="Tipo de cotizacion">
+                <select value={pricingMode} onChange={(e) => changePricingMode(e.target.value)} disabled={pricingLocked} style={inp}>
+                  <option value="gram">Por gramo</option>
+                  <option value="piece">Por pieza</option>
                 </select>
+              </Field>
+              <Field label={isPieceMode ? `Lista por pieza ${po.moneda}` : `Lista por gramo ${po.moneda}`}>
+                {isPieceMode ? (
+                  <select
+                    value={selectedPiecePriceListId || ""}
+                    onChange={(e) => applyPiecePriceList(e.target.value)}
+                    disabled={pricingLocked}
+                    style={inp}
+                  >
+                    <option value="">Selecciona una lista activa</option>
+                    <option value={CUSTOM_PRICE_LIST_VALUE}>Personalizada</option>
+                    {compatiblePiecePriceLists.map((list) => (
+                      <option key={list.id} value={list.id}>{list.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <select
+                    value={selectedLaborListId || ""}
+                    onChange={(e) => applyLaborList(e.target.value, lines)}
+                    disabled={pricingLocked}
+                    style={inp}
+                  >
+                    <option value="">Selecciona una lista activa</option>
+                    <option value={CUSTOM_PRICE_LIST_VALUE}>Personalizada</option>
+                    {compatibleLaborLists.map((list) => (
+                      <option key={list.id} value={list.id}>{list.name}</option>
+                    ))}
+                  </select>
+                )}
               </Field>
               <Field label="Tipo de cambio USD">
                 <input type="number" step="0.01" placeholder="Ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
@@ -770,6 +944,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               </div>
             ) : null}
 
+          {!isPieceMode ? (
           <section className="quote-block quote-block--pricing">
             <h3>Costeo de plata fina</h3>
 
@@ -825,6 +1000,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               </div>
             </div>
           </section>
+          ) : null}
 
           <section className="quote-block">
             <h3>Productos cotizados</h3>
@@ -883,21 +1059,35 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             <div className="responsive-table">
               <table className="simple-admin-table quote-items-table">
                 <thead>
-                  <tr>
-                    <th>Foto</th>
-                    <th>SKU</th>
-                    <th className="right">Cantidad</th>
-                    <th>Descripcion</th>
-                    <th>Linea</th>
-                    <th className="right">Peso unit.</th>
-                    <th className="right">Gramos totales</th>
-                    <th className="right">Labor/g {moneyLabel}</th>
-                    <th className="right">PF/g {moneyLabel}</th>
-                    <th className="right">Labor+PF {moneyLabel}</th>
-                    <th>Comentarios</th>
-                    <th className="right">Subtotal</th>
-                    <th></th>
-                  </tr>
+                  {isPieceMode ? (
+                    <tr>
+                      <th>Foto</th>
+                      <th>SKU</th>
+                      <th className="right">Cantidad</th>
+                      <th>Descripcion</th>
+                      <th>Linea</th>
+                      <th className="right">Precio pieza {moneyLabel}</th>
+                      <th>Comentarios</th>
+                      <th className="right">Subtotal</th>
+                      <th></th>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <th>Foto</th>
+                      <th>SKU</th>
+                      <th className="right">Cantidad</th>
+                      <th>Descripcion</th>
+                      <th>Linea</th>
+                      <th className="right">Peso unit.</th>
+                      <th className="right">Gramos totales</th>
+                      <th className="right">Labor/g {moneyLabel}</th>
+                      <th className="right">PF/g {moneyLabel}</th>
+                      <th className="right">Labor+PF {moneyLabel}</th>
+                      <th>Comentarios</th>
+                      <th className="right">Subtotal</th>
+                      <th></th>
+                    </tr>
+                  )}
                 </thead>
                 <tbody>
                   {items.length ? items.map((item, idx) => {
@@ -931,18 +1121,32 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                           <small>{[item.producto_metal, item.producto_kilataje].filter(Boolean).join(" / ")}</small>
                         </td>
                         <td><strong>{item.producto_linea || "-"}</strong></td>
-                        <td><input type="number" step="0.01" value={item.gramos_por_pieza} onChange={(event) => setItem(idx, "gramos_por_pieza", Number(event.target.value))} /></td>
-                        <td><input type="number" step="0.01" value={item._gt_manual ?? item.gramos_total} onChange={(event) => setGTotal(idx, event.target.value)} readOnly={pricingLocked} /></td>
-                        <td><input type="number" step="0.01" value={toDisplayMoney(item.labor_mxn) || ""} onChange={(event) => setLabor(idx, event.target.value)} readOnly={pricingLocked} /></td>
-                        <td className="right">{fmt(toDisplayMoney(fineSilver))}</td>
-                        <td className="right">{fmt(toDisplayMoney(item.precio_gramo_mxn))}</td>
+                        {isPieceMode ? (
+                          <td className="right">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={toDisplayMoney(item.precio_pieza_mxn) || ""}
+                              onChange={(event) => setItem(idx, "precio_pieza_mxn", fromDisplayMoney(event.target.value))}
+                              readOnly={pricingLocked}
+                            />
+                          </td>
+                        ) : (
+                          <>
+                            <td><input type="number" step="0.01" value={item.gramos_por_pieza} onChange={(event) => setItem(idx, "gramos_por_pieza", Number(event.target.value))} /></td>
+                            <td><input type="number" step="0.01" value={item._gt_manual ?? item.gramos_total} onChange={(event) => setGTotal(idx, event.target.value)} readOnly={pricingLocked} /></td>
+                            <td><input type="number" step="0.01" value={toDisplayMoney(item.labor_mxn) || ""} onChange={(event) => setLabor(idx, event.target.value)} readOnly={pricingLocked} /></td>
+                            <td className="right">{fmt(toDisplayMoney(fineSilver))}</td>
+                            <td className="right">{fmt(toDisplayMoney(item.precio_gramo_mxn))}</td>
+                          </>
+                        )}
                         <td><input value={item.comentarios || ""} onChange={(event) => setItem(idx, "comentarios", event.target.value)} placeholder="Color, piedra, medida..." /></td>
                         <td className="right"><strong>{fmt(toDisplayMoney(item.subtotal_mxn))}</strong></td>
                         <td><button className="table-delete" type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== idx))}>x</button></td>
                       </tr>
                     );
                   }) : (
-                    <tr><td colSpan="12" className="empty-row">Sin productos. Agrega productos desde el catalogo.</td></tr>
+                    <tr><td colSpan={isPieceMode ? "9" : "13"} className="empty-row">Sin productos. Agrega productos desde el catalogo.</td></tr>
                   )}
                 </tbody>
               </table>

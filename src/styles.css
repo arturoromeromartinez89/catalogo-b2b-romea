@@ -2324,6 +2324,41 @@ dd {
   position: relative;
 }
 
+/* Price lists by piece */
+.file-action {
+  cursor: pointer;
+  display: inline-flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.file-action input[type="file"] {
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  width: 1px;
+}
+
+.piece-import-tools {
+  align-items: center;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(180px, 260px);
+}
+
+.piece-import-tools small {
+  color: var(--romea-muted);
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+@media (max-width: 900px) {
+  .piece-import-tools {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-product-card.enabled {
   border-color: rgba(31, 51, 95, 0.55);
   box-shadow: var(--shadow-md);

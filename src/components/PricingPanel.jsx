@@ -4,18 +4,24 @@ import ActionNotice from "./ActionNotice";
 import { fetchCompanySettings } from "../services/companySettings";
 import {
   buildPriceListName,
+  calculatePiecePriceListItem,
   calculateFineSilver,
   calculatePriceListLine,
   duplicateLaborList,
+  duplicatePiecePriceList,
   fetchLaborListLines,
   fetchLaborLists,
   fetchLines,
+  fetchPiecePriceListItems,
+  fetchPiecePriceLists,
   inferLaborFromLineCode,
   roundUp2,
   saveLaborList,
+  savePiecePriceList,
   syncProductLinesFromProducts,
   TROY_OUNCE_GRAMS,
   upsertLaborListLines,
+  upsertPiecePriceListItems,
 } from "../services/pricingService";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -32,6 +38,16 @@ const blankList = {
   plata_fina_value: "",
   exchange_rate_date: today(),
   kitco_date: today(),
+  comments: "",
+  prepared_by: "",
+};
+
+const blankPieceList = {
+  currency: "MXN",
+  name: "MXN -",
+  status: "borrador",
+  margin_pct: 20,
+  tipo_cambio: "",
   comments: "",
   prepared_by: "",
 };
@@ -87,6 +103,51 @@ const normalizeList = (list = {}) => ({
   oz_grams: Number(list.oz_grams || TROY_OUNCE_GRAMS),
   prepared_by: list.prepared_by || list.source_snapshot?.prepared_by || "",
 });
+
+const normalizePieceList = (list = {}) => ({
+  ...blankPieceList,
+  ...list,
+  currency: list.currency || "MXN",
+  status: list.status || "borrador",
+  margin_pct: Number(list.margin_pct || 0),
+  prepared_by: list.prepared_by || list.source_snapshot?.prepared_by || "",
+});
+
+const normalizeHeader = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+
+const readFirst = (row, aliases) => {
+  const entries = Object.entries(row || {});
+  const found = entries.find(([key]) => aliases.includes(normalizeHeader(key)));
+  return found ? found[1] : "";
+};
+
+const toNumber = (value) => {
+  if (value === null || value === undefined || value === "") return 0;
+  const clean = String(value).replace(/[$,\s]/g, "");
+  const number = Number(clean);
+  return Number.isFinite(number) ? number : 0;
+};
+
+const parsePieceCostExcel = async (file) => {
+  const XLSX = await import("xlsx");
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+  return rows
+    .map((row) => ({
+      codigo: String(readFirst(row, ["codigo", "sku", "code", "modelo"])).trim(),
+      descripcion: String(readFirst(row, ["descripcion", "description", "desc"])).trim(),
+      cost_mxn: toNumber(readFirst(row, ["costo_pieza", "costo_pieza_mxn", "costo", "cost", "cost_mxn", "precio_costo"])),
+    }))
+    .filter((row) => row.codigo);
+};
 
 const makeDraftLines = (productLines = [], sourceLines = [], list = blankList) => {
   const sourceMap = new Map(sourceLines.map((row) => [row.line_codigo, row]));
@@ -447,8 +508,188 @@ function PriceListEditor({ list, productLines, tenantId, profile, company, onClo
   );
 }
 
+function PiecePriceListEditor({ list, tenantId, profile, onClose, onSaved, setNotice }) {
+  const [draft, setDraft] = useState(() => normalizePieceList(list));
+  const [rows, setRows] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const frozen = Boolean(draft.id && draft.status === "activa");
+
+  const recalcRows = (nextDraft = draft, nextRows = rows) => {
+    setRows(nextRows.map((row) => calculatePiecePriceListItem({
+      item: row,
+      currency: nextDraft.currency,
+      exchangeRate: nextDraft.tipo_cambio,
+      marginPct: row.margin_pct ?? nextDraft.margin_pct,
+    })));
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      const sourceRows = draft.id ? await fetchPiecePriceListItems(draft.id) : [];
+      setRows(sourceRows.map((row) => calculatePiecePriceListItem({
+        item: row,
+        currency: draft.currency,
+        exchangeRate: draft.tipo_cambio,
+        marginPct: row.margin_pct ?? draft.margin_pct,
+      })));
+    };
+    load().catch((error) => setNotice({ type: "error", title: "Error", message: error.message }));
+  }, [draft.id]);
+
+  const setDraftValue = (key, value) => {
+    const next = { ...draft, [key]: value };
+    if (key === "currency") next.name = buildPriceListName(value, draft.name);
+    if (key === "name") next.name = buildPriceListName(draft.currency, value);
+    setDraft(next);
+    window.setTimeout(() => recalcRows(next), 0);
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const imported = await parsePieceCostExcel(file);
+      const nextRows = imported.map((row) => calculatePiecePriceListItem({
+        item: { ...row, margin_pct: draft.margin_pct },
+        currency: draft.currency,
+        exchangeRate: draft.tipo_cambio,
+        marginPct: draft.margin_pct,
+      }));
+      setRows(nextRows);
+      setNotice({ type: "success", title: "Costos cargados", message: `${nextRows.length} SKUs importados desde Excel.` });
+    } catch (error) {
+      setNotice({ type: "error", title: "No se pudo leer el Excel", message: error.message });
+    } finally {
+      setImporting(false);
+      event.target.value = "";
+    }
+  };
+
+  const setRow = (idx, key, value) => {
+    if (frozen) return;
+    const nextRows = [...rows];
+    nextRows[idx] = { ...nextRows[idx], [key]: key === "descripcion" ? value : Number(value || 0) };
+    recalcRows(draft, nextRows);
+  };
+
+  const applyMarginAll = (value) => {
+    const margin = Number(value || 0);
+    setDraft((current) => ({ ...current, margin_pct: margin }));
+    recalcRows({ ...draft, margin_pct: margin }, rows.map((row) => ({ ...row, margin_pct: margin })));
+  };
+
+  const handleSave = async (status = draft.status) => {
+    if (!rows.length) {
+      setNotice({ type: "error", title: "Sin SKUs", message: "Carga primero un Excel con codigo y costo por pieza." });
+      return;
+    }
+    setSaving(true);
+    try {
+      const saved = await savePiecePriceList({
+        ...draft,
+        status,
+        source_snapshot: {
+          formula: draft.currency === "USD"
+            ? "Precio = (costo MXN / tipo de cambio) / (1 - margen%)"
+            : "Precio = costo MXN / (1 - margen%)",
+          generated_at: new Date().toISOString(),
+          prepared_by: draft.prepared_by || profile?.email || "",
+        },
+      }, tenantId);
+      await upsertPiecePriceListItems(saved.id, rows, saved);
+      setNotice({ type: "success", title: "Lista por pieza guardada", message: `${saved.name} guardada correctamente.` });
+      onSaved(saved);
+    } catch (error) {
+      setNotice({ type: "error", title: "No se pudo guardar", message: error.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const duplicate = async () => {
+    const copy = await duplicatePiecePriceList(draft, tenantId);
+    setNotice({ type: "success", title: "Version duplicada", message: `${copy.name} creada como borrador.` });
+    onSaved(copy, true);
+  };
+
+  return (
+    <section className="price-editor-page">
+      <div className="price-editor-toolbar">
+        <div>
+          <span className="tool-eyebrow">Lista por pieza</span>
+          <h2>{draft.name}</h2>
+          {frozen ? <p className="muted">Lista activa congelada. Duplica para modificar costos, margen o tipo de cambio.</p> : <p className="muted">Importa costos por SKU y calcula precio final por pieza con margen.</p>}
+        </div>
+        <div className="price-editor-actions">
+          {frozen ? <button className="primary-button compact-action" type="button" onClick={duplicate}>Duplicar version</button> : null}
+          {!frozen ? <button className="secondary-button compact-action" type="button" onClick={() => handleSave("borrador")} disabled={saving}>Guardar borrador</button> : null}
+          {!frozen ? <button className="primary-button compact-action" type="button" onClick={() => handleSave("activa")} disabled={saving}>Activar lista</button> : null}
+          <button className="secondary-button compact-action" type="button" onClick={onClose}>Cerrar</button>
+        </div>
+      </div>
+
+      <div className="price-config-grid">
+        <label>Moneda<select value={draft.currency} onChange={(e) => setDraftValue("currency", e.target.value)} disabled={frozen}><option>MXN</option><option>USD</option></select></label>
+        <label>Nombre<input value={draft.name.replace(/^(USD|MXN)\s*-\s*/i, "")} onChange={(e) => setDraftValue("name", e.target.value)} readOnly={frozen} /></label>
+        <label>Tipo de cambio<input type="number" step="0.01" value={draft.tipo_cambio || ""} onChange={(e) => setDraftValue("tipo_cambio", e.target.value)} readOnly={frozen} placeholder="Requerido para USD" /></label>
+        <label>Margen general %<input type="number" step="0.1" value={draft.margin_pct || ""} onChange={(e) => applyMarginAll(e.target.value)} readOnly={frozen} /></label>
+        <label>Elaborado por<input value={draft.prepared_by || ""} onChange={(e) => setDraftValue("prepared_by", e.target.value)} readOnly={frozen} placeholder="Nombre de quien elaboro la lista" /></label>
+        <label className="wide-field">Comentarios<input value={draft.comments || ""} onChange={(e) => setDraftValue("comments", e.target.value)} readOnly={frozen} placeholder="Ej. Lista por pieza para cliente mayorista" /></label>
+      </div>
+
+      {!frozen ? (
+        <div className="price-bulk-tools piece-import-tools">
+          <div>
+            <span>Excel de costos por SKU</span>
+            <small>Columnas aceptadas: codigo / sku, descripcion, costo_pieza o costo.</small>
+          </div>
+          <label className="secondary-button compact-action file-action">
+            {importing ? "Leyendo..." : "Cargar Excel de costos"}
+            <input type="file" accept=".xlsx,.xls" onChange={handleImport} />
+          </label>
+          <input type="number" step="0.1" placeholder="Aplicar margen a todos, ej. 20" onChange={(e) => applyMarginAll(e.target.value)} />
+        </div>
+      ) : null}
+
+      <div className="responsive-table price-lines-wrap">
+        <table className="simple-admin-table price-list-table">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Descripcion</th>
+              <th className="right">Costo pieza MXN</th>
+              <th className="right">Costo pieza USD</th>
+              <th className="right">Margen</th>
+              <th className="right">Precio final {draft.currency}</th>
+              <th className="right">Precio final MXN</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, idx) => (
+              <tr key={`${row.codigo}-${idx}`}>
+                <td><strong>{row.codigo}</strong></td>
+                <td><input value={row.descripcion || ""} onChange={(e) => setRow(idx, "descripcion", e.target.value)} readOnly={frozen} /></td>
+                <td><input type="number" step="0.01" value={row.cost_mxn || ""} onChange={(e) => setRow(idx, "cost_mxn", e.target.value)} readOnly={frozen} /></td>
+                <td className="right">{money(row.cost_usd, "USD")}</td>
+                <td><input type="number" step="0.1" value={row.margin_pct || ""} onChange={(e) => setRow(idx, "margin_pct", e.target.value)} readOnly={frozen} /></td>
+                <td className="right"><strong>{money(row.unit_price, draft.currency)}</strong></td>
+                <td className="right">{money(row.unit_price_mxn, "MXN")}</td>
+              </tr>
+            ))}
+            {!rows.length ? <tr><td colSpan="7" className="empty-row">Carga un Excel con codigo y costo por pieza.</td></tr> : null}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 export default function PricingPanel({ products = [], tenantId = "", profile }) {
+  const [priceMode, setPriceMode] = useState("gram");
   const [lists, setLists] = useState([]);
+  const [pieceLists, setPieceLists] = useState([]);
   const [productLines, setProductLines] = useState([]);
   const [openList, setOpenList] = useState(null);
   const [notice, setNotice] = useState(null);
@@ -457,12 +698,25 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
   const [company, setCompany] = useState({});
 
   const load = async () => {
-    const [nextLists, nextLines, nextCompany] = await Promise.all([fetchLaborLists(tenantId), fetchLines(tenantId), fetchCompanySettings(tenantId)]);
+    const [nextLists, nextPieceLists, nextLines, nextCompany] = await Promise.all([
+      fetchLaborLists(tenantId),
+      fetchPiecePriceLists(tenantId).catch((error) => {
+        if (/piece_price_lists|schema cache|does not exist/i.test(error.message || "")) return [];
+        throw error;
+      }),
+      fetchLines(tenantId),
+      fetchCompanySettings(tenantId),
+    ]);
     const withCounts = await Promise.all(nextLists.map(async (list) => {
       const rows = await fetchLaborListLines(list.id).catch(() => []);
       return { ...list, _configured: rows.length };
     }));
+    const pieceWithCounts = await Promise.all(nextPieceLists.map(async (list) => {
+      const rows = await fetchPiecePriceListItems(list.id).catch(() => []);
+      return { ...list, _configured: rows.length };
+    }));
     setLists(withCounts);
+    setPieceLists(pieceWithCounts);
     setProductLines(nextLines);
     setCompany(nextCompany || {});
     if (nextCompany?.logo_url) {
@@ -476,7 +730,9 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
 
   useEffect(() => { load().catch((error) => setNotice({ type: "error", title: "Error", message: error.message })); }, [tenantId]);
 
-  const createNew = () => setOpenList({ ...blankList, name: "USD -" });
+  const createNew = () => setOpenList(priceMode === "piece"
+    ? { ...blankPieceList, name: "MXN -", pricing_kind: "piece" }
+    : { ...blankList, name: "USD -", pricing_kind: "gram" });
 
   const syncLines = async () => {
     setSyncing(true);
@@ -491,7 +747,9 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
     }
   };
 
-  const filtered = lists.filter((list) => statusFilter === "all" || (list.status || "borrador") === statusFilter);
+  const activeLists = priceMode === "piece" ? pieceLists : lists;
+  const filtered = activeLists.filter((list) => statusFilter === "all" || (list.status || "borrador") === statusFilter);
+  const openKind = openList?.pricing_kind || priceMode;
 
   return (
     <section className="clients-workspace pricing-workspace">
@@ -502,7 +760,19 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
         </div>
       ) : null}
 
-      {openList ? (
+      {openList && openKind === "piece" ? (
+        <PiecePriceListEditor
+          list={openList}
+          tenantId={tenantId}
+          profile={profile}
+          onClose={() => setOpenList(null)}
+          onSaved={(saved, keepOpen = false) => {
+            load();
+            setOpenList(keepOpen ? { ...saved, pricing_kind: "piece" } : null);
+          }}
+          setNotice={setNotice}
+        />
+      ) : openList ? (
         <PriceListEditor
           list={openList}
           productLines={productLines}
@@ -512,7 +782,7 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
           onClose={() => setOpenList(null)}
           onSaved={(saved, keepOpen = false) => {
             load();
-            setOpenList(keepOpen ? saved : null);
+            setOpenList(keepOpen ? { ...saved, pricing_kind: "gram" } : null);
           }}
           setNotice={setNotice}
         />
@@ -521,38 +791,70 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
           <header className="clients-page-header">
             <div>
               <h2>Listas de precios</h2>
-              <p>{filtered.length} de {lists.length} listas. Las listas activas se usan en preorden segun moneda.</p>
+              <p>{filtered.length} de {activeLists.length} listas. Las listas activas se usan en preorden segun moneda y tipo de cotizacion.</p>
             </div>
-            <button className="primary-button compact-action success-action" type="button" onClick={createNew}>+ Nueva lista</button>
+            <button className="primary-button compact-action success-action" type="button" onClick={createNew}>+ Nueva lista {priceMode === "piece" ? "por pieza" : "por gramo"}</button>
           </header>
 
           <section className="clients-filter-card pricing-list-filter">
+            <div className="price-status-tabs">
+              <button className={priceMode === "gram" ? "active" : ""} onClick={() => { setPriceMode("gram"); setOpenList(null); }} type="button">Por gramo</button>
+              <button className={priceMode === "piece" ? "active" : ""} onClick={() => { setPriceMode("piece"); setOpenList(null); }} type="button">Por pieza</button>
+            </div>
             <div className="price-status-tabs">
               <button className={statusFilter === "all" ? "active" : ""} onClick={() => setStatusFilter("all")} type="button">Todas</button>
               <button className={statusFilter === "borrador" ? "active" : ""} onClick={() => setStatusFilter("borrador")} type="button">Borrador</button>
               <button className={statusFilter === "activa" ? "active" : ""} onClick={() => setStatusFilter("activa")} type="button">Activas</button>
             </div>
-            <button className="secondary-button compact-action" type="button" onClick={syncLines} disabled={syncing}>{syncing ? "Actualizando..." : "Actualizar lineas"}</button>
+            {priceMode === "gram" ? (
+              <button className="secondary-button compact-action" type="button" onClick={syncLines} disabled={syncing}>{syncing ? "Actualizando..." : "Actualizar lineas"}</button>
+            ) : (
+              <p className="muted">Excel requerido: codigo, descripcion y costo por pieza en MXN.</p>
+            )}
           </section>
 
           <section className="clients-table-card">
             <div className="responsive-table">
               <table className="simple-admin-table clients-directory-table">
                 <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Moneda</th>
-                    <th>Estado</th>
-                    <th>TC</th>
-                    <th>Kitco</th>
-                    <th>PF/g</th>
-                    <th>Lineas</th>
-                    <th>Fecha</th>
-                    <th>Acciones</th>
-                  </tr>
+                  {priceMode === "piece" ? (
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Moneda</th>
+                      <th>Estado</th>
+                      <th>TC</th>
+                      <th>Margen</th>
+                      <th>SKUs</th>
+                      <th>Fecha</th>
+                      <th>Acciones</th>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Moneda</th>
+                      <th>Estado</th>
+                      <th>TC</th>
+                      <th>Kitco</th>
+                      <th>PF/g</th>
+                      <th>Lineas</th>
+                      <th>Fecha</th>
+                      <th>Acciones</th>
+                    </tr>
+                  )}
                 </thead>
                 <tbody>
-                  {filtered.map((list) => (
+                  {filtered.map((list) => priceMode === "piece" ? (
+                    <tr key={list.id}>
+                      <td><strong>{list.name}</strong><small>{list.comments || "-"}</small></td>
+                      <td>{list.currency || "MXN"}</td>
+                      <td><span className={`price-status-badge ${list.status || "borrador"}`}>{list.status || "borrador"}</span></td>
+                      <td>{list.tipo_cambio || "-"}</td>
+                      <td>{Number(list.margin_pct || 0).toFixed(2)}%</td>
+                      <td>{list._configured || 0}</td>
+                      <td>{list.created_at ? new Date(list.created_at).toLocaleDateString("es-MX") : "-"}</td>
+                      <td><button className="secondary-button compact-action" type="button" onClick={() => setOpenList({ ...list, pricing_kind: "piece" })}>Abrir</button></td>
+                    </tr>
+                  ) : (
                     <tr key={list.id}>
                       <td><strong>{list.name}</strong><small>{list.comments || "-"}</small></td>
                       <td>{list.currency || "MXN"}</td>
@@ -562,10 +864,10 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
                       <td>{money(list.plata_fina_value, list.currency)}</td>
                       <td>{list._configured || 0}</td>
                       <td>{list.created_at ? new Date(list.created_at).toLocaleDateString("es-MX") : "-"}</td>
-                      <td><button className="secondary-button compact-action" type="button" onClick={() => setOpenList(list)}>Abrir</button></td>
+                      <td><button className="secondary-button compact-action" type="button" onClick={() => setOpenList({ ...list, pricing_kind: "gram" })}>Abrir</button></td>
                     </tr>
                   ))}
-                  {!filtered.length ? <tr><td colSpan="9" className="empty-row">Aun no hay listas de precios.</td></tr> : null}
+                  {!filtered.length ? <tr><td colSpan={priceMode === "piece" ? "8" : "9"} className="empty-row">Aun no hay listas de precios {priceMode === "piece" ? "por pieza" : "por gramo"}.</td></tr> : null}
                 </tbody>
               </table>
             </div>
