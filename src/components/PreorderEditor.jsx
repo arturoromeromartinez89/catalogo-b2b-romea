@@ -904,7 +904,20 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     const fineSilver = Math.max(0, Number(item.precio_gramo_mxn || 0) - Number(item.labor_mxn || 0));
                     return (
                       <tr key={`${item.producto_codigo}-${idx}`}>
-                        <td>{item.producto_foto_url ? <img src={imageUrlForSize(item.producto_foto_url, 120)} alt={item.producto_codigo} loading="lazy" decoding="async" /> : "-"}</td>
+                        <td className="quote-item-photo-cell">
+                          {item.producto_foto_url ? (
+                            <img
+                              className="quote-item-photo"
+                              src={imageUrlForSize(item.producto_foto_url, 240)}
+                              alt={item.producto_codigo}
+                              loading="lazy"
+                              decoding="async"
+                              onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
+                            />
+                          ) : (
+                            <span className="quote-item-photo-placeholder">Sin foto</span>
+                          )}
+                        </td>
                         <td><strong>{item.producto_codigo}</strong></td>
                         <td>
                           <div className="qty-stepper">
