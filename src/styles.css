@@ -3426,6 +3426,26 @@ dd {
   grid-template-columns: auto minmax(0, 1fr);
 }
 
+.quote-picker-actions {
+  grid-template-columns: auto auto minmax(0, 1fr);
+}
+
+.preorder-excel-action {
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+.preorder-excel-action.disabled {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .quote-picker-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 .quote-product-picker > label input {
   border-color: var(--romea-blue);
   box-shadow: inset 0 0 0 1px rgba(31, 51, 95, 0.08);

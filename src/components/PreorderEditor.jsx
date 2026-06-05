@@ -26,6 +26,11 @@ const fmt = (value) =>
 const IVA_RATE = 0.16;
 const PROSPECT_CLIENT_VALUE = "__new_prospect__";
 const CUSTOM_PRICE_LIST_VALUE = "__custom_price_list__";
+const PREORDER_EXCEL_COLUMNS = [
+  { key: "codigo", aliases: ["codigo", "sku", "code", "modelo"] },
+  { key: "cantidad", aliases: ["cantidad", "piezas", "qty", "quantity"] },
+  { key: "comentarios", aliases: ["comentarios", "comentario", "notas", "nota", "observaciones"] },
+];
 
 const calcItem = (item) => {
   const piezas = Number(item.piezas || 0);
@@ -45,6 +50,46 @@ const Field = ({ label, children }) => (
     {children}
   </label>
 );
+
+const normalizeHeader = (value) => normalizeText(String(value || "").replace(/_/g, " ")).trim();
+
+const readFirstColumn = (row, aliases) => {
+  const normalized = Object.entries(row || {}).reduce((map, [key, value]) => {
+    map.set(normalizeHeader(key), value);
+    return map;
+  }, new Map());
+  for (const alias of aliases) {
+    const value = normalized.get(normalizeHeader(alias));
+    if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+  }
+  return "";
+};
+
+const parsePreorderExcel = async (file) => {
+  if (!file) return [];
+  const XLSX = await import("xlsx");
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) throw new Error("El archivo Excel no tiene hojas.");
+  const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
+  if (!rows.length) throw new Error("El Excel no tiene filas.");
+
+  const parsed = rows.map((row) => {
+    const item = {};
+    PREORDER_EXCEL_COLUMNS.forEach((column) => {
+      item[column.key] = readFirstColumn(row, column.aliases);
+    });
+    return {
+      codigo: String(item.codigo || "").trim(),
+      cantidad: Math.max(1, Number(String(item.cantidad || "1").replace(/,/g, "").trim()) || 1),
+      comentarios: String(item.comentarios || "").trim(),
+    };
+  }).filter((item) => item.codigo);
+
+  if (!parsed.length) throw new Error("El Excel debe incluir al menos una columna codigo/sku.");
+  return parsed;
+};
 
 function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, pricingLocked = false, tenantId = "", profile }) {
   const { language } = useLanguage();
@@ -90,6 +135,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [msg, setMsg] = useState("");
   const [productSearch, setProductSearch] = useState("");
   const [productStatus, setProductStatus] = useState({ type: "info", text: "Escanea o busca un producto para agregarlo." });
+  const [importingPreorderExcel, setImportingPreorderExcel] = useState(false);
   const [prospectForm, setProspectForm] = useState({ name: "", company: "", email: "", phone: "", rfc: "", active: true });
   const [tenantCompany, setTenantCompany] = useState(null);
   const scannerInputRef = useRef(null);
@@ -495,6 +541,94 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     setMsg(`${product.codigo} agregado a la preorden.`);
     setProductStatus({ type: "success", text: `${product.codigo} agregado. Listo para el siguiente.` });
     window.setTimeout(() => scannerInputRef.current?.focus(), 80);
+  };
+
+  const buildItemForProduct = (product, quantity = 1, comments = "", listItemsOverride = piecePriceItems) => {
+    const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
+    const selectedPieceList = piecePriceLists.find((entry) => entry.id === selectedPiecePriceListId);
+    const rawItem = buildPreorderItemFromProduct(product, quantity, lines, plataFinaMxn);
+    const pricedItem = isPieceMode
+      ? pricePieceItemFromList({ ...rawItem, pricing_mode: "piece" }, listItemsOverride, selectedPieceList)
+      : priceItemFromLines(rawItem, lines, selectedList, getListSilverMxn(selectedList));
+    return calcItem({
+      ...pricedItem,
+      piezas: Math.max(1, Number(quantity || 1)),
+      comentarios: comments || pricedItem.comentarios || "",
+    });
+  };
+
+  const mergePreorderItems = (currentItems, incomingItems) => {
+    const next = [...currentItems];
+    incomingItems.forEach((incoming) => {
+      const existingIndex = next.findIndex((item) => normalizeText(item.producto_codigo) === normalizeText(incoming.producto_codigo));
+      if (existingIndex >= 0) {
+        const existing = next[existingIndex];
+        const comentarios = [existing.comentarios, incoming.comentarios].filter(Boolean).join(" | ");
+        next[existingIndex] = calcItem({
+          ...existing,
+          piezas: Number(existing.piezas || 0) + Number(incoming.piezas || 0),
+          comentarios,
+          precio_pieza_mxn: incoming.precio_pieza_mxn || existing.precio_pieza_mxn,
+          precio_gramo_mxn: incoming.precio_gramo_mxn || existing.precio_gramo_mxn,
+          labor_mxn: incoming.labor_mxn || existing.labor_mxn,
+        });
+      } else {
+        next.push(incoming);
+      }
+    });
+    return next;
+  };
+
+  const handlePreorderExcelImport = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!isPieceMode) {
+      setProductStatus({ type: "error", text: "Cambia la preorden a Por pieza antes de cargar Excel." });
+      return;
+    }
+    if (!selectedPiecePriceListId || selectedPiecePriceListId === CUSTOM_PRICE_LIST_VALUE) {
+      setProductStatus({ type: "error", text: "Selecciona una lista por pieza activa antes de cargar Excel." });
+      return;
+    }
+    setImportingPreorderExcel(true);
+    try {
+      const rows = await parsePreorderExcel(file);
+      const activePieceItems = piecePriceItems.length
+        ? piecePriceItems
+        : await fetchPiecePriceListItems(selectedPiecePriceListId);
+      if (!piecePriceItems.length) setPiecePriceItems(activePieceItems);
+      const productByCode = new Map(products.map((product) => [normalizeText(product.codigo), product]));
+      const found = [];
+      const missing = [];
+
+      rows.forEach((row) => {
+        const product = productByCode.get(normalizeText(row.codigo));
+        if (!product) {
+          missing.push(row.codigo);
+          return;
+        }
+        found.push(buildItemForProduct(product, row.cantidad, row.comentarios, activePieceItems));
+      });
+
+      if (!found.length) {
+        setProductStatus({ type: "error", text: `No encontre ningun SKU del Excel en el catalogo. Revisa codigos.` });
+        return;
+      }
+
+      setItems((current) => mergePreorderItems(current, found));
+      markEdited();
+      setProductStatus({
+        type: missing.length ? "info" : "success",
+        text: `${found.length} SKUs cargados desde Excel.${missing.length ? ` No encontrados: ${missing.slice(0, 8).join(", ")}${missing.length > 8 ? "..." : ""}` : ""}`,
+      });
+      setMsg(`${found.length} productos importados a la preorden por pieza.`);
+    } catch (error) {
+      setProductStatus({ type: "error", text: `No se pudo leer el Excel: ${error.message}` });
+    } finally {
+      setImportingPreorderExcel(false);
+      window.setTimeout(() => scannerInputRef.current?.focus(), 80);
+    }
   };
 
   const findProductByScan = (code) => {
@@ -1031,6 +1165,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   <button className="primary-button compact-action" type="button" onClick={handleProductEntrySubmit}>
                     Agregar por codigo
                   </button>
+                  {isPieceMode ? (
+                    <label className={`secondary-button compact-action file-action preorder-excel-action ${importingPreorderExcel ? "disabled" : ""}`}>
+                      {importingPreorderExcel ? "Leyendo Excel..." : "Cargar Excel de preorden"}
+                      <input type="file" accept=".xlsx,.xls" onChange={handlePreorderExcelImport} disabled={importingPreorderExcel} />
+                    </label>
+                  ) : null}
                   <p className={`scanner-status ${productStatus.type}`}>{productStatus.text}</p>
                 </div>
                 {productResults.length ? (
