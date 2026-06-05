@@ -3,7 +3,6 @@ import PreorderEditor from "./PreorderEditor";
 import { fetchAllPreorders } from "../services/preorderService";
 
 const STATUS_LABELS = {
-  borrador:  { label: "Borrador",  color: "#64748b" },
   pendiente:  { label: "Pendiente revision",  color: "#f59e0b" },
   revision:   { label: "En revisión", color: "#3b82f6" },
   confirmada: { label: "Confirmada", color: "#10b981" },
@@ -58,7 +57,7 @@ function PreorderListView({ clients, products, profile, tenantId, onOpen, onNew,
       {/* Toolbar de la lista */}
       <div className="po-list-toolbar">
         <div className="po-filter-pills">
-          {[["all", "Todas"], ["borrador", "Borradores"], ["pendiente", "Pendientes"], ["revision", "En revisión"], ["confirmada", "Confirmadas"]].map(([key, label]) => (
+          {[["all", "Todas"], ["pendiente", "Pendientes"], ["revision", "En revisión"], ["confirmada", "Confirmadas"]].map(([key, label]) => (
             <button
               key={key}
               type="button"
@@ -195,7 +194,7 @@ export default function PreorderWorkspace({
   // Abre una preorden en una pestaña (si ya está abierta, activa esa pestaña)
   const openTab = (preorder) => {
     const currentActive = tabs.find((t) => t.id === activeId);
-    if (currentActive?.dirty && currentActive.type !== TAB_LIST && !window.confirm("Hay una preorden con cambios sin guardar. Guarda como borrador antes de salir. ¿Quieres cambiar de pestaña sin guardar?")) {
+    if (currentActive?.dirty && currentActive.type !== TAB_LIST && !window.confirm("Hay una preorden con cambios sin guardar. Guarda antes de salir. ¿Quieres cambiar de pestaña sin guardar?")) {
       return;
     }
     const tabId = UUID_RE.test(String(preorder?.id || "")) ? preorder.id : `new-${Date.now()}`;
@@ -261,7 +260,7 @@ export default function PreorderWorkspace({
             active={tab.id === activeId}
             onClick={() => {
               const currentActive = tabs.find((item) => item.id === activeId);
-              if (currentActive?.dirty && currentActive.id !== tab.id && currentActive.type !== TAB_LIST && !window.confirm("Hay una preorden con cambios sin guardar. Guarda como borrador antes de salir. ¿Quieres cambiar de pestaña sin guardar?")) return;
+              if (currentActive?.dirty && currentActive.id !== tab.id && currentActive.type !== TAB_LIST && !window.confirm("Hay una preorden con cambios sin guardar. Guarda antes de salir. ¿Quieres cambiar de pestaña sin guardar?")) return;
               setActiveId(tab.id);
             }}
             onClose={closeTab}

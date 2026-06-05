@@ -11,7 +11,6 @@ import { normalizeText } from "../utils/textNormalizer";
 import { buildPreorderItemFromProduct } from "../utils/preorderUtils";
 
 const STATUS = {
-  borrador: { label: "Borrador", color: "#64748b" },
   pendiente: { label: "Pendiente de revision", color: "#d97706" },
   revision: { label: "En revision", color: "#2563eb" },
   confirmada: { label: "Confirmada", color: "#059669" },
@@ -805,7 +804,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const handlePdf = async () => {
     if (!UUID_RE.test(String(po.id || ""))) {
-      setMsg("Primero guarda la preorden como borrador antes de generar PDF.");
+      setMsg("Primero guarda la preorden antes de generar PDF.");
       return;
     }
     if (!po.client_id) { setMsg("Debes seleccionar un cliente o registrar un prospecto para generar el PDF."); return; }

@@ -51,6 +51,11 @@ const cleanItemNumbers = (item, idx) => ({
   sort_order: toDbNumber(item.sort_order, idx),
 });
 
+const normalizePreorderStatus = (status) => {
+  const allowed = new Set(["pendiente", "revision", "confirmada", "cancelada"]);
+  return allowed.has(status) ? status : "pendiente";
+};
+
 // ── ADMIN ─────────────────────────────────────────────────
 export const fetchAllPreorders = async (profile) => {
   const tenantId = isSuperAdmin(profile) ? "" : getTenantId(profile);
@@ -107,6 +112,7 @@ export const savePreorder = async (preorder, items) => {
 
   const preorderData = cleanPreorderNumbers({
     ...clean,
+    status: normalizePreorderStatus(clean.status),
     folio: clean.folio || buildFolio(),
     ...totals,
     updated_at: new Date().toISOString(),
