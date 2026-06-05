@@ -20,6 +20,17 @@ const toDbNumber = (value, fallback = 0) => {
   return Number.isFinite(number) ? number : fallback;
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const isValidUuid = (value) => typeof value === "string" && UUID_RE.test(value);
+
+const cleanOptionalUuid = (record, field, emptyValue = undefined) => {
+  if (!record[field] || !isValidUuid(record[field])) {
+    if (emptyValue === undefined) delete record[field];
+    else record[field] = emptyValue;
+  }
+};
+
 const cleanPreorderNumbers = (preorderData) => ({
   ...preorderData,
   tipo_cambio: toDbNumber(preorderData.tipo_cambio, 0),
@@ -82,15 +93,16 @@ export const savePreorder = async (preorder, items) => {
     total_iva_mxn,
     ...clean
   } = { ...preorder };
-  if (!clean.client_id) clean.client_id = null;
-  if (!clean.created_by) clean.created_by = null;
-  if (!clean.labor_list_id) delete clean.labor_list_id;
-  if (!clean.piece_price_list_id) delete clean.piece_price_list_id;
+  cleanOptionalUuid(clean, "client_id", null);
+  cleanOptionalUuid(clean, "created_by", null);
+  cleanOptionalUuid(clean, "labor_list_id");
+  cleanOptionalUuid(clean, "piece_price_list_id");
   if (!clean.tenant_id && !clean.tenantId) delete clean.tenant_id;
   if (clean.tenantId) {
     clean.tenant_id = clean.tenantId;
     delete clean.tenantId;
   }
+  cleanOptionalUuid(clean, "tenant_id");
 
   const preorderData = cleanPreorderNumbers({
     ...clean,
@@ -134,12 +146,16 @@ export const savePreorder = async (preorder, items) => {
       if (comentarios) {
         cleanItem.producto_descripcion = [cleanItem.producto_descripcion, `Nota: ${comentarios}`].filter(Boolean).join("\n");
       }
-      return cleanItemNumbers({
+      const cleanedItem = cleanItemNumbers({
         ...cleanItem,
         preorder_id: preorderId,
         sort_order: idx,
         updated_at: new Date().toISOString(),
       }, idx);
+      cleanOptionalUuid(cleanedItem, "piece_price_list_id");
+      cleanOptionalUuid(cleanedItem, "labor_list_id");
+      cleanOptionalUuid(cleanedItem, "tenant_id");
+      return cleanedItem;
     });
     const { error } = await supabase.from("preorder_items").insert(itemsData);
     if (error) throw error;

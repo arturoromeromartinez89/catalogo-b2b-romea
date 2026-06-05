@@ -91,6 +91,14 @@ const parsePreorderExcel = async (file) => {
   return parsed;
 };
 
+const safeFilePart = (value) =>
+  String(value || "borrador")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9-_]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "borrador";
+
 function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, pricingLocked = false, tenantId = "", profile }) {
   const { language } = useLanguage();
   const company = useCompany();
@@ -815,6 +823,91 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     });
   };
 
+  const handleExcelDownload = async () => {
+    if (!items.length) {
+      setMsg("Agrega al menos un producto para descargar la preorden en Excel.");
+      return;
+    }
+    try {
+      const XLSX = await import("xlsx");
+      const exportRows = items.map((item, idx) => {
+        const piezas = Number(item.piezas || 0);
+        const gramosPorPieza = Number(item.gramos_por_pieza || 0);
+        const gramosTotal = Number(item.gramos_total || 0);
+        const subtotal = toDisplayMoney(item.subtotal_mxn);
+        if (isPieceMode) {
+          return {
+            "#": idx + 1,
+            codigo: item.producto_codigo || "",
+            cantidad: piezas,
+            descripcion: item.producto_descripcion || "",
+            linea: item.producto_linea || "",
+            metal: item.producto_metal || "",
+            kilataje: item.producto_kilataje || "",
+            peso_unitario_g: gramosPorPieza,
+            gramos_totales: gramosTotal,
+            [`precio_pieza_${moneyLabel.toLowerCase()}`]: toDisplayMoney(item.precio_pieza_mxn),
+            [`subtotal_${moneyLabel.toLowerCase()}`]: subtotal,
+            comentarios: item.comentarios || "",
+          };
+        }
+        const fineSilver = Math.max(0, Number(item.precio_gramo_mxn || 0) - Number(item.labor_mxn || 0));
+        return {
+          "#": idx + 1,
+          codigo: item.producto_codigo || "",
+          cantidad: piezas,
+          descripcion: item.producto_descripcion || "",
+          linea: item.producto_linea || "",
+          metal: item.producto_metal || "",
+          kilataje: item.producto_kilataje || "",
+          peso_unitario_g: gramosPorPieza,
+          gramos_totales: gramosTotal,
+          [`labor_g_${moneyLabel.toLowerCase()}`]: toDisplayMoney(item.labor_mxn),
+          [`pf_g_${moneyLabel.toLowerCase()}`]: toDisplayMoney(fineSilver),
+          [`precio_gramo_${moneyLabel.toLowerCase()}`]: toDisplayMoney(item.precio_gramo_mxn),
+          [`subtotal_${moneyLabel.toLowerCase()}`]: subtotal,
+          comentarios: item.comentarios || "",
+        };
+      });
+
+      const summaryRows = [
+        { campo: "Folio", valor: po.folio || "Borrador sin folio guardado" },
+        { campo: "Cliente", valor: po.cliente_nombre || "" },
+        { campo: "Empresa", valor: po.cliente_empresa || "" },
+        { campo: "RFC", valor: po.cliente_rfc || "" },
+        { campo: "Telefono", valor: po.cliente_telefono || "" },
+        { campo: "Correo", valor: po.cliente_email || "" },
+        { campo: "Moneda", valor: po.moneda || "MXN" },
+        { campo: "Tipo de cotizacion", valor: isPieceMode ? "Por pieza" : "Por gramo" },
+        { campo: "Lista de precios", valor: isPieceMode
+          ? (piecePriceLists.find((list) => list.id === selectedPiecePriceListId)?.name || "Personalizada")
+          : (laborLists.find((list) => list.id === selectedLaborListId)?.name || "Personalizada")
+        },
+        { campo: "Tipo de cambio", valor: Number(po.tipo_cambio || 0) },
+        { campo: "Total piezas", valor: totals.piezas },
+        { campo: "Total gramos", valor: Number(totals.gramos.toFixed(2)) },
+        { campo: `Subtotal ${moneyLabel}`, valor: toDisplayMoney(totals.mxn) },
+        { campo: `Total ${moneyLabel}`, valor: toDisplayMoney(totalFinalMxn) },
+        { campo: "Comentarios", valor: po.notas || "" },
+      ];
+
+      const workbook = XLSX.utils.book_new();
+      const productsSheet = XLSX.utils.json_to_sheet(exportRows);
+      const summarySheet = XLSX.utils.json_to_sheet(summaryRows);
+      productsSheet["!cols"] = Object.keys(exportRows[0] || {}).map((key) => ({
+        wch: Math.max(12, Math.min(36, key.length + 4)),
+      }));
+      summarySheet["!cols"] = [{ wch: 24 }, { wch: 42 }];
+      XLSX.utils.book_append_sheet(workbook, productsSheet, "Preorden");
+      XLSX.utils.book_append_sheet(workbook, summarySheet, "Resumen");
+      const fileName = `preorden-${safeFilePart(po.folio || po.cliente_empresa || po.cliente_nombre)}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+      setMsg("Excel de preorden descargado correctamente.");
+    } catch (error) {
+      setMsg(`Error al descargar Excel: ${error.message}`);
+    }
+  };
+
   const handleDelete = async () => {
     if (!window.confirm("Eliminar esta preorden?")) return;
     await deletePreorder(po.id);
@@ -866,6 +959,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           ) : null}
           <button className="secondary-button compact-action" type="button" onClick={handlePdf}>
             PDF
+          </button>
+          <button className="secondary-button compact-action" type="button" onClick={handleExcelDownload}>
+            Excel
           </button>
           <button
             className="primary-button compact-action"
