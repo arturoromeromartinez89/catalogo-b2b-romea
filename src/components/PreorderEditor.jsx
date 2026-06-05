@@ -29,6 +29,7 @@ const CUSTOM_PRICE_LIST_VALUE = "__custom_price_list__";
 const PREORDER_EXCEL_COLUMNS = [
   { key: "codigo", aliases: ["codigo", "sku", "code", "modelo"] },
   { key: "cantidad", aliases: ["cantidad", "piezas", "qty", "quantity"] },
+  { key: "precio", aliases: ["precio", "precio pieza", "precio_pieza", "precio unitario", "precio_unitario", "unit price", "unit_price", "price", "precio mxn", "precio usd", "precio_pieza_mxn", "precio_pieza_usd"] },
   { key: "comentarios", aliases: ["comentarios", "comentario", "notas", "nota", "observaciones"] },
 ];
 
@@ -65,6 +66,18 @@ const readFirstColumn = (row, aliases) => {
   return "";
 };
 
+const parseExcelNumber = (value) => {
+  if (value === "" || value === null || value === undefined) return null;
+  const cleaned = String(value)
+    .replace(/\$/g, "")
+    .replace(/,/g, "")
+    .replace(/\s+/g, "")
+    .trim();
+  if (!cleaned) return null;
+  const number = Number(cleaned);
+  return Number.isFinite(number) ? number : null;
+};
+
 const parsePreorderExcel = async (file) => {
   if (!file) return [];
   const XLSX = await import("xlsx");
@@ -83,6 +96,7 @@ const parsePreorderExcel = async (file) => {
     return {
       codigo: String(item.codigo || "").trim(),
       cantidad: Math.max(1, Number(String(item.cantidad || "1").replace(/,/g, "").trim()) || 1),
+      precio: parseExcelNumber(item.precio),
       comentarios: String(item.comentarios || "").trim(),
     };
   }).filter((item) => item.codigo);
@@ -551,13 +565,23 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     window.setTimeout(() => scannerInputRef.current?.focus(), 80);
   };
 
-  const buildItemForProduct = (product, quantity = 1, comments = "", listItemsOverride = piecePriceItems) => {
+  const buildItemForProduct = (product, quantity = 1, comments = "", listItemsOverride = piecePriceItems, priceOverride = null) => {
     const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
     const selectedPieceList = piecePriceLists.find((entry) => entry.id === selectedPiecePriceListId);
     const rawItem = buildPreorderItemFromProduct(product, quantity, lines, plataFinaMxn);
-    const pricedItem = isPieceMode
+    let pricedItem = isPieceMode
       ? pricePieceItemFromList({ ...rawItem, pricing_mode: "piece" }, listItemsOverride, selectedPieceList)
       : priceItemFromLines(rawItem, lines, selectedList, getListSilverMxn(selectedList));
+    if (isPieceMode && priceOverride !== null) {
+      pricedItem = {
+        ...pricedItem,
+        pricing_mode: "piece",
+        piece_price_list_id: "",
+        precio_pieza_mxn: fromDisplayMoney(priceOverride),
+        precio_gramo_mxn: 0,
+        labor_mxn: 0,
+      };
+    }
     return calcItem({
       ...pricedItem,
       piezas: Math.max(1, Number(quantity || 1)),
@@ -576,9 +600,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           ...existing,
           piezas: Number(existing.piezas || 0) + Number(incoming.piezas || 0),
           comentarios,
-          precio_pieza_mxn: incoming.precio_pieza_mxn || existing.precio_pieza_mxn,
-          precio_gramo_mxn: incoming.precio_gramo_mxn || existing.precio_gramo_mxn,
-          labor_mxn: incoming.labor_mxn || existing.labor_mxn,
+          precio_pieza_mxn: Number(incoming.precio_pieza_mxn || 0) > 0 ? incoming.precio_pieza_mxn : existing.precio_pieza_mxn,
+          precio_gramo_mxn: Number(incoming.precio_gramo_mxn || 0) > 0 ? incoming.precio_gramo_mxn : existing.precio_gramo_mxn,
+          labor_mxn: Number(incoming.labor_mxn || 0) > 0 ? incoming.labor_mxn : existing.labor_mxn,
         });
       } else {
         next.push(incoming);
@@ -595,20 +619,19 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       setProductStatus({ type: "error", text: "Cambia la preorden a Por pieza antes de cargar Excel." });
       return;
     }
-    if (!selectedPiecePriceListId || selectedPiecePriceListId === CUSTOM_PRICE_LIST_VALUE) {
-      setProductStatus({ type: "error", text: "Selecciona una lista por pieza activa antes de cargar Excel." });
-      return;
-    }
     setImportingPreorderExcel(true);
     try {
       const rows = await parsePreorderExcel(file);
-      const activePieceItems = piecePriceItems.length
-        ? piecePriceItems
-        : await fetchPiecePriceListItems(selectedPiecePriceListId);
-      if (!piecePriceItems.length) setPiecePriceItems(activePieceItems);
+      const hasValidSelectedList = selectedPiecePriceListId && selectedPiecePriceListId !== CUSTOM_PRICE_LIST_VALUE;
+      const activePieceItems = hasValidSelectedList
+        ? (piecePriceItems.length ? piecePriceItems : await fetchPiecePriceListItems(selectedPiecePriceListId))
+        : [];
+      if (hasValidSelectedList && !piecePriceItems.length) setPiecePriceItems(activePieceItems);
       const productByCode = new Map(products.map((product) => [normalizeText(product.codigo), product]));
       const found = [];
       const missing = [];
+      let rowsWithExcelPrice = 0;
+      let rowsWithoutPrice = 0;
 
       rows.forEach((row) => {
         const product = productByCode.get(normalizeText(row.codigo));
@@ -616,7 +639,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           missing.push(row.codigo);
           return;
         }
-        found.push(buildItemForProduct(product, row.cantidad, row.comentarios, activePieceItems));
+        if (row.precio !== null) rowsWithExcelPrice += 1;
+        else rowsWithoutPrice += 1;
+        found.push(buildItemForProduct(product, row.cantidad, row.comentarios, activePieceItems, row.precio));
       });
 
       if (!found.length) {
@@ -625,12 +650,20 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       }
 
       setItems((current) => mergePreorderItems(current, found));
+      if (rowsWithExcelPrice) {
+        setSelectedPiecePriceListId(CUSTOM_PRICE_LIST_VALUE);
+        setPo((current) => ({ ...current, piece_price_list_id: "" }));
+        setPricingDirty(true);
+      }
       markEdited();
       setProductStatus({
         type: missing.length ? "info" : "success",
-        text: `${found.length} SKUs cargados desde Excel.${missing.length ? ` No encontrados: ${missing.slice(0, 8).join(", ")}${missing.length > 8 ? "..." : ""}` : ""}`,
+        text: `${found.length} SKUs cargados desde Excel.${rowsWithExcelPrice ? " Precio tomado del Excel." : hasValidSelectedList ? " Precio tomado de la lista seleccionada." : ""}${rowsWithoutPrice && !hasValidSelectedList ? ` ${rowsWithoutPrice} sin precio quedaron en 0 para editar.` : ""}${missing.length ? ` No encontrados: ${missing.slice(0, 8).join(", ")}${missing.length > 8 ? "..." : ""}` : ""}`,
       });
-      setMsg(`${found.length} productos importados a la preorden por pieza.`);
+      setMsg(rowsWithExcelPrice
+        ? `${found.length} productos importados. La preorden queda con precios personalizados del Excel.`
+        : `${found.length} productos importados a la preorden por pieza.`
+      );
     } catch (error) {
       setProductStatus({ type: "error", text: `No se pudo leer el Excel: ${error.message}` });
     } finally {
