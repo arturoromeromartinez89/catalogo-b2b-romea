@@ -814,7 +814,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       subtotal_mxn: item.subtotal_mxn,
     }));
     await generatePdf(pdfItems, customer, language, activeCompany, {
-      showGramos: true,
+      showGramos: !isPieceMode,
       applyIva: false,
       showBreakdown: !isPieceMode,
       pricingMode,
@@ -844,8 +844,6 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             linea: item.producto_linea || "",
             metal: item.producto_metal || "",
             kilataje: item.producto_kilataje || "",
-            peso_unitario_g: gramosPorPieza,
-            gramos_totales: gramosTotal,
             [`precio_pieza_${moneyLabel.toLowerCase()}`]: toDisplayMoney(item.precio_pieza_mxn),
             [`subtotal_${moneyLabel.toLowerCase()}`]: subtotal,
             comentarios: item.comentarios || "",
@@ -885,7 +883,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
         },
         { campo: "Tipo de cambio", valor: Number(po.tipo_cambio || 0) },
         { campo: "Total piezas", valor: totals.piezas },
-        { campo: "Total gramos", valor: Number(totals.gramos.toFixed(2)) },
+        ...(!isPieceMode ? [{ campo: "Total gramos", valor: Number(totals.gramos.toFixed(2)) }] : []),
         { campo: `Subtotal ${moneyLabel}`, valor: toDisplayMoney(totals.mxn) },
         { campo: `Total ${moneyLabel}`, valor: toDisplayMoney(totalFinalMxn) },
         { campo: "Comentarios", valor: po.notas || "" },
@@ -1057,8 +1055,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
           <section className="po-remission-group po-remission-group--totals">
             <div className="po-remission-title">Totales</div>
-            <div className="po-remission-total-row"><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
             <div className="po-remission-total-row"><span>Piezas</span><strong>{totals.piezas}</strong></div>
+            {!isPieceMode ? (
+              <div className="po-remission-total-row"><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
+            ) : null}
             <div className="po-remission-total-row po-remission-total-row--money"><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
           </section>
         </div>
@@ -1153,8 +1153,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               <div className="po-header-line">
                 <strong>Totales</strong>
               </div>
-              <div><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
               <div><span>Piezas</span><strong>{totals.piezas}</strong></div>
+              {!isPieceMode ? (
+                <div><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
+              ) : null}
               <div><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
             </div>
           </section>
@@ -1391,7 +1393,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
           <section className="po-totals-bar">
             <div><span>Piezas</span><strong>{totals.piezas}</strong></div>
-            <div><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
+            {!isPieceMode ? (
+              <div><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
+            ) : null}
             <div><span>Subtotal {moneyLabel}</span><strong>{fmt(toDisplayMoney(totals.mxn))}</strong></div>
             <div className="po-total-highlight"><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
           </section>

@@ -294,10 +294,12 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   doc.line(page.margin + 80, y, page.w - page.margin, y); y += 5;
 
   // Total gramos — muy visible
-  doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
-  txt(doc, t("TOTAL GRAMOS","TOTAL GRAMS"), page.margin + 80, y);
-  txt(doc, `${grandGramos.toFixed(2)} g`, page.w - page.margin, y, { align: "right" });
-  y += 6;
+  if (showGramos && !isPiecePricing) {
+    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
+    txt(doc, t("TOTAL GRAMOS","TOTAL GRAMS"), page.margin + 80, y);
+    txt(doc, `${grandGramos.toFixed(2)} g`, page.w - page.margin, y, { align: "right" });
+    y += 6;
+  }
 
   doc.setFontSize(9);
   txt(doc, t("TOTAL PIEZAS","TOTAL PIECES"), page.margin + 80, y);
