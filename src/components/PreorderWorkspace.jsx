@@ -16,6 +16,7 @@ const fmt = (n) =>
     : "—";
 
 const TAB_LIST = "list";
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // ─── Pestaña individual ───────────────────────────────────────────────────────
 function Tab({ tab, active, onClick, onClose }) {
@@ -197,7 +198,7 @@ export default function PreorderWorkspace({
     if (currentActive?.dirty && currentActive.type !== TAB_LIST && !window.confirm("Hay una preorden con cambios sin guardar. Guarda como borrador antes de salir. ¿Quieres cambiar de pestaña sin guardar?")) {
       return;
     }
-    const tabId = preorder?.id || `new-${Date.now()}`;
+    const tabId = UUID_RE.test(String(preorder?.id || "")) ? preorder.id : `new-${Date.now()}`;
     const existing = tabs.find((t) => t.id === tabId);
     if (existing) { setActiveId(tabId); return; }
     const label = preorder?.folio || "Nueva preorden";
@@ -205,7 +206,7 @@ export default function PreorderWorkspace({
     setActiveId(tabId);
   };
 
-  const openNewTab = () => openTab({ id: `new-${Date.now()}` });
+  const openNewTab = () => openTab({});
 
   const closeTab = (tabId, updatedDraft) => {
     const tab = tabs.find((t) => t.id === tabId);

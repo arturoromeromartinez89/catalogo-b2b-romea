@@ -26,6 +26,7 @@ const fmt = (value) =>
 const IVA_RATE = 0.16;
 const PROSPECT_CLIENT_VALUE = "__new_prospect__";
 const CUSTOM_PRICE_LIST_VALUE = "__custom_price_list__";
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PREORDER_EXCEL_COLUMNS = [
   { key: "codigo", aliases: ["codigo", "sku", "code", "modelo"] },
   { key: "cantidad", aliases: ["cantidad", "piezas", "qty", "quantity"] },
@@ -116,7 +117,8 @@ const safeFilePart = (value) =>
 function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, pricingLocked = false, tenantId = "", profile }) {
   const { language } = useLanguage();
   const company = useCompany();
-  const isNew = !initial?.id;
+  const hasSavedInitialId = UUID_RE.test(String(initial?.id || ""));
+  const isNew = !hasSavedInitialId;
   const resolvedTenantId = tenantId || initial?.tenant_id || initial?.tenantId || profile?.tenant_id || "";
 
   const blank = {
@@ -778,7 +780,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     try {
       const resolvedClientId = await resolveClientForSave();
       if (!resolvedClientId) { setMsg("Debes seleccionar un cliente o registrar un prospecto para guardar la preorden."); return; }
-      const savedId = await savePreorder({
+      const savedResult = await savePreorder({
         ...po,
         pricing_mode: pricingMode,
         labor_list_id: isPieceMode ? "" : selectedLaborListId,
@@ -788,10 +790,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
         tenant_id: resolvedTenantId,
         created_by: po.created_by || profile?.id || null,
       }, items);
-      setPo((current) => ({ ...current, id: savedId }));
+      const savedId = typeof savedResult === "string" ? savedResult : savedResult.id;
+      const savedFolio = typeof savedResult === "string" ? po.folio : savedResult.folio;
+      setPo((current) => ({ ...current, id: savedId, folio: savedFolio || current.folio }));
       setSaved(true);
       setMsg("Preorden guardada correctamente.");
-      window.setTimeout(() => onSaved?.({ id: savedId, folio: po.folio }), 900);
+      window.setTimeout(() => onSaved?.({ id: savedId, folio: savedFolio || po.folio }), 900);
     } catch (error) {
       setMsg(`Error: ${error.message}`);
     } finally {
@@ -800,7 +804,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const handlePdf = async () => {
-    if (!po.id) {
+    if (!UUID_RE.test(String(po.id || ""))) {
       setMsg("Primero guarda la preorden como borrador antes de generar PDF.");
       return;
     }

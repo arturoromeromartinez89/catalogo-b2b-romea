@@ -76,7 +76,8 @@ export const fetchPreorder = async (id) => {
 
 export const savePreorder = async (preorder, items) => {
   const totals = calcTotals(items, preorder);
-  const isNew = !preorder.id;
+  const isExisting = isValidUuid(preorder.id);
+  const isNew = !isExisting;
 
   // Limpiar campos vacíos que son UUID en Supabase
   const {
@@ -111,7 +112,7 @@ export const savePreorder = async (preorder, items) => {
     updated_at: new Date().toISOString(),
   });
 
-  let preorderId = preorder.id;
+  let preorderId = isExisting ? preorder.id : null;
 
   if (isNew) {
     const { data, error } = await supabase
@@ -161,7 +162,7 @@ export const savePreorder = async (preorder, items) => {
     if (error) throw error;
   }
 
-  return preorderId;
+  return { id: preorderId, folio: preorderData.folio };
 };
 
 export const updatePreorderStatus = async (id, status) => {
