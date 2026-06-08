@@ -148,6 +148,7 @@ export const savePreorder = async (preorder, items) => {
         _configurable_group,
         _configurable_title,
         _configurable_base_description,
+        _configurable_base_foto_url,
         _configurable_base_weight,
         _configurable_selections,
         _configurable_variant_code,

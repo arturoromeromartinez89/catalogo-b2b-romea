@@ -72,6 +72,7 @@ const buildConfigurablePreorderItem = (product, quantity = 1) => {
     _configurable_group: true,
     _configurable_title: product.configurableTitle || product.descripcion,
     _configurable_base_description: product.configurableTitle || product.descripcion,
+    _configurable_base_foto_url: product.fotoUrl || "",
     _configurable_base_weight: Number(product.pesoPromedio || 0),
     _configurable_selections: {},
     _configurable_variants: (product.variants || []).map((variant) => ({
@@ -1562,8 +1563,45 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                         <td>
                           <div>{item.producto_descripcion}</div>
                           {isConfigurableItem ? (
-                            <div className="configurable-components-grid">
-                              {CONFIGURABLE_COMPONENT_STEPS.map((step) => {
+                            <div className="configurable-builder">
+                              <div className="configurable-visual-row">
+                                <article className="configurable-visual-card">
+                                  <span>Tejido / base</span>
+                                  <img
+                                    src={imageUrlForSize(item._configurable_base_foto_url || item.producto_foto_url, 120) || buildPlaceholderUrl()}
+                                    alt={item._configurable_base_description || item.producto_descripcion}
+                                    loading="lazy"
+                                    decoding="async"
+                                    onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
+                                  />
+                                  <strong>{item._configurable_base_description || item.producto_descripcion}</strong>
+                                </article>
+
+                                <label className="configurable-visual-card configurable-visual-card--select">
+                                  <span>Broche</span>
+                                  <img
+                                    src={imageUrlForSize(item._configurable_selections?.broche?.fotoUrl, 120) || buildPlaceholderUrl()}
+                                    alt={item._configurable_selections?.broche?.nombre || "Broche"}
+                                    loading="lazy"
+                                    decoding="async"
+                                    onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
+                                  />
+                                  <select
+                                    value={item._configurable_selections?.broche?.codigo || ""}
+                                    onChange={(event) => setConfigurableComponent(idx, "broche", event.target.value)}
+                                  >
+                                    <option value="">Selecciona broche...</option>
+                                    {getConfigurableOptions(item, "broche").map((component) => (
+                                      <option key={component.id || component.codigo} value={component.codigo}>
+                                        {component.nombre}{component.peso ? ` (+${component.peso} ${component.unidad || "g"})` : ""}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              </div>
+
+                              <div className="configurable-components-grid">
+                                {CONFIGURABLE_COMPONENT_STEPS.filter((step) => step.key !== "broche").map((step) => {
                                 const selectedCode = item._configurable_selections?.[step.key]?.codigo || "";
                                 const options = getConfigurableOptions(item, step.key);
                                 return (
@@ -1582,7 +1620,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                                     </select>
                                   </label>
                                 );
-                              })}
+                                })}
+                              </div>
                             </div>
                           ) : null}
                           <small>{[item.producto_metal, item.producto_kilataje].filter(Boolean).join(" / ")}</small>
