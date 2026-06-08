@@ -37,6 +37,7 @@ import {
 import { fetchTenants, makeTenantSlug, saveTenant } from "../services/tenantService";
 import { isSuperAdmin } from "../services/tenantUtils";
 import { normalizeProduct, parseExcelFile } from "../utils/excelParser";
+import { buildConfigurableCatalogProducts, hasConfigurableCatalogProducts, isConfigurableCatalogCompany, isConfigurableProductGroup } from "../utils/configurableCatalog";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
@@ -239,6 +240,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [catalogPdfOpen, setCatalogPdfOpen] = useState(false);
   const [quoteLinkOpen, setQuoteLinkOpen] = useState(false);
   const [selectionDrawerOpen, setSelectionDrawerOpen] = useState(false);
+  const [configurableChoice, setConfigurableChoice] = useState(null);
   const [tenantForm, setTenantForm] = useState({ name: "", slug: "", status: "active" });
   const [signingOut, setSigningOut] = useState(false);
   const cameraVideoRef = useRef(null);
@@ -349,11 +351,19 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
 
   const products = data ? data.products : sampleProducts;
   const selectedClient = useMemo(() => data?.clients.find((client) => client.id === selectedClientId), [data?.clients, selectedClientId]);
-  const selectedProduct = useMemo(() => products.find((product) => product.codigo === selectedProductCode), [products, selectedProductCode]);
+  const configurableCatalogEnabled = useMemo(
+    () => isConfigurableCatalogCompany({ activeTenant, activeCompany, supportTenantName }) || hasConfigurableCatalogProducts(products),
+    [activeTenant, activeCompany, supportTenantName, products]
+  );
+  const catalogProducts = useMemo(
+    () => configurableCatalogEnabled ? buildConfigurableCatalogProducts(products) : products,
+    [configurableCatalogEnabled, products]
+  );
+  const selectedProduct = useMemo(() => catalogProducts.find((product) => product.codigo === selectedProductCode), [catalogProducts, selectedProductCode]);
   const filterOptions = useMemo(() => buildFilterOptions(products), [products]);
   const filteredProducts = useMemo(
-    () => applyFilters(products, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips),
-    [products, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips]
+    () => applyFilters(catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips),
+    [catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips]
   );
   const renderedProducts = useMemo(
     () => filteredProducts.slice(0, visibleProductLimit),
@@ -392,8 +402,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     });
   }, [deferredProspectSearch, prospectStatusFilter, prospects]);
   const checkedProducts = useMemo(
-    () => products.filter((product) => checkedIds.has(product.codigo)),
-    [products, checkedIds]
+    () => catalogProducts.filter((product) => checkedIds.has(product.codigo)),
+    [catalogProducts, checkedIds]
   );
   const catalogSelectionProducts = useMemo(
     () => products.filter((product) => catalogSelectionIds.has(product.codigo)),
@@ -596,19 +606,19 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const isClientPriceActive = (priceListId) =>
     data?.clientPriceLists.some((item) => item.client_id === selectedClientId && item.price_list_id === priceListId && item.active);
 
-  const addToCart = (product, quantity = 1) => {
+  const addRealProductToCart = (product, quantity = 1, context = {}) => {
     if (!tenantId) {
       setStatus("Primero selecciona una empresa para crear preórdenes.");
       return;
     }
-    const nextItem = buildBaseDraftItem(product, quantity);
+    const nextItem = { ...buildBaseDraftItem(product, quantity), ...context };
     setDraftPreorder((current) => {
       const preorder = current || { status: "pendiente", tenant_id: tenantId, created_by: profile?.id || "", preorder_items: [] };
       const existing = preorder.preorder_items.find((item) => item.producto_codigo === product.codigo);
       const preorderItems = existing
         ? preorder.preorder_items.map((item) =>
             item.producto_codigo === product.codigo
-              ? buildBaseDraftItem(product, Number(item.piezas || 0) + Number(nextItem.piezas || 0))
+              ? { ...buildBaseDraftItem(product, Number(item.piezas || 0) + Number(nextItem.piezas || 0)), ...context }
               : item
           )
         : [...preorder.preorder_items, nextItem];
@@ -618,6 +628,25 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     setSelectionDrawerOpen(true);
     setLastActionMessage(`Producto ${product.codigo} agregado a pre-orden.`);
     setStatus(`Producto ${product.codigo} agregado a la preorden en proceso.`);
+  };
+
+  const addToCart = (product, quantity = 1) => {
+    if (isConfigurableProductGroup(product)) {
+      setConfigurableChoice({ product, quantity });
+      return;
+    }
+    addRealProductToCart(product, quantity);
+  };
+
+  const addConfigurableVariantToCart = (variant) => {
+    if (!configurableChoice?.product || !variant?.product) return;
+    const group = configurableChoice.product;
+    const description = `${variant.label} ${group.configurableTitle || group.descripcion}`.trim();
+    addRealProductToCart(variant.product, configurableChoice.quantity || 1, {
+      producto_descripcion: description,
+      comentarios: `Configurado desde ${group.configurableTitle || group.descripcion}`,
+    });
+    setConfigurableChoice(null);
   };
 
   const removeFromPreorder = (code) => {
@@ -868,10 +897,17 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     });
   };
 
+  const getCatalogSelectionCodes = (product) => {
+    if (!isConfigurableProductGroup(product)) return product?.codigo ? [product.codigo] : [];
+    return (product.variants || []).map((variant) => variant.product?.codigo).filter(Boolean);
+  };
+
   const addToCatalogSelection = (product) => {
+    const codes = getCatalogSelectionCodes(product);
+    if (!codes.length) return;
     setCatalogSelectionIds((current) => {
       const next = new Set(current);
-      next.add(product.codigo);
+      codes.forEach((code) => next.add(code));
       return next;
     });
     setSelectionDrawerOpen(true);
@@ -893,10 +929,11 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       notifyAction("warning", "Sin productos marcados", "Marca productos primero para agregarlos al catalogo.");
       return;
     }
-    const selectedCount = checkedIds.size;
+    const codesToAdd = checkedProducts.flatMap(getCatalogSelectionCodes);
+    const selectedCount = codesToAdd.length;
     setCatalogSelectionIds((current) => {
       const next = new Set(current);
-      checkedIds.forEach((code) => next.add(code));
+      codesToAdd.forEach((code) => next.add(code));
       return next;
     });
     setCheckedIds(new Set());
@@ -911,11 +948,22 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       notifyAction("warning", "Sin productos marcados", "Marca productos primero para agregarlos a pre-orden.");
       return;
     }
-    checkedProducts.forEach((product) => addToCart(product));
+    const configurableProducts = checkedProducts.filter(isConfigurableProductGroup);
+    const regularProducts = checkedProducts.filter((product) => !isConfigurableProductGroup(product));
+    regularProducts.forEach((product) => addToCart(product));
     setCheckedIds(new Set());
     setSelectionDrawerOpen(true);
-    setLastActionMessage(`${checkedProducts.length.toLocaleString()} productos agregados a pre-orden.`);
-    notifyAction("success", "Pre-orden actualizada", `${checkedProducts.length.toLocaleString()} productos agregados a pre-orden.`);
+    if (regularProducts.length) {
+      setLastActionMessage(`${regularProducts.length.toLocaleString()} productos agregados a pre-orden.`);
+      notifyAction("success", "Pre-orden actualizada", `${regularProducts.length.toLocaleString()} productos agregados a pre-orden.`);
+    }
+    if (configurableProducts.length) {
+      notifyAction(
+        "warning",
+        "Configura cada producto",
+        `${configurableProducts.length.toLocaleString()} productos configurables requieren elegir tipo de pieza.`
+      );
+    }
   };
 
   const openCatalogPdfPanel = () => {
@@ -1308,6 +1356,51 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           tenantId={tenantId}
           onClose={() => setQuoteLinkOpen(false)}
         />
+      ) : null}
+
+      {configurableChoice?.product ? (
+        <div className="client-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="configurable-product-title">
+          <section className="client-modal configurable-product-modal">
+            <header>
+              <div>
+                <span className="tool-eyebrow">Producto configurable</span>
+                <h2 id="configurable-product-title">
+                  {configurableChoice.product.configurableTitle || configurableChoice.product.descripcion}
+                </h2>
+              </div>
+              <button className="icon-button" type="button" aria-label="Cerrar" onClick={() => setConfigurableChoice(null)}>
+                x
+              </button>
+            </header>
+            <div className="client-modal-body configurable-product-body">
+              <p className="wide-field muted">
+                Elige el tipo de pieza para agregarla a la preorden. Cada opcion conserva su SKU real.
+              </p>
+              <div className="configurable-variant-grid">
+                {(configurableChoice.product.variants || []).map((variant) => (
+                  <button
+                    className="configurable-variant-card"
+                    type="button"
+                    key={variant.product.codigo}
+                    onClick={() => addConfigurableVariantToCart(variant)}
+                  >
+                    <img
+                      src={imageUrlForSize(variant.product.fotoUrl, 180) || buildPlaceholderUrl(t("noPhoto"))}
+                      alt={variant.product.descripcion}
+                      onError={(event) => {
+                        event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
+                      }}
+                    />
+                    <span>{variant.label}</span>
+                    <strong>{variant.product.codigo}</strong>
+                    <small>{shortText(variant.product.descripcion, 70)}</small>
+                    <em>{formatWeight(variant.product.pesoPromedio)}</em>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
       ) : null}
 
       {checkedIds.size ? (
