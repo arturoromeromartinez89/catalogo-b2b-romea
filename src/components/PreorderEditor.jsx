@@ -9,6 +9,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { buildPlaceholderUrl, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 import { buildPreorderItemFromProduct } from "../utils/preorderUtils";
+import { buildConfigurableCatalogProducts, isConfigurableProductGroup } from "../utils/configurableCatalog";
 
 const STATUS = {
   pendiente: { label: "Pendiente de revision", color: "#d97706" },
@@ -44,6 +45,34 @@ const calcItem = (item) => {
   const pGramo = Number(item.precio_gramo_mxn || 0);
   return { ...item, gramos_total: gTotal, subtotal_mxn: gTotal * pGramo };
 };
+
+const buildConfigurablePreorderItem = (product, quantity = 1) => {
+  const piezas = Math.max(1, Number(quantity || 1));
+  return {
+    producto_codigo: product.codigo,
+    producto_descripcion: product.configurableTitle || product.descripcion,
+    producto_metal: product.metal,
+    producto_kilataje: product.kilataje,
+    producto_linea: product.linea,
+    producto_foto_url: product.fotoUrl || "",
+    piezas,
+    gramos_por_pieza: Number(product.pesoPromedio || 0),
+    gramos_total: piezas * Number(product.pesoPromedio || 0),
+    labor_mxn: 0,
+    precio_gramo_mxn: 0,
+    subtotal_mxn: 0,
+    comentarios: "Pendiente de configurar tipo de pieza",
+    _configurable_group: true,
+    _configurable_title: product.configurableTitle || product.descripcion,
+    _configurable_variants: (product.variants || []).map((variant) => ({
+      code: variant.code,
+      label: variant.label,
+      product: variant.product,
+    })),
+  };
+};
+
+const hasUnconfiguredItems = (items = []) => items.some((item) => item?._configurable_group);
 
 const Field = ({ label, children }) => (
   <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: "var(--color-text-secondary)" }}>
@@ -530,24 +559,31 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const ivaMxn = po.aplicar_iva ? totals.mxn * IVA_RATE : 0;
   const totalFinalMxn = totals.mxn + ivaMxn;
 
+  const preorderCatalogProducts = useMemo(
+    () => buildConfigurableCatalogProducts(products || []),
+    [products]
+  );
+
   const productResults = useMemo(() => {
     const term = normalizeText(productSearch);
     if (!term || term.length < 2) return [];
-    return products
+    return preorderCatalogProducts
       .filter((product) => {
         const text = product.searchText || normalizeText([product.codigo, product.descripcion, product.linea, product.familia].join(" "));
         return term.split(/\s+/).every((word) => text.includes(word));
       })
       .slice(0, 8);
-  }, [productSearch, products]);
+  }, [productSearch, preorderCatalogProducts]);
 
   const addProduct = (product) => {
     const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
     const selectedPieceList = piecePriceLists.find((entry) => entry.id === selectedPiecePriceListId);
     const rawItem = buildPreorderItemFromProduct(product, 1, lines, plataFinaMxn);
-    const nextItem = isPieceMode
-      ? pricePieceItemFromList({ ...rawItem, pricing_mode: "piece" }, piecePriceItems, selectedPieceList)
-      : priceItemFromLines(rawItem, lines, selectedList, getListSilverMxn(selectedList));
+    const nextItem = isConfigurableProductGroup(product)
+      ? buildConfigurablePreorderItem(product, 1)
+      : isPieceMode
+        ? pricePieceItemFromList({ ...rawItem, pricing_mode: "piece" }, piecePriceItems, selectedPieceList)
+        : priceItemFromLines(rawItem, lines, selectedList, getListSilverMxn(selectedList));
     setItems((current) => {
       const existing = current.find((item) => item.producto_codigo === nextItem.producto_codigo);
       if (existing) {
@@ -561,8 +597,17 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     });
     markEdited();
     setProductSearch("");
-    setMsg(`${product.codigo} agregado a la preorden.`);
-    setProductStatus({ type: "success", text: `${product.codigo} agregado. Listo para el siguiente.` });
+    setMsg(
+      isConfigurableProductGroup(product)
+        ? `${product.configurableTitle || product.descripcion} agregado. Configura el tipo de pieza en la tabla.`
+        : `${product.codigo} agregado a la preorden.`
+    );
+    setProductStatus({
+      type: "success",
+      text: isConfigurableProductGroup(product)
+        ? "Base agregada. Ahora elige tipo de pieza en la fila de la preorden."
+        : `${product.codigo} agregado. Listo para el siguiente.`,
+    });
     window.setTimeout(() => scannerInputRef.current?.focus(), 80);
   };
 
@@ -673,10 +718,39 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     }
   };
 
+  const applyConfigurableVariant = (idx, variantCode) => {
+    const sourceItem = items[idx];
+    const variant = (sourceItem?._configurable_variants || []).find((entry) => entry.product?.codigo === variantCode);
+    if (!variant?.product) return;
+
+    const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
+    const selectedPieceList = piecePriceLists.find((entry) => entry.id === selectedPiecePriceListId);
+    const rawItem = buildPreorderItemFromProduct(variant.product, Number(sourceItem.piezas || 1), lines, plataFinaMxn);
+    const pricedItem = isPieceMode
+      ? pricePieceItemFromList({ ...rawItem, pricing_mode: "piece" }, piecePriceItems, selectedPieceList)
+      : priceItemFromLines(rawItem, lines, selectedList, getListSilverMxn(selectedList));
+    const configuredDescription = `${variant.label} ${sourceItem._configurable_title || sourceItem.producto_descripcion}`.trim();
+
+    setItems((current) =>
+      current.map((item, itemIdx) =>
+        itemIdx === idx
+          ? {
+              ...pricedItem,
+              producto_descripcion: configuredDescription,
+              comentarios: "",
+            }
+          : item
+      )
+    );
+    markEdited();
+    setMsg(`${variant.product.codigo} configurado en la preorden.`);
+    setProductStatus({ type: "success", text: `${variant.product.codigo} configurado. Puedes seguir agregando productos.` });
+  };
+
   const findProductByScan = (code) => {
     const scanned = normalizeText(code);
     if (!scanned) return null;
-    return products.find((product) => {
+    return preorderCatalogProducts.find((product) => {
       const candidates = [
         product.codigo,
         product.modelo,
@@ -774,6 +848,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const handleSave = async () => {
     if (!items.length) { setMsg("Agrega al menos un producto para guardar la preorden."); return; }
+    if (hasUnconfiguredItems(items)) {
+      setMsg("Configura el tipo de pieza en todos los productos pendientes antes de guardar.");
+      return;
+    }
     setSaving(true);
     setSaved(false);
     try {
@@ -803,6 +881,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const handlePdf = async () => {
+    if (hasUnconfiguredItems(items)) {
+      setMsg("Configura el tipo de pieza en todos los productos pendientes antes de generar PDF.");
+      return;
+    }
     if (!UUID_RE.test(String(po.id || ""))) {
       setMsg("Primero guarda la preorden antes de generar PDF.");
       return;
@@ -1365,6 +1447,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 </thead>
                 <tbody>
                   {items.length ? items.map((item, idx) => {
+                    const isConfigurableItem = Boolean(item._configurable_group);
                     const fineSilver = Math.max(0, Number(item.precio_gramo_mxn || 0) - Number(item.labor_mxn || 0));
                     return (
                       <tr key={`${item.producto_codigo}-${idx}`}>
@@ -1392,6 +1475,20 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                         </td>
                         <td>
                           <div>{item.producto_descripcion}</div>
+                          {isConfigurableItem ? (
+                            <select
+                              value=""
+                              onChange={(event) => applyConfigurableVariant(idx, event.target.value)}
+                              style={{ marginTop: 6, width: "100%" }}
+                            >
+                              <option value="">Configurar tipo de pieza...</option>
+                              {(item._configurable_variants || []).map((variant) => (
+                                <option key={variant.product?.codigo || variant.code} value={variant.product?.codigo || ""}>
+                                  {variant.label} - {variant.product?.codigo}
+                                </option>
+                              ))}
+                            </select>
+                          ) : null}
                           <small>{[item.producto_metal, item.producto_kilataje].filter(Boolean).join(" / ")}</small>
                         </td>
                         <td><strong>{item.producto_linea || "-"}</strong></td>
