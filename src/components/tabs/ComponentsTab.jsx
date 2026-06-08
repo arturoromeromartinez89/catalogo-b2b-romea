@@ -46,44 +46,6 @@ const MetadataFields = ({ tipo, metadata, onChange }) => {
       </label>
     );
   }
-  if (tipo === "tipo_pieza") {
-    return (
-      <div className="components-meta-group">
-        <label className="components-meta-check">
-          <input
-            type="checkbox"
-            checked={Boolean(metadata?.excluye_placa_militar)}
-            onChange={(e) => {
-              const next = { ...metadata, excluye_placa_militar: e.target.checked };
-              if (e.target.checked) next.fuerza_placa_militar = false;
-              onChange(next);
-            }}
-          />
-          <span>Excluye Placa Militar del selector de broche</span>
-        </label>
-        <label className="components-meta-check">
-          <input
-            type="checkbox"
-            checked={Boolean(metadata?.fuerza_placa_militar)}
-            onChange={(e) => {
-              const next = { ...metadata, fuerza_placa_militar: e.target.checked };
-              if (e.target.checked) next.excluye_placa_militant = false;
-              onChange(next);
-            }}
-          />
-          <span>Fuerza Placa Militar como broche (Esclava placa militar)</span>
-        </label>
-        <label className="components-meta-check">
-          <input
-            type="checkbox"
-            checked={Boolean(metadata?.requiere_diseño_placa)}
-            onChange={(e) => set("requiere_diseño_placa", e.target.checked)}
-          />
-          <span>Muestra selector de diseño de placa</span>
-        </label>
-      </div>
-    );
-  }
   return null;
 };
 
@@ -422,10 +384,8 @@ export default function ComponentsTab({ tenantId }) {
           <h3>{activeTypeInfo?.icon} {activeTypeInfo?.label}</h3>
           <span className="components-table-hint">
             {activeType === "broche" && "Activa el flag 'Es placa militar' en los broches tipo placa para activar las reglas de Esclava militar."}
-            {activeType === "tipo_pieza" && "Configura las reglas de compatibilidad con broches desde el boton Editar."}
-            {activeType === "tejido" && "El peso es por gramo del tejido — se multiplica por el largo al calcular."}
-            {activeType === "largo" && "El peso aqui no aplica — el largo afecta el total multiplicando gramos base del tejido."}
-            {activeType === "diseño_placa" && "Disenos de placa disponibles para esclavas (placa en medio y placa militar)."}
+            {activeType === "largo" && "El largo condiciona el peso total del producto — registra el largo en mm o cm."}
+            {activeType === "diseño_placa" && "Diseños de placa disponibles para Esclava placa en medio y Esclava placa militar."}
           </span>
         </div>
 

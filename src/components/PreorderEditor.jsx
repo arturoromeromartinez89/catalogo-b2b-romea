@@ -28,16 +28,35 @@ const IVA_RATE = 0.16;
 const PROSPECT_CLIENT_VALUE = "__new_prospect__";
 const CUSTOM_PRICE_LIST_VALUE = "__custom_price_list__";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-// Pasos del configurador. Los condicionales se muestran según reglas de metadata.
-const CONFIGURABLE_COMPONENT_STEPS = [
-  { key: "tipo_pieza",    label: "Tipo de pieza",   required: true,  conditional: false },
-  { key: "broche",        label: "Broche",           required: true,  conditional: false },
-  { key: "diseño_placa",  label: "Diseño de placa",  required: false, conditional: true  },
-  { key: "largo",         label: "Largo",            required: true,  conditional: false },
-  { key: "terminado",     label: "Terminado",        required: true,  conditional: false },
+// ---------------------------------------------------------------------------
+// Tipos de pieza — selector lógico, NO es un componente con peso.
+// Determina qué componentes físicos se activan (broche, diseño de placa).
+// ---------------------------------------------------------------------------
+const PIECE_TYPES = [
+  { codigo: "CADENA",          nombre: "Cadena",                 metadata: { excluye_placa_militar: true } },
+  { codigo: "PULSO",           nombre: "Pulso",                  metadata: { excluye_placa_militar: true } },
+  { codigo: "ESCLAVA-MEDIO",   nombre: "Esclava placa en medio", metadata: { excluye_placa_militar: true, requiere_diseño_placa: true } },
+  { codigo: "ESCLAVA-MILITAR", nombre: "Esclava placa militar",  metadata: { fuerza_placa_militar: true,  requiere_diseño_placa: true } },
 ];
 
-// Helpers de reglas — leen metadata del componente tipo_pieza seleccionado
+// Mapeo de código de variante de SKU → tipo de pieza
+const VARIANT_TO_PIECE_TYPE = {
+  CHN: "CADENA",
+  BRC: "PULSO",
+  IDB: "ESCLAVA-MEDIO",
+  IDL: "ESCLAVA-MILITAR",
+};
+
+// Pasos del configurador (broche, diseño_placa, largo, terminado)
+// tipo_pieza es un selector aparte que activa/desactiva los demás.
+const CONFIGURABLE_COMPONENT_STEPS = [
+  { key: "broche",       label: "Broche",          required: true,  conditional: false },
+  { key: "diseño_placa", label: "Diseño de placa",  required: false, conditional: true  },
+  { key: "largo",        label: "Largo",            required: true,  conditional: false },
+  { key: "terminado",    label: "Terminado",        required: true,  conditional: false },
+];
+
+// Helpers de reglas — leen metadata del tipo_pieza seleccionado
 const tipoPiezaExcluyePlacaMilitar = (item) =>
   Boolean(item?._configurable_selections?.tipo_pieza?.metadata?.excluye_placa_militar);
 
@@ -67,6 +86,9 @@ const calcItem = (item) => {
 
 const buildConfigurablePreorderItem = (product, quantity = 1) => {
   const piezas = Math.max(1, Number(quantity || 1));
+  // SKU base = solo el código de tejido + tamaño, ej: "CHI-10MM"
+  // product.codigo puede ser "CFG-001-CHI-10MM" → quitamos el prefijo "CFG-XXX-"
+  const baseCodigo = String(product.codigo || "").replace(/^CFG-[^-]+-/, "");
   return {
     producto_codigo: product.codigo,
     producto_descripcion: product.configurableTitle || product.descripcion,
@@ -82,6 +104,7 @@ const buildConfigurablePreorderItem = (product, quantity = 1) => {
     subtotal_mxn: 0,
     comentarios: "Pendiente de configurar tipo de pieza",
     _configurable_group: true,
+    _configurable_base_code: baseCodigo,
     _configurable_title: product.configurableTitle || product.descripcion,
     _configurable_base_description: product.configurableTitle || product.descripcion,
     _configurable_base_foto_url: product.fotoUrl || "",
@@ -786,28 +809,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const getConfigurableOptions = (item, componentType) => {
-    // tipo_pieza: mezcla variantes del producto con componentes de DB
+    // tipo_pieza: usa lista fija (selector lógico, no un componente con peso)
     if (componentType === "tipo_pieza") {
-      const byKey = new Map();
-      (componentGroups.tipo_pieza || []).forEach((component) => {
-        byKey.set(normalizeText(component.nombre || component.codigo), component);
-      });
-      (item?._configurable_variants || []).forEach((variant, index) => {
-        const key = normalizeText(variant.label || variant.code || `tipo-${index}`);
-        if (byKey.has(key)) return;
-        byKey.set(key, {
-          id: variant.product?.codigo || variant.code || key,
-          codigo: variant.product?.codigo || variant.code || key,
-          nombre: variant.label || variant.code,
-          tipo: "tipo_pieza",
-          peso: 0,
-          unidad: "pza",
-          metadata: {},
-          product: variant.product,
-          orden: 100 + index,
-        });
-      });
-      return [...byKey.values()].sort((a, b) => Number(a.orden || 0) - Number(b.orden || 0));
+      return PIECE_TYPES;
     }
 
     // broche: filtrar según tipo_pieza seleccionado
@@ -1613,7 +1617,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                             <span className="quote-item-photo-placeholder">Sin foto</span>
                           ) : null}
                         </td>
-                        <td><strong>{item.producto_codigo}</strong></td>
+                        <td><strong>{isConfigurableItem ? (item._configurable_base_code || item.producto_codigo) : item.producto_codigo}</strong></td>
                         <td>
                           <div className="qty-stepper">
                             <button type="button" onClick={() => adjustQuantity(idx, -1)}>-</button>

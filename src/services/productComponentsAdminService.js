@@ -1,16 +1,17 @@
 import { supabase } from "../lib/supabaseClient";
 
 // ─── Tipos disponibles ────────────────────────────────────────────────────────
+// Tejido = SKU base (tabla productos), NO es componente físico con peso.
+// Tipo de pieza = selector lógico del configurador, NO tiene entrada aquí.
+// Solo se gestionan componentes físicos con peso propio.
 export const COMPONENT_TYPES = [
-  { key: "tejido",       label: "Tejidos",            icon: "▦" },
-  { key: "tipo_pieza",   label: "Tipos de pieza",     icon: "◈" },
-  { key: "broche",       label: "Broches",             icon: "◉" },
+  { key: "broche",       label: "Broches",            icon: "◉" },
   { key: "diseño_placa", label: "Diseños de placa",   icon: "▣" },
-  { key: "largo",        label: "Largos",              icon: "↔" },
-  { key: "terminado",    label: "Terminados",          icon: "◎" },
-  { key: "piedra",       label: "Piedras",             icon: "◆" },
-  { key: "accesorio",    label: "Accesorios",          icon: "◇" },
-  { key: "otro",         label: "Otros",               icon: "○" },
+  { key: "largo",        label: "Largos",             icon: "↔" },
+  { key: "terminado",    label: "Terminados",         icon: "◎" },
+  { key: "piedra",       label: "Piedras",            icon: "◆" },
+  { key: "accesorio",    label: "Accesorios",         icon: "◇" },
+  { key: "otro",         label: "Otros",              icon: "○" },
 ];
 
 export const COMPONENT_TYPE_KEYS = COMPONENT_TYPES.map((t) => t.key);
