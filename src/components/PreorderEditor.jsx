@@ -1601,10 +1601,223 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   {items.length ? items.map((item, idx) => {
                     const isConfigurableItem = Boolean(item._configurable_group);
                     const fineSilver = Math.max(0, Number(item.precio_gramo_mxn || 0) - Number(item.labor_mxn || 0));
+
+                    // ── Fila configurable: tarjeta de ancho completo ────────────────
+                    if (isConfigurableItem) {
+                      const colCount = isPieceMode ? 9 : 13;
+                      const isComplete = isConfigurableItemComplete(item);
+                      return (
+                        <tr key={`${item.producto_codigo}-${idx}`} className="cfg-item-row">
+                          <td colSpan={colCount} className="cfg-item-cell">
+                            <div className={`cfg-card${isComplete ? " cfg-card--complete" : ""}`}>
+
+                              {/* ── Cabecera de la tarjeta ────────────────────────── */}
+                              <div className="cfg-card__header">
+                                <div className="cfg-card__header-left">
+                                  {item._configurable_base_foto_url || item.producto_foto_url ? (
+                                    <img
+                                      className="cfg-card__tejido-thumb"
+                                      src={imageUrlForSize(item._configurable_base_foto_url || item.producto_foto_url, 120)}
+                                      alt={item._configurable_base_code}
+                                      loading="lazy"
+                                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                    />
+                                  ) : (
+                                    <div className="cfg-card__tejido-thumb cfg-card__tejido-thumb--empty">
+                                      {item._configurable_base_code?.split("-")[0] || "—"}
+                                    </div>
+                                  )}
+                                  <div className="cfg-card__title-block">
+                                    <span className="cfg-card__sku">{item._configurable_base_code || item.producto_codigo}</span>
+                                    <span className="cfg-card__name">{item._configurable_title || item.producto_descripcion}</span>
+                                    <span className="cfg-card__meta">{[item.producto_metal, item.producto_kilataje].filter(Boolean).join(" · ")}</span>
+                                  </div>
+                                </div>
+                                <div className="cfg-card__header-right">
+                                  {isComplete
+                                    ? <span className="cfg-badge cfg-badge--ok">✓ Completo</span>
+                                    : <span className="cfg-badge cfg-badge--pending">Pendiente</span>
+                                  }
+                                  <button className="table-delete" type="button" onClick={() => setItems((c) => c.filter((_, i) => i !== idx))}>×</button>
+                                </div>
+                              </div>
+
+                              {/* ══════════════════════════════════════════════════ */}
+                              {/* SECCIÓN 1 — CONFIGURAR                           */}
+                              {/* ══════════════════════════════════════════════════ */}
+                              <div className="cfg-section">
+                                <div className="cfg-section__label">
+                                  <span className="cfg-section__num">1</span> Configurar modelo
+                                </div>
+                                <div className="cfg-selectors">
+
+                                  {/* Tipo de pieza — ancho completo */}
+                                  <label className="cfg-field cfg-field--full">
+                                    <span className="cfg-field__label">Tipo de pieza</span>
+                                    <select
+                                      className="cfg-field__select"
+                                      value={item._configurable_selections?.tipo_pieza?.codigo || ""}
+                                      onChange={(e) => setConfigurableComponent(idx, "tipo_pieza", e.target.value)}
+                                    >
+                                      <option value="">— Selecciona tipo de pieza —</option>
+                                      {getConfigurableOptions(item, "tipo_pieza").map((c) => (
+                                        <option key={c.codigo} value={c.codigo}>{c.nombre}</option>
+                                      ))}
+                                    </select>
+                                  </label>
+
+                                  {/* Broche (con preview de foto si existe) */}
+                                  <label className={`cfg-field cfg-field--broche${item._configurable_selections?.broche ? " cfg-field--selected" : ""}`}>
+                                    <span className="cfg-field__label">Broche</span>
+                                    {item._configurable_selections?.broche?.fotoUrl ? (
+                                      <img
+                                        className="cfg-field__photo"
+                                        src={imageUrlForSize(item._configurable_selections.broche.fotoUrl, 80)}
+                                        alt={item._configurable_selections.broche.nombre}
+                                        loading="lazy"
+                                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                      />
+                                    ) : null}
+                                    <select
+                                      className="cfg-field__select"
+                                      value={item._configurable_selections?.broche?.codigo || ""}
+                                      onChange={(e) => setConfigurableComponent(idx, "broche", e.target.value)}
+                                      disabled={!item._configurable_selections?.tipo_pieza}
+                                    >
+                                      <option value="">{item._configurable_selections?.tipo_pieza ? "— Selecciona broche —" : "Primero elige tipo de pieza"}</option>
+                                      {getConfigurableOptions(item, "broche").map((c) => (
+                                        <option key={c.id || c.codigo} value={c.codigo}>
+                                          {c.nombre}{c.peso ? ` (+${c.peso}g)` : ""}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+
+                                  {/* Diseño de placa — solo cuando aplica */}
+                                  {tipoPiezaRequiereDiseñoPlaca(item) ? (
+                                    <label className="cfg-field cfg-field--diseño">
+                                      <span className="cfg-field__label">
+                                        {tipoPiezaFuerzaPlacaMilitar(item) ? "Diseño de placa militar" : "Diseño de placa"}
+                                      </span>
+                                      <select
+                                        className="cfg-field__select"
+                                        value={item._configurable_selections?.["diseño_placa"]?.codigo || ""}
+                                        onChange={(e) => setConfigurableComponent(idx, "diseño_placa", e.target.value)}
+                                      >
+                                        <option value="">— Selecciona diseño —</option>
+                                        {getConfigurableOptions(item, "diseño_placa").map((c) => (
+                                          <option key={c.id || c.codigo} value={c.codigo}>{c.nombre}</option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                  ) : null}
+
+                                  {/* Largo */}
+                                  <label className="cfg-field">
+                                    <span className="cfg-field__label">Largo</span>
+                                    <select
+                                      className="cfg-field__select"
+                                      value={item._configurable_selections?.largo?.codigo || ""}
+                                      onChange={(e) => setConfigurableComponent(idx, "largo", e.target.value)}
+                                    >
+                                      <option value="">— Selecciona largo —</option>
+                                      {getConfigurableOptions(item, "largo").map((c) => (
+                                        <option key={c.id || c.codigo} value={c.codigo}>{c.nombre}</option>
+                                      ))}
+                                    </select>
+                                  </label>
+
+                                  {/* Terminado */}
+                                  <label className="cfg-field">
+                                    <span className="cfg-field__label">Terminado</span>
+                                    <select
+                                      className="cfg-field__select"
+                                      value={item._configurable_selections?.terminado?.codigo || ""}
+                                      onChange={(e) => setConfigurableComponent(idx, "terminado", e.target.value)}
+                                    >
+                                      <option value="">— Selecciona terminado —</option>
+                                      {getConfigurableOptions(item, "terminado").map((c) => (
+                                        <option key={c.id || c.codigo} value={c.codigo}>{c.nombre}</option>
+                                      ))}
+                                    </select>
+                                  </label>
+
+                                </div>
+                              </div>
+
+                              {/* ══════════════════════════════════════════════════ */}
+                              {/* SECCIÓN 2 — CANTIDAD Y PESOS                     */}
+                              {/* ══════════════════════════════════════════════════ */}
+                              <div className="cfg-section">
+                                <div className="cfg-section__label">
+                                  <span className="cfg-section__num">2</span> Cantidad y pesos
+                                </div>
+                                <div className="cfg-pricing">
+
+                                  {/* Piezas */}
+                                  <div className="cfg-pricing__field">
+                                    <span className="cfg-pricing__label">Piezas</span>
+                                    <div className="qty-stepper">
+                                      <button type="button" onClick={() => adjustQuantity(idx, -1)}>-</button>
+                                      <input type="number" min="1" value={item.piezas} onChange={(e) => setItem(idx, "piezas", Number(e.target.value))} />
+                                      <button type="button" onClick={() => adjustQuantity(idx, 1)}>+</button>
+                                    </div>
+                                  </div>
+
+                                  {isPieceMode ? (
+                                    <div className="cfg-pricing__field">
+                                      <span className="cfg-pricing__label">Precio/pza {moneyLabel}</span>
+                                      <input type="number" step="0.01" value={toDisplayMoney(item.precio_pieza_mxn) || ""} onChange={(e) => setItem(idx, "precio_pieza_mxn", fromDisplayMoney(e.target.value))} readOnly={pricingLocked} />
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="cfg-pricing__field">
+                                        <span className="cfg-pricing__label">Gr / pieza</span>
+                                        <input type="number" step="0.01" value={item.gramos_por_pieza} onChange={(e) => setItem(idx, "gramos_por_pieza", Number(e.target.value))} />
+                                      </div>
+                                      <div className="cfg-pricing__field">
+                                        <span className="cfg-pricing__label">Gr total</span>
+                                        <input type="number" step="0.01" value={item._gt_manual ?? item.gramos_total} onChange={(e) => setGTotal(idx, e.target.value)} readOnly={pricingLocked} />
+                                      </div>
+                                      <div className="cfg-pricing__field">
+                                        <span className="cfg-pricing__label">Labor/g {moneyLabel}</span>
+                                        <input type="number" step="0.01" value={toDisplayMoney(item.labor_mxn) || ""} onChange={(e) => setLabor(idx, e.target.value)} readOnly={pricingLocked} />
+                                      </div>
+                                      <div className="cfg-pricing__field cfg-pricing__field--readonly">
+                                        <span className="cfg-pricing__label">PF/g</span>
+                                        <span className="cfg-pricing__value">{fmt(toDisplayMoney(fineSilver))}</span>
+                                      </div>
+                                      <div className="cfg-pricing__field cfg-pricing__field--readonly">
+                                        <span className="cfg-pricing__label">Labor+PF</span>
+                                        <span className="cfg-pricing__value">{fmt(toDisplayMoney(item.precio_gramo_mxn))}</span>
+                                      </div>
+                                    </>
+                                  )}
+
+                                  <div className="cfg-pricing__field cfg-pricing__field--comments">
+                                    <span className="cfg-pricing__label">Comentarios</span>
+                                    <input value={item.comentarios || ""} onChange={(e) => setItem(idx, "comentarios", e.target.value)} placeholder="Notas adicionales..." />
+                                  </div>
+
+                                  <div className="cfg-pricing__field cfg-pricing__field--subtotal">
+                                    <span className="cfg-pricing__label">Subtotal</span>
+                                    <strong className="cfg-pricing__subtotal">{fmt(toDisplayMoney(item.subtotal_mxn))}</strong>
+                                  </div>
+
+                                </div>
+                              </div>
+
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    // ── Fila normal ────────────────────────────────────────────────
                     return (
                       <tr key={`${item.producto_codigo}-${idx}`}>
                         <td className="quote-item-photo-cell">
-                          {!isConfigurableItem && item.producto_foto_url ? (
+                          {item.producto_foto_url ? (
                             <img
                               className="quote-item-photo"
                               src={imageUrlForSize(item.producto_foto_url, 240)}
@@ -1613,11 +1826,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                               decoding="async"
                               onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
                             />
-                          ) : !isConfigurableItem ? (
+                          ) : (
                             <span className="quote-item-photo-placeholder">Sin foto</span>
-                          ) : null}
+                          )}
                         </td>
-                        <td><strong>{isConfigurableItem ? (item._configurable_base_code || item.producto_codigo) : item.producto_codigo}</strong></td>
+                        <td><strong>{item.producto_codigo}</strong></td>
                         <td>
                           <div className="qty-stepper">
                             <button type="button" onClick={() => adjustQuantity(idx, -1)}>-</button>
@@ -1627,135 +1840,6 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                         </td>
                         <td>
                           <div>{item.producto_descripcion}</div>
-                          {isConfigurableItem ? (
-                            <div className="configurable-builder">
-
-                              {/* ── 1. Tipo de pieza — primero, ancho completo ── */}
-                              <label className="configurable-component-field configurable-component-field--primary">
-                                <span>Tipo de pieza</span>
-                                <select
-                                  value={item._configurable_selections?.tipo_pieza?.codigo || ""}
-                                  onChange={(event) => setConfigurableComponent(idx, "tipo_pieza", event.target.value)}
-                                >
-                                  <option value="">Selecciona tipo de pieza...</option>
-                                  {getConfigurableOptions(item, "tipo_pieza").map((component) => (
-                                    <option key={component.id || component.codigo} value={component.codigo}>
-                                      {component.nombre}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-
-                              {/* ── 2. Dos imágenes protagonistas: tejido + broche ── */}
-                              <div className="configurable-visual-row">
-
-                                {/* Tarjeta 1: Tejido / base — estática */}
-                                <article className="configurable-photo-card">
-                                  <div className="configurable-photo-card__image">
-                                    {item._configurable_base_foto_url || item.producto_foto_url ? (
-                                      <img
-                                        src={imageUrlForSize(item._configurable_base_foto_url || item.producto_foto_url, 480)}
-                                        alt={item._configurable_base_description || item.producto_descripcion}
-                                        loading="lazy"
-                                        decoding="async"
-                                        onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
-                                      />
-                                    ) : (
-                                      <div className="configurable-photo-card__image--empty">Sin foto</div>
-                                    )}
-                                  </div>
-                                  <div className="configurable-photo-card__footer">
-                                    <span className="configurable-photo-card__label">Tejido / base</span>
-                                    <strong className="configurable-photo-card__name">
-                                      {item._configurable_base_description || item.producto_descripcion}
-                                    </strong>
-                                  </div>
-                                </article>
-
-                                {/* Tarjeta 2: Broche — filtrado por tipo de pieza, imagen cambia al elegir */}
-                                <label className={`configurable-photo-card configurable-photo-card--interactive${item._configurable_selections?.broche ? " configurable-photo-card--selected" : ""}`}>
-                                  <div className="configurable-photo-card__image">
-                                    {item._configurable_selections?.broche?.fotoUrl ? (
-                                      <img
-                                        src={imageUrlForSize(item._configurable_selections.broche.fotoUrl, 480)}
-                                        alt={item._configurable_selections.broche.nombre}
-                                        loading="lazy"
-                                        decoding="async"
-                                        onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
-                                      />
-                                    ) : (
-                                      <div className="configurable-photo-card__image--empty">
-                                        {item._configurable_selections?.tipo_pieza ? "Elige broche" : "Primero tipo de pieza"}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="configurable-photo-card__footer">
-                                    <span className="configurable-photo-card__label">Broche</span>
-                                    <select
-                                      value={item._configurable_selections?.broche?.codigo || ""}
-                                      onChange={(event) => setConfigurableComponent(idx, "broche", event.target.value)}
-                                      disabled={!item._configurable_selections?.tipo_pieza}
-                                    >
-                                      <option value="">Selecciona broche...</option>
-                                      {getConfigurableOptions(item, "broche").map((component) => (
-                                        <option key={component.id || component.codigo} value={component.codigo}>
-                                          {component.nombre}{component.peso ? ` (+${component.peso} ${component.unidad || "g"})` : ""}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                </label>
-
-                              </div>
-
-                              {/* ── 3. Diseño de placa — solo en esclavas ── */}
-                              {tipoPiezaRequiereDiseñoPlaca(item) ? (
-                                <label className="configurable-component-field configurable-component-field--primary">
-                                  <span>
-                                    {tipoPiezaFuerzaPlacaMilitar(item)
-                                      ? "Diseño de placa militar"
-                                      : "Diseño de placa en medio"}
-                                  </span>
-                                  <select
-                                    value={item._configurable_selections?.["diseño_placa"]?.codigo || ""}
-                                    onChange={(event) => setConfigurableComponent(idx, "diseño_placa", event.target.value)}
-                                  >
-                                    <option value="">Selecciona diseño...</option>
-                                    {getConfigurableOptions(item, "diseño_placa").map((component) => (
-                                      <option key={component.id || component.codigo} value={component.codigo}>
-                                        {component.nombre}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </label>
-                              ) : null}
-
-                              {/* ── 4. Largo + Terminado ── */}
-                              <div className="configurable-components-grid configurable-components-grid--two">
-                                {["largo", "terminado"].map((key) => {
-                                  const step = CONFIGURABLE_COMPONENT_STEPS.find((s) => s.key === key);
-                                  const selectedCode = item._configurable_selections?.[key]?.codigo || "";
-                                  return (
-                                    <label key={key} className="configurable-component-field">
-                                      <span>{step?.label || key}</span>
-                                      <select
-                                        value={selectedCode}
-                                        onChange={(event) => setConfigurableComponent(idx, key, event.target.value)}
-                                      >
-                                        <option value="">Selecciona...</option>
-                                        {getConfigurableOptions(item, key).map((component) => (
-                                          <option key={component.id || component.codigo} value={component.codigo}>
-                                            {component.nombre}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </label>
-                                  );
-                                })}
-                              </div>
-
-                            </div>
-                          ) : null}
                           <small>{[item.producto_metal, item.producto_kilataje].filter(Boolean).join(" / ")}</small>
                         </td>
                         <td><strong>{item.producto_linea || "-"}</strong></td>

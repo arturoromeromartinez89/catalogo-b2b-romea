@@ -7465,3 +7465,272 @@ textarea:focus {
   padding: 16px 24px 20px;
   border-top: 1px solid var(--romea-line);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CONFIGURABLE ITEM CARD  (tarjeta de dos secciones en la tabla de preorden)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.cfg-item-row > .cfg-item-cell {
+  padding: 0;
+  background: transparent;
+}
+
+/* ── Tarjeta base ── */
+.cfg-card {
+  background: #fff;
+  border: 1.5px solid var(--romea-line, #e5e5e5);
+  border-left: 4px solid var(--accent, #b8963e);
+  border-radius: 10px;
+  margin: 6px 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 6px rgba(0,0,0,.06);
+  transition: border-color .2s;
+}
+.cfg-card--complete {
+  border-left-color: #059669;
+}
+
+/* ── Cabecera ── */
+.cfg-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 10px 12px;
+  background: var(--romea-bg, #fafaf9);
+  border-bottom: 1px solid var(--romea-line, #e5e5e5);
+  gap: 12px;
+}
+.cfg-card__header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.cfg-card__header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* thumbnail del tejido */
+.cfg-card__tejido-thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+  background: var(--romea-line);
+}
+.cfg-card__tejido-thumb--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent, #b8963e);
+  background: #f5f0e8;
+  letter-spacing: .5px;
+}
+.cfg-card__title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cfg-card__sku {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent, #b8963e);
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+.cfg-card__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--romea-ink, #1a1a1a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cfg-card__meta {
+  font-size: 11px;
+  color: var(--romea-muted, #888);
+}
+
+/* Badges de estado */
+.cfg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .2px;
+}
+.cfg-badge--ok {
+  background: #d1fae5;
+  color: #065f46;
+}
+.cfg-badge--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* ── Secciones internas ── */
+.cfg-section {
+  padding: 14px 16px 16px;
+}
+.cfg-section + .cfg-section {
+  border-top: 1px dashed var(--romea-line, #e5e5e5);
+  background: #fdfcfa;
+}
+.cfg-section__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--romea-muted, #888);
+  margin-bottom: 12px;
+}
+.cfg-section__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent, #b8963e);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* ── Sección 1: Selectores ── */
+.cfg-selectors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cfg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+  flex: 1 1 160px;
+}
+.cfg-field--full {
+  flex: 1 1 100%;
+  min-width: 100%;
+}
+.cfg-field--broche {
+  flex: 1 1 200px;
+}
+.cfg-field--diseño {
+  flex: 1 1 200px;
+}
+.cfg-field__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--romea-muted, #888);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.cfg-field__photo {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 1px solid var(--romea-line);
+  align-self: flex-start;
+}
+.cfg-field__select {
+  padding: 7px 10px;
+  border: 1.5px solid var(--romea-line, #d4d4d4);
+  border-radius: 7px;
+  font-size: 13px;
+  background: #fff;
+  color: var(--romea-ink, #1a1a1a);
+  cursor: pointer;
+  transition: border-color .15s;
+  width: 100%;
+}
+.cfg-field__select:focus {
+  outline: none;
+  border-color: var(--accent, #b8963e);
+  box-shadow: 0 0 0 3px rgba(184,150,62,.15);
+}
+.cfg-field__select:disabled {
+  background: #f5f5f5;
+  color: #aaa;
+  cursor: not-allowed;
+}
+.cfg-field--selected .cfg-field__select {
+  border-color: #059669;
+  background: #f0fdf4;
+}
+
+/* ── Sección 2: Cantidad y pesos ── */
+.cfg-pricing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+.cfg-pricing__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 90px;
+}
+.cfg-pricing__field--readonly {
+  min-width: 80px;
+}
+.cfg-pricing__field--comments {
+  flex: 2 1 200px;
+}
+.cfg-pricing__field--subtotal {
+  flex: 1 1 120px;
+  align-items: flex-end;
+}
+.cfg-pricing__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--romea-muted, #888);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  white-space: nowrap;
+}
+.cfg-pricing__value {
+  font-size: 13px;
+  color: var(--romea-ink);
+  padding: 7px 0;
+}
+.cfg-pricing__subtotal {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent, #b8963e);
+}
+.cfg-pricing__field input {
+  padding: 7px 10px;
+  border: 1.5px solid var(--romea-line, #d4d4d4);
+  border-radius: 7px;
+  font-size: 13px;
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+.cfg-pricing__field input:focus {
+  outline: none;
+  border-color: var(--accent, #b8963e);
+  box-shadow: 0 0 0 3px rgba(184,150,62,.15);
+}
+.cfg-pricing__field .qty-stepper {
+  margin-top: 0;
+}
