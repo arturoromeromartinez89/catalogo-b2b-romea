@@ -1,4 +1,5 @@
 import ProductDetail from "../ProductDetail";
+import { isConfigurableProductGroup } from "../../utils/configurableCatalog";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../../utils/formatters";
 
 const PRODUCT_RENDER_BATCH = 60; // debe coincidir con AdminDashboard
@@ -28,13 +29,18 @@ export default function CatalogTab({
   setProductModal,
   toggleProductCheck,
 }) {
+  const isSelectedConfigurable = isConfigurableProductGroup(selectedProduct);
+  const selectedInCatalog = isSelectedConfigurable
+    ? (selectedProduct?.variants || []).some((variant) => catalogSelectionIds.has(variant.product?.codigo))
+    : catalogSelectionIds.has(selectedProduct?.codigo);
+
   return (
     <section className="admin-workspace">
       {!selectedProductCode ? (
         <div className="catalog-page-topbar">
           <div>
-            <span className="tool-eyebrow">Catálogo</span>
-            <h2>Catálogo administrador</h2>
+            <span className="tool-eyebrow">Catalogo</span>
+            <h2>Catalogo administrador</h2>
             <p>{t("showingFiltered", renderedProducts.length.toLocaleString(), filteredProducts.length.toLocaleString())}</p>
           </div>
           <div className="catalog-topbar-actions">
@@ -54,7 +60,7 @@ export default function CatalogTab({
               </button>
             ) : null}
             <button className="selection-action catalog" type="button" onClick={addCheckedToCatalogSelection} disabled={!checkedIds.size}>
-              + Catálogo
+              + Catalogo
             </button>
             <button className="selection-action preorder" type="button" onClick={addCheckedToPreorder} disabled={!checkedIds.size}>
               + Pre-orden
@@ -71,88 +77,109 @@ export default function CatalogTab({
           onRemovePreorder={removeFromPreorder}
           onAddToCatalog={addToCatalogSelection}
           onRemoveFromCatalog={removeFromCatalogSelection}
-          inPreorder={addedCodes.includes(selectedProduct?.codigo)}
-          inCatalogSelection={catalogSelectionIds.has(selectedProduct?.codigo)}
-          onEdit={(product) => setProductModal({ open: true, product, mode: "edit" })}
-          onDuplicate={(product) => setProductModal({ open: true, product, mode: "duplicate" })}
+          inPreorder={isSelectedConfigurable ? false : addedCodes.includes(selectedProduct?.codigo)}
+          inCatalogSelection={selectedInCatalog}
+          onEdit={isSelectedConfigurable ? null : (product) => setProductModal({ open: true, product, mode: "edit" })}
+          onDuplicate={isSelectedConfigurable ? null : (product) => setProductModal({ open: true, product, mode: "duplicate" })}
         />
       ) : filteredProducts.length ? (
         <>
           <div className="admin-product-grid">
-            {renderedProducts.map((product) => (
-              <article
-                className={`admin-product-card enabled ${addedCodes.includes(product.codigo) ? "in-preorder" : ""}`}
-                key={product.id || product.codigo}
-              >
-                <label className="product-select-check" onClick={(event) => event.stopPropagation()}>
-                  <input
-                    type="checkbox"
-                    checked={checkedIds.has(product.codigo)}
-                    onChange={() => toggleProductCheck(product.codigo)}
-                  />
-                </label>
-                {addedCodes.includes(product.codigo) ? <span className="preorder-added-badge">✓ En preorden</span> : null}
-                {catalogSelectionIds.has(product.codigo) ? <span className="catalog-added-badge">✓ Catálogo</span> : null}
-                <button className="admin-product-image" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
-                  <img
-                    src={imageUrlForSize(product.fotoUrl, 360) || buildPlaceholderUrl(t("noPhoto"))}
-                    alt={product.descripcion}
-                    loading="lazy"
-                    decoding="async"
-                    fetchPriority="low"
-                    onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(t("noPhoto")); }}
-                  />
-                </button>
-                <div className="admin-product-info">
-                  <strong>{product.codigo}</strong>
-                  <h3>{shortText(product.descripcion, 72)}</h3>
-                  <p>{[product.metal, product.kilataje, formatWeight(product.pesoPromedio)].filter(Boolean).join(" / ")}</p>
-                  <span>
-                    {product.precioMinimo
-                      ? formatCurrency(product.precioMinimo, product.monedaPrecioMin)
-                      : t("priceToConfirm")} · MO {formatCurrency(product.manoObra || 0, product.monedaPrecioMin)}
-                  </span>
-                </div>
-                <div className="admin-product-actions product-action-layout">
-                  <div className="product-action-admin">
-                    <button className="secondary-button compact-action" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
-                      {t("viewDetail")}
-                    </button>
-                    <button className="secondary-button compact-action" type="button" onClick={() => setProductModal({ open: true, product, mode: "edit" })}>
-                      {t("editProduct")}
-                    </button>
+            {renderedProducts.map((product) => {
+              const isConfigurable = isConfigurableProductGroup(product);
+              const inPreorder = isConfigurable ? false : addedCodes.includes(product.codigo);
+              const inCatalogSelection = isConfigurable
+                ? (product.variants || []).some((variant) => catalogSelectionIds.has(variant.product?.codigo))
+                : catalogSelectionIds.has(product.codigo);
+              const priceText = product.precioMinimo
+                ? formatCurrency(product.precioMinimo, product.monedaPrecioMin)
+                : t("priceToConfirm");
+
+              return (
+                <article
+                  className={`admin-product-card enabled ${inPreorder ? "in-preorder" : ""} ${isConfigurable ? "configurable-card" : ""}`}
+                  key={product.id || product.codigo}
+                >
+                  <label className="product-select-check" onClick={(event) => event.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={checkedIds.has(product.codigo)}
+                      onChange={() => toggleProductCheck(product.codigo)}
+                    />
+                  </label>
+                  {inPreorder ? <span className="preorder-added-badge">En preorden</span> : null}
+                  {inCatalogSelection ? <span className="catalog-added-badge">Catalogo</span> : null}
+                  <button className="admin-product-image" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
+                    <img
+                      src={imageUrlForSize(product.fotoUrl, 360) || buildPlaceholderUrl(t("noPhoto"))}
+                      alt={product.descripcion}
+                      loading="lazy"
+                      decoding="async"
+                      fetchPriority="low"
+                      onError={(event) => {
+                        event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
+                      }}
+                    />
+                  </button>
+                  <div className="admin-product-info">
+                    <strong>{isConfigurable ? product.configurableTitle || product.descripcion : product.codigo}</strong>
+                    <h3>
+                      {isConfigurable
+                        ? `${(product.variants || []).length} tipos disponibles`
+                        : shortText(product.descripcion, 72)}
+                    </h3>
+                    <p>
+                      {isConfigurable
+                        ? "Configura tipo de pieza al agregar"
+                        : [product.metal, product.kilataje, formatWeight(product.pesoPromedio)].filter(Boolean).join(" / ")}
+                    </p>
+                    <span>
+                      {isConfigurable ? "Producto configurable" : `${priceText} - MO ${formatCurrency(product.manoObra || 0, product.monedaPrecioMin)}`}
+                    </span>
                   </div>
-                  <div className="product-action-client">
-                    <button
-                      className={`action-button preorder ${addedCodes.includes(product.codigo) ? "done" : ""}`}
-                      type="button"
-                      onClick={() => addToCart(product)}
-                      disabled={addedCodes.includes(product.codigo)}
-                    >
-                      {t("addPreorderShort")}
-                    </button>
-                    {addedCodes.includes(product.codigo) ? (
-                      <button className="action-button undo" type="button" onClick={() => removeFromPreorder(product.codigo)}>
-                        {t("undo")}
+                  <div className="admin-product-actions product-action-layout">
+                    <div className="product-action-admin">
+                      <button className="secondary-button compact-action" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
+                        {t("viewDetail")}
                       </button>
-                    ) : null}
-                    <button
-                      className={`action-button catalog ${catalogSelectionIds.has(product.codigo) ? "done" : ""}`}
-                      type="button"
-                      onClick={() => addToCatalogSelection(product)}
-                      disabled={catalogSelectionIds.has(product.codigo)}
-                    >
-                      {t("addCatalogShort")}
-                    </button>
-                    {catalogSelectionIds.has(product.codigo) ? (
-                      <button className="action-button undo" type="button" onClick={() => removeFromCatalogSelection(product.codigo)}>
-                        {t("undo")}
+                      {!isConfigurable ? (
+                        <button className="secondary-button compact-action" type="button" onClick={() => setProductModal({ open: true, product, mode: "edit" })}>
+                          {t("editProduct")}
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="product-action-client">
+                      <button
+                        className={`action-button preorder ${inPreorder ? "done" : ""}`}
+                        type="button"
+                        onClick={() => addToCart(product)}
+                        disabled={inPreorder}
+                      >
+                        {t("addPreorderShort")}
                       </button>
-                    ) : null}
+                      {inPreorder ? (
+                        <button className="action-button undo" type="button" onClick={() => removeFromPreorder(product.codigo)}>
+                          {t("undo")}
+                        </button>
+                      ) : null}
+                      <button
+                        className={`action-button catalog ${inCatalogSelection ? "done" : ""}`}
+                        type="button"
+                        onClick={() => addToCatalogSelection(product)}
+                        disabled={inCatalogSelection}
+                      >
+                        {t("addCatalogShort")}
+                      </button>
+                      {!isConfigurable && inCatalogSelection ? (
+                        <button className="action-button undo" type="button" onClick={() => removeFromCatalogSelection(product.codigo)}>
+                          {t("undo")}
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
           {filteredProducts.length > renderedProducts.length ? (
             <div className="load-more-row">
@@ -161,7 +188,7 @@ export default function CatalogTab({
                 type="button"
                 onClick={() => setVisibleProductLimit((current) => current + PRODUCT_RENDER_BATCH)}
               >
-                Mostrar más productos ({renderedProducts.length.toLocaleString()} de {filteredProducts.length.toLocaleString()})
+                Mostrar mas productos ({renderedProducts.length.toLocaleString()} de {filteredProducts.length.toLocaleString()})
               </button>
             </div>
           ) : null}
