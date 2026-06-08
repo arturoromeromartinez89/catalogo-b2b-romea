@@ -28,12 +28,24 @@ const IVA_RATE = 0.16;
 const PROSPECT_CLIENT_VALUE = "__new_prospect__";
 const CUSTOM_PRICE_LIST_VALUE = "__custom_price_list__";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// Pasos del configurador. Los condicionales se muestran según reglas de metadata.
 const CONFIGURABLE_COMPONENT_STEPS = [
-  { key: "tipo_pieza", label: "Tipo de pieza", required: true },
-  { key: "broche", label: "Broche", required: true },
-  { key: "largo", label: "Largo", required: true },
-  { key: "terminado", label: "Terminado", required: true },
+  { key: "tipo_pieza",    label: "Tipo de pieza",   required: true,  conditional: false },
+  { key: "broche",        label: "Broche",           required: true,  conditional: false },
+  { key: "diseño_placa",  label: "Diseño de placa",  required: false, conditional: true  },
+  { key: "largo",         label: "Largo",            required: true,  conditional: false },
+  { key: "terminado",     label: "Terminado",        required: true,  conditional: false },
 ];
+
+// Helpers de reglas — leen metadata del componente tipo_pieza seleccionado
+const tipoPiezaExcluyePlacaMilitar = (item) =>
+  Boolean(item?._configurable_selections?.tipo_pieza?.metadata?.excluye_placa_militar);
+
+const tipoPiezaFuerzaPlacaMilitar = (item) =>
+  Boolean(item?._configurable_selections?.tipo_pieza?.metadata?.fuerza_placa_militar);
+
+const tipoPiezaRequiereDiseñoPlaca = (item) =>
+  Boolean(item?._configurable_selections?.tipo_pieza?.metadata?.requiere_diseño_placa);
 const PREORDER_EXCEL_COLUMNS = [
   { key: "codigo", aliases: ["codigo", "sku", "code", "modelo"] },
   { key: "cantidad", aliases: ["cantidad", "piezas", "qty", "quantity"] },
@@ -86,7 +98,13 @@ const buildConfigurablePreorderItem = (product, quantity = 1) => {
 const isConfigurableItemComplete = (item) => {
   if (!item?._configurable_group) return true;
   const selections = item._configurable_selections || {};
-  return CONFIGURABLE_COMPONENT_STEPS.every((step) => !step.required || selections[step.key]?.codigo);
+  return CONFIGURABLE_COMPONENT_STEPS.every((step) => {
+    if (step.key === "diseño_placa") {
+      // Solo requerido si el tipo de pieza seleccionado exige placa
+      return !tipoPiezaRequiereDiseñoPlaca(item) || selections.diseño_placa?.codigo;
+    }
+    return !step.required || selections[step.key]?.codigo;
+  });
 };
 
 const hasUnconfiguredItems = (items = []) => items.some((item) => !isConfigurableItemComplete(item));
@@ -768,26 +786,51 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const getConfigurableOptions = (item, componentType) => {
-    if (componentType !== "tipo_pieza") return componentGroups[componentType] || [];
-    const byKey = new Map();
-    (componentGroups.tipo_pieza || []).forEach((component) => {
-      byKey.set(normalizeText(component.nombre || component.codigo), component);
-    });
-    (item?._configurable_variants || []).forEach((variant, index) => {
-      const key = normalizeText(variant.label || variant.code || `tipo-${index}`);
-      if (byKey.has(key)) return;
-      byKey.set(key, {
-        id: variant.product?.codigo || variant.code || key,
-        codigo: variant.product?.codigo || variant.code || key,
-        nombre: variant.label || variant.code,
-        tipo: "tipo_pieza",
-        peso: 0,
-        unidad: "pza",
-        product: variant.product,
-        orden: 100 + index,
+    // tipo_pieza: mezcla variantes del producto con componentes de DB
+    if (componentType === "tipo_pieza") {
+      const byKey = new Map();
+      (componentGroups.tipo_pieza || []).forEach((component) => {
+        byKey.set(normalizeText(component.nombre || component.codigo), component);
       });
-    });
-    return [...byKey.values()].sort((a, b) => Number(a.orden || 0) - Number(b.orden || 0));
+      (item?._configurable_variants || []).forEach((variant, index) => {
+        const key = normalizeText(variant.label || variant.code || `tipo-${index}`);
+        if (byKey.has(key)) return;
+        byKey.set(key, {
+          id: variant.product?.codigo || variant.code || key,
+          codigo: variant.product?.codigo || variant.code || key,
+          nombre: variant.label || variant.code,
+          tipo: "tipo_pieza",
+          peso: 0,
+          unidad: "pza",
+          metadata: {},
+          product: variant.product,
+          orden: 100 + index,
+        });
+      });
+      return [...byKey.values()].sort((a, b) => Number(a.orden || 0) - Number(b.orden || 0));
+    }
+
+    // broche: filtrar según tipo_pieza seleccionado
+    if (componentType === "broche") {
+      const allBroches = componentGroups.broche || [];
+      if (tipoPiezaFuerzaPlacaMilitar(item)) {
+        // Esclava militar → solo broches tipo placa militar
+        return allBroches.filter((b) => b.metadata?.es_placa_militar);
+      }
+      if (tipoPiezaExcluyePlacaMilitar(item)) {
+        // Cadena / Pulso / Esclava placa en medio → sin placas militares
+        return allBroches.filter((b) => !b.metadata?.es_placa_militar);
+      }
+      return allBroches;
+    }
+
+    // diseño_placa: solo disponible si el tipo de pieza lo requiere
+    if (componentType === "diseño_placa") {
+      if (!tipoPiezaRequiereDiseñoPlaca(item)) return [];
+      return componentGroups["diseño_placa"] || [];
+    }
+
+    return componentGroups[componentType] || [];
   };
 
   const setConfigurableComponent = (idx, componentType, componentCode) => {
@@ -798,8 +841,26 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     setItems((current) => current.map((item, itemIdx) => {
       if (itemIdx !== idx) return item;
       const selections = { ...(item._configurable_selections || {}) };
+
       if (selected) selections[componentType] = selected;
       else delete selections[componentType];
+
+      // Cuando cambia tipo_pieza → limpiar broche y diseño_placa dependientes
+      if (componentType === "tipo_pieza") {
+        delete selections.broche;
+        delete selections["diseño_placa"];
+
+        // Esclava militar → auto-seleccionar la placa militar si solo hay una opción
+        if (selected?.metadata?.fuerza_placa_militar) {
+          const placaOptions = (componentGroups.broche || []).filter((b) => b.metadata?.es_placa_militar);
+          if (placaOptions.length === 1) selections.broche = placaOptions[0];
+        }
+      }
+
+      // Cuando cambia broche → limpiar diseño_placa si cambia la compatibilidad
+      if (componentType === "broche") {
+        delete selections["diseño_placa"];
+      }
 
       const sourceProduct = componentType === "tipo_pieza" ? selected?.product : null;
       const next = {
@@ -1565,7 +1626,23 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                           {isConfigurableItem ? (
                             <div className="configurable-builder">
 
-                              {/* ── Dos imágenes protagonistas: tejido + broche ── */}
+                              {/* ── 1. Tipo de pieza — primero, ancho completo ── */}
+                              <label className="configurable-component-field configurable-component-field--primary">
+                                <span>Tipo de pieza</span>
+                                <select
+                                  value={item._configurable_selections?.tipo_pieza?.codigo || ""}
+                                  onChange={(event) => setConfigurableComponent(idx, "tipo_pieza", event.target.value)}
+                                >
+                                  <option value="">Selecciona tipo de pieza...</option>
+                                  {getConfigurableOptions(item, "tipo_pieza").map((component) => (
+                                    <option key={component.id || component.codigo} value={component.codigo}>
+                                      {component.nombre}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+
+                              {/* ── 2. Dos imágenes protagonistas: tejido + broche ── */}
                               <div className="configurable-visual-row">
 
                                 {/* Tarjeta 1: Tejido / base — estática */}
@@ -1591,7 +1668,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                                   </div>
                                 </article>
 
-                                {/* Tarjeta 2: Broche — interactiva, imagen cambia al elegir */}
+                                {/* Tarjeta 2: Broche — filtrado por tipo de pieza, imagen cambia al elegir */}
                                 <label className={`configurable-photo-card configurable-photo-card--interactive${item._configurable_selections?.broche ? " configurable-photo-card--selected" : ""}`}>
                                   <div className="configurable-photo-card__image">
                                     {item._configurable_selections?.broche?.fotoUrl ? (
@@ -1603,7 +1680,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                                         onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
                                       />
                                     ) : (
-                                      <div className="configurable-photo-card__image--empty">Elige broche</div>
+                                      <div className="configurable-photo-card__image--empty">
+                                        {item._configurable_selections?.tipo_pieza ? "Elige broche" : "Primero tipo de pieza"}
+                                      </div>
                                     )}
                                   </div>
                                   <div className="configurable-photo-card__footer">
@@ -1611,6 +1690,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                                     <select
                                       value={item._configurable_selections?.broche?.codigo || ""}
                                       onChange={(event) => setConfigurableComponent(idx, "broche", event.target.value)}
+                                      disabled={!item._configurable_selections?.tipo_pieza}
                                     >
                                       <option value="">Selecciona broche...</option>
                                       {getConfigurableOptions(item, "broche").map((component) => (
@@ -1624,22 +1704,44 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
                               </div>
 
-                              {/* ── Selectores secundarios: tipo de pieza, largo, terminado ── */}
-                              <div className="configurable-components-grid">
-                                {CONFIGURABLE_COMPONENT_STEPS.filter((step) => step.key !== "broche").map((step) => {
-                                  const selectedCode = item._configurable_selections?.[step.key]?.codigo || "";
-                                  const options = getConfigurableOptions(item, step.key);
+                              {/* ── 3. Diseño de placa — solo en esclavas ── */}
+                              {tipoPiezaRequiereDiseñoPlaca(item) ? (
+                                <label className="configurable-component-field configurable-component-field--primary">
+                                  <span>
+                                    {tipoPiezaFuerzaPlacaMilitar(item)
+                                      ? "Diseño de placa militar"
+                                      : "Diseño de placa en medio"}
+                                  </span>
+                                  <select
+                                    value={item._configurable_selections?.["diseño_placa"]?.codigo || ""}
+                                    onChange={(event) => setConfigurableComponent(idx, "diseño_placa", event.target.value)}
+                                  >
+                                    <option value="">Selecciona diseño...</option>
+                                    {getConfigurableOptions(item, "diseño_placa").map((component) => (
+                                      <option key={component.id || component.codigo} value={component.codigo}>
+                                        {component.nombre}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              ) : null}
+
+                              {/* ── 4. Largo + Terminado ── */}
+                              <div className="configurable-components-grid configurable-components-grid--two">
+                                {["largo", "terminado"].map((key) => {
+                                  const step = CONFIGURABLE_COMPONENT_STEPS.find((s) => s.key === key);
+                                  const selectedCode = item._configurable_selections?.[key]?.codigo || "";
                                   return (
-                                    <label key={step.key} className="configurable-component-field">
-                                      <span>{step.label}</span>
+                                    <label key={key} className="configurable-component-field">
+                                      <span>{step?.label || key}</span>
                                       <select
                                         value={selectedCode}
-                                        onChange={(event) => setConfigurableComponent(idx, step.key, event.target.value)}
+                                        onChange={(event) => setConfigurableComponent(idx, key, event.target.value)}
                                       >
                                         <option value="">Selecciona...</option>
-                                        {options.map((component) => (
+                                        {getConfigurableOptions(item, key).map((component) => (
                                           <option key={component.id || component.codigo} value={component.codigo}>
-                                            {component.nombre}{component.peso ? ` (+${component.peso} ${component.unidad || "g"})` : ""}
+                                            {component.nombre}
                                           </option>
                                         ))}
                                       </select>

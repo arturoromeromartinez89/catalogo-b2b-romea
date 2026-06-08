@@ -7000,12 +7000,28 @@ textarea:focus {
   border-color: var(--romea-accent, #b08d57);
 }
 
-/* Lower selects grid (tipo_pieza, largo, terminado) */
+/* Selector primario — ancho completo (tipo de pieza, diseño de placa) */
+.configurable-component-field--primary {
+  width: 100%;
+}
+
+.configurable-component-field--primary select {
+  height: 34px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* Lower selects grid (largo + terminado) */
 .configurable-components-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(116px, 1fr));
   gap: 6px;
   min-width: 360px;
+}
+
+.configurable-components-grid--two {
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  min-width: 300px;
 }
 
 .configurable-component-field {
