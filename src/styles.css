@@ -8155,45 +8155,149 @@ textarea:focus {
 .bal-result-row .red { color: #dc2626; }
 .bal-disclaimer { font-size: 11px; color: var(--romea-muted); margin-top: 8px; max-width: 500px; }
 
-/* ─── Admin module — sub-navegación siempre expandida ──────────────────────────
-   Aparece debajo del botón "Administración" activo en el sidebar oscuro.
-   Hereda el tema del sidebar: fondo var(--brand-900), texto blanco.
+/* ─── Admin module — sidebar secundario (panel entre sidebar primario y content)
+   Layout: admin-catalog-shell.has-secondary-sidebar usa 3 columnas.
+   El sidebar secundario es blanco/claro, hereda el look de los paneles del sistema.
    ═════════════════════════════════════════════════════════════════════════════ */
 
-.admin-subnav {
-  border-left: 2px solid rgba(255,255,255,0.15);
-  display: grid;
-  gap: 2px;
-  margin-left: 10px;
-  margin-top: 4px;
-  padding-left: 8px;
+/* 3-column shell when admin module is active */
+.admin-catalog-shell.has-secondary-sidebar {
+  grid-template-columns: 268px 210px minmax(0, 1fr);
 }
 
-.admin-subnav button {
+/* The secondary sidebar itself */
+.admin-secondary-sidebar {
+  background: var(--neutral-50, #f7f8fb);
+  border-right: 1px solid var(--neutral-200, #e6eaf1);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.admin-secondary-sidebar .secondary-sidebar-header {
+  border-bottom: 1px solid var(--neutral-200, #e6eaf1);
+  flex-shrink: 0;
+  padding: 14px 14px 12px;
+}
+
+.admin-secondary-sidebar .secondary-sidebar-header h3 {
+  color: var(--neutral-500, #6f7787);
+  font-size: 10px;
+  font-weight: var(--weight-bold, 700);
+  letter-spacing: 0.10em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+/* Nav container — scrollable */
+.secondary-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 6px;
+}
+
+/* Group label */
+.secondary-nav-section-title {
+  color: var(--neutral-500, #6f7787);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-top: 14px;
+  padding: 3px 8px;
+  text-transform: uppercase;
+}
+
+/* Nav item button */
+.secondary-nav-item {
   background: transparent;
   border: none;
-  border-radius: var(--radius-sm);
-  color: rgba(255,255,255,0.62);
+  border-radius: var(--radius-sm, 4px);
+  color: var(--neutral-700, #374151);
   cursor: pointer;
+  display: block;
   font-family: var(--font-sans);
-  font-size: 11.5px;
-  font-weight: var(--weight-semibold);
-  min-height: 26px;
-  padding: 5px 8px;
+  font-size: 13px;
+  font-weight: var(--weight-medium, 500);
+  padding: 7px 10px;
   text-align: left;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.1s, color 0.1s;
   width: 100%;
 }
 
-.admin-subnav button:hover {
-  background: rgba(255,255,255,0.09);
-  color: rgba(255,255,255,0.90);
+.secondary-nav-item:hover {
+  background: var(--neutral-100, #eef0f5);
+  color: var(--neutral-800, #1d2433);
 }
 
-.admin-subnav button.active {
-  background: rgba(255,255,255,0.18);
+.secondary-nav-item.active {
+  background: var(--brand-900, #0f172a);
   color: #ffffff;
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold, 600);
+}
+
+/* ─── Catálogo — filtros inline (movidos del sidebar al área de contenido) ──── */
+
+.catalog-inline-filter-bar {
+  background: white;
+  border-bottom: 1px solid var(--neutral-200, #e6eaf1);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 20px;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+
+/* Métricas rápidas dentro del filtro bar */
+.catalog-filter-metrics {
+  align-items: center;
+  border-right: 1px solid var(--neutral-200, #e6eaf1);
+  display: flex;
+  flex-shrink: 0;
+  gap: 16px;
+  padding-right: 12px;
+}
+
+.catalog-filter-metrics div {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.catalog-filter-metrics span {
+  color: var(--neutral-500, #6f7787);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.catalog-filter-metrics strong {
+  color: var(--neutral-800, #1d2433);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Los componentes FilterPanel, AdvancedSearch, QuickFilters en modo inline */
+.catalog-inline-filter-bar .advanced-search-wrap,
+.catalog-inline-filter-bar .filter-panel-root,
+.catalog-inline-filter-bar .quick-filters-root {
+  flex-shrink: 0;
+}
+
+/* Contenedor de los controles de filtro (puede colapsar) */
+.catalog-filter-controls {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Estado colapsado — solo se ve el bloque de métricas y el botón mostrar */
+.catalog-inline-filter-bar--collapsed .catalog-filter-controls {
+  display: none;
 }
 
 /* ─── Modal ancho — para formularios con tabla (ej. Nueva Remisión) ─────────── */
@@ -8204,9 +8308,18 @@ textarea:focus {
 
 /* ─── Admin module tab — área de contenido ──────────────────────────────────── */
 
+/* El admin-catalog-main ya es flex column con overflow hidden;
+   admin-module-content necesita ser el scroll container */
 .admin-module-content {
   flex: 1;
+  min-height: 0;          /* sin esto flex overflow no funciona */
   overflow-y: auto;
+}
+
+/* Garantizar que todos los tabs del módulo admin son scrolleables */
+.rem-tab,
+.bal-content {
+  overflow-y: visible;    /* el scroll lo maneja admin-module-content */
 }
 
 /* ─── Resumen / placeholder panels ──────────────────────────────────────────── */

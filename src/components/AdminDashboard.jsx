@@ -24,6 +24,9 @@ import ComponentsTab from "./tabs/ComponentsTab";
 import RemisionesTab from "./tabs/RemisionesTab";
 import GastosTab from "./tabs/GastosTab";
 import BalanceTab from "./tabs/BalanceTab";
+import CentrosCostosTab from "./tabs/CentrosCostosTab";
+import CuentasAdminTab from "./tabs/CuentasAdminTab";
+import CategoriasGastoTab from "./tabs/CategoriasGastoTab";
 import { sampleProducts } from "../data/sampleProducts";
 import { useLanguage } from "../i18n/LanguageContext";
 import { supabase } from "../lib/supabaseClient";
@@ -55,11 +58,16 @@ const baseTabs = ["catalog", "preorders", "clients", "prospects", "prices", "com
 const configurableOnlyTabs = ["components"];
 const adminModuleTabs = ["administracion"];
 const ADMIN_SUB_TABS = [
-  { id: "resumen",    label: "Resumen" },
-  { id: "remisiones", label: "Remisiones" },
-  { id: "gastos",     label: "Gastos" },
-  { id: "balance",    label: "Balance" },
-  { id: "estados",    label: "Estados financieros" },
+  // Grupo operaciones
+  { id: "resumen",    label: "Resumen",            group: "operaciones" },
+  { id: "remisiones", label: "Remisiones",          group: "operaciones" },
+  { id: "gastos",     label: "Gastos",              group: "operaciones" },
+  { id: "balance",    label: "Balance",             group: "operaciones" },
+  { id: "estados",    label: "Estados financieros", group: "operaciones" },
+  // Grupo catálogos internos
+  { id: "cuentas",    label: "Cuentas",             group: "catalogos" },
+  { id: "categorias", label: "Categorías de gasto", group: "catalogos" },
+  { id: "centros",    label: "Centros de costos",   group: "catalogos" },
 ];
 const tabKeys = {
   tenants:       "tenants",
@@ -1041,7 +1049,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   }
 
   return (
-    <div className="admin-catalog-shell">
+    <div className={`admin-catalog-shell${tab === "administracion" && configurableCatalogEnabled ? " has-secondary-sidebar" : ""}`}>
       <aside className="admin-romea-sidebar">
         <div className="brand-block">
           <BrandLogo company={activeCompany} />
@@ -1082,61 +1090,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               </button>
             ))}
           </div>
-          {/* Sub-navegación de Administración — siempre expandida cuando está activa */}
-          {tab === "administracion" && configurableCatalogEnabled ? (
-            <div className="admin-subnav">
-              {ADMIN_SUB_TABS.map((sub) => (
-                <button
-                  key={sub.id}
-                  className={adminSubTab === sub.id ? "active" : ""}
-                  type="button"
-                  onClick={() => setAdminSubTab(sub.id)}
-                >
-                  {sub.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
         </section>
-
-        {tab === "catalog" && !selectedProductCode ? (
-          <section className={`sidebar-section sidebar-catalog-tools ${filtersCollapsed ? "collapsed" : ""}`}>
-            <div className="sidebar-tool-heading">
-              <h3>Filtros</h3>
-              <button className="link-button sidebar-collapse-link" type="button" onClick={() => setFiltersCollapsed((current) => !current)}>
-                {filtersCollapsed ? "Mostrar" : "Ocultar"}
-              </button>
-            </div>
-            {!filtersCollapsed ? (
-              <div className="sidebar-filter-stack">
-                <div className="sidebar-mini-metrics">
-                  <div><span>Total</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
-                  <div><span>Filtrados</span><strong>{productQuery !== deferredProductQuery ? "…" : filteredProducts.length.toLocaleString()}</strong></div>
-                </div>
-                <AdvancedSearch
-                  value={productQuery}
-                  chips={searchChips}
-                  products={products}
-                  onChange={setProductQuery}
-                  onAddChip={(chip) => {
-                    addSearchChip(chip);
-                    setProductQuery("");
-                  }}
-                  onRemoveChip={(chip) => setSearchChips((current) => current.filter((item) => item !== chip))}
-                />
-                <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
-                <QuickFilters
-                  activeFilters={quickFilters}
-                  onToggle={(id) => setQuickFilters((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
-                  onRemove={(id) => setQuickFilters((current) => current.filter((item) => item !== id))}
-                />
-                <button className="secondary-button compact-action full" type="button" onClick={clearCatalogFilters}>
-                  {t("clearFilters")}
-                </button>
-              </div>
-            ) : null}
-          </section>
-        ) : null}
 
         {supportMode ? (
           <section className="sidebar-support-card" aria-label="Modo soporte">
@@ -1168,6 +1122,36 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           ) : null}
         </div>
       </aside>
+
+      {/* ── Sidebar secundario: se muestra solo en Administración ── */}
+      {tab === "administracion" && configurableCatalogEnabled ? (
+        <aside className="admin-secondary-sidebar">
+          <nav className="secondary-nav">
+            <div className="secondary-nav-section-title">Operaciones</div>
+            {ADMIN_SUB_TABS.filter((s) => s.group === "operaciones").map((sub) => (
+              <button
+                key={sub.id}
+                type="button"
+                className={`secondary-nav-item${adminSubTab === sub.id ? " active" : ""}`}
+                onClick={() => setAdminSubTab(sub.id)}
+              >
+                {sub.label}
+              </button>
+            ))}
+            <div className="secondary-nav-section-title" style={{ marginTop: 12 }}>Catálogos internos</div>
+            {ADMIN_SUB_TABS.filter((s) => s.group === "catalogos").map((sub) => (
+              <button
+                key={sub.id}
+                type="button"
+                className={`secondary-nav-item${adminSubTab === sub.id ? " active" : ""}`}
+                onClick={() => setAdminSubTab(sub.id)}
+              >
+                {sub.label}
+              </button>
+            ))}
+          </nav>
+        </aside>
+      ) : null}
 
       <main className="admin-catalog-main">
         <header className="admin-catalog-header minimal">
@@ -1221,6 +1205,36 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             addToCatalogSelection={addToCatalogSelection}
             removeFromCatalogSelection={removeFromCatalogSelection}
             setProductModal={setProductModal}
+            filterBar={!selectedProductCode ? (
+              <div className={`catalog-inline-filter-bar${filtersCollapsed ? " catalog-inline-filter-bar--collapsed" : ""}`}>
+                <div className="catalog-filter-metrics">
+                  <div><span>Total</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
+                  <div><span>Filtrados</span><strong>{productQuery !== deferredProductQuery ? "…" : filteredProducts.length.toLocaleString()}</strong></div>
+                </div>
+                <div className="catalog-filter-controls">
+                  <AdvancedSearch
+                    value={productQuery}
+                    chips={searchChips}
+                    products={products}
+                    onChange={setProductQuery}
+                    onAddChip={(chip) => { addSearchChip(chip); setProductQuery(""); }}
+                    onRemoveChip={(chip) => setSearchChips((current) => current.filter((item) => item !== chip))}
+                  />
+                  <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
+                  <QuickFilters
+                    activeFilters={quickFilters}
+                    onToggle={(id) => setQuickFilters((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
+                    onRemove={(id) => setQuickFilters((current) => current.filter((item) => item !== id))}
+                  />
+                  <button className="secondary-button compact-action" type="button" onClick={clearCatalogFilters}>
+                    {t("clearFilters")}
+                  </button>
+                  <button className="link-button" type="button" onClick={() => setFiltersCollapsed((c) => !c)}>
+                    {filtersCollapsed ? "▾ Mostrar" : "▴ Ocultar"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
           />
         ) : null}
 
@@ -1365,6 +1379,15 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                 <h3>Estados financieros</h3>
                 <p>En desarrollo: Estado de resultados, Balance general, Posición de plata y Flujo de caja por periodo.</p>
               </div>
+            ) : null}
+            {adminSubTab === "cuentas" ? (
+              <CuentasAdminTab tenantId={tenantId} notifyAction={notifyAction} />
+            ) : null}
+            {adminSubTab === "categorias" ? (
+              <CategoriasGastoTab tenantId={tenantId} notifyAction={notifyAction} />
+            ) : null}
+            {adminSubTab === "centros" ? (
+              <CentrosCostosTab tenantId={tenantId} notifyAction={notifyAction} />
             ) : null}
           </div>
         ) : null}

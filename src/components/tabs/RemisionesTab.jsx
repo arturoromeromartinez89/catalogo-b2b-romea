@@ -9,6 +9,7 @@ import {
   fetchCuentas,
   seedCuentasDefault,
 } from "../../services/adminModuleService";
+import { supabase } from "../../lib/supabaseClient";
 
 // ─── Utilidades ───────────────────────────────────────────────────────────────
 
@@ -20,13 +21,24 @@ const fmtMXN = (n) => fmt(n, "MXN");
 
 const today = () => new Date().toISOString().split("T")[0];
 
+// Estados basados en entrega (NO en pagos)
 const ESTADO_LABELS = {
-  borrador: { label: "Borrador",   color: "#94a3b8" },
-  emitida:  { label: "Emitida",    color: "#2563eb" },
-  parcial:  { label: "Pago parcial", color: "#d97706" },
-  cobrada:  { label: "Cobrada",    color: "#059669" },
-  cancelada:{ label: "Cancelada",  color: "#dc2626" },
+  borrador:  { label: "Borrador",   color: "#94a3b8" },
+  emitida:   { label: "Emitida",    color: "#2563eb" },
+  entregada: { label: "Entregada",  color: "#059669" },
+  cancelada: { label: "Cancelada",  color: "#dc2626" },
 };
+
+// Transiciones de estado por entrega (sin depender de pagos)
+async function emitirRemision(id) {
+  const { error } = await supabase.from("remisiones").update({ estado: "emitida" }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+async function marcarEntregada(id) {
+  const { error } = await supabase.from("remisiones").update({ estado: "entregada" }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
 
 const MEDIO_PAGO_LABELS = {
   efectivo_mxn:      "Efectivo MXN",
@@ -407,7 +419,7 @@ function NuevaRemisionModal({ folios, clients, onSave, onClose, saving }) {
 
 // ─── Panel de detalle de remisión ─────────────────────────────────────────────
 
-function RemisionDetail({ remision, cuentas, onCobrar, onCancelar, onClose }) {
+function RemisionDetail({ remision, cuentas, onCobrar, onCancelar, onEmitir, onEntregar, onClose }) {
   const esUSD = remision.moneda === "USD";
   const totalCobros = remision.cobros?.length || 0;
 
@@ -420,12 +432,22 @@ function RemisionDetail({ remision, cuentas, onCobrar, onCancelar, onClose }) {
         </div>
         <div className="rem-detail__header-right">
           <EstadoBadge estado={remision.estado} />
-          {remision.estado !== "cancelada" && remision.estado !== "cobrada" && (
-            <button className="primary-button compact-action" onClick={() => onCobrar(remision)}>
-              + Registrar cobro
+          {remision.estado === "borrador" && (
+            <button className="primary-button compact-action" onClick={() => onEmitir(remision.id)}>
+              Emitir
             </button>
           )}
           {remision.estado === "emitida" && (
+            <button className="primary-button compact-action" onClick={() => onEntregar(remision.id)}>
+              ✓ Marcar entregada
+            </button>
+          )}
+          {remision.estado !== "cancelada" && (
+            <button className="secondary-button compact-action" onClick={() => onCobrar(remision)}>
+              + Registrar cobro
+            </button>
+          )}
+          {(remision.estado === "borrador" || remision.estado === "emitida") && (
             <button className="danger-button compact-action" onClick={() => onCancelar(remision.id)}>
               Cancelar
             </button>
@@ -607,6 +629,34 @@ export default function RemisionesTab({ tenantId, clients = [], notifyAction, se
     }
   };
 
+  const handleEmitir = async (id) => {
+    try {
+      await emitirRemision(id);
+      notify("Remisión emitida.");
+      if (selected?.id === id) {
+        const updated = await fetchRemisionById(id);
+        setSelected(updated);
+      }
+      load();
+    } catch (e) {
+      notify("Error: " + e.message, "error");
+    }
+  };
+
+  const handleEntregar = async (id) => {
+    try {
+      await marcarEntregada(id);
+      notify("Remisión marcada como entregada.");
+      if (selected?.id === id) {
+        const updated = await fetchRemisionById(id);
+        setSelected(updated);
+      }
+      load();
+    } catch (e) {
+      notify("Error: " + e.message, "error");
+    }
+  };
+
   const handleCancelar = async (id) => {
     if (!window.confirm("¿Cancelar esta remisión?")) return;
     try {
@@ -615,7 +665,7 @@ export default function RemisionesTab({ tenantId, clients = [], notifyAction, se
       if (selected?.id === id) setSelected(null);
       load();
     } catch (e) {
-      alert("Error: " + e.message);
+      notify("Error: " + e.message, "error");
     }
   };
 
@@ -754,12 +804,20 @@ export default function RemisionesTab({ tenantId, clients = [], notifyAction, se
                       </td>
                       <td><EstadoBadge estado={rem.estado} /></td>
                       <td>
-                        {rem.estado !== "cancelada" && rem.estado !== "cobrada" && (
+                        {rem.estado === "borrador" && (
+                          <button
+                            className="secondary-button compact-action"
+                            onClick={(e) => { e.stopPropagation(); handleEmitir(rem.id); }}
+                          >
+                            Emitir
+                          </button>
+                        )}
+                        {rem.estado === "emitida" && (
                           <button
                             className="primary-button compact-action"
-                            onClick={(e) => { e.stopPropagation(); setShowCobrar(rem); }}
+                            onClick={(e) => { e.stopPropagation(); handleEntregar(rem.id); }}
                           >
-                            Cobrar
+                            ✓ Entregada
                           </button>
                         )}
                       </td>
@@ -772,6 +830,8 @@ export default function RemisionesTab({ tenantId, clients = [], notifyAction, se
                             cuentas={cuentas}
                             onCobrar={setShowCobrar}
                             onCancelar={handleCancelar}
+                            onEmitir={handleEmitir}
+                            onEntregar={handleEntregar}
                             onClose={() => setSelected(null)}
                           />
                         </td>

@@ -28,6 +28,7 @@ export default function CatalogTab({
   removeFromCatalogSelection,
   setProductModal,
   toggleProductCheck,
+  filterBar,   // Barra de filtros inline — pasada desde AdminDashboard
 }) {
   const isSelectedConfigurable = isConfigurableProductGroup(selectedProduct);
   const selectedInCatalog = isSelectedConfigurable
@@ -68,6 +69,8 @@ export default function CatalogTab({
           </div>
         </div>
       ) : null}
+
+      {filterBar}
 
       {selectedProductCode ? (
         <ProductDetail
