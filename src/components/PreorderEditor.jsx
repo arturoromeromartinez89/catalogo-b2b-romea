@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings } from "../services/companySettings";
 import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice, fetchLaborLists, fetchLaborListLines, fetchPiecePriceLists, fetchPiecePriceListItems, roundUp2 } from "../services/pricingService";
+import { fetchProductComponents, groupProductComponents } from "../services/productComponentsService";
 import { saveClient } from "../services/supabaseCatalog";
 import { savePreorder, deletePreorder } from "../services/preorderService";
 import { generatePdf } from "../utils/pdfGenerator";
@@ -9,7 +10,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { buildPlaceholderUrl, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 import { buildPreorderItemFromProduct } from "../utils/preorderUtils";
-import { buildConfigurableCatalogProducts, isConfigurableProductGroup } from "../utils/configurableCatalog";
+import { buildConfigurableCatalogProducts, hasConfigurableCatalogProducts, isConfigurableCatalogCompany, isConfigurableProductGroup } from "../utils/configurableCatalog";
 
 const STATUS = {
   pendiente: { label: "Pendiente de revision", color: "#d97706" },
@@ -27,6 +28,12 @@ const IVA_RATE = 0.16;
 const PROSPECT_CLIENT_VALUE = "__new_prospect__";
 const CUSTOM_PRICE_LIST_VALUE = "__custom_price_list__";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const CONFIGURABLE_COMPONENT_STEPS = [
+  { key: "tipo_pieza", label: "Tipo de pieza", required: true },
+  { key: "broche", label: "Broche", required: true },
+  { key: "largo", label: "Largo", required: true },
+  { key: "terminado", label: "Terminado", required: true },
+];
 const PREORDER_EXCEL_COLUMNS = [
   { key: "codigo", aliases: ["codigo", "sku", "code", "modelo"] },
   { key: "cantidad", aliases: ["cantidad", "piezas", "qty", "quantity"] },
@@ -64,6 +71,9 @@ const buildConfigurablePreorderItem = (product, quantity = 1) => {
     comentarios: "Pendiente de configurar tipo de pieza",
     _configurable_group: true,
     _configurable_title: product.configurableTitle || product.descripcion,
+    _configurable_base_description: product.configurableTitle || product.descripcion,
+    _configurable_base_weight: Number(product.pesoPromedio || 0),
+    _configurable_selections: {},
     _configurable_variants: (product.variants || []).map((variant) => ({
       code: variant.code,
       label: variant.label,
@@ -72,7 +82,38 @@ const buildConfigurablePreorderItem = (product, quantity = 1) => {
   };
 };
 
-const hasUnconfiguredItems = (items = []) => items.some((item) => item?._configurable_group);
+const isConfigurableItemComplete = (item) => {
+  if (!item?._configurable_group) return true;
+  const selections = item._configurable_selections || {};
+  return CONFIGURABLE_COMPONENT_STEPS.every((step) => !step.required || selections[step.key]?.codigo);
+};
+
+const hasUnconfiguredItems = (items = []) => items.some((item) => !isConfigurableItemComplete(item));
+
+const componentLabel = (component) => component?.nombre || component?.label || component?.codigo || "";
+
+const buildConfiguredDescription = (item, selections = {}) => {
+  const base = item?._configurable_base_description || item?._configurable_title || item?.producto_descripcion || "";
+  const type = componentLabel(selections.tipo_pieza);
+  const broche = componentLabel(selections.broche);
+  const largo = componentLabel(selections.largo);
+  const terminado = componentLabel(selections.terminado);
+  return [
+    type ? `${type} ${base}` : base,
+    broche,
+    largo ? `${largo} largo` : "",
+    terminado ? `terminado ${terminado}` : "",
+  ].filter(Boolean).join(", ");
+};
+
+const configuredWeight = (item, selections = {}) => {
+  const baseWeight = Number(item?._configurable_base_weight ?? item?.gramos_por_pieza ?? 0);
+  const extras = Object.values(selections || {}).reduce((sum, component) => {
+    const unit = component?.unidad || "g";
+    return unit === "g" ? sum + Number(component?.peso || 0) : sum;
+  }, 0);
+  return roundUp2(baseWeight + extras);
+};
 
 const Field = ({ label, children }) => (
   <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: "var(--color-text-secondary)" }}>
@@ -179,6 +220,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [selectedLaborListId, setSelectedLaborListId] = useState(initial?.labor_list_id || "");
   const [selectedPiecePriceListId, setSelectedPiecePriceListId] = useState(initial?.piece_price_list_id || "");
   const [piecePriceItems, setPiecePriceItems] = useState([]);
+  const [productComponents, setProductComponents] = useState([]);
   const [pricingDirty, setPricingDirty] = useState(false);
   const [metalPrices, setMetalPrices] = useState({});
   const [plataFinaMxn, setPlataFinaMxn] = useState(0);
@@ -202,6 +244,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     else setTenantCompany(null);
     fetchLines(resolvedTenantId).then(setLines).catch((error) => setMsg(`Error: ${error.message}`));
     fetchLaborLists(resolvedTenantId).then(setLaborLists).catch(() => setLaborLists([]));
+    fetchProductComponents(resolvedTenantId).then(setProductComponents).catch(() => setProductComponents([]));
     fetchPiecePriceLists(resolvedTenantId)
       .then(setPiecePriceLists)
       .catch((error) => {
@@ -559,10 +602,15 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const ivaMxn = po.aplicar_iva ? totals.mxn * IVA_RATE : 0;
   const totalFinalMxn = totals.mxn + ivaMxn;
 
-  const preorderCatalogProducts = useMemo(
-    () => buildConfigurableCatalogProducts(products || []),
-    [products]
+  const preorderConfigurableEnabled = useMemo(
+    () => isConfigurableCatalogCompany({ activeCompany }) || hasConfigurableCatalogProducts(products || []),
+    [activeCompany, products]
   );
+  const preorderCatalogProducts = useMemo(
+    () => preorderConfigurableEnabled ? buildConfigurableCatalogProducts(products || []) : (products || []),
+    [preorderConfigurableEnabled, products]
+  );
+  const componentGroups = useMemo(() => groupProductComponents(productComponents), [productComponents]);
 
   const productResults = useMemo(() => {
     const term = normalizeText(productSearch);
@@ -718,33 +766,71 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     }
   };
 
-  const applyConfigurableVariant = (idx, variantCode) => {
+  const getConfigurableOptions = (item, componentType) => {
+    if (componentType !== "tipo_pieza") return componentGroups[componentType] || [];
+    const byKey = new Map();
+    (componentGroups.tipo_pieza || []).forEach((component) => {
+      byKey.set(normalizeText(component.nombre || component.codigo), component);
+    });
+    (item?._configurable_variants || []).forEach((variant, index) => {
+      const key = normalizeText(variant.label || variant.code || `tipo-${index}`);
+      if (byKey.has(key)) return;
+      byKey.set(key, {
+        id: variant.product?.codigo || variant.code || key,
+        codigo: variant.product?.codigo || variant.code || key,
+        nombre: variant.label || variant.code,
+        tipo: "tipo_pieza",
+        peso: 0,
+        unidad: "pza",
+        product: variant.product,
+        orden: 100 + index,
+      });
+    });
+    return [...byKey.values()].sort((a, b) => Number(a.orden || 0) - Number(b.orden || 0));
+  };
+
+  const setConfigurableComponent = (idx, componentType, componentCode) => {
     const sourceItem = items[idx];
-    const variant = (sourceItem?._configurable_variants || []).find((entry) => entry.product?.codigo === variantCode);
-    if (!variant?.product) return;
+    const selected = getConfigurableOptions(sourceItem, componentType)
+      .find((component) => String(component.codigo) === String(componentCode));
 
-    const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
-    const selectedPieceList = piecePriceLists.find((entry) => entry.id === selectedPiecePriceListId);
-    const rawItem = buildPreorderItemFromProduct(variant.product, Number(sourceItem.piezas || 1), lines, plataFinaMxn);
-    const pricedItem = isPieceMode
-      ? pricePieceItemFromList({ ...rawItem, pricing_mode: "piece" }, piecePriceItems, selectedPieceList)
-      : priceItemFromLines(rawItem, lines, selectedList, getListSilverMxn(selectedList));
-    const configuredDescription = `${variant.label} ${sourceItem._configurable_title || sourceItem.producto_descripcion}`.trim();
+    setItems((current) => current.map((item, itemIdx) => {
+      if (itemIdx !== idx) return item;
+      const selections = { ...(item._configurable_selections || {}) };
+      if (selected) selections[componentType] = selected;
+      else delete selections[componentType];
 
-    setItems((current) =>
-      current.map((item, itemIdx) =>
-        itemIdx === idx
-          ? {
-              ...pricedItem,
-              producto_descripcion: configuredDescription,
-              comentarios: "",
-            }
-          : item
-      )
-    );
+      const sourceProduct = componentType === "tipo_pieza" ? selected?.product : null;
+      const next = {
+        ...item,
+        _configurable_selections: selections,
+        producto_descripcion: buildConfiguredDescription(item, selections),
+      };
+      const commentIsSystemGenerated = /pendiente de configurar/i.test(String(item.comentarios || ""));
+      if (commentIsSystemGenerated) {
+        next.comentarios = isConfigurableItemComplete({ ...item, _configurable_selections: selections })
+          ? ""
+          : "Pendiente de configurar componentes";
+      }
+
+      if (sourceProduct) {
+        next.producto_foto_url = sourceProduct.fotoUrl || item.producto_foto_url;
+        next.producto_metal = sourceProduct.metal || item.producto_metal;
+        next.producto_kilataje = sourceProduct.kilataje || item.producto_kilataje;
+        next.producto_linea = sourceProduct.linea || item.producto_linea;
+        next._configurable_variant_code = sourceProduct.codigo;
+        next._configurable_base_weight = Number(sourceProduct.pesoPromedio || item._configurable_base_weight || item.gramos_por_pieza || 0);
+      }
+
+      const weight = configuredWeight(next, selections);
+      return calcItem({
+        ...next,
+        gramos_por_pieza: weight,
+        _gt_manual: null,
+      });
+    }));
     markEdited();
-    setMsg(`${variant.product.codigo} configurado en la preorden.`);
-    setProductStatus({ type: "success", text: `${variant.product.codigo} configurado. Puedes seguir agregando productos.` });
+    setProductStatus({ type: "success", text: "Configuracion actualizada en la preorden." });
   };
 
   const findProductByScan = (code) => {
@@ -1476,18 +1562,28 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                         <td>
                           <div>{item.producto_descripcion}</div>
                           {isConfigurableItem ? (
-                            <select
-                              value=""
-                              onChange={(event) => applyConfigurableVariant(idx, event.target.value)}
-                              style={{ marginTop: 6, width: "100%" }}
-                            >
-                              <option value="">Configurar tipo de pieza...</option>
-                              {(item._configurable_variants || []).map((variant) => (
-                                <option key={variant.product?.codigo || variant.code} value={variant.product?.codigo || ""}>
-                                  {variant.label} - {variant.product?.codigo}
-                                </option>
-                              ))}
-                            </select>
+                            <div className="configurable-components-grid">
+                              {CONFIGURABLE_COMPONENT_STEPS.map((step) => {
+                                const selectedCode = item._configurable_selections?.[step.key]?.codigo || "";
+                                const options = getConfigurableOptions(item, step.key);
+                                return (
+                                  <label key={step.key} className="configurable-component-field">
+                                    <span>{step.label}</span>
+                                    <select
+                                      value={selectedCode}
+                                      onChange={(event) => setConfigurableComponent(idx, step.key, event.target.value)}
+                                    >
+                                      <option value="">Selecciona...</option>
+                                      {options.map((component) => (
+                                        <option key={component.id || component.codigo} value={component.codigo}>
+                                          {component.nombre}{component.peso ? ` (+${component.peso} ${component.unidad || "g"})` : ""}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                );
+                              })}
+                            </div>
                           ) : null}
                           <small>{[item.producto_metal, item.producto_kilataje].filter(Boolean).join(" / ")}</small>
                         </td>
