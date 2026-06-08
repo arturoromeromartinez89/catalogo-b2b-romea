@@ -121,19 +121,18 @@ function CobrarModal({ remision, cuentas, onSave, onClose, saving }) {
   };
 
   return (
-    <div className="rem-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="rem-modal">
-        <div className="rem-modal__header">
-          <h3>Registrar cobro — {remision.folio}</h3>
-          <button type="button" className="rem-modal__close" onClick={onClose}>×</button>
-        </div>
+    <div className="client-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="client-modal">
+        <header>
+          <h2>Registrar cobro — {remision.folio}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar">×</button>
+        </header>
 
-        <div className="rem-modal__info">
-          <span>Saldo pendiente: <strong>{esUSD ? fmtUSD(saldoPendiente) : fmtMXN(saldoPendiente)}</strong></span>
-          {saldoPlata > 0 && <span>Plata pendiente: <strong>{saldoPlata.toFixed(3)} g</strong></span>}
-        </div>
-
-        <form className="rem-modal__body" onSubmit={handleSubmit}>
+        <form id="cobro-form" className="rem-modal__body" onSubmit={handleSubmit}>
+          <div className="rem-modal__info" style={{ marginBottom: 12 }}>
+            <span>Saldo pendiente: <strong>{esUSD ? fmtUSD(saldoPendiente) : fmtMXN(saldoPendiente)}</strong></span>
+            {saldoPlata > 0 && <span>Plata pendiente: <strong>{saldoPlata.toFixed(3)} g</strong></span>}
+          </div>
           <div className="rem-form-grid">
 
             <label className="rem-field">
@@ -228,14 +227,13 @@ function CobrarModal({ remision, cuentas, onSave, onClose, saving }) {
               <textarea value={form.notas} onChange={(e) => set("notas", e.target.value)} rows={2} />
             </label>
           </div>
-
-          <div className="rem-modal__actions">
-            <button type="button" className="btn btn--ghost" onClick={onClose} disabled={saving}>Cancelar</button>
-            <button type="submit" className="btn btn--accent" disabled={saving}>
-              {saving ? "Guardando…" : "Registrar cobro"}
-            </button>
-          </div>
         </form>
+        <footer>
+          <button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancelar</button>
+          <button type="submit" form="cobro-form" className="primary-button" disabled={saving}>
+            {saving ? "Guardando…" : "Registrar cobro"}
+          </button>
+        </footer>
       </div>
     </div>
   );
@@ -282,14 +280,14 @@ function NuevaRemisionModal({ folios, clients, onSave, onClose, saving }) {
   };
 
   return (
-    <div className="rem-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="rem-modal rem-modal--wide">
-        <div className="rem-modal__header">
-          <h3>Nueva remisión <span className="rem-modal__folio">{folio}</span></h3>
-          <button type="button" className="rem-modal__close" onClick={onClose}>×</button>
-        </div>
+    <div className="client-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="client-modal client-modal--wide">
+        <header>
+          <h2>Nueva remisión <span className="rem-modal__folio">{folio}</span></h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar">×</button>
+        </header>
 
-        <form className="rem-modal__body" onSubmit={handleSubmit}>
+        <form id="nueva-rem-form" className="rem-modal__body" onSubmit={handleSubmit}>
 
           {/* Datos generales */}
           <div className="rem-section-title">Datos generales</div>
@@ -338,7 +336,7 @@ function NuevaRemisionModal({ folios, clients, onSave, onClose, saving }) {
           {/* Artículos */}
           <div className="rem-section-title" style={{ marginTop: 20 }}>
             Artículos
-            <button type="button" className="btn btn--ghost btn--sm" style={{ marginLeft: 12 }} onClick={addItem}>+ Agregar línea</button>
+            <button type="button" className="secondary-button compact-action" style={{ marginLeft: 12 }} onClick={addItem}>+ Agregar línea</button>
           </div>
 
           <div className="rem-items-table-wrap">
@@ -395,13 +393,13 @@ function NuevaRemisionModal({ folios, clients, onSave, onClose, saving }) {
             </table>
           </div>
 
-          <div className="rem-modal__actions">
-            <button type="button" className="btn btn--ghost" onClick={onClose} disabled={saving}>Cancelar</button>
-            <button type="submit" className="btn btn--accent" disabled={saving || items.every((i) => !i.descripcion)}>
-              {saving ? "Guardando…" : "Crear remisión"}
-            </button>
-          </div>
         </form>
+        <footer>
+          <button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancelar</button>
+          <button type="submit" form="nueva-rem-form" className="primary-button" disabled={saving || items.every((i) => !i.descripcion)}>
+            {saving ? "Guardando…" : "Crear remisión"}
+          </button>
+        </footer>
       </div>
     </div>
   );
@@ -423,16 +421,16 @@ function RemisionDetail({ remision, cuentas, onCobrar, onCancelar, onClose }) {
         <div className="rem-detail__header-right">
           <EstadoBadge estado={remision.estado} />
           {remision.estado !== "cancelada" && remision.estado !== "cobrada" && (
-            <button className="btn btn--accent btn--sm" onClick={() => onCobrar(remision)}>
+            <button className="primary-button compact-action" onClick={() => onCobrar(remision)}>
               + Registrar cobro
             </button>
           )}
           {remision.estado === "emitida" && (
-            <button className="btn btn--danger btn--sm" onClick={() => onCancelar(remision.id)}>
+            <button className="danger-button compact-action" onClick={() => onCancelar(remision.id)}>
               Cancelar
             </button>
           )}
-          <button className="btn btn--ghost btn--sm" onClick={onClose}>Cerrar</button>
+          <button className="secondary-button compact-action" onClick={onClose}>Cerrar</button>
         </div>
       </div>
 
@@ -531,7 +529,7 @@ function RemisionDetail({ remision, cuentas, onCobrar, onCancelar, onClose }) {
 
 // ─── Tab principal ────────────────────────────────────────────────────────────
 
-export default function RemisionesTab({ tenantId, clients = [] }) {
+export default function RemisionesTab({ tenantId, clients = [], notifyAction, setStatus }) {
   const [remisiones, setRemisiones] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
@@ -547,7 +545,12 @@ export default function RemisionesTab({ tenantId, clients = [] }) {
   const [showCobrar, setShowCobrar]       = useState(null); // remision
   const [selected, setSelected]           = useState(null); // remision para detalle
   const [saving, setSaving]               = useState(false);
-  const [msg, setMsg]                     = useState("");
+
+  // Retroalimentación al usuario — usa notifyAction del dashboard si está disponible
+  const notify = (text, type = "success") => {
+    if (notifyAction) notifyAction(type, "", text);
+    else if (setStatus) setStatus(text);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -570,8 +573,6 @@ export default function RemisionesTab({ tenantId, clients = [] }) {
   }, [tenantId, filtroEstado, filtroMoneda]);
 
   useEffect(() => { load(); }, [load]);
-
-  const notify = (text) => { setMsg(text); setTimeout(() => setMsg(""), 3000); };
 
   const handleCreateRemision = async (form, items) => {
     setSaving(true);
@@ -663,11 +664,10 @@ export default function RemisionesTab({ tenantId, clients = [] }) {
       <div className="rem-tab__header">
         <div className="rem-tab__title-row">
           <h2 className="rem-tab__title">Remisiones</h2>
-          <button className="btn btn--accent" onClick={() => setShowNueva(true)}>
+          <button className="primary-button" onClick={() => setShowNueva(true)}>
             + Nueva remisión
           </button>
         </div>
-        {msg && <div className="rem-toast">{msg}</div>}
       </div>
 
       {/* Filtros */}
@@ -689,7 +689,7 @@ export default function RemisionesTab({ tenantId, clients = [] }) {
           <option value="USD">Solo USD</option>
           <option value="MXN">Solo MXN</option>
         </select>
-        <button className="btn btn--ghost btn--sm" onClick={load}>↻ Actualizar</button>
+        <button className="secondary-button compact-action" onClick={load}>↻ Actualizar</button>
       </div>
 
       {/* KPIs de resumen */}
@@ -756,7 +756,7 @@ export default function RemisionesTab({ tenantId, clients = [] }) {
                       <td>
                         {rem.estado !== "cancelada" && rem.estado !== "cobrada" && (
                           <button
-                            className="btn btn--accent btn--sm"
+                            className="primary-button compact-action"
                             onClick={(e) => { e.stopPropagation(); setShowCobrar(rem); }}
                           >
                             Cobrar

@@ -42,13 +42,13 @@ function GastoForm({ initial, categorias, onSave, onClose, saving }) {
   };
 
   return (
-    <div className="rem-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="rem-modal">
-        <div className="rem-modal__header">
-          <h3>{initial?.id ? "Editar gasto" : "Nuevo gasto"}</h3>
-          <button type="button" className="rem-modal__close" onClick={onClose}>×</button>
-        </div>
-        <form className="rem-modal__body" onSubmit={handleSubmit}>
+    <div className="client-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="client-modal">
+        <header>
+          <h2>{initial?.id ? "Editar gasto" : "Nuevo gasto"}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar">×</button>
+        </header>
+        <form id="gasto-form" className="rem-modal__body" onSubmit={handleSubmit}>
           <div className="rem-form-grid">
             <label className="rem-field">
               <span>Fecha</span>
@@ -85,13 +85,13 @@ function GastoForm({ initial, categorias, onSave, onClose, saving }) {
               <textarea value={form.notas} onChange={(e) => set("notas", e.target.value)} rows={2} />
             </label>
           </div>
-          <div className="rem-modal__actions">
-            <button type="button" className="btn btn--ghost" onClick={onClose} disabled={saving}>Cancelar</button>
-            <button type="submit" className="btn btn--accent" disabled={saving || !form.descripcion || !form.montoMxn}>
-              {saving ? "Guardando…" : initial?.id ? "Guardar cambios" : "Crear gasto"}
-            </button>
-          </div>
         </form>
+        <footer>
+          <button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancelar</button>
+          <button type="submit" form="gasto-form" className="primary-button" disabled={saving || !form.descripcion || !form.montoMxn}>
+            {saving ? "Guardando…" : initial?.id ? "Guardar cambios" : "Crear gasto"}
+          </button>
+        </footer>
       </div>
     </div>
   );
@@ -103,17 +103,17 @@ function PagarModal({ gasto, cuentas, onPagar, onClose, saving }) {
   const [metodo, setMetodo] = useState("transferencia");
 
   return (
-    <div className="rem-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="rem-modal">
-        <div className="rem-modal__header">
-          <h3>Pagar gasto</h3>
-          <button type="button" className="rem-modal__close" onClick={onClose}>×</button>
-        </div>
-        <div className="rem-modal__info">
-          <strong>{gasto.descripcion}</strong>
-          <span>Saldo pendiente: <strong>{fmtMXN(gasto.saldoMxn)}</strong></span>
-        </div>
+    <div className="client-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="client-modal">
+        <header>
+          <h2>Pagar gasto</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar">×</button>
+        </header>
         <div className="rem-modal__body">
+          <div className="rem-modal__info" style={{ marginBottom: 12 }}>
+            <strong>{gasto.descripcion}</strong>
+            <span>Saldo pendiente: <strong>{fmtMXN(gasto.saldoMxn)}</strong></span>
+          </div>
           <div className="rem-form-grid">
             <label className="rem-field">
               <span>Monto a pagar MXN</span>
@@ -140,22 +140,22 @@ function PagarModal({ gasto, cuentas, onPagar, onClose, saving }) {
               </label>
             )}
           </div>
-          <div className="rem-modal__actions">
-            <button type="button" className="btn btn--ghost" onClick={onClose} disabled={saving}>Cancelar</button>
-            <button
-              type="button" className="btn btn--accent" disabled={saving || !monto || Number(monto) <= 0}
-              onClick={() => onPagar(gasto.id, Number(monto), cuentaId, metodo)}
-            >
-              {saving ? "Guardando…" : "Registrar pago"}
-            </button>
-          </div>
         </div>
+        <footer>
+          <button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancelar</button>
+          <button
+            type="button" className="primary-button" disabled={saving || !monto || Number(monto) <= 0}
+            onClick={() => onPagar(gasto.id, Number(monto), cuentaId, metodo)}
+          >
+            {saving ? "Guardando…" : "Registrar pago"}
+          </button>
+        </footer>
       </div>
     </div>
   );
 }
 
-export default function GastosTab({ tenantId }) {
+export default function GastosTab({ tenantId, notifyAction, setStatus }) {
   const [gastos, setGastos]           = useState([]);
   const [categorias, setCategorias]   = useState([]);
   const [cuentas, setCuentas]         = useState([]);
@@ -169,9 +169,11 @@ export default function GastosTab({ tenantId }) {
   const [editGasto, setEditGasto]     = useState(null);
   const [showPagar, setShowPagar]     = useState(null);
   const [saving, setSaving]           = useState(false);
-  const [msg, setMsg]                 = useState("");
 
-  const notify = (text) => { setMsg(text); setTimeout(() => setMsg(""), 3000); };
+  const notify = (text, type = "success") => {
+    if (notifyAction) notifyAction(type, "", text);
+    else if (setStatus) setStatus(text);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -253,9 +255,8 @@ export default function GastosTab({ tenantId }) {
       <div className="rem-tab__header">
         <div className="rem-tab__title-row">
           <h2 className="rem-tab__title">Gastos</h2>
-          <button className="btn btn--accent" onClick={() => { setEditGasto(null); setShowForm(true); }}>+ Nuevo gasto</button>
+          <button className="primary-button" onClick={() => { setEditGasto(null); setShowForm(true); }}>+ Nuevo gasto</button>
         </div>
-        {msg && <div className="rem-toast">{msg}</div>}
       </div>
 
       <div className="rem-filters">
@@ -273,7 +274,7 @@ export default function GastosTab({ tenantId }) {
           <option value="">Todas las categorías</option>
           {categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
         </select>
-        <button className="btn btn--ghost btn--sm" onClick={load}>↻</button>
+        <button className="secondary-button compact-action" onClick={load}>↻</button>
       </div>
 
       {filtered.length > 0 && (
@@ -323,9 +324,9 @@ export default function GastosTab({ tenantId }) {
                       <td>
                         <div className="rem-row-actions">
                           {g.estado !== "pagado" && g.estado !== "cancelado" && (
-                            <button className="btn btn--accent btn--sm" onClick={() => setShowPagar(g)}>Pagar</button>
+                            <button className="primary-button compact-action" onClick={() => setShowPagar(g)}>Pagar</button>
                           )}
-                          <button className="btn btn--ghost btn--sm" onClick={() => { setEditGasto(g); setShowForm(true); }}>Editar</button>
+                          <button className="secondary-button compact-action" onClick={() => { setEditGasto(g); setShowForm(true); }}>Editar</button>
                           <button className="table-delete" onClick={() => handleDelete(g)}>×</button>
                         </div>
                       </td>

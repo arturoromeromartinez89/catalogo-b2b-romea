@@ -112,9 +112,9 @@ export const fetchCuentas = async (tenantId) => {
 };
 
 export const DEFAULT_CUENTAS = [
-  { nombre: "Efectivo taller", tipo: "efectivo",   moneda: "MXN", saldo_inicial: 0, orden: 1 },
-  { nombre: "Banco BBVA",      tipo: "banco",       moneda: "MXN", saldo_inicial: 0, orden: 2 },
-  { nombre: "Mercado Pago",    tipo: "plataforma",  moneda: "MXN", saldo_inicial: 0, orden: 3 },
+  { nombre: "Efectivo taller", tipo: "efectivo",   moneda: "MXN", saldo_inicial: 0, gramos_iniciales: 0, orden: 1 },
+  { nombre: "Banco BBVA",      tipo: "banco",       moneda: "MXN", saldo_inicial: 0, gramos_iniciales: 0, orden: 2 },
+  { nombre: "Mercado Pago",    tipo: "plataforma",  moneda: "MXN", saldo_inicial: 0, gramos_iniciales: 0, orden: 3 },
   { nombre: "Caja Plata .925", tipo: "plata",       moneda: "GRM", saldo_inicial: 0, gramos_iniciales: 0, orden: 4 },
 ];
 

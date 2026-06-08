@@ -53,34 +53,37 @@ const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_marku
 const PRODUCT_RENDER_BATCH = 60;
 const baseTabs = ["catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
 const configurableOnlyTabs = ["components"];
-const adminModuleTabs = ["remisiones", "gastos", "balance"];
+const adminModuleTabs = ["administracion"];
+const ADMIN_SUB_TABS = [
+  { id: "resumen",    label: "Resumen" },
+  { id: "remisiones", label: "Remisiones" },
+  { id: "gastos",     label: "Gastos" },
+  { id: "balance",    label: "Balance" },
+  { id: "estados",    label: "Estados financieros" },
+];
 const tabKeys = {
-  tenants:    "tenants",
-  catalog:    "catalog",
-  preorders:  "preorders",
-  clients:    "clients",
-  prospects:  "prospects",
-  prices:     "priceMenu",
-  company:    "company",
-  database:   "database",
-  components: "components",
-  remisiones: "remisiones",
-  gastos:     "gastos",
-  balance:    "balance",
+  tenants:       "tenants",
+  catalog:       "catalog",
+  preorders:     "preorders",
+  clients:       "clients",
+  prospects:     "prospects",
+  prices:        "priceMenu",
+  company:       "company",
+  database:      "database",
+  components:    "components",
+  administracion: "administracion",
 };
 const titleKeys = {
-  tenants:    "tenants",
-  catalog:    "adminCatalog",
-  preorders:  "preorders",
-  clients:    "clients",
-  prospects:  "prospects",
-  prices:     "priceMenu",
-  company:    "company",
-  database:   "database",
-  components: "components",
-  remisiones: "remisiones",
-  gastos:     "gastos",
-  balance:    "balance",
+  tenants:       "tenants",
+  catalog:       "adminCatalog",
+  preorders:     "preorders",
+  clients:       "clients",
+  prospects:     "prospects",
+  prices:        "priceMenu",
+  company:       "company",
+  database:      "database",
+  components:    "components",
+  administracion: "administracion",
 };
 
 const formProductToRow = (product) => ({
@@ -206,6 +209,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
   const tabs = superadmin ? ["tenants", ...baseTabs] : [...baseTabs]; // se extiende abajo con extraTabs
   const [tab, setTab] = useState("catalog");
+  const [adminSubTab, setAdminSubTab] = useState("resumen");
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("");
   const [actionNotice, setActionNotice] = useState(null);
@@ -1068,11 +1072,31 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           <h3>{t("admin")}</h3>
           <div className="admin-nav-list">
             {allTabs.map((id) => (
-              <button className={tab === id ? "active" : ""} key={id} type="button" onClick={() => changeTab(id)}>
-                {t(tabKeys[id])}
+              <button
+                className={tab === id ? "active" : ""}
+                key={id}
+                type="button"
+                onClick={() => changeTab(id)}
+              >
+                {id === "administracion" ? "Administración" : t(tabKeys[id])}
               </button>
             ))}
           </div>
+          {/* Sub-navegación de Administración — siempre expandida cuando está activa */}
+          {tab === "administracion" && configurableCatalogEnabled ? (
+            <div className="admin-subnav">
+              {ADMIN_SUB_TABS.map((sub) => (
+                <button
+                  key={sub.id}
+                  className={adminSubTab === sub.id ? "active" : ""}
+                  type="button"
+                  onClick={() => setAdminSubTab(sub.id)}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </section>
 
         {tab === "catalog" && !selectedProductCode ? (
@@ -1308,16 +1332,41 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           <ComponentsTab tenantId={tenantId} />
         ) : null}
 
-        {tab === "remisiones" && configurableCatalogEnabled ? (
-          <RemisionesTab tenantId={tenantId} clients={data?.clients || []} />
-        ) : null}
-
-        {tab === "gastos" && configurableCatalogEnabled ? (
-          <GastosTab tenantId={tenantId} />
-        ) : null}
-
-        {tab === "balance" && configurableCatalogEnabled ? (
-          <BalanceTab tenantId={tenantId} />
+        {tab === "administracion" && configurableCatalogEnabled ? (
+          <div className="admin-module-content">
+            {adminSubTab === "resumen" ? (
+              <div className="admin-placeholder-panel">
+                <span className="placeholder-icon">📊</span>
+                <h3>Resumen ejecutivo</h3>
+                <p>Próximamente: KPIs de remisiones, cobros y gastos del mes en un solo vistazo. Por ahora usa Balance para el detalle.</p>
+              </div>
+            ) : null}
+            {adminSubTab === "remisiones" ? (
+              <RemisionesTab
+                tenantId={tenantId}
+                clients={data?.clients || []}
+                notifyAction={notifyAction}
+                setStatus={setStatus}
+              />
+            ) : null}
+            {adminSubTab === "gastos" ? (
+              <GastosTab
+                tenantId={tenantId}
+                notifyAction={notifyAction}
+                setStatus={setStatus}
+              />
+            ) : null}
+            {adminSubTab === "balance" ? (
+              <BalanceTab tenantId={tenantId} />
+            ) : null}
+            {adminSubTab === "estados" ? (
+              <div className="admin-placeholder-panel">
+                <span className="placeholder-icon">📋</span>
+                <h3>Estados financieros</h3>
+                <p>En desarrollo: Estado de resultados, Balance general, Posición de plata y Flujo de caja por periodo.</p>
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </main>
 

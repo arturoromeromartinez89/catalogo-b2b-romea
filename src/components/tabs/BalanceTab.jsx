@@ -30,7 +30,7 @@ function KpiCard({ label, value, sub, variant = "default", icon }) {
 
 // ─── Barra de progreso ────────────────────────────────────────────────────────
 
-function ProgressBar({ value, total, color = "var(--accent)" }) {
+function ProgressBar({ value, total, color = "var(--brand-700, #1f335f)" }) {
   const pct = total > 0 ? Math.min(100, (value / total) * 100) : 0;
   return (
     <div className="bal-progress">
@@ -86,7 +86,7 @@ export default function BalanceTab({ tenantId }) {
               <span>Hasta</span>
               <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
             </label>
-            <button className="btn btn--ghost btn--sm" onClick={load}>↻ Actualizar</button>
+            <button className="secondary-button compact-action" onClick={load}>↻ Actualizar</button>
           </div>
         </div>
       </div>

@@ -8154,3 +8154,111 @@ textarea:focus {
 .bal-result-row .green { color: #059669; }
 .bal-result-row .red { color: #dc2626; }
 .bal-disclaimer { font-size: 11px; color: var(--romea-muted); margin-top: 8px; max-width: 500px; }
+
+/* ─── Admin module — sub-navegación siempre expandida ──────────────────────────
+   Aparece debajo del botón "Administración" activo en el sidebar oscuro.
+   Hereda el tema del sidebar: fondo var(--brand-900), texto blanco.
+   ═════════════════════════════════════════════════════════════════════════════ */
+
+.admin-subnav {
+  border-left: 2px solid rgba(255,255,255,0.15);
+  display: grid;
+  gap: 2px;
+  margin-left: 10px;
+  margin-top: 4px;
+  padding-left: 8px;
+}
+
+.admin-subnav button {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: rgba(255,255,255,0.62);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: var(--weight-semibold);
+  min-height: 26px;
+  padding: 5px 8px;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+  width: 100%;
+}
+
+.admin-subnav button:hover {
+  background: rgba(255,255,255,0.09);
+  color: rgba(255,255,255,0.90);
+}
+
+.admin-subnav button.active {
+  background: rgba(255,255,255,0.18);
+  color: #ffffff;
+  font-weight: var(--weight-bold);
+}
+
+/* ─── Modal ancho — para formularios con tabla (ej. Nueva Remisión) ─────────── */
+
+.client-modal--wide {
+  width: min(97vw, 920px);
+}
+
+/* ─── Admin module tab — área de contenido ──────────────────────────────────── */
+
+.admin-module-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ─── Resumen / placeholder panels ──────────────────────────────────────────── */
+
+.admin-placeholder-panel {
+  align-items: center;
+  color: var(--neutral-500);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  justify-content: center;
+  min-height: 240px;
+  padding: var(--sp-6);
+  text-align: center;
+}
+
+.admin-placeholder-panel .placeholder-icon {
+  font-size: 42px;
+  opacity: 0.4;
+}
+
+.admin-placeholder-panel h3 {
+  color: var(--neutral-800);
+  font-size: 16px;
+  font-weight: var(--weight-bold);
+  margin: 0;
+}
+
+.admin-placeholder-panel p {
+  color: var(--neutral-500);
+  font-size: 13px;
+  margin: 0;
+  max-width: 360px;
+}
+
+/* fix: compatibilidad modal rem existente con clases de sistema ─────────────── */
+
+/* Fuerza el grid header/body/footer con body scrollable */
+.client-modal {
+  grid-template-rows: auto 1fr auto;
+}
+
+.client-modal > .rem-modal__body {
+  overflow-y: auto;
+}
+
+/* El título h2 del modal admin es más compacto que los modales de clientes */
+.client-modal > header > h2 {
+  font-size: 16px;
+}
+
+/* Modal ancho: el body puede ser más alto */
+.client-modal--wide {
+  max-height: 94vh;
+}
