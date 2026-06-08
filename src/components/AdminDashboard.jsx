@@ -21,6 +21,9 @@ import ClientsTab from "./tabs/ClientsTab";
 import ProspectsTab from "./tabs/ProspectsTab";
 import DatabaseTab from "./tabs/DatabaseTab";
 import ComponentsTab from "./tabs/ComponentsTab";
+import RemisionesTab from "./tabs/RemisionesTab";
+import GastosTab from "./tabs/GastosTab";
+import BalanceTab from "./tabs/BalanceTab";
 import { sampleProducts } from "../data/sampleProducts";
 import { useLanguage } from "../i18n/LanguageContext";
 import { supabase } from "../lib/supabaseClient";
@@ -50,6 +53,7 @@ const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_marku
 const PRODUCT_RENDER_BATCH = 60;
 const baseTabs = ["catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
 const configurableOnlyTabs = ["components"];
+const adminModuleTabs = ["remisiones", "gastos", "balance"];
 const tabKeys = {
   tenants:    "tenants",
   catalog:    "catalog",
@@ -60,6 +64,9 @@ const tabKeys = {
   company:    "company",
   database:   "database",
   components: "components",
+  remisiones: "remisiones",
+  gastos:     "gastos",
+  balance:    "balance",
 };
 const titleKeys = {
   tenants:    "tenants",
@@ -71,6 +78,9 @@ const titleKeys = {
   company:    "company",
   database:   "database",
   components: "components",
+  remisiones: "remisiones",
+  gastos:     "gastos",
+  balance:    "balance",
 };
 
 const formProductToRow = (product) => ({
@@ -358,7 +368,11 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     () => isConfigurableCatalogCompany({ activeTenant, activeCompany, supportTenantName }) || hasConfigurableCatalogProducts(products),
     [activeTenant, activeCompany, supportTenantName, products]
   );
-  const allTabs = configurableCatalogEnabled ? [...tabs, ...configurableOnlyTabs] : tabs;
+  const allTabs = [
+    ...tabs,
+    ...(configurableCatalogEnabled ? configurableOnlyTabs : []),
+    ...(configurableCatalogEnabled ? adminModuleTabs : []),
+  ];
   const catalogProducts = useMemo(
     () => configurableCatalogEnabled ? buildConfigurableCatalogProducts(products) : products,
     [configurableCatalogEnabled, products]
@@ -1292,6 +1306,18 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
 
         {tab === "components" && configurableCatalogEnabled ? (
           <ComponentsTab tenantId={tenantId} />
+        ) : null}
+
+        {tab === "remisiones" && configurableCatalogEnabled ? (
+          <RemisionesTab tenantId={tenantId} clients={data?.clients || []} />
+        ) : null}
+
+        {tab === "gastos" && configurableCatalogEnabled ? (
+          <GastosTab tenantId={tenantId} />
+        ) : null}
+
+        {tab === "balance" && configurableCatalogEnabled ? (
+          <BalanceTab tenantId={tenantId} />
         ) : null}
       </main>
 
