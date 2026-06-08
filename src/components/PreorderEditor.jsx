@@ -1539,7 +1539,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     return (
                       <tr key={`${item.producto_codigo}-${idx}`}>
                         <td className="quote-item-photo-cell">
-                          {item.producto_foto_url ? (
+                          {!isConfigurableItem && item.producto_foto_url ? (
                             <img
                               className="quote-item-photo"
                               src={imageUrlForSize(item.producto_foto_url, 240)}
@@ -1548,9 +1548,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                               decoding="async"
                               onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
                             />
-                          ) : (
+                          ) : !isConfigurableItem ? (
                             <span className="quote-item-photo-placeholder">Sin foto</span>
-                          )}
+                          ) : null}
                         </td>
                         <td><strong>{item.producto_codigo}</strong></td>
                         <td>
@@ -1564,64 +1564,90 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                           <div>{item.producto_descripcion}</div>
                           {isConfigurableItem ? (
                             <div className="configurable-builder">
+
+                              {/* ── Dos imágenes protagonistas: tejido + broche ── */}
                               <div className="configurable-visual-row">
-                                <article className="configurable-visual-card">
-                                  <span>Tejido / base</span>
-                                  <img
-                                    src={imageUrlForSize(item._configurable_base_foto_url || item.producto_foto_url, 120) || buildPlaceholderUrl()}
-                                    alt={item._configurable_base_description || item.producto_descripcion}
-                                    loading="lazy"
-                                    decoding="async"
-                                    onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
-                                  />
-                                  <strong>{item._configurable_base_description || item.producto_descripcion}</strong>
+
+                                {/* Tarjeta 1: Tejido / base — estática */}
+                                <article className="configurable-photo-card">
+                                  <div className="configurable-photo-card__image">
+                                    {item._configurable_base_foto_url || item.producto_foto_url ? (
+                                      <img
+                                        src={imageUrlForSize(item._configurable_base_foto_url || item.producto_foto_url, 480)}
+                                        alt={item._configurable_base_description || item.producto_descripcion}
+                                        loading="lazy"
+                                        decoding="async"
+                                        onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
+                                      />
+                                    ) : (
+                                      <div className="configurable-photo-card__image--empty">Sin foto</div>
+                                    )}
+                                  </div>
+                                  <div className="configurable-photo-card__footer">
+                                    <span className="configurable-photo-card__label">Tejido / base</span>
+                                    <strong className="configurable-photo-card__name">
+                                      {item._configurable_base_description || item.producto_descripcion}
+                                    </strong>
+                                  </div>
                                 </article>
 
-                                <label className="configurable-visual-card configurable-visual-card--select">
-                                  <span>Broche</span>
-                                  <img
-                                    src={imageUrlForSize(item._configurable_selections?.broche?.fotoUrl, 120) || buildPlaceholderUrl()}
-                                    alt={item._configurable_selections?.broche?.nombre || "Broche"}
-                                    loading="lazy"
-                                    decoding="async"
-                                    onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
-                                  />
-                                  <select
-                                    value={item._configurable_selections?.broche?.codigo || ""}
-                                    onChange={(event) => setConfigurableComponent(idx, "broche", event.target.value)}
-                                  >
-                                    <option value="">Selecciona broche...</option>
-                                    {getConfigurableOptions(item, "broche").map((component) => (
-                                      <option key={component.id || component.codigo} value={component.codigo}>
-                                        {component.nombre}{component.peso ? ` (+${component.peso} ${component.unidad || "g"})` : ""}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </label>
-                              </div>
-
-                              <div className="configurable-components-grid">
-                                {CONFIGURABLE_COMPONENT_STEPS.filter((step) => step.key !== "broche").map((step) => {
-                                const selectedCode = item._configurable_selections?.[step.key]?.codigo || "";
-                                const options = getConfigurableOptions(item, step.key);
-                                return (
-                                  <label key={step.key} className="configurable-component-field">
-                                    <span>{step.label}</span>
+                                {/* Tarjeta 2: Broche — interactiva, imagen cambia al elegir */}
+                                <label className={`configurable-photo-card configurable-photo-card--interactive${item._configurable_selections?.broche ? " configurable-photo-card--selected" : ""}`}>
+                                  <div className="configurable-photo-card__image">
+                                    {item._configurable_selections?.broche?.fotoUrl ? (
+                                      <img
+                                        src={imageUrlForSize(item._configurable_selections.broche.fotoUrl, 480)}
+                                        alt={item._configurable_selections.broche.nombre}
+                                        loading="lazy"
+                                        decoding="async"
+                                        onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
+                                      />
+                                    ) : (
+                                      <div className="configurable-photo-card__image--empty">Elige broche</div>
+                                    )}
+                                  </div>
+                                  <div className="configurable-photo-card__footer">
+                                    <span className="configurable-photo-card__label">Broche</span>
                                     <select
-                                      value={selectedCode}
-                                      onChange={(event) => setConfigurableComponent(idx, step.key, event.target.value)}
+                                      value={item._configurable_selections?.broche?.codigo || ""}
+                                      onChange={(event) => setConfigurableComponent(idx, "broche", event.target.value)}
                                     >
-                                      <option value="">Selecciona...</option>
-                                      {options.map((component) => (
+                                      <option value="">Selecciona broche...</option>
+                                      {getConfigurableOptions(item, "broche").map((component) => (
                                         <option key={component.id || component.codigo} value={component.codigo}>
                                           {component.nombre}{component.peso ? ` (+${component.peso} ${component.unidad || "g"})` : ""}
                                         </option>
                                       ))}
                                     </select>
-                                  </label>
-                                );
+                                  </div>
+                                </label>
+
+                              </div>
+
+                              {/* ── Selectores secundarios: tipo de pieza, largo, terminado ── */}
+                              <div className="configurable-components-grid">
+                                {CONFIGURABLE_COMPONENT_STEPS.filter((step) => step.key !== "broche").map((step) => {
+                                  const selectedCode = item._configurable_selections?.[step.key]?.codigo || "";
+                                  const options = getConfigurableOptions(item, step.key);
+                                  return (
+                                    <label key={step.key} className="configurable-component-field">
+                                      <span>{step.label}</span>
+                                      <select
+                                        value={selectedCode}
+                                        onChange={(event) => setConfigurableComponent(idx, step.key, event.target.value)}
+                                      >
+                                        <option value="">Selecciona...</option>
+                                        {options.map((component) => (
+                                          <option key={component.id || component.codigo} value={component.codigo}>
+                                            {component.nombre}{component.peso ? ` (+${component.peso} ${component.unidad || "g"})` : ""}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                  );
                                 })}
                               </div>
+
                             </div>
                           ) : null}
                           <small>{[item.producto_metal, item.producto_kilataje].filter(Boolean).join(" / ")}</small>
