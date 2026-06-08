@@ -20,6 +20,7 @@ import CatalogTab from "./tabs/CatalogTab";
 import ClientsTab from "./tabs/ClientsTab";
 import ProspectsTab from "./tabs/ProspectsTab";
 import DatabaseTab from "./tabs/DatabaseTab";
+import ComponentsTab from "./tabs/ComponentsTab";
 import { sampleProducts } from "../data/sampleProducts";
 import { useLanguage } from "../i18n/LanguageContext";
 import { supabase } from "../lib/supabaseClient";
@@ -48,25 +49,28 @@ const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
 const PRODUCT_RENDER_BATCH = 60;
 const baseTabs = ["catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
+const configurableOnlyTabs = ["components"];
 const tabKeys = {
-  tenants: "tenants",
-  catalog: "catalog",
-  preorders: "preorders",
-  clients: "clients",
-  prospects: "prospects",
-  prices: "priceMenu",
-  company: "company",
-  database: "database",
+  tenants:    "tenants",
+  catalog:    "catalog",
+  preorders:  "preorders",
+  clients:    "clients",
+  prospects:  "prospects",
+  prices:     "priceMenu",
+  company:    "company",
+  database:   "database",
+  components: "components",
 };
 const titleKeys = {
-  tenants: "tenants",
-  catalog: "adminCatalog",
-  preorders: "preorders",
-  clients: "clients",
-  prospects: "prospects",
-  prices: "priceMenu",
-  company: "company",
-  database: "database",
+  tenants:    "tenants",
+  catalog:    "adminCatalog",
+  preorders:  "preorders",
+  clients:    "clients",
+  prospects:  "prospects",
+  prices:     "priceMenu",
+  company:    "company",
+  database:   "database",
+  components: "components",
 };
 
 const formProductToRow = (product) => ({
@@ -190,7 +194,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const tenantId = tenantOverride || (superadmin ? selectedTenantId : profile?.tenant_id || profile?.tenantId || "");
   const activeTenant = useMemo(() => tenants.find((tenant) => tenant.id === tenantId), [tenants, tenantId]);
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
-  const tabs = superadmin ? ["tenants", ...baseTabs] : baseTabs;
+  const extraTabs = configurableCatalogEnabled ? configurableOnlyTabs : [];
+  const tabs = superadmin ? ["tenants", ...baseTabs, ...extraTabs] : [...baseTabs, ...extraTabs];
   const [tab, setTab] = useState("catalog");
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("");
@@ -1283,6 +1288,10 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             setStatus={setStatus}
             notifyAction={notifyAction}
           />
+        ) : null}
+
+        {tab === "components" && configurableCatalogEnabled ? (
+          <ComponentsTab tenantId={tenantId} />
         ) : null}
       </main>
 
