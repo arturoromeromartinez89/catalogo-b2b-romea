@@ -194,8 +194,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const tenantId = tenantOverride || (superadmin ? selectedTenantId : profile?.tenant_id || profile?.tenantId || "");
   const activeTenant = useMemo(() => tenants.find((tenant) => tenant.id === tenantId), [tenants, tenantId]);
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
-  const extraTabs = configurableCatalogEnabled ? configurableOnlyTabs : [];
-  const tabs = superadmin ? ["tenants", ...baseTabs, ...extraTabs] : [...baseTabs, ...extraTabs];
+  const tabs = superadmin ? ["tenants", ...baseTabs] : [...baseTabs]; // se extiende abajo con extraTabs
   const [tab, setTab] = useState("catalog");
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("");
@@ -359,6 +358,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     () => isConfigurableCatalogCompany({ activeTenant, activeCompany, supportTenantName }) || hasConfigurableCatalogProducts(products),
     [activeTenant, activeCompany, supportTenantName, products]
   );
+  const allTabs = configurableCatalogEnabled ? [...tabs, ...configurableOnlyTabs] : tabs;
   const catalogProducts = useMemo(
     () => configurableCatalogEnabled ? buildConfigurableCatalogProducts(products) : products,
     [configurableCatalogEnabled, products]
@@ -1053,7 +1053,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
         <section className="sidebar-section sidebar-menu-section">
           <h3>{t("admin")}</h3>
           <div className="admin-nav-list">
-            {tabs.map((id) => (
+            {allTabs.map((id) => (
               <button className={tab === id ? "active" : ""} key={id} type="button" onClick={() => changeTab(id)}>
                 {t(tabKeys[id])}
               </button>
