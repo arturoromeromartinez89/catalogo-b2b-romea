@@ -12,7 +12,10 @@ export function CompanyProvider({ children }) {
     fetchCompanySettings().then(setCompany).catch(() => setCompany(defaultSettings));
   }, []);
 
-  const reload = () => fetchCompanySettings().then(setCompany).catch(() => {});
+  // tenantId opcional: si se pasa, recarga settings del tenant correcto.
+  // Sin argumento sigue cargando el registro global (tenant_id IS NULL) para
+  // el contexto base de la app (Vanguardia / configuración por defecto).
+  const reload = (tenantId = "") => fetchCompanySettings(tenantId).then(setCompany).catch(() => {});
 
   return (
     <CompanyContext.Provider value={{ ...company, reload }}>

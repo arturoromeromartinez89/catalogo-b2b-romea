@@ -43,6 +43,12 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
   const handleLogo = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    // Guard: no subir sin empresa activa — evita guardar en bucket global equivocado
+    if (!tenantId) {
+      setStatus("Error: no se detectó empresa activa. No se puede subir el logo.");
+      event.target.value = "";
+      return;
+    }
     setUploading(true);
     setStatus("Subiendo logo...");
     try {
@@ -58,15 +64,23 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
   };
 
   const handleSave = async () => {
+    // Guard: no guardar sin empresa activa — evita sobreescribir settings globales
+    if (!tenantId) {
+      setStatus("Error: no se detectó empresa activa. Contacta al administrador.");
+      return;
+    }
     setSaving(true);
     setStatus("");
     try {
       await saveCompanySettings(form, tenantId);
-      company.reload();
+      // No llamamos company.reload() sin tenantId porque recargaría el registro
+      // global (tenant_id IS NULL) y pisaría visualmente los datos de esta empresa.
+      // El evento company-settings-updated actualiza tenantCompany en AdminDashboard
+      // directamente con los datos correctos que acabamos de guardar.
       window.dispatchEvent(new CustomEvent("company-settings-updated", { detail: { tenantId, settings: form } }));
-      setStatus("Informacion de empresa guardada correctamente.");
+      setStatus("Datos de empresa guardados correctamente.");
     } catch (error) {
-      setStatus("Error: " + error.message);
+      setStatus("Error al guardar: " + error.message);
     } finally {
       setSaving(false);
     }
