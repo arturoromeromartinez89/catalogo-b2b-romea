@@ -119,7 +119,17 @@ export const savePreorder = async (preorder, items) => {
 
   if (items.length > 0) {
     const itemsData = items.map((item, idx) => {
-      const { id, preorder_id, created_at, _gt_manual, comentarios, ...cleanItem } = item;
+      const {
+        id,
+        preorder_id,
+        created_at,
+        _gt_manual,
+        _configurable_group,
+        _configurable_title,
+        _configurable_variants,
+        comentarios,
+        ...cleanItem
+      } = item;
       if (comentarios) {
         cleanItem.producto_descripcion = [cleanItem.producto_descripcion, `Nota: ${comentarios}`].filter(Boolean).join("\n");
       }
