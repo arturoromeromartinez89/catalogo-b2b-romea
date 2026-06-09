@@ -51,6 +51,22 @@ const cleanItemNumbers = (item, idx) => ({
   sort_order: toDbNumber(item.sort_order, idx),
 });
 
+const CLIENT_ONLY_ITEM_FIELDS = new Set([
+  "id",
+  "preorder_id",
+  "created_at",
+  "comentarios",
+  "costo_pieza_mxn",
+  "margen_pieza_pct",
+]);
+
+const stripClientOnlyItemFields = (item) =>
+  Object.fromEntries(
+    Object.entries(item || {}).filter(
+      ([key]) => !key.startsWith("_") && !CLIENT_ONLY_ITEM_FIELDS.has(key)
+    )
+  );
+
 const normalizePreorderStatus = (status) => {
   const allowed = new Set(["pendiente", "revision", "confirmada", "cancelada"]);
   return allowed.has(status) ? status : "pendiente";
@@ -140,25 +156,8 @@ export const savePreorder = async (preorder, items) => {
 
   if (items.length > 0) {
     const itemsData = items.map((item, idx) => {
-      const {
-        id,
-        preorder_id,
-        created_at,
-        _gt_manual,
-        _configurable_group,
-        _configurable_title,
-        _configurable_base_code,        // ← strip: no es columna en DB
-        _configurable_base_description,
-        _configurable_base_foto_url,
-        _configurable_base_weight,
-        _configurable_selections,
-        _configurable_variant_code,
-        _configurable_variants,
-        comentarios,
-        costo_pieza_mxn,
-        margen_pieza_pct,
-        ...cleanItem
-      } = item;
+      const comentarios = item.comentarios;
+      const cleanItem = stripClientOnlyItemFields(item);
       if (comentarios) {
         cleanItem.producto_descripcion = [cleanItem.producto_descripcion, `Nota: ${comentarios}`].filter(Boolean).join("\n");
       }

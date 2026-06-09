@@ -412,8 +412,8 @@ create table if not exists public.remisiones (
   -- Es solo referencia informativa, NO es deuda en dinero
 
   -- ── Estado ───────────────────────────────────────────────────────
-  estado          text not null default 'emitida'
-                  check (estado in ('borrador','emitida','cobrada','parcial','cancelada')),
+  estado          text not null default 'borrador'
+                  check (estado in ('borrador','emitida','entregada','cancelada')),
 
   metodo_envio    text,
   tracking        text,
@@ -888,8 +888,8 @@ create index if not exists idx_pagos_fecha  on public.pagos(tenant_id, fecha_pag
 --
 --   ACTIVOS CIRCULANTES:
 --     Caja y bancos MXN        = SUM(saldo_actual) WHERE tipo IN ('efectivo','banco','plataforma')
---     Cuentas por cobrar USD   = SUM(saldo_dinero) WHERE moneda = 'USD' y estado != 'cobrada'
---     Cuentas por cobrar MXN   = SUM(saldo_dinero) WHERE moneda = 'MXN' y estado != 'cobrada'
+--     Cuentas por cobrar USD   = SUM(saldo_dinero) WHERE moneda = 'USD' y saldo_dinero > 0
+--     Cuentas por cobrar MXN   = SUM(saldo_dinero) WHERE moneda = 'MXN' y saldo_dinero > 0
 --     CxC plata (valuada)      = SUM(saldo_plata_gramos) × kitco_hoy × tipo_cambio
 --     Inventario plata fina    = gramos_actuales × (kitco_hoy / 31.1035) × tipo_cambio
 --     -- Nota: valuación a precio de mercado del día (Kitco)

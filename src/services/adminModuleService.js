@@ -222,9 +222,7 @@ export const createRemision = async (remision, items, tenantId) => {
     return s + Number(i.subtotalLaborMxn || 0);
   }, 0);
   const total = subtotal - Number(remision.descuento || 0);
-  const cargoPlatGramos = remision.moneda === "MXN"
-    ? items.reduce((s, i) => s + Number(i.subtotalPlataGramos || 0), 0)
-    : 0;
+  const cargoPlatGramos = remision.moneda === "MXN" ? totalGramos : 0;
 
   const remisionPayload = {
     tenant_id:            tenantId,
@@ -279,7 +277,7 @@ export const createRemision = async (remision, items, tenantId) => {
       precio_usd_por_gramo:        Number(item.precioUsdPorGramo || 0),
       subtotal_usd:                Number(item.subtotalUsd || 0),
       subtotal_labor_mxn:          Number(item.subtotalLaborMxn || 0),
-      subtotal_plata_gramos:       Number(item.subtotalPlataGramos || 0),
+      subtotal_plata_gramos:       Number(item.gramosTotal || 0),
       sort_order:                  idx,
       notas:                       item.notas || "",
     }));
