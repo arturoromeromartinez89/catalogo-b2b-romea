@@ -1060,6 +1060,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       applyIva: false,
       showBreakdown: !isPieceMode,
       plataFinaMxn,
+      notes: po.notas || "",
+      pfMode: po.pf_mode,
+      kitcoUsdOz: po.kitco_usd_oz,
+      premiumPct: po.premio_pct,
       status: po.status,
     };
     const pdfItems = items.map((item) => ({
@@ -1089,6 +1093,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       showBreakdown: !isPieceMode,
       pricingMode,
       silverFineMxn: plataFinaMxn,
+      pfMode: po.pf_mode,
+      kitcoUsdOz: po.kitco_usd_oz,
+      premiumPct: po.premio_pct,
       status: po.status,
     });
   };

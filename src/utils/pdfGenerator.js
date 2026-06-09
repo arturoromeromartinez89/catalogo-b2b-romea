@@ -110,6 +110,12 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   const applyIva = Boolean(opts.applyIva || customer.applyIva);
   const IVA_RATE = 0.16;
   const isDraft = (opts.status || customer.status || "").toLowerCase() === "borrador";
+  const documentNotes = customer.notes || customer.notas || customer.observations || customer.observaciones || "";
+  const pfMode = opts.pfMode || customer.pfMode || customer.pf_mode || "";
+  const kitcoUsdOz = Number(opts.kitcoUsdOz || customer.kitcoUsdOz || customer.kitco_usd_oz || 0);
+  const premiumPct = Number(opts.premiumPct || customer.premiumPct || customer.premio_pct || 0);
+  const silverFineMxn = Number(opts.silverFineMxn || customer.silverFineMxn || customer.plataFinaMxn || customer.plata_fina_mxn || 0);
+  const silverFineDisplay = silverFineMxn ? displayMoney(silverFineMxn) : 0;
 
   // ── HEADER ───────────────────────────────────────────────
   const storedLogo = typeof localStorage !== "undefined" ? localStorage.getItem("romea-logo-data") : "";
@@ -168,6 +174,61 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   y = Math.max(y, cy) + 5;
   doc.setDrawColor(200,210,230); doc.setLineWidth(0.3);
   doc.line(page.margin, y, page.w - page.margin, y); y += 6;
+
+  const drawInfoBox = ({ x, boxY, w, title, lines, accent = [31, 51, 95] }) => {
+    const wrapped = (lines || [])
+      .filter(Boolean)
+      .flatMap((line) => doc.splitTextToSize(String(line), w - 8));
+    const h = Math.max(18, 10 + wrapped.length * 4);
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(220, 228, 240);
+    doc.roundedRect(x, boxY, w, h, 1.5, 1.5, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.6);
+    doc.setTextColor(...accent);
+    txt(doc, title, x + 4, boxY + 5);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.4);
+    doc.setTextColor(60, 65, 78);
+    txt(doc, wrapped, x + 4, boxY + 10);
+    return h;
+  };
+
+  const hasSilverInfo = !isPiecePricing && (kitcoUsdOz || premiumPct || silverFineMxn || pfMode);
+  if (documentNotes || hasSilverInfo) {
+    if (y + 34 > page.h - footerReserve) { doc.addPage(); y = page.margin; }
+    const gap = 6;
+    const boxW = hasSilverInfo ? (page.col - gap) / 2 : page.col;
+    const noteH = drawInfoBox({
+      x: page.margin,
+      boxY: y,
+      w: boxW,
+      title: t("COMENTARIOS", "COMMENTS"),
+      lines: [documentNotes || t("Sin comentarios adicionales.", "No additional comments.")],
+      accent: [31, 51, 95],
+    });
+    let silverH = 0;
+    if (hasSilverInfo) {
+      silverH = drawInfoBox({
+        x: page.margin + boxW + gap,
+        boxY: y,
+        w: boxW,
+        title: t("VALORIZACION DE PLATA FINA", "FINE SILVER VALUATION"),
+        lines: [
+          kitcoUsdOz ? `KITCO SILVER: ${money(kitcoUsdOz)} USD/OZ` : t("KITCO SILVER: pendiente", "KITCO SILVER: pending"),
+          `+ PREMIUM: ${Number.isFinite(premiumPct) ? premiumPct : 0}%`,
+          silverFineMxn
+            ? `${t("VALOR PF", "FS VALUE")}: ${money(silverFineDisplay)} ${currency}/g`
+            : t("VALOR PF: pendiente por confirmar", "FS VALUE: pending confirmation"),
+          pfMode === "kitco"
+            ? t("Calculo desde Kitco aplicado a esta preorden.", "Kitco calculation applied to this preorder.")
+            : t("Plata fina capturada manualmente.", "Fine silver captured manually."),
+        ],
+        accent: [218, 119, 0],
+      });
+    }
+    y += Math.max(noteH, silverH) + 6;
+  }
 
   // ── COLUMNAS ──────────────────────────────────────────────
   const C = {
