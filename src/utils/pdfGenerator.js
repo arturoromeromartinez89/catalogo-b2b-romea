@@ -116,6 +116,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   const premiumPct = Number(opts.premiumPct || customer.premiumPct || customer.premio_pct || 0);
   const silverFineMxn = Number(opts.silverFineMxn || customer.silverFineMxn || customer.plataFinaMxn || customer.plata_fina_mxn || 0);
   const silverFineDisplay = silverFineMxn ? displayMoney(silverFineMxn) : 0;
+  const hasSilverInfo = !isPiecePricing && (kitcoUsdOz || premiumPct || silverFineMxn || pfMode);
 
   // ── HEADER ───────────────────────────────────────────────
   const storedLogo = typeof localStorage !== "undefined" ? localStorage.getItem("romea-logo-data") : "";
@@ -170,6 +171,20 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     customer.phone ? `Tel: ${customer.phone}` : null,
     customer.rfc ? `RFC: ${customer.rfc}` : null,
   ].filter(Boolean).forEach((l) => { txt(doc, l, cx, cy); cy += 4; });
+  if (hasSilverInfo) {
+    cy += 2;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(7); doc.setTextColor(100,100,100);
+    txt(doc, t("VALORIZACION DE PLATA FINA", "FINE SILVER VALUATION"), cx, cy); cy += 4;
+    doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(60,60,60);
+    const pfLines = [
+      kitcoUsdOz ? `KITCO SILVER: ${money(kitcoUsdOz)} USD/OZ` : t("KITCO SILVER: pendiente", "KITCO SILVER: pending"),
+      `+ PREMIUM: ${Number.isFinite(premiumPct) ? premiumPct : 0}%`,
+      silverFineMxn
+        ? `${t("VALOR PF", "FS VALUE")}: ${money(silverFineDisplay)} ${currency}/g`
+        : t("VALOR PF: pendiente por confirmar", "FS VALUE: pending confirmation"),
+    ];
+    pfLines.forEach((l) => { txt(doc, l, cx, cy); cy += 4; });
+  }
 
   y = Math.max(y, cy) + 5;
   doc.setDrawColor(200,210,230); doc.setLineWidth(0.3);
@@ -194,40 +209,17 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     return h;
   };
 
-  const hasSilverInfo = !isPiecePricing && (kitcoUsdOz || premiumPct || silverFineMxn || pfMode);
-  if (documentNotes || hasSilverInfo) {
-    if (y + 34 > page.h - footerReserve) { doc.addPage(); y = page.margin; }
-    const gap = 6;
-    const boxW = hasSilverInfo ? (page.col - gap) / 2 : page.col;
+  if (documentNotes) {
+    if (y + 24 > page.h - footerReserve) { doc.addPage(); y = page.margin; }
     const noteH = drawInfoBox({
       x: page.margin,
       boxY: y,
-      w: boxW,
+      w: page.col,
       title: t("COMENTARIOS", "COMMENTS"),
-      lines: [documentNotes || t("Sin comentarios adicionales.", "No additional comments.")],
+      lines: [documentNotes],
       accent: [31, 51, 95],
     });
-    let silverH = 0;
-    if (hasSilverInfo) {
-      silverH = drawInfoBox({
-        x: page.margin + boxW + gap,
-        boxY: y,
-        w: boxW,
-        title: t("VALORIZACION DE PLATA FINA", "FINE SILVER VALUATION"),
-        lines: [
-          kitcoUsdOz ? `KITCO SILVER: ${money(kitcoUsdOz)} USD/OZ` : t("KITCO SILVER: pendiente", "KITCO SILVER: pending"),
-          `+ PREMIUM: ${Number.isFinite(premiumPct) ? premiumPct : 0}%`,
-          silverFineMxn
-            ? `${t("VALOR PF", "FS VALUE")}: ${money(silverFineDisplay)} ${currency}/g`
-            : t("VALOR PF: pendiente por confirmar", "FS VALUE: pending confirmation"),
-          pfMode === "kitco"
-            ? t("Calculo desde Kitco aplicado a esta preorden.", "Kitco calculation applied to this preorder.")
-            : t("Plata fina capturada manualmente.", "Fine silver captured manually."),
-        ],
-        accent: [218, 119, 0],
-      });
-    }
-    y += Math.max(noteH, silverH) + 6;
+    y += noteH + 6;
   }
 
   // ── COLUMNAS ──────────────────────────────────────────────
