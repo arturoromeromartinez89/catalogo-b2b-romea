@@ -225,6 +225,22 @@ const safeFilePart = (value) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 60) || "borrador";
 
+const downloadWorkbook = (XLSX, workbook, fileName) => {
+  const arrayBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([arrayBuffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
 function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, onCreateRemision, pricingLocked = false, tenantId = "", profile }) {
   const { language } = useLanguage();
   const company = useCompany();
@@ -1176,7 +1192,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       XLSX.utils.book_append_sheet(workbook, productsSheet, "Preorden");
       XLSX.utils.book_append_sheet(workbook, summarySheet, "Resumen");
       const fileName = `preorden-${safeFilePart(po.folio || po.cliente_empresa || po.cliente_nombre)}.xlsx`;
-      XLSX.writeFile(workbook, fileName);
+      downloadWorkbook(XLSX, workbook, fileName);
       setMsg("Excel de preorden descargado correctamente.");
     } catch (error) {
       setMsg(`Error al descargar Excel: ${error.message}`);
