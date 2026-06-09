@@ -21,7 +21,7 @@ import ClientsTab from "./tabs/ClientsTab";
 import ProspectsTab from "./tabs/ProspectsTab";
 import DatabaseTab from "./tabs/DatabaseTab";
 import ComponentsTab from "./tabs/ComponentsTab";
-import RemisionesTab from "./tabs/RemisionesTab";
+import RemisionWorkspace from "./RemisionWorkspace";
 import GastosTab from "./tabs/GastosTab";
 import BalanceTab from "./tabs/BalanceTab";
 import CentrosCostosTab from "./tabs/CentrosCostosTab";
@@ -256,6 +256,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [draftPreorder, setDraftPreorder] = useState(null);
   const [draftStorageReadyKey, setDraftStorageReadyKey] = useState(null);
   const [isDraftOpen, setIsDraftOpen] = useState(false);
+  const [remisionDraft, setRemisionDraft] = useState(null);
+  const [remisionDraftOpen, setRemisionDraftOpen] = useState(false);
   const [tabChangeModal, setTabChangeModal] = useState({ open: false, nextTab: null });
   const [addedCodes, setAddedCodes] = useState([]);
   const [visibleProductLimit, setVisibleProductLimit] = useState(PRODUCT_RENDER_BATCH);
@@ -996,6 +998,28 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     setQuoteLinkOpen(true);
   };
 
+  const handleCreateRemisionFromPreorder = (preorder) => {
+    // Mapea la preorden al formato que espera RemisionWorkspace/RemisionEditor
+    setRemisionDraft({
+      estado:            "borrador",
+      clienteId:         preorder.client_id || "",
+      clienteNombre:     preorder.cliente_nombre || "",
+      clienteEmpresa:    preorder.cliente_empresa || "",
+      clienteEmail:      preorder.cliente_email || "",
+      clienteTelefono:   preorder.cliente_telefono || "",
+      clienteRfc:        preorder.cliente_rfc || "",
+      moneda:            preorder.moneda || "USD",
+      tipoCambioEmision: preorder.tipo_cambio ? String(preorder.tipo_cambio) : "",
+      preorderId:        preorder.id || null,
+      notas:             preorder.notas || "",
+      // Items de la preorden — RemisionEditor los procesa con itemsFromPreorder()
+      preorder_items:    preorder.preorder_items || [],
+    });
+    setRemisionDraftOpen(true);
+    changeTab("administracion");
+    setAdminSubTab("remisiones");
+  };
+
   const openDraftPreorderWorkspace = () => {
     if (!draftPreorder?.preorder_items?.length) return;
     setCatalogPdfOpen(false);
@@ -1317,6 +1341,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               setIsDraftOpen(false);
               setStatus("Preorden guardada correctamente. Puedes verla en el menu Preordenes.");
             }}
+            onCreateRemision={handleCreateRemisionFromPreorder}
           />
         ) : null}
 
@@ -1356,11 +1381,18 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               </div>
             ) : null}
             {adminSubTab === "remisiones" ? (
-              <RemisionesTab
-                tenantId={tenantId}
+              <RemisionWorkspace
                 clients={data?.clients || []}
-                notifyAction={notifyAction}
-                setStatus={setStatus}
+                products={products}
+                profile={profile}
+                tenantId={tenantId}
+                initialDraft={remisionDraft}
+                isInitialDraftOpen={remisionDraftOpen}
+                onInitialDraftClose={() => setRemisionDraftOpen(false)}
+                onInitialDraftSaved={() => {
+                  setRemisionDraft(null);
+                  setRemisionDraftOpen(false);
+                }}
               />
             ) : null}
             {adminSubTab === "gastos" ? (

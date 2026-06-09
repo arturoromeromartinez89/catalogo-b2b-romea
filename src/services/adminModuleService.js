@@ -250,7 +250,7 @@ export const createRemision = async (remision, items, tenantId) => {
     saldo_plata_gramos:   cargoPlatGramos,
     kitco_emision:        remision.kitcoEmision || null,
     tipo_cambio_emision:  remision.tipoCambioEmision || null,
-    estado:               "emitida",
+    estado:               remision.estado || "borrador",
     metodo_envio:         remision.metodoEnvio || "",
     notas:                remision.notas || "",
   };
@@ -288,6 +288,79 @@ export const createRemision = async (remision, items, tenantId) => {
   }
 
   return fetchRemisionById(rem.id);
+};
+
+export const updateRemision = async (remisionId, remision, items, tenantId) => {
+  const totalGramos = items.reduce((s, i) => s + Number(i.gramosTotal || 0), 0);
+  const subtotal = items.reduce((s, i) => {
+    if (remision.moneda === "USD") return s + Number(i.subtotalUsd || 0);
+    return s + Number(i.subtotalLaborMxn || 0);
+  }, 0);
+  const total = subtotal - Number(remision.descuento || 0);
+  const cargoPlatGramos = remision.moneda === "MXN"
+    ? items.reduce((s, i) => s + Number(i.gramosTotal || 0), 0)
+    : 0;
+
+  const payload = {
+    folio:                remision.folio,
+    fecha:                remision.fecha,
+    fecha_entrega:        remision.fechaEntrega || null,
+    client_id:            remision.clienteId || remision.client_id || null,
+    cliente_nombre:       remision.clienteNombre || "",
+    cliente_empresa:      remision.clienteEmpresa || "",
+    cliente_email:        remision.clienteEmail || "",
+    cliente_telefono:     remision.clienteTelefono || "",
+    moneda:               remision.moneda || "USD",
+    preorder_id:          remision.preorderId || null,
+    total_gramos:         totalGramos,
+    subtotal,
+    descuento:            Number(remision.descuento || 0),
+    total,
+    cargo_plata_gramos:   cargoPlatGramos,
+    kitco_emision:        remision.kitcoEmision || null,
+    tipo_cambio_emision:  remision.tipoCambioEmision || null,
+    estado:               remision.estado || "borrador",
+    notas:                remision.notas || "",
+    updated_at:           new Date().toISOString(),
+  };
+
+  const { error: remErr } = await supabase.from("remisiones").update(payload).eq("id", remisionId);
+  if (remErr) handleError(remErr, "updateRemision");
+
+  // Reemplazar items
+  await supabase.from("remision_items").delete().eq("remision_id", remisionId);
+  if (items.length > 0) {
+    const itemsPayload = items.map((item, idx) => ({
+      remision_id:                 remisionId,
+      tenant_id:                   tenantId,
+      producto_codigo:             item.productoCodigo || "",
+      producto_foto_url:           item.productoFotoUrl || "",
+      descripcion:                 item.descripcion,
+      configuracion:               item.configuracion || {},
+      cantidad:                    Number(item.cantidad || 1),
+      gramos_por_pieza:            Number(item.gramosPorPieza || 0),
+      gramos_total:                Number(item.gramosTotal || 0),
+      labor_mxn_por_gramo:         Number(item.laborMxnPorGramo || 0),
+      plata_fina_mxn_por_gramo:    Number(item.plataMxnPorGramo || 0),
+      precio_total_mxn_por_gramo:  Number(item.precioTotalPorGramo || 0),
+      precio_usd_por_gramo:        Number(item.precioUsdPorGramo || 0),
+      subtotal_usd:                Number(item.subtotalUsd || 0),
+      subtotal_labor_mxn:          Number(item.subtotalLaborMxn || 0),
+      subtotal_plata_gramos:       Number(item.gramosTotal || 0),
+      sort_order:                  idx,
+      notas:                       item.notas || "",
+    }));
+    const { error: itemsErr } = await supabase.from("remision_items").insert(itemsPayload);
+    if (itemsErr) handleError(itemsErr, "updateRemision.items");
+  }
+
+  return fetchRemisionById(remisionId);
+};
+
+export const saveRemision = async (remision, items, tenantId) => {
+  const isExisting = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(remision.id || ""));
+  if (isExisting) return updateRemision(remision.id, remision, items, tenantId);
+  return createRemision(remision, items, tenantId);
 };
 
 export const updateRemisionEstado = async (id, estado) => {
@@ -356,13 +429,11 @@ export const registrarCobro = async (cobro, tenantId) => {
     .single();
   if (cobroErr) handleError(cobroErr, "registrarCobro.insert");
 
-  // 2. Actualizar saldos de la remisión
+  // 2. Actualizar saldos de la remisión (SIN cambiar estado — es delivery-based)
   const remision = await fetchRemisionById(cobro.remisionId);
   const nuevoMontoCobrado = remision.montoCobrado + Number(cobro.abonoUsd || cobro.abonoLaborMxn || 0);
   const nuevoSaldo = Math.max(0, remision.total - nuevoMontoCobrado);
   const nuevoSaldoPlata = Math.max(0, remision.saldoPlataGramos - Number(cobro.abonoPlataGramos || 0));
-  const nuevoEstado = nuevoSaldo <= 0.01 && nuevoSaldoPlata <= 0.001 ? "cobrada"
-    : nuevoMontoCobrado > 0 ? "parcial" : "emitida";
 
   await supabase
     .from("remisiones")
@@ -371,7 +442,7 @@ export const registrarCobro = async (cobro, tenantId) => {
       saldo_dinero:           nuevoSaldo,
       plata_entregada_gramos: remision.plataEntregadaGramos + Number(cobro.abonoPlataGramos || 0),
       saldo_plata_gramos:     nuevoSaldoPlata,
-      estado:                 nuevoEstado,
+      // NO actualizamos estado — los estados son de entrega, no de pago
       updated_at:             new Date().toISOString(),
     })
     .eq("id", cobro.remisionId);

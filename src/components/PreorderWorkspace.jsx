@@ -152,6 +152,7 @@ export default function PreorderWorkspace({
   isDraftOpen = false,
   onDraftClose,
   onDraftSaved,
+  onCreateRemision,
 }) {
   const [tabs, setTabs] = useState([{ id: TAB_LIST, type: TAB_LIST, label: "Preórdenes", dirty: false }]);
   const [activeId, setActiveId] = useState(TAB_LIST);
@@ -297,6 +298,7 @@ export default function PreorderWorkspace({
             onClose={(updatedDraft) => closeTab(activeTab.id, updatedDraft)}
             onSaved={(savedData) => handleSaved(activeTab.id, savedData)}
             onDirty={() => markDirty(activeTab.id)}
+            onCreateRemision={onCreateRemision}
           />
         )}
       </div>

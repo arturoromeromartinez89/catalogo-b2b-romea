@@ -225,7 +225,7 @@ const safeFilePart = (value) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 60) || "borrador";
 
-function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, pricingLocked = false, tenantId = "", profile }) {
+function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, onCreateRemision, pricingLocked = false, tenantId = "", profile }) {
   const { language } = useLanguage();
   const company = useCompany();
   const hasSavedInitialId = UUID_RE.test(String(initial?.id || ""));
@@ -1231,6 +1231,16 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           <button className="secondary-button compact-action" type="button" onClick={handleExcelDownload}>
             Excel
           </button>
+          {onCreateRemision ? (
+            <button
+              className="secondary-button compact-action"
+              type="button"
+              title="Crear una remisión a partir de esta preorden"
+              onClick={() => onCreateRemision({ ...po, preorder_items: items })}
+            >
+              ↓ Crear remisión
+            </button>
+          ) : null}
           <button
             className="primary-button compact-action"
             type="button"

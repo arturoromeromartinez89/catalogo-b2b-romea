@@ -147,6 +147,7 @@ export const savePreorder = async (preorder, items) => {
         _gt_manual,
         _configurable_group,
         _configurable_title,
+        _configurable_base_code,        // ← strip: no es columna en DB
         _configurable_base_description,
         _configurable_base_foto_url,
         _configurable_base_weight,
