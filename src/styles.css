@@ -8236,69 +8236,255 @@ textarea:focus {
   font-weight: var(--weight-semibold, 600);
 }
 
-/* ─── Catálogo — filtros inline (movidos del sidebar al área de contenido) ──── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   CatalogFilterBar (.cfb)
+   Barra compacta de filtros — siempre una sola fila, 52 px de altura.
+   Layout: [métricas] [búsqueda] [Filtros▾popover] [pills scroll] [✕] [▴]
+   ───────────────────────────────────────────────────────────────────────────── */
 
-.catalog-inline-filter-bar {
-  background: white;
+.cfb {
+  align-items: center;
+  background: #fff;
   border-bottom: 1px solid var(--neutral-200, #e6eaf1);
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 10px 20px;
-  align-items: flex-start;
   flex-shrink: 0;
+  gap: 8px;
+  height: 52px;
+  overflow: visible;          /* necesario para el popover */
+  padding: 0 20px;
+  position: relative;
+  z-index: 10;
 }
 
-/* Métricas rápidas dentro del filtro bar */
-.catalog-filter-metrics {
-  align-items: center;
+/* Collapsed: más delgada, solo métricas + toggle */
+.cfb--collapsed { height: 40px; }
+
+/* ── Métricas ── */
+.cfb-metrics {
+  align-items: baseline;
   border-right: 1px solid var(--neutral-200, #e6eaf1);
   display: flex;
   flex-shrink: 0;
-  gap: 16px;
+  gap: 3px;
   padding-right: 12px;
+  white-space: nowrap;
 }
-
-.catalog-filter-metrics div {
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+.cfb-metric {
+  color: var(--neutral-800, #1d2433);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
 }
-
-.catalog-filter-metrics span {
-  color: var(--neutral-500, #6f7787);
+.cfb-metric--filtered { color: var(--romea-blue, #2558d9); }
+.cfb-sep {
+  color: var(--neutral-300, #d0d5e0);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1;
+}
+.cfb-metrics-label {
+  color: var(--neutral-400, #a0a8b5);
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.catalog-filter-metrics strong {
-  color: var(--neutral-800, #1d2433);
-  font-size: 15px;
-  font-weight: 700;
+/* ── Búsqueda — adapta AdvancedSearch al toolbar ── */
+.cfb-search {
+  flex: 1;
+  max-width: 380px;
+  min-width: 160px;
 }
+/* Limita el token-box a una fila dentro del toolbar */
+.cfb .advanced-search { width: 100%; }
+.cfb .search-token-box {
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+  height: 34px;
+  overflow: hidden;
+  padding: 0 8px;
+}
+.cfb .search-token-box input { min-width: 80px; }
 
-/* Los componentes FilterPanel, AdvancedSearch, QuickFilters en modo inline */
-.catalog-inline-filter-bar .advanced-search-wrap,
-.catalog-inline-filter-bar .filter-panel-root,
-.catalog-inline-filter-bar .quick-filters-root {
+/* ── Botón Filtros + popover ── */
+.cfb-filter-wrap {
   flex-shrink: 0;
+  position: relative;
 }
-
-/* Contenedor de los controles de filtro (puede colapsar) */
-.catalog-filter-controls {
-  align-items: flex-start;
+.cfb-filter-btn {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--neutral-200, #e6eaf1);
+  border-radius: 8px;
+  color: var(--neutral-700, #2d3748);
+  cursor: pointer;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 5px;
+  height: 34px;
+  padding: 0 12px;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.cfb-filter-btn:hover {
+  background: var(--color-bg-input, #f8faff);
+  border-color: var(--romea-blue, #2558d9);
+}
+.cfb-filter-btn--active {
+  background: var(--romea-soft, #eef2ff);
+  border-color: var(--romea-blue, #2558d9);
+  color: var(--romea-blue, #2558d9);
+}
+.cfb-chevron { font-size: 8px; margin-left: 1px; opacity: 0.6; }
+
+/* Badge de conteo */
+.cfb-badge {
+  background: var(--romea-blue, #2558d9);
+  border-radius: 99px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  min-width: 16px;
+  padding: 2px 4px;
+  text-align: center;
 }
 
-/* Estado colapsado — solo se ve el bloque de métricas y el botón mostrar */
-.catalog-inline-filter-bar--collapsed .catalog-filter-controls {
-  display: none;
+/* Popover de FilterPanel */
+.cfb-filter-popover {
+  background: #fff;
+  border: 1px solid var(--neutral-200, #e6eaf1);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.06);
+  left: 0;
+  min-width: 280px;
+  padding: 4px 4px 8px;
+  position: absolute;
+  top: calc(100% + 6px);
+  z-index: 300;
 }
+/* Adapta el FilterPanel al popover: quita padding excesivo del sidebar-section */
+.cfb-filter-popover .sidebar-section {
+  padding: 12px 12px 0;
+}
+.cfb-filter-popover .sidebar-section > h3 {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.cfb-filter-popover .side-filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cfb-filter-popover .side-filter-list label {
+  display: grid;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 3px;
+}
+.cfb-filter-popover .side-filter-list select,
+.cfb-filter-popover .side-filter-list input[type="number"] {
+  border: 1px solid var(--neutral-200, #e6eaf1);
+  border-radius: 6px;
+  font-size: 12px;
+  height: 30px;
+  padding: 0 8px;
+  width: 100%;
+}
+.cfb-filter-popover .range-grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 6px;
+}
+
+/* ── Pills de filtros rápidos — scroll horizontal, sin wrap ── */
+.cfb-pills {
+  display: flex;
+  flex: 1;
+  flex-wrap: nowrap;
+  gap: 5px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 2px 0;
+  scrollbar-width: none;
+}
+.cfb-pills::-webkit-scrollbar { display: none; }
+
+.cfb-pill {
+  background: var(--neutral-50, #f7f8fa);
+  border: 1px solid var(--neutral-200, #e6eaf1);
+  border-radius: 999px;
+  color: var(--neutral-600, #4a5568);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 5px 11px;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.cfb-pill:hover {
+  background: #fff;
+  border-color: var(--romea-blue, #2558d9);
+  color: var(--romea-blue, #2558d9);
+}
+.cfb-pill--active {
+  background: var(--romea-blue, #2558d9);
+  border-color: var(--romea-blue, #2558d9);
+  color: #fff;
+}
+.cfb-pill--active:hover { background: #1a46c8; border-color: #1a46c8; }
+
+/* ── Limpiar filtros ── */
+.cfb-clear {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--neutral-200, #e6eaf1);
+  border-radius: 7px;
+  color: var(--neutral-500, #6f7787);
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 4px;
+  height: 30px;
+  padding: 0 10px;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  white-space: nowrap;
+}
+.cfb-clear:hover {
+  background: #fff5f5;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* ── Toggle ocultar/mostrar — siempre al extremo derecho ── */
+.cfb-toggle {
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: var(--neutral-400, #a0a8b5);
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 4px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0 6px;
+  transition: color 0.12s;
+  white-space: nowrap;
+}
+.cfb-toggle:hover { color: var(--neutral-700, #2d3748); }
 
 /* ─── Modal ancho — para formularios con tabla (ej. Nueva Remisión) ─────────── */
 

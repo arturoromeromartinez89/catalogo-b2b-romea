@@ -1,17 +1,15 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import ActionNotice from "./ActionNotice";
-import AdvancedSearch from "./AdvancedSearch";
 import BrandLogo from "./BrandLogo";
 import CompanySettingsPanel from "./CompanySettingsPanel";
 import CatalogPdfPanel from "./CatalogPdfPanel";
+import CatalogFilterBar from "./CatalogFilterBar";
 import PricingPanel from "./PricingPanel";
 import PreorderWorkspace from "./PreorderWorkspace";
 import QuoteLinkPanel from "./QuoteLinkPanel";
 import SelectedProductsDrawer from "./SelectedProductsDrawer";
 import ProductFormModal from "./ProductFormModal";
-import FilterPanel from "./FilterPanel";
 import LanguageToggle from "./LanguageToggle";
-import QuickFilters from "./QuickFilters";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings } from "../services/companySettings";
 // Tabs extraídos — step 1 del refactor progresivo
@@ -1230,34 +1228,25 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             removeFromCatalogSelection={removeFromCatalogSelection}
             setProductModal={setProductModal}
             filterBar={!selectedProductCode ? (
-              <div className={`catalog-inline-filter-bar${filtersCollapsed ? " catalog-inline-filter-bar--collapsed" : ""}`}>
-                <div className="catalog-filter-metrics">
-                  <div><span>Total</span><strong>{loadingProducts ? "..." : products.length.toLocaleString()}</strong></div>
-                  <div><span>Filtrados</span><strong>{productQuery !== deferredProductQuery ? "…" : filteredProducts.length.toLocaleString()}</strong></div>
-                </div>
-                <div className="catalog-filter-controls">
-                  <AdvancedSearch
-                    value={productQuery}
-                    chips={searchChips}
-                    products={products}
-                    onChange={setProductQuery}
-                    onAddChip={(chip) => { addSearchChip(chip); setProductQuery(""); }}
-                    onRemoveChip={(chip) => setSearchChips((current) => current.filter((item) => item !== chip))}
-                  />
-                  <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
-                  <QuickFilters
-                    activeFilters={quickFilters}
-                    onToggle={(id) => setQuickFilters((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
-                    onRemove={(id) => setQuickFilters((current) => current.filter((item) => item !== id))}
-                  />
-                  <button className="secondary-button compact-action" type="button" onClick={clearCatalogFilters}>
-                    {t("clearFilters")}
-                  </button>
-                  <button className="link-button" type="button" onClick={() => setFiltersCollapsed((c) => !c)}>
-                    {filtersCollapsed ? "▾ Mostrar" : "▴ Ocultar"}
-                  </button>
-                </div>
-              </div>
+              <CatalogFilterBar
+                totalCount={products.length}
+                filteredCount={productQuery !== deferredProductQuery ? filteredProducts.length : filteredProducts.length}
+                loadingProducts={loadingProducts}
+                productQuery={productQuery}
+                searchChips={searchChips}
+                products={products}
+                onQueryChange={setProductQuery}
+                onAddChip={addSearchChip}
+                onRemoveChip={(chip) => setSearchChips((c) => c.filter((item) => item !== chip))}
+                filters={filters}
+                filterOptions={filterOptions}
+                onFiltersChange={setFilters}
+                quickFilters={quickFilters}
+                onQuickFilterToggle={(id) => setQuickFilters((c) => c.includes(id) ? c.filter((item) => item !== id) : [...c, id])}
+                onClear={clearCatalogFilters}
+                collapsed={filtersCollapsed}
+                onToggleCollapse={() => setFiltersCollapsed((c) => !c)}
+              />
             ) : null}
           />
         ) : null}
