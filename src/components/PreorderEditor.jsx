@@ -289,6 +289,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [items, setItems] = useState(() => withPreorderSortOrder(orderPreorderItems(initial?.preorder_items || [])));
   const [draggedItemIndex, setDraggedItemIndex] = useState(null);
   const [dragOverItemIndex, setDragOverItemIndex] = useState(null);
+  const preorderItemsScrollRef = useRef(null);
+  const preorderAutoScrollRef = useRef({ frameId: null, target: null, velocity: 0 });
   const [lines, setLines] = useState([]);
   const [laborLists, setLaborLists] = useState([]);
   const [piecePriceLists, setPiecePriceLists] = useState([]);
@@ -318,6 +320,52 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const markEdited = () => {
     onDirty?.();
     setSaved(false);
+  };
+
+  const stopPreorderAutoScroll = () => {
+    const frameId = preorderAutoScrollRef.current.frameId;
+    if (frameId) window.cancelAnimationFrame(frameId);
+    preorderAutoScrollRef.current = { frameId: null, target: null, velocity: 0 };
+  };
+
+  const getPreorderScrollTarget = () => {
+    let node = preorderItemsScrollRef.current?.parentElement || null;
+    while (node && node !== document.body) {
+      const style = window.getComputedStyle(node);
+      const canScrollY = /auto|scroll|overlay/i.test(style.overflowY);
+      if (canScrollY && node.scrollHeight > node.clientHeight + 2) return node;
+      node = node.parentElement;
+    }
+    return document.scrollingElement || document.documentElement;
+  };
+
+  const tickPreorderAutoScroll = () => {
+    const { target, velocity } = preorderAutoScrollRef.current;
+    if (target && Math.abs(velocity) > 0.2) target.scrollTop += velocity;
+    preorderAutoScrollRef.current.frameId = window.requestAnimationFrame(tickPreorderAutoScroll);
+  };
+
+  const updatePreorderAutoScroll = (clientY) => {
+    const target = getPreorderScrollTarget();
+    const isDocumentTarget = target === document.scrollingElement || target === document.documentElement;
+    const rect = isDocumentTarget
+      ? { top: 0, bottom: window.innerHeight, height: window.innerHeight }
+      : target.getBoundingClientRect();
+    const edgeSize = Math.max(72, Math.min(128, rect.height * 0.28));
+    const upperPressure = Math.max(0, Math.min(1, (edgeSize - (clientY - rect.top)) / edgeSize));
+    const lowerPressure = Math.max(0, Math.min(1, (edgeSize - (rect.bottom - clientY)) / edgeSize));
+    const direction = lowerPressure > upperPressure ? 1 : upperPressure > lowerPressure ? -1 : 0;
+    const pressure = Math.max(upperPressure, lowerPressure);
+    const velocity = direction && pressure > 0.02
+      ? direction * (1.5 + 14 * Math.pow(pressure, 1.7))
+      : 0;
+
+    preorderAutoScrollRef.current.target = target;
+    preorderAutoScrollRef.current.velocity = velocity;
+    if (!preorderAutoScrollRef.current.frameId && velocity) {
+      preorderAutoScrollRef.current.frameId = window.requestAnimationFrame(tickPreorderAutoScroll);
+    }
+    if (!velocity) stopPreorderAutoScroll();
   };
 
   useEffect(() => {
@@ -999,6 +1047,21 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const canDragPreorderItems = !pricingLocked && items.length > 1;
 
+  useEffect(() => {
+    if (draggedItemIndex === null || !canDragPreorderItems) {
+      stopPreorderAutoScroll();
+      return undefined;
+    }
+    const handleWindowDragOver = (event) => {
+      updatePreorderAutoScroll(event.clientY);
+    };
+    window.addEventListener("dragover", handleWindowDragOver);
+    return () => {
+      window.removeEventListener("dragover", handleWindowDragOver);
+      stopPreorderAutoScroll();
+    };
+  }, [draggedItemIndex, canDragPreorderItems]);
+
   const movePreorderItem = (fromIndex, toIndex) => {
     if (pricingLocked || fromIndex === null || toIndex === null || fromIndex === toIndex) return;
     markEdited();
@@ -1025,10 +1088,17 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const handlePreorderItemDragOver = (event, idx) => {
-    if (!canDragPreorderItems || draggedItemIndex === null || draggedItemIndex === idx) return;
+    if (!canDragPreorderItems || draggedItemIndex === null) return;
+    updatePreorderAutoScroll(event.clientY);
+    if (draggedItemIndex === idx) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
     setDragOverItemIndex(idx);
+  };
+
+  const handlePreorderTableDragOver = (event) => {
+    if (!canDragPreorderItems || draggedItemIndex === null) return;
+    updatePreorderAutoScroll(event.clientY);
   };
 
   const handlePreorderItemDrop = (event, idx) => {
@@ -1042,6 +1112,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const endPreorderItemDrag = () => {
+    stopPreorderAutoScroll();
     setDraggedItemIndex(null);
     setDragOverItemIndex(null);
   };
@@ -1780,7 +1851,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               </div>
             ) : null}
 
-            <div className="responsive-table">
+            <div
+              ref={preorderItemsScrollRef}
+              className="responsive-table"
+              onDragOver={handlePreorderTableDragOver}
+            >
               <table className="simple-admin-table quote-items-table">
                 <thead>
                   {isPieceMode ? (
