@@ -164,11 +164,11 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
           <div className="sku-restriction-status">
             {isRestricted ? (
               <span className="sku-badge sku-badge--restricted">
-                🔒 Restringido — {allowedSkus.length} SKU{allowedSkus.length !== 1 ? "s" : ""}
+                🔒 Catálogo limitado — solo verá {allowedSkus.length} de {products.length} productos
               </span>
             ) : (
               <span className="sku-badge sku-badge--open">
-                🌐 Sin restricción — ve todos los productos ({products.length})
+                🌐 Sin límite — verá todos los productos ({products.length})
               </span>
             )}
           </div>
@@ -239,7 +239,7 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
           {isRestricted ? (
             <div>
               <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>
-                SKUs asignados ({allowedSkus.length})
+                Productos visibles para el cliente ({allowedSkus.length})
               </div>
               <div className="sku-assigned-list">
                 {allowedSkus.map((codigo) => {
@@ -263,7 +263,7 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
             </div>
           ) : (
             <p style={{ color: "var(--romea-muted)", fontSize: 13 }}>
-              Este cliente tiene acceso a todo el catálogo. Agrega productos arriba para crear una selección personalizada.
+              Sin límite activo — el cliente ve todos los productos. Carga un Excel o agrega productos arriba para definir qué productos puede ver.
             </p>
           )}
 
@@ -279,23 +279,29 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
             {isRestricted && (
               <button
                 type="button"
-                className="danger-button"
+                className="secondary-button"
                 onClick={handleClearRestriction}
                 disabled={saving}
-                title="Eliminar la restricción y dar acceso a todos los productos"
+                title="Quitar el límite — el cliente vuelve a ver todos los productos"
               >
-                Quitar restricción
+                Sin límite (ver todo)
               </button>
             )}
           </div>
-          <button type="button" className="secondary-button" onClick={onClose}>Cancelar</button>
+          <button type="button" className="secondary-button" onClick={onClose} disabled={saving}>
+            Cancelar
+          </button>
           <button
             type="button"
             className="primary-button"
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? "Guardando..." : "Guardar catálogo"}
+            {saving
+              ? "Guardando..."
+              : isRestricted
+                ? `Habilitar ${allowedSkus.length} SKU${allowedSkus.length !== 1 ? "s" : ""} visibles`
+                : "Guardar sin límite"}
           </button>
         </footer>
       </div>
