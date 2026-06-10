@@ -119,10 +119,10 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
     setMsg("");
     try {
       await onSave(client.id, allowedSkus);
-      setMsg("Catálogo guardado.");
+      setMsg(`✅ Catálogo guardado — ${allowedSkus.length} SKU${allowedSkus.length !== 1 ? "s" : ""} asignados.`);
+      window.setTimeout(() => onClose(), 1400);
     } catch (e) {
-      setMsg(`Error: ${e.message}`);
-    } finally {
+      setMsg(`❌ Error: ${e.message}`);
       setSaving(false);
     }
   };
@@ -133,10 +133,10 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
     try {
       await onSave(client.id, []);
       setAllowedSkus([]);
-      setMsg("Restricción eliminada. El cliente verá todos los productos.");
+      setMsg("✅ Restricción eliminada. El cliente verá todos los productos.");
+      window.setTimeout(() => onClose(), 1400);
     } catch (e) {
-      setMsg(`Error: ${e.message}`);
-    } finally {
+      setMsg(`❌ Error: ${e.message}`);
       setSaving(false);
     }
   };
@@ -267,7 +267,11 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
             </p>
           )}
 
-          {msg && <p className="status info">{msg}</p>}
+          {msg && (
+            <p className={`sku-import-msg ${msg.startsWith("✅") ? "sku-import-msg--ok" : "sku-import-msg--err"}`}>
+              {msg}
+            </p>
+          )}
         </div>
 
         <footer>
