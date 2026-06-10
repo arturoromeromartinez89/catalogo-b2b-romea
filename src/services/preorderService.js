@@ -95,10 +95,18 @@ export const fetchPreorder = async (id) => {
   return data;
 };
 
-export const savePreorder = async (preorder, items) => {
+/**
+ * Guarda una preorden. Acepta un objeto de opciones:
+ *   expectedUpdatedAt  — timestamp (string ISO) de la versión que tenemos en memoria.
+ *                        Si la DB ya tiene un updated_at distinto, lanzamos un error
+ *                        de tipo "CONFLICT" para que el editor pueda informar al usuario.
+ *   forceOverwrite     — si es true, omite el chequeo de versión y guarda de todas formas.
+ */
+export const savePreorder = async (preorder, items, { expectedUpdatedAt = null, forceOverwrite = false } = {}) => {
   const totals = calcTotals(items, preorder);
   const isExisting = isValidUuid(preorder.id);
   const isNew = !isExisting;
+  const newUpdatedAt = new Date().toISOString();
 
   // Limpiar campos vacíos que son UUID en Supabase
   const {
@@ -131,7 +139,7 @@ export const savePreorder = async (preorder, items) => {
     status: normalizePreorderStatus(clean.status),
     folio: clean.folio || buildFolio(),
     ...totals,
-    updated_at: new Date().toISOString(),
+    updated_at: newUpdatedAt,
   });
 
   let preorderId = isExisting ? preorder.id : null;
@@ -145,11 +153,37 @@ export const savePreorder = async (preorder, items) => {
     if (error) throw error;
     preorderId = data.id;
   } else {
-    const { error } = await supabase
+    // ── Optimistic locking ──────────────────────────────────────────────────
+    // Si tenemos un timestamp de referencia Y no se fuerza la sobreescritura,
+    // verificamos que la DB no haya sido modificada por otra sesión.
+    let updateQuery = supabase
       .from("preorders")
       .update(preorderData)
       .eq("id", preorderId);
+
+    if (expectedUpdatedAt && !forceOverwrite) {
+      updateQuery = updateQuery.eq("updated_at", expectedUpdatedAt);
+    }
+
+    const { data: updatedRows, error } = await updateQuery.select("id");
     if (error) throw error;
+
+    // Si no se actualizó ninguna fila con el filtro de updated_at → conflicto
+    if (expectedUpdatedAt && !forceOverwrite && (!updatedRows || updatedRows.length === 0)) {
+      // Leemos la versión actual de la DB para mostrar su timestamp al usuario
+      const { data: current } = await supabase
+        .from("preorders")
+        .select("updated_at, folio")
+        .eq("id", preorderId)
+        .single();
+      const conflictError = new Error(
+        `CONFLICT:${current?.updated_at || ""}:${current?.folio || ""}`
+      );
+      conflictError.isConflict = true;
+      conflictError.dbUpdatedAt = current?.updated_at || null;
+      throw conflictError;
+    }
+
     // Borrar items anteriores y reinsertarlos
     await supabase.from("preorder_items").delete().eq("preorder_id", preorderId);
   }
@@ -165,7 +199,7 @@ export const savePreorder = async (preorder, items) => {
         ...cleanItem,
         preorder_id: preorderId,
         sort_order: idx,
-        updated_at: new Date().toISOString(),
+        updated_at: newUpdatedAt,
       }, idx);
       cleanOptionalUuid(cleanedItem, "piece_price_list_id");
       cleanOptionalUuid(cleanedItem, "labor_list_id");
@@ -176,7 +210,7 @@ export const savePreorder = async (preorder, items) => {
     if (error) throw error;
   }
 
-  return { id: preorderId, folio: preorderData.folio };
+  return { id: preorderId, folio: preorderData.folio, updatedAt: newUpdatedAt };
 };
 
 export const updatePreorderStatus = async (id, status) => {

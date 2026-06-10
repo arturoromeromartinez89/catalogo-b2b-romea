@@ -284,6 +284,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [plataFinaMxn, setPlataFinaMxn] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [savedAt, setSavedAt] = useState(null);            // timestamp del último guardado exitoso
+  const [loadedAt, setLoadedAt] = useState(() => initial?.updated_at || null); // versión que tenemos en memoria
+  const [saveConflict, setSaveConflict] = useState(null);  // { dbUpdatedAt } cuando otra sesión guardó primero
   const [msg, setMsg] = useState("");
   const [productSearch, setProductSearch] = useState("");
   const [productStatus, setProductStatus] = useState({ type: "info", text: "Escanea o busca un producto para agregarlo." });
@@ -291,6 +294,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [prospectForm, setProspectForm] = useState({ name: "", company: "", email: "", phone: "", rfc: "", active: true });
   const [tenantCompany, setTenantCompany] = useState(null);
   const scannerInputRef = useRef(null);
+  const bottomScannerRef = useRef(null);  // barra de búsqueda inferior (misma lógica, distinto ref)
   const activeCompany = resolvedTenantId ? (tenantCompany || {}) : company;
   const markEdited = () => {
     onDirty?.();
@@ -1014,7 +1018,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     return savedClient.id;
   };
 
-  const handleSave = async () => {
+  const doSave = async ({ forceOverwrite = false } = {}) => {
     if (!items.length) { setMsg("Agrega al menos un producto para guardar la preorden."); return; }
     if (hasUnconfiguredItems(items)) {
       setMsg("Configura el tipo de pieza en todos los productos pendientes antes de guardar.");
@@ -1022,31 +1026,52 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     }
     setSaving(true);
     setSaved(false);
+    setSaveConflict(null);
     try {
       const resolvedClientId = await resolveClientForSave();
       if (!resolvedClientId) { setMsg("Debes seleccionar un cliente o registrar un prospecto para guardar la preorden."); return; }
-      const savedResult = await savePreorder({
-        ...po,
-        pricing_mode: pricingMode,
-        labor_list_id: isPieceMode ? "" : selectedLaborListId,
-        piece_price_list_id: isPieceMode ? selectedPiecePriceListId : "",
-        client_id: resolvedClientId,
-        total_mxn: totalFinalMxn,
-        tenant_id: resolvedTenantId,
-        created_by: po.created_by || profile?.id || null,
-      }, items);
-      const savedId = typeof savedResult === "string" ? savedResult : savedResult.id;
-      const savedFolio = typeof savedResult === "string" ? po.folio : savedResult.folio;
+      const savedResult = await savePreorder(
+        {
+          ...po,
+          pricing_mode: pricingMode,
+          labor_list_id: isPieceMode ? "" : selectedLaborListId,
+          piece_price_list_id: isPieceMode ? selectedPiecePriceListId : "",
+          client_id: resolvedClientId,
+          total_mxn: totalFinalMxn,
+          tenant_id: resolvedTenantId,
+          created_by: po.created_by || profile?.id || null,
+        },
+        items,
+        { expectedUpdatedAt: loadedAt, forceOverwrite }
+      );
+      const savedId     = savedResult.id;
+      const savedFolio  = savedResult.folio;
+      const newUpdatedAt = savedResult.updatedAt || new Date().toISOString();
       setPo((current) => ({ ...current, id: savedId, folio: savedFolio || current.folio }));
+      setLoadedAt(newUpdatedAt);  // actualizamos la versión de referencia
+      setSavedAt(newUpdatedAt);
       setSaved(true);
-      setMsg("Preorden guardada correctamente.");
+      const hora = new Date(newUpdatedAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+      setMsg(`Guardada a las ${hora}`);
       window.setTimeout(() => onSaved?.({ id: savedId, folio: savedFolio || po.folio }), 900);
     } catch (error) {
-      setMsg(`Error: ${error.message}`);
+      if (error.isConflict) {
+        // Otra sesión guardó esta preorden antes — avisar al usuario
+        setSaveConflict({ dbUpdatedAt: error.dbUpdatedAt });
+        const hora = error.dbUpdatedAt
+          ? new Date(error.dbUpdatedAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })
+          : "hora desconocida";
+        setMsg(`⚠️ Conflicto: esta preorden fue guardada en otra sesión a las ${hora}. Elige cómo proceder abajo.`);
+      } else {
+        setMsg(`Error: ${error.message}`);
+      }
     } finally {
       setSaving(false);
     }
   };
+
+  const handleSave = () => doSave({ forceOverwrite: false });
+  const handleForceSave = () => doSave({ forceOverwrite: true });
 
   const handlePdf = async () => {
     if (hasUnconfiguredItems(items)) {
@@ -1242,7 +1267,31 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           ) : null}
         </div>
         <div className="po-editor-toolbar-right">
-          {msg ? <span className="po-toolbar-msg">{msg}</span> : null}
+          {/* Timestamp de la versión guardada — garantía de que tienes la más reciente */}
+          {savedAt && !saveConflict ? (
+            <span className="po-saved-at" title={`Guardado el ${new Date(savedAt).toLocaleString("es-MX")}`}>
+              ✓ {new Date(savedAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          ) : loadedAt && !isNew && !saveConflict ? (
+            <span className="po-saved-at po-saved-at--loaded" title={`Versión cargada: ${new Date(loadedAt).toLocaleString("es-MX")}`}>
+              v {new Date(loadedAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          ) : null}
+
+          {msg ? <span className={`po-toolbar-msg${saveConflict ? " po-toolbar-msg--conflict" : ""}`}>{msg}</span> : null}
+
+          {/* Banner de conflicto — aparece cuando otra sesión guardó primero */}
+          {saveConflict ? (
+            <button
+              className="secondary-button compact-action warning-action"
+              type="button"
+              title="Sobrescribir la versión más reciente con tus cambios actuales"
+              onClick={handleForceSave}
+            >
+              ⚠ Sobrescribir
+            </button>
+          ) : null}
+
           {!isNew ? (
             <button className="danger-button compact-action" type="button" onClick={handleDelete}>
               Eliminar
@@ -1924,6 +1973,60 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               </table>
             </div>
           </section>
+
+          {/* ── Barra inferior de búsqueda ───────────────────────────────────────
+              Solo visible cuando hay productos en la tabla y no está en modo cliente.
+              Evita tener que scrollear hasta arriba para agregar más artículos. */}
+          {!pricingLocked && items.length >= 3 && products.length ? (
+            <div className="quote-product-picker quote-product-picker--bottom">
+              <label>
+                Agregar otro producto
+                <input
+                  ref={bottomScannerRef}
+                  value={productSearch}
+                  onChange={(event) => {
+                    setProductSearch(event.target.value);
+                    if (productStatus.type !== "info") {
+                      setProductStatus({ type: "info", text: "Presiona Enter para agregar un codigo exacto o elige una sugerencia." });
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handleProductEntrySubmit();
+                    }
+                  }}
+                  placeholder="Escanear codigo o buscar por SKU, descripcion, linea o familia"
+                />
+              </label>
+              <div className="quote-picker-actions">
+                <button className="primary-button compact-action" type="button" onClick={handleProductEntrySubmit}>
+                  Agregar por codigo
+                </button>
+                <p className={`scanner-status ${productStatus.type}`}>{productStatus.text}</p>
+              </div>
+              {productResults.length ? (
+                <div className="quote-product-results">
+                  {productResults.map((product) => (
+                    <button key={product.id || product.codigo} type="button" onClick={() => addProduct(product)}>
+                      <img
+                        src={imageUrlForSize(product.fotoUrl, 120) || buildPlaceholderUrl()}
+                        alt={product.descripcion}
+                        loading="lazy"
+                        decoding="async"
+                        onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
+                      />
+                      <span>
+                        <strong>{product.codigo}</strong>
+                        <small>{shortText(product.descripcion, 62)}</small>
+                      </span>
+                      <b>Agregar</b>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <section className="po-totals-bar">
             <div><span>Piezas</span><strong>{totals.piezas}</strong></div>

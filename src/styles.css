@@ -5742,6 +5742,36 @@ body > div[data-portal] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.po-toolbar-msg--conflict {
+  color: #c2410c;
+  font-weight: 600;
+  max-width: 340px;
+}
+
+/* Versión / timestamp de guardado en el toolbar */
+.po-saved-at {
+  align-items: center;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  border-radius: 5px;
+  color: #065f46;
+  display: flex;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 3px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.po-saved-at--loaded {
+  background: var(--romea-soft);
+  border-color: var(--romea-line);
+  color: var(--romea-muted);
+}
+
+/* Barra de búsqueda inferior — separación visual respecto a la tabla */
+.quote-product-picker--bottom {
+  margin-top: 4px;
+}
 
 .po-editor-body {
   display: grid;
