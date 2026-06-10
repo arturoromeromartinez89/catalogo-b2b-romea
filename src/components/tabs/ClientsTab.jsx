@@ -208,6 +208,9 @@ export default function ClientsTab({
   // SKU management
   products = [],
   onSaveClientSkus,
+  // Labor list management
+  laborLists = [],
+  onSaveClientLaborList,
 }) {
   const [skuClient, setSkuClient] = useState(null);
 
@@ -391,6 +394,29 @@ export default function ClientsTab({
                   <option value="inactive">Inactivo</option>
                 </select>
               </label>
+
+              {/* Lista de labores — define la tarifa de mano de obra en la preorden del cliente */}
+              {laborLists.length > 0 && (
+                <label className="wide-field">
+                  Lista de labores
+                  <select
+                    value={clientForm.labor_list_id || ""}
+                    onChange={(event) => setClientForm({ ...clientForm, labor_list_id: event.target.value || null })}
+                  >
+                    <option value="">Sin lista (precios base)</option>
+                    {laborLists
+                      .filter((list) => list.status === "activa")
+                      .map((list) => (
+                        <option key={list.id} value={list.id}>
+                          {list.name} ({list.currency || "MXN"})
+                        </option>
+                      ))}
+                  </select>
+                  <small style={{ color: "var(--romea-muted)", fontSize: 11, marginTop: 3, display: "block" }}>
+                    Se auto-aplica cuando el cliente crea su preorden
+                  </small>
+                </label>
+              )}
             </div>
             <footer>
               <button className="secondary-button" type="button" onClick={() => setIsClientFormOpen(false)}>

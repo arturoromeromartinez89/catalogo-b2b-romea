@@ -38,6 +38,7 @@ import {
   savePriceList,
   setClientPriceList,
   updateClientAllowedSkus,
+  updateClientLaborList,
   upsertProducts,
 } from "../services/supabaseCatalog";
 import { fetchTenants, makeTenantSlug, saveTenant } from "../services/tenantService";
@@ -48,7 +49,7 @@ import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 
-const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", domicilio: "", comentarios: "", type: "cliente", active: true };
+const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", domicilio: "", comentarios: "", type: "cliente", active: true, labor_list_id: null };
 const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", domicilio: "", comentarios: "", badge_raw: "", obtenido_en: "JCK", type: "prospecto", active: true };
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
@@ -613,7 +614,6 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const handleSaveClientSkus = async (clientId, skus) => {
     try {
       await updateClientAllowedSkus(clientId, skus);
-      // Actualiza el cliente en el estado local para que la tabla refleje el cambio inmediatamente
       setData((current) => {
         if (!current) return current;
         const clients = current.clients.map((c) =>
@@ -628,7 +628,29 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
         : "El cliente ahora ve todos los productos.");
     } catch (error) {
       notifyAction("error", "Error al guardar", error.message);
-      throw error; // re-lanza para que el modal muestre el mensaje
+      throw error;
+    }
+  };
+
+  // Handler: asigna (o quita) lista de labores a un cliente
+  const handleSaveClientLaborList = async (clientId, laborListId) => {
+    try {
+      await updateClientLaborList(clientId, laborListId);
+      setData((current) => {
+        if (!current) return current;
+        const clients = current.clients.map((c) =>
+          c.id === clientId ? { ...c, labor_list_id: laborListId || null } : c
+        );
+        return { ...current, clients };
+      });
+      const list = (data?.laborLists || []).find((l) => l.id === laborListId);
+      notifyAction("success", "Lista de labores actualizada",
+        laborListId
+          ? `Lista "${list?.name || laborListId}" asignada al cliente.`
+          : "El cliente usará precios base (sin lista de labores).");
+    } catch (error) {
+      notifyAction("error", "Error al guardar", error.message);
+      throw error;
     }
   };
 
@@ -1298,7 +1320,9 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             savingClient={savingClient}
             handleSaveClient={handleSaveClient}
             products={products}
+            laborLists={data.laborLists || []}
             onSaveClientSkus={handleSaveClientSkus}
+            onSaveClientLaborList={handleSaveClientLaborList}
           />
         ) : null}
 

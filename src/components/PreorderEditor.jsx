@@ -1281,13 +1281,22 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 <input value={new Date(initial?.created_at || Date.now()).toLocaleDateString("es-MX")} readOnly style={inp} />
               </Field>
               <Field label="Cliente">
-                <select value={po.client_id} onChange={handleClientSelect} style={inp}>
-                  <option value="">Selecciona cliente existente</option>
-                  <option value={PROSPECT_CLIENT_VALUE}>+ Prospecto nuevo</option>
-                  {(clients || []).map((client) => (
-                    <option key={client.id} value={client.id}>{client.company || client.name}</option>
-                  ))}
-                </select>
+                {pricingLocked ? (
+                  /* En vista de cliente el selector está bloqueado — solo muestra quién es */
+                  <input
+                    value={po.cliente_empresa || po.cliente_nombre || "—"}
+                    readOnly
+                    style={{ ...inp, background: "var(--romea-soft, #f8f7f4)", cursor: "default" }}
+                  />
+                ) : (
+                  <select value={po.client_id} onChange={handleClientSelect} style={inp}>
+                    <option value="">Selecciona cliente existente</option>
+                    <option value={PROSPECT_CLIENT_VALUE}>+ Prospecto nuevo</option>
+                    {(clients || []).map((client) => (
+                      <option key={client.id} value={client.id}>{client.company || client.name}</option>
+                    ))}
+                  </select>
+                )}
               </Field>
               <Field label="Nombre"><input value={po.cliente_nombre || ""} readOnly style={inp} /></Field>
               <Field label="Empresa"><input value={po.cliente_empresa || ""} readOnly style={inp} /></Field>
@@ -1375,13 +1384,21 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 <span>{new Date(initial?.created_at || Date.now()).toLocaleDateString("es-MX")}</span>
               </div>
               <Field label="Cliente">
-                <select value={po.client_id} onChange={handleClientSelect} style={inp}>
-                  <option value="">Selecciona cliente existente</option>
-                  <option value={PROSPECT_CLIENT_VALUE}>+ Prospecto nuevo</option>
-                  {(clients || []).map((client) => (
-                    <option key={client.id} value={client.id}>{client.company || client.name}</option>
-                  ))}
-                </select>
+                {pricingLocked ? (
+                  <input
+                    value={po.cliente_empresa || po.cliente_nombre || "—"}
+                    readOnly
+                    style={{ ...inp, background: "var(--romea-soft, #f8f7f4)", cursor: "default" }}
+                  />
+                ) : (
+                  <select value={po.client_id} onChange={handleClientSelect} style={inp}>
+                    <option value="">Selecciona cliente existente</option>
+                    <option value={PROSPECT_CLIENT_VALUE}>+ Prospecto nuevo</option>
+                    {(clients || []).map((client) => (
+                      <option key={client.id} value={client.id}>{client.company || client.name}</option>
+                    ))}
+                  </select>
+                )}
               </Field>
               <Field label="Nombre"><input value={po.cliente_nombre || ""} readOnly style={inp} /></Field>
               <Field label="Empresa"><input value={po.cliente_empresa || ""} readOnly style={inp} /></Field>

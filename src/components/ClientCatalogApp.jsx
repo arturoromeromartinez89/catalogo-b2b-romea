@@ -228,6 +228,9 @@ export default function ClientCatalogApp({ profile }) {
     tipo_cambio:      Number(customer.tipoCambio || 0),
     moneda:           customer.currency || "MXN",
     notas:            customer.notes,
+    // Lista de labores asignada por el admin al cliente:
+    // PreorderEditor la auto-aplica vía initial?.labor_list_id
+    labor_list_id: clientData?.labor_list_id || "",
     preorder_items: cartItems.map((item, idx) => {
       const product = item.product;
       const piezas  = Number(item.quantity || 1);

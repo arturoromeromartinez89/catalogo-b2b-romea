@@ -254,10 +254,14 @@ export const getSessionAndProfile = async () => {
 export const fetchAdminData = async (profile) => {
   const tenantId = getTenantId(profile);
   const allProducts = await fetchAllProducts({ tenantId });
-  const clientsQuery = withTenant(supabase.from("clients").select("*").order("company"), tenantId);
-  const catalogsQuery = withTenant(supabase.from("catalogs").select("*").order("name"), tenantId);
-  const priceListsQuery = withTenant(supabase.from("price_lists").select("*").order("name"), tenantId);
-  const [products, clients, catalogs, catalogProducts, priceLists, priceItems, clientCatalogs, clientPriceLists] =
+  const clientsQuery      = withTenant(supabase.from("clients").select("*").order("company"), tenantId);
+  const catalogsQuery     = withTenant(supabase.from("catalogs").select("*").order("name"), tenantId);
+  const priceListsQuery   = withTenant(supabase.from("price_lists").select("*").order("name"), tenantId);
+  const laborListsQuery   = withTenant(
+    supabase.from("labor_lists").select("id, name, currency, status").order("name"),
+    tenantId
+  );
+  const [products, clients, catalogs, catalogProducts, priceLists, priceItems, clientCatalogs, clientPriceLists, laborLists] =
     await Promise.all([
       { data: allProducts, error: null },
       clientsQuery,
@@ -267,9 +271,12 @@ export const fetchAdminData = async (profile) => {
       supabase.from("price_list_items").select("*").order("metal"),
       supabase.from("client_catalogs").select("*"),
       supabase.from("client_price_lists").select("*"),
+      laborListsQuery,
     ]);
 
   [products, clients, catalogs, catalogProducts, priceLists, priceItems, clientCatalogs, clientPriceLists].forEach(throwIfError);
+  // laborLists: errores no-fatales (la tabla puede no existir en tenants legacy)
+  if (laborLists.error) console.warn("labor_lists fetch:", laborLists.error.message);
 
   return {
     products: products.data.map(dbProductToProduct),
@@ -280,6 +287,7 @@ export const fetchAdminData = async (profile) => {
     priceItems: priceItems.data,
     clientCatalogs: clientCatalogs.data,
     clientPriceLists: clientPriceLists.data,
+    laborLists: laborLists.data || [],
   };
 };
 
@@ -417,6 +425,20 @@ export const updateClientAllowedSkus = async (clientId, skus) => {
   const { error } = await supabase
     .from("clients")
     .update({ allowed_skus: allowed, updated_at: new Date().toISOString() })
+    .eq("id", clientId);
+  if (error) throw new Error(error.message);
+};
+
+/**
+ * Asigna (o quita) la lista de labores de un cliente.
+ * laborListId = "" o null → sin lista asignada (precios base).
+ * laborListId = UUID → esa lista se auto-aplica en la preorden del cliente.
+ */
+export const updateClientLaborList = async (clientId, laborListId) => {
+  const value = laborListId || null;
+  const { error } = await supabase
+    .from("clients")
+    .update({ labor_list_id: value, updated_at: new Date().toISOString() })
     .eq("id", clientId);
   if (error) throw new Error(error.message);
 };
