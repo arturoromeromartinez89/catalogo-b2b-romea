@@ -1,3 +1,4 @@
+import { useState } from "react";
 import ProductDetail from "../ProductDetail";
 import { isConfigurableProductGroup } from "../../utils/configurableCatalog";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../../utils/formatters";
@@ -28,8 +29,12 @@ export default function CatalogTab({
   removeFromCatalogSelection,
   setProductModal,
   toggleProductCheck,
+  onProductReorder,
+  reorderSaving = false,
   filterBar,   // Barra de filtros inline — pasada desde AdminDashboard
 }) {
+  const [draggedCode, setDraggedCode] = useState("");
+  const [dragOverCode, setDragOverCode] = useState("");
   const isSelectedConfigurable = isConfigurableProductGroup(selectedProduct);
   const selectedInCatalog = isSelectedConfigurable
     ? (selectedProduct?.variants || []).some((variant) => catalogSelectionIds.has(variant.product?.codigo))
@@ -90,6 +95,7 @@ export default function CatalogTab({
           <div className="admin-product-grid">
             {renderedProducts.map((product) => {
               const isConfigurable = isConfigurableProductGroup(product);
+              const canDrag = Boolean(onProductReorder) && !reorderSaving && !isConfigurable;
               const inPreorder = isConfigurable ? false : addedCodes.includes(product.codigo);
               const inCatalogSelection = isConfigurable
                 ? (product.variants || []).some((variant) => catalogSelectionIds.has(variant.product?.codigo))
@@ -100,9 +106,49 @@ export default function CatalogTab({
 
               return (
                 <article
-                  className={`admin-product-card enabled ${inPreorder ? "in-preorder" : ""} ${isConfigurable ? "configurable-card" : ""}`}
+                  className={`admin-product-card enabled ${inPreorder ? "in-preorder" : ""} ${isConfigurable ? "configurable-card" : ""} ${draggedCode === product.codigo ? "is-dragging" : ""} ${dragOverCode === product.codigo ? "is-drop-target" : ""}`}
                   key={product.id || product.codigo}
+                  onDragOver={(event) => {
+                    if (!canDrag || draggedCode === product.codigo) return;
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                    setDragOverCode(product.codigo);
+                  }}
+                  onDragLeave={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) setDragOverCode("");
+                  }}
+                  onDrop={(event) => {
+                    if (!canDrag) return;
+                    event.preventDefault();
+                    const sourceCode = event.dataTransfer.getData("text/plain") || draggedCode;
+                    setDraggedCode("");
+                    setDragOverCode("");
+                    onProductReorder?.(sourceCode, product.codigo);
+                  }}
                 >
+                  <span
+                    className={`product-drag-handle ${canDrag ? "" : "disabled"}`}
+                    draggable={canDrag}
+                    role="button"
+                    tabIndex={canDrag ? 0 : -1}
+                    title={canDrag ? "Arrastrar para reordenar" : "No disponible para este producto"}
+                    aria-label={`Mover ${product.codigo}`}
+                    onDragStart={(event) => {
+                      if (!canDrag) {
+                        event.preventDefault();
+                        return;
+                      }
+                      event.dataTransfer.effectAllowed = "move";
+                      event.dataTransfer.setData("text/plain", product.codigo);
+                      setDraggedCode(product.codigo);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedCode("");
+                      setDragOverCode("");
+                    }}
+                  >
+                    Mover
+                  </span>
                   <label className="product-select-check" onClick={(event) => event.stopPropagation()}>
                     <input
                       type="checkbox"

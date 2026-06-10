@@ -76,7 +76,14 @@ export const fetchAllProducts = async ({ visibleOnly = false, tenantId = "", col
     from += PAGE_SIZE;
   }
 
-  return rows;
+  return rows.sort((a, b) => {
+    const orderA = Number(a.orden_web || 0);
+    const orderB = Number(b.orden_web || 0);
+    if (orderA > 0 && orderB > 0 && orderA !== orderB) return orderA - orderB;
+    if (orderA > 0 && !orderB) return -1;
+    if (!orderA && orderB > 0) return 1;
+    return String(a.codigo || "").localeCompare(String(b.codigo || ""), "es");
+  });
 };
 
 export const dbProductToProduct = (row) => ({
@@ -316,6 +323,30 @@ export const upsertProducts = async (products, tenantId = "") => {
   }
 
   return savedRows.map(dbProductToProduct);
+};
+
+export const updateProductsWebOrder = async (products = [], tenantId = "") => {
+  const rows = products
+    .filter((product) => product?.codigo && !product.isConfigurableGroup)
+    .map((product, index) => ({
+      codigo: product.codigo,
+      orden_web: index + 1,
+      updated_at: new Date().toISOString(),
+      ...(tenantId ? { tenant_id: tenantId } : {}),
+    }));
+
+  if (!rows.length) return [];
+
+  for (let index = 0; index < rows.length; index += UPSERT_BATCH_SIZE) {
+    const batch = rows.slice(index, index + UPSERT_BATCH_SIZE);
+    const result = await supabase
+      .from("products")
+      .upsert(batch, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" })
+      .select(PUBLIC_PRODUCT_COLUMNS);
+    throwIfError(result);
+  }
+
+  return products.map((product, index) => ({ ...product, ordenWeb: index + 1 }));
 };
 
 export const deleteProduct = async (id, tenantId = "") => {
