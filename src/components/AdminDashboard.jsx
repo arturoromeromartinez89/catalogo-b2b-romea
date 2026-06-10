@@ -194,10 +194,17 @@ const parseBadgeScanReadable = (rawValue) => {
 };
 
 const displayContactEmail = (email) => String(email || "").endsWith("@prospect.local") ? "-" : email || "-";
-const isProspectRecord = (client) =>
-  (client.type || "") === "prospecto" ||
-  String(client.email || "").endsWith("@prospect.local") ||
-  Boolean(client.badge_raw);
+const isProspectRecord = (client) => {
+  // type="cliente" es el criterio definitivo — siempre es cliente, sin importar otros campos
+  if ((client.type || "") === "cliente") return false;
+  // type="prospecto" explícito → prospecto
+  if ((client.type || "") === "prospecto") return true;
+  // Sin type explícito: usar señales secundarias (email fantasy, badge de feria)
+  return (
+    String(client.email || "").endsWith("@prospect.local") ||
+    Boolean(client.badge_raw)
+  );
+};
 const prospectForForm = (prospect) => ({
   ...blankProspect,
   ...prospect,
@@ -1300,7 +1307,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
         {tab === "clients" ? (
           <ClientsTab
             filteredClients={filteredClients}
-            allClientsCount={(data.clients || []).length}
+            allClientsCount={realClients.length}
             clientSearch={clientSearch}
             setClientSearch={setClientSearch}
             clientStatusFilter={clientStatusFilter}
