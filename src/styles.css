@@ -1486,6 +1486,23 @@ dd {
   min-height: 0;
 }
 
+/* ── Overlay a pantalla completa para PreorderEditor en vista de cliente ──
+   FIX: el PreorderEditor era un hijo directo del grid de admin-catalog-shell,
+   por lo que CSS grid auto-placement lo ponía en la columna del sidebar (270px).
+   Con position:fixed se saca del flujo del grid y ocupa toda la pantalla. ── */
+.client-editor-overlay {
+  background: #fff;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  left: 0;
+  overflow: hidden;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 500;
+}
+
 .admin-catalog-header {
   align-items: center;
   background: rgba(247, 248, 251, 0.96);
@@ -8491,6 +8508,123 @@ textarea:focus {
 .client-modal--wide {
   width: min(97vw, 920px);
 }
+
+/* ─── Catálogo personalizado por cliente — SKU panel ────────────────────────── */
+
+.sku-restriction-status {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.sku-badge {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 4px;
+  padding: 4px 10px;
+}
+
+.sku-badge--restricted {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #c2410c;
+}
+
+.sku-badge--open {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+.sku-badge--sm {
+  font-size: 10px;
+  padding: 2px 7px;
+}
+
+/* Sugerencias de búsqueda de productos */
+.sku-suggestions {
+  background: #fff;
+  border: 1px solid var(--neutral-200, #e6eaf1);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  left: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 50;
+}
+
+.sku-suggestion-item {
+  align-items: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: grid;
+  font-size: 12px;
+  gap: 6px;
+  grid-template-columns: auto 1fr auto;
+  padding: 8px 12px;
+  text-align: left;
+  width: 100%;
+}
+.sku-suggestion-item:hover { background: var(--color-bg-input, #f8faff); }
+.sku-suggestion-item strong { color: var(--neutral-800, #1d2433); font-weight: 700; white-space: nowrap; }
+.sku-suggestion-item span   { color: var(--neutral-500, #6f7787); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sku-suggestion-item b      { color: var(--romea-blue, #2558d9); font-size: 11px; white-space: nowrap; }
+
+/* Lista de SKUs asignados */
+.sku-assigned-list {
+  border: 1px solid var(--neutral-200, #e6eaf1);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.sku-assigned-item {
+  align-items: center;
+  border-bottom: 1px solid var(--neutral-100, #f0f2f7);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 90px 1fr 28px;
+  padding: 6px 12px;
+}
+.sku-assigned-item:last-child { border-bottom: none; }
+
+.sku-code {
+  color: var(--neutral-800, #1d2433);
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sku-desc {
+  color: var(--neutral-500, #6f7787);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sku-remove {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--neutral-400, #a0a8b5);
+  cursor: pointer;
+  display: flex;
+  font-size: 14px;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+.sku-remove:hover { background: #fff5f5; border-color: #ef4444; color: #ef4444; }
 
 /* ─── Admin module tab — área de contenido ──────────────────────────────────── */
 

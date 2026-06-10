@@ -37,6 +37,7 @@ import {
   savePriceItem,
   savePriceList,
   setClientPriceList,
+  updateClientAllowedSkus,
   upsertProducts,
 } from "../services/supabaseCatalog";
 import { fetchTenants, makeTenantSlug, saveTenant } from "../services/tenantService";
@@ -605,6 +606,29 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     } catch (error) {
       setStatus(`Error actualizando lista: ${error.message}`);
       notifyAction("error", "No se pudo actualizar", `Error actualizando lista: ${error.message}`);
+    }
+  };
+
+  // Handler: actualiza los SKUs permitidos para un cliente (catálogo personalizado)
+  const handleSaveClientSkus = async (clientId, skus) => {
+    try {
+      await updateClientAllowedSkus(clientId, skus);
+      // Actualiza el cliente en el estado local para que la tabla refleje el cambio inmediatamente
+      setData((current) => {
+        if (!current) return current;
+        const clients = current.clients.map((c) =>
+          c.id === clientId
+            ? { ...c, allowed_skus: skus?.length ? skus : null }
+            : c
+        );
+        return { ...current, clients };
+      });
+      notifyAction("success", "Catálogo actualizado", skus?.length
+        ? `Se asignaron ${skus.length} SKUs al cliente.`
+        : "El cliente ahora ve todos los productos.");
+    } catch (error) {
+      notifyAction("error", "Error al guardar", error.message);
+      throw error; // re-lanza para que el modal muestre el mensaje
     }
   };
 
@@ -1273,6 +1297,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             blankClient={blankClient}
             savingClient={savingClient}
             handleSaveClient={handleSaveClient}
+            products={products}
+            onSaveClientSkus={handleSaveClientSkus}
           />
         ) : null}
 

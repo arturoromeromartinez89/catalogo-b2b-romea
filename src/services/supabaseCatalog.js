@@ -407,6 +407,20 @@ export const setClientPriceList = async (clientId, priceListId, active) => {
   throwIfError(await supabase.from("client_price_lists").upsert({ client_id: clientId, price_list_id: priceListId, active }));
 };
 
+/**
+ * Actualiza la lista de SKUs permitidos para un cliente.
+ * skus = [] o null → sin restricción (ve todo el catálogo).
+ * skus = ["SKU1", "SKU2"] → solo ve esos productos.
+ */
+export const updateClientAllowedSkus = async (clientId, skus) => {
+  const allowed = Array.isArray(skus) && skus.length > 0 ? skus : null;
+  const { error } = await supabase
+    .from("clients")
+    .update({ allowed_skus: allowed, updated_at: new Date().toISOString() })
+    .eq("id", clientId);
+  if (error) throw new Error(error.message);
+};
+
 export const fetchClientData = async (profile) => {
   const tenantId = getTenantId(profile);
   const visibleProducts = await fetchAllProducts({ visibleOnly: true, tenantId, columns: PUBLIC_PRODUCT_COLUMNS });

@@ -1,10 +1,8 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
-import FilterPanel from "./FilterPanel";
+import CatalogFilterBar from "./CatalogFilterBar";
 import LanguageToggle from "./LanguageToggle";
 import ProductDetail from "./ProductDetail";
 import PreorderEditor from "./PreorderEditor";
-import QuickFilters from "./QuickFilters";
-import AdvancedSearch from "./AdvancedSearch";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useCompany } from "../contexts/CompanyContext";
 import BrandLogo from "./BrandLogo";
@@ -44,14 +42,15 @@ export default function ClientCatalogApp({ profile }) {
   const company = useCompany();
   const [tenantCompany, setTenantCompany] = useState(null);
   const [products, setProducts] = useState([]);
+  const [clientData, setClientData] = useState(null);
   const [cartItems, setCartItems] = useState([]);
   const [cartStorageReadyKey, setCartStorageReadyKey] = useState(null);
-  const [clientData, setClientData] = useState(null);
   const [customer, setCustomer] = useState(() => makeDefaultCustomer(language));
   const [query, setQuery] = useState("");
   const [searchChips, setSearchChips] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
   const [quickFilters, setQuickFilters] = useState([]);
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
   const deferredQuery = useDeferredValue(query);
   const deferredSearchChips = useDeferredValue(searchChips);
   const deferredFilters = useDeferredValue(filters);
@@ -65,6 +64,7 @@ export default function ClientCatalogApp({ profile }) {
   const tenantId = profile?.tenant_id || profile?.tenantId || "";
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
 
+  // ── Carga inicial ──────────────────────────────────────────────────────────
   useEffect(() => {
     setStatus(t("loadingCatalog"));
     Promise.all([
@@ -89,11 +89,11 @@ export default function ClientCatalogApp({ profile }) {
           setClientData(result.client);
           setCustomer((current) => ({
             ...current,
-            name: result.client.name || "",
-            company: result.client.company || "",
-            email: result.client.email || "",
-            phone: result.client.phone || "",
-            rfc: result.client.rfc || "",
+            name:       result.client.name    || "",
+            company:    result.client.company || "",
+            email:      result.client.email   || "",
+            phone:      result.client.phone   || "",
+            rfc:        result.client.rfc     || "",
             tipoCambio: metalPrices?.tipo_cambio || current.tipoCambio || "",
           }));
         }
@@ -103,10 +103,7 @@ export default function ClientCatalogApp({ profile }) {
   }, [profile, tenantId]);
 
   useEffect(() => {
-    if (!tenantId) {
-      setTenantCompany(null);
-      return;
-    }
+    if (!tenantId) { setTenantCompany(null); return; }
     fetchCompanySettings(tenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
   }, [tenantId]);
 
@@ -114,74 +111,70 @@ export default function ClientCatalogApp({ profile }) {
     setCustomer((current) => {
       const allDefaults = Object.values(orderDefaults);
       const conceptIsDefault = allDefaults.some((item) => item.concept === current.concept);
-      const statusIsDefault = allDefaults.some((item) => item.status === current.status);
+      const statusIsDefault  = allDefaults.some((item) => item.status  === current.status);
       const nextDefaults = orderDefaults[language] || orderDefaults.es;
       return {
         ...current,
         concept: conceptIsDefault ? nextDefaults.concept : current.concept,
-        status: statusIsDefault ? nextDefaults.status : current.status,
+        status:  statusIsDefault  ? nextDefaults.status  : current.status,
       };
     });
   }, [language]);
 
-  const filterOptions = useMemo(() => buildFilterOptions(products), [products]);
+  // ── SKU restriction — si el cliente tiene allowed_skus, filtrar la base ───
+  const baseProducts = useMemo(() => {
+    const allowed = clientData?.allowed_skus;
+    if (!allowed || allowed.length === 0) return products;
+    const set = new Set(allowed);
+    return products.filter((p) => set.has(p.codigo));
+  }, [products, clientData]);
+
+  // ── Filtros y búsqueda ────────────────────────────────────────────────────
+  const filterOptions   = useMemo(() => buildFilterOptions(baseProducts), [baseProducts]);
   const filteredProducts = useMemo(
-    () => applyFilters(products, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips),
-    [products, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips]
+    () => applyFilters(baseProducts, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips),
+    [baseProducts, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips]
   );
   const renderedProducts = useMemo(
     () => filteredProducts.slice(0, visibleProductLimit),
     [filteredProducts, visibleProductLimit]
   );
-  const selectedProduct = products.find((product) => product.codigo === selectedCode);
-  const preorderPieces = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+  useEffect(() => { setVisibleProductLimit(PRODUCT_RENDER_BATCH); },
+    [deferredQuery, deferredSearchChips, deferredFilters, deferredQuickFilters]);
+
+  const selectedProduct  = baseProducts.find((p) => p.codigo === selectedCode);
+  const preorderPieces   = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+  // ── Carrito — sessionStorage ───────────────────────────────────────────────
+  const cartStorageKey = tenantId && profile?.id
+    ? `client-cart-items:${tenantId}:${profile.id}`
+    : null;
 
   useEffect(() => {
-    setVisibleProductLimit(PRODUCT_RENDER_BATCH);
-  }, [deferredQuery, deferredSearchChips, deferredFilters, deferredQuickFilters]);
-
-  // Clave con namespace para evitar mezcla entre tenants/usuarios en el mismo navegador.
-  const cartStorageKey = tenantId && profile?.id ? `client-cart-items:${tenantId}:${profile.id}` : null;
-
-  // Carga el carrito desde sessionStorage cuando el tenant o el usuario cambia.
-  // Activa cartStorageReadyKey solo DESPUÉS de leer, para que el efecto de guardado
-  // no borre lo que acaba de cargar (bug de hidratación).
-  useEffect(() => {
-    if (!cartStorageKey) {
-      setCartItems([]);
-      setAddedCodes([]);
-      setCartStorageReadyKey(null);
-      return;
-    }
+    if (!cartStorageKey) { setCartItems([]); setAddedCodes([]); setCartStorageReadyKey(null); return; }
     try {
-      const saved = sessionStorage.getItem(cartStorageKey);
+      const saved  = sessionStorage.getItem(cartStorageKey);
       const parsed = saved ? JSON.parse(saved) : [];
       setCartItems(parsed);
       setAddedCodes(parsed.map((item) => item.product?.codigo).filter(Boolean));
     } catch {
-      setCartItems([]);
-      setAddedCodes([]);
+      setCartItems([]); setAddedCodes([]);
     } finally {
       setCartStorageReadyKey(cartStorageKey);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartStorageKey]);
 
-  // Persiste el carrito solo cuando la hidratación ya terminó para esta clave.
-  // Previene que cartItems = [] borre sessionStorage antes de restaurarse.
   useEffect(() => {
     if (!cartStorageKey || cartStorageReadyKey !== cartStorageKey) return;
     try {
-      if (cartItems.length > 0) {
-        sessionStorage.setItem(cartStorageKey, JSON.stringify(cartItems));
-      } else {
-        sessionStorage.removeItem(cartStorageKey);
-      }
-    } catch {
-      // sessionStorage puede fallar en modo privado o sin espacio.
-    }
+      if (cartItems.length > 0) sessionStorage.setItem(cartStorageKey, JSON.stringify(cartItems));
+      else sessionStorage.removeItem(cartStorageKey);
+    } catch { /* sessionStorage puede fallar en modo privado */ }
   }, [cartItems, cartStorageKey, cartStorageReadyKey]);
 
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const addSearchChip = (chip) => {
     const trimmed = chip.trim();
     if (!trimmed) return;
@@ -210,12 +203,8 @@ export default function ClientCatalogApp({ profile }) {
   const handleSignOut = async () => {
     if (signingOut) return;
     setSigningOut(true);
-    try {
-      await fastSignOut(supabase);
-    } catch (error) {
-      setStatus(`No se pudo salir: ${error.message}`);
-      setSigningOut(false);
-    }
+    try { await fastSignOut(supabase); }
+    catch (error) { setStatus(`No se pudo salir: ${error.message}`); setSigningOut(false); }
   };
 
   const clearFilters = () => {
@@ -231,39 +220,42 @@ export default function ClientCatalogApp({ profile }) {
     tenant_id: tenantId,
     created_by: profile.id,
     client_id: profile.client_id,
-    cliente_nombre: customer.name,
-    cliente_empresa: customer.company,
-    cliente_email: customer.email,
+    cliente_nombre:   customer.name,
+    cliente_empresa:  customer.company,
+    cliente_email:    customer.email,
     cliente_telefono: customer.phone,
-    cliente_rfc: customer.rfc,
-    tipo_cambio: Number(customer.tipoCambio || 0),
-    moneda: customer.currency || "MXN",
-    notas: customer.notes,
+    cliente_rfc:      customer.rfc,
+    tipo_cambio:      Number(customer.tipoCambio || 0),
+    moneda:           customer.currency || "MXN",
+    notas:            customer.notes,
     preorder_items: cartItems.map((item, idx) => {
       const product = item.product;
-      const piezas = Number(item.quantity || 1);
-      const gramos = Number(product.pesoPromedio || 0);
-      const precio = Number(product.quotePricePerGram || product.precioMinimo || 0);
+      const piezas  = Number(item.quantity || 1);
+      const gramos  = Number(product.pesoPromedio || 0);
+      const precio  = Number(product.quotePricePerGram || product.precioMinimo || 0);
       return {
-        producto_codigo: product.codigo,
+        producto_codigo:      product.codigo,
         producto_descripcion: product.descripcion,
-        producto_metal: product.metal,
-        producto_kilataje: product.kilataje,
-        producto_linea: product.linea,
-        producto_foto_url: product.fotoUrl,
+        producto_metal:       product.metal,
+        producto_kilataje:    product.kilataje,
+        producto_linea:       product.linea,
+        producto_foto_url:    product.fotoUrl,
         piezas,
         gramos_por_pieza: gramos,
-        gramos_total: piezas * gramos,
-        labor_mxn: Number(product.quoteLaborPerGram || 0),
+        gramos_total:     piezas * gramos,
+        labor_mxn:        Number(product.quoteLaborPerGram || 0),
         precio_gramo_mxn: precio,
-        subtotal_mxn: piezas * gramos * precio,
-        sort_order: idx,
+        subtotal_mxn:     piezas * gramos * precio,
+        sort_order:       idx,
       };
     }),
   });
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="admin-catalog-shell">
+
+      {/* ── Sidebar: solo métricas + botón preorden ── */}
       <aside className="admin-romea-sidebar">
         <div className="brand-block">
           <BrandLogo company={activeCompany} />
@@ -274,7 +266,7 @@ export default function ClientCatalogApp({ profile }) {
           <section className="sidebar-section">
             <h3>{t("productBase")}</h3>
             <div className="mini-summary">
-              <div><span>{t("totalLabel")}</span><strong>{products.length}</strong></div>
+              <div><span>{t("totalLabel")}</span><strong>{baseProducts.length}</strong></div>
               <div><span>Filtrados</span><strong>{filteredProducts.length}</strong></div>
               <div><span>{t("preorder")}</span><strong>{preorderPieces}</strong></div>
               <div><span>{t("models")}</span><strong>{cartItems.length}</strong></div>
@@ -288,22 +280,7 @@ export default function ClientCatalogApp({ profile }) {
               {t("openPreorder")}
             </button>
           </section>
-
-          <FilterPanel filters={filters} options={filterOptions} onChange={setFilters} />
-
-          <QuickFilters
-            activeFilters={quickFilters}
-            onToggle={(id) =>
-              setQuickFilters((current) =>
-                current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
-              )
-            }
-            onRemove={(id) => setQuickFilters((current) => current.filter((item) => item !== id))}
-          />
-
-          <button className="secondary-button full compact-action" type="button" onClick={clearFilters}>
-            {t("clearFilters")}
-          </button>
+          {/* Filtros y búsqueda movidos a CatalogFilterBar en el contenido principal */}
         </div>
 
         <div className="sidebar-bottom-actions client-sidebar-actions">
@@ -318,6 +295,7 @@ export default function ClientCatalogApp({ profile }) {
         </div>
       </aside>
 
+      {/* ── Contenido principal ── */}
       <main className="admin-catalog-main">
         <header className="admin-catalog-header">
           <div>
@@ -327,29 +305,41 @@ export default function ClientCatalogApp({ profile }) {
           </div>
           <div className="admin-header-actions">
             <LanguageToggle />
-            <button className="header-logout-button" type="button" onClick={handleSignOut} disabled={signingOut}>
+            <button
+              className="header-logout-button"
+              type="button"
+              onClick={handleSignOut}
+              disabled={signingOut}
+            >
               {signingOut ? "Saliendo..." : t("logout")}
             </button>
           </div>
         </header>
 
-        <section className="admin-workspace">
-          <div className="admin-toolbar one-input">
-            <AdvancedSearch
-              value={query}
-              chips={searchChips}
-              products={products}
-              onChange={setQuery}
-              onAddChip={(chip) => {
-                addSearchChip(chip);
-                setQuery("");
-              }}
-              onRemoveChip={(chip) =>
-                setSearchChips((current) => current.filter((item) => item !== chip))
-              }
-            />
-          </div>
+        {/* ── Barra de filtros compacta — misma que admin ── */}
+        <CatalogFilterBar
+          totalCount={baseProducts.length}
+          filteredCount={filteredProducts.length}
+          loadingProducts={baseProducts.length === 0 && !!status}
+          productQuery={query}
+          searchChips={searchChips}
+          products={baseProducts}
+          onQueryChange={setQuery}
+          onAddChip={addSearchChip}
+          onRemoveChip={(chip) => setSearchChips((c) => c.filter((item) => item !== chip))}
+          filters={filters}
+          filterOptions={filterOptions}
+          onFiltersChange={setFilters}
+          quickFilters={quickFilters}
+          onQuickFilterToggle={(id) =>
+            setQuickFilters((c) => c.includes(id) ? c.filter((item) => item !== id) : [...c, id])
+          }
+          onClear={clearFilters}
+          collapsed={filtersCollapsed}
+          onToggleCollapse={() => setFiltersCollapsed((c) => !c)}
+        />
 
+        <section className="admin-workspace">
           {selectedCode ? (
             <ProductDetail
               product={selectedProduct}
@@ -358,66 +348,72 @@ export default function ClientCatalogApp({ profile }) {
             />
           ) : filteredProducts.length ? (
             <>
-            <div className="admin-product-grid">
-              {renderedProducts.map((product) => (
-                <article className={`admin-product-card enabled ${addedCodes.includes(product.codigo) ? "in-preorder" : ""}`} key={product.id || product.codigo}>
-                  {addedCodes.includes(product.codigo) ? <span className="preorder-added-badge">✓ En preorden</span> : null}
-                  <button
-                    className="admin-product-image"
-                    type="button"
-                    onClick={() => setSelectedCode(product.codigo)}
+              <div className="admin-product-grid">
+                {renderedProducts.map((product) => (
+                  <article
+                    className={`admin-product-card enabled${addedCodes.includes(product.codigo) ? " in-preorder" : ""}`}
+                    key={product.id || product.codigo}
                   >
-                    <img
-                      src={imageUrlForSize(product.fotoUrl, 360) || buildPlaceholderUrl(t("noPhoto"))}
-                      alt={product.descripcion}
-                      loading="lazy"
-                      decoding="async"
-                      fetchPriority="low"
-                      onError={(event) => {
-                        event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
-                      }}
-                    />
-                  </button>
-                  <div className="admin-product-info">
-                    <strong>{product.codigo}</strong>
-                    <h3>{shortText(product.descripcion, 72)}</h3>
-                    <p>
-                      {[product.metal, product.kilataje, formatWeight(product.pesoPromedio)]
-                        .filter(Boolean)
-                        .join(" / ")}
-                    </p>
-                    <span>
-                      {product.precioMinimo
-                        ? formatCurrency(product.precioMinimo, product.monedaPrecioMin)
-                        : t("priceToConfirm")}
-                    </span>
-                  </div>
-                  <div className="admin-product-actions">
+                    {addedCodes.includes(product.codigo)
+                      ? <span className="preorder-added-badge">✓ En preorden</span>
+                      : null}
                     <button
-                      className="secondary-button compact-action"
+                      className="admin-product-image"
                       type="button"
                       onClick={() => setSelectedCode(product.codigo)}
                     >
-                      {t("viewDetail")}
+                      <img
+                        src={imageUrlForSize(product.fotoUrl, 360) || buildPlaceholderUrl(t("noPhoto"))}
+                        alt={product.descripcion}
+                        loading="lazy"
+                        decoding="async"
+                        fetchPriority="low"
+                        onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(t("noPhoto")); }}
+                      />
                     </button>
-                    <button
-                      className="primary-button compact-action"
-                      type="button"
-                      onClick={() => addToCart(product)}
-                    >
-                      {t("addToPreorder")}
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-            {filteredProducts.length > renderedProducts.length ? (
-              <div className="load-more-row">
-                <button className="secondary-button compact-action" type="button" onClick={() => setVisibleProductLimit((current) => current + PRODUCT_RENDER_BATCH)}>
-                  Mostrar más productos ({renderedProducts.length.toLocaleString()} de {filteredProducts.length.toLocaleString()})
-                </button>
+                    <div className="admin-product-info">
+                      <strong>{product.codigo}</strong>
+                      <h3>{shortText(product.descripcion, 72)}</h3>
+                      <p>
+                        {[product.metal, product.kilataje, formatWeight(product.pesoPromedio)]
+                          .filter(Boolean).join(" / ")}
+                      </p>
+                      <span>
+                        {product.precioMinimo
+                          ? formatCurrency(product.precioMinimo, product.monedaPrecioMin)
+                          : t("priceToConfirm")}
+                      </span>
+                    </div>
+                    <div className="admin-product-actions">
+                      <button
+                        className="secondary-button compact-action"
+                        type="button"
+                        onClick={() => setSelectedCode(product.codigo)}
+                      >
+                        {t("viewDetail")}
+                      </button>
+                      <button
+                        className="primary-button compact-action"
+                        type="button"
+                        onClick={() => addToCart(product)}
+                      >
+                        {t("addToPreorder")}
+                      </button>
+                    </div>
+                  </article>
+                ))}
               </div>
-            ) : null}
+              {filteredProducts.length > renderedProducts.length ? (
+                <div className="load-more-row">
+                  <button
+                    className="secondary-button compact-action"
+                    type="button"
+                    onClick={() => setVisibleProductLimit((c) => c + PRODUCT_RENDER_BATCH)}
+                  >
+                    Mostrar más ({renderedProducts.length.toLocaleString()} de {filteredProducts.length.toLocaleString()})
+                  </button>
+                </div>
+              ) : null}
             </>
           ) : (
             <div className="empty-state">
@@ -428,41 +424,48 @@ export default function ClientCatalogApp({ profile }) {
         </section>
       </main>
 
+      {/* ── PreorderEditor como overlay a pantalla completa ──
+          IMPORTANTE: debe estar FUERA del grid (posición fixed) para no
+          quedar atrapado en la columna del sidebar (bug de CSS grid auto-placement) */}
       {isCartOpen ? (
-        <PreorderEditor
-          preorder={cartToPreorder()}
-          clients={clientData ? [clientData] : []}
-          tenantId={tenantId}
-          profile={profile}
-          pricingLocked
-          onClose={(updatedDraft) => {
-            if (updatedDraft?.preorder_items) {
-              setCartItems(updatedDraft.preorder_items.map((item) => ({
-                quantity: Number(item.piezas || 1),
-                product: {
-                  codigo: item.producto_codigo,
-                  descripcion: item.producto_descripcion,
-                  metal: item.producto_metal,
-                  kilataje: item.producto_kilataje,
-                  linea: item.producto_linea,
-                  fotoUrl: item.producto_foto_url,
-                  pesoPromedio: Number(item.gramos_por_pieza || 0),
-                  precioMinimo: Number(item.precio_gramo_mxn || 0),
-                  quotePricePerGram: Number(item.precio_gramo_mxn || 0),
-                  quoteLaborPerGram: Number(item.labor_mxn || 0),
-                },
-              })));
-            }
-            setIsCartOpen(false);
-          }}
-          onSaved={() => {
-            setCartItems([]);
-            setAddedCodes([]);
-            setIsCartOpen(false);
-            setStatus("Preorden guardada. El administrador ya puede verla en el menu Preordenes.");
-          }}
-        />
+        <div className="client-editor-overlay">
+          <PreorderEditor
+            preorder={cartToPreorder()}
+            clients={clientData ? [clientData] : []}
+            tenantId={tenantId}
+            profile={profile}
+            pricingLocked
+            onClose={(updatedDraft) => {
+              if (updatedDraft?.preorder_items) {
+                setCartItems(updatedDraft.preorder_items.map((item) => ({
+                  quantity: Number(item.piezas || 1),
+                  product: {
+                    codigo:          item.producto_codigo,
+                    descripcion:     item.producto_descripcion,
+                    metal:           item.producto_metal,
+                    kilataje:        item.producto_kilataje,
+                    linea:           item.producto_linea,
+                    fotoUrl:         item.producto_foto_url,
+                    pesoPromedio:    Number(item.gramos_por_pieza || 0),
+                    precioMinimo:    Number(item.precio_gramo_mxn || 0),
+                    quotePricePerGram: Number(item.precio_gramo_mxn || 0),
+                    quoteLaborPerGram: Number(item.labor_mxn || 0),
+                  },
+                })));
+              }
+              setIsCartOpen(false);
+            }}
+            onSaved={() => {
+              setCartItems([]);
+              setAddedCodes([]);
+              setIsCartOpen(false);
+              setStatus("Preorden guardada. El administrador ya puede verla en el menú Preórdenes.");
+            }}
+          />
+        </div>
       ) : null}
+
+      {/* Overlay de cierre de sesión */}
       {signingOut ? (
         <div className="signout-overlay" role="status" aria-live="assertive">
           <div className="signout-card">
