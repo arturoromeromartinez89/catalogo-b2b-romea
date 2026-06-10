@@ -5773,6 +5773,24 @@ body > div[data-portal] {
   margin-top: 4px;
 }
 
+/* Banner de confirmación de duplicado */
+.quote-duplicate-confirm {
+  align-items: center;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+}
+.quote-duplicate-confirm span {
+  color: #92400e;
+  flex: 1;
+  font-size: 13px;
+  min-width: 160px;
+}
+
 .po-editor-body {
   display: grid;
   gap: 20px;

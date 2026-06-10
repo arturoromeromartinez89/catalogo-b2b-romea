@@ -294,7 +294,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [prospectForm, setProspectForm] = useState({ name: "", company: "", email: "", phone: "", rfc: "", active: true });
   const [tenantCompany, setTenantCompany] = useState(null);
   const scannerInputRef = useRef(null);
-  const bottomScannerRef = useRef(null);  // barra de búsqueda inferior (misma lógica, distinto ref)
+  const bottomScannerRef = useRef(null);       // barra de búsqueda inferior (misma lógica, distinto ref)
+  const activeScannerRef = useRef("top");      // "top" | "bottom" — cuál barra usó el usuario por última vez
+  const [pendingDuplicate, setPendingDuplicate] = useState(null); // { product, nextItem } esperando confirmación
   const activeCompany = resolvedTenantId ? (tenantCompany || {}) : company;
   const markEdited = () => {
     onDirty?.();
@@ -685,6 +687,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       .slice(0, 8);
   }, [productSearch, preorderCatalogProducts]);
 
+  // Devuelve el ref del input activo (top o bottom) para mantener el foco en la barra correcta
+  const getActiveScannerRef = () =>
+    activeScannerRef.current === "bottom" ? bottomScannerRef : scannerInputRef;
+
   const addProduct = (product) => {
     const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
     const selectedPieceList = piecePriceLists.find((entry) => entry.id === selectedPiecePriceListId);
@@ -694,19 +700,22 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       : isPieceMode
         ? pricePieceItemFromList({ ...rawItem, pricing_mode: "piece" }, piecePriceItems, selectedPieceList)
         : priceItemFromLines(rawItem, lines, selectedList, getListSilverMxn(selectedList));
-    setItems((current) => {
-      const existing = current.find((item) => item.producto_codigo === nextItem.producto_codigo);
-      if (existing) {
-        return current.map((item) =>
-          item.producto_codigo === nextItem.producto_codigo
-            ? calcItem({ ...item, piezas: Number(item.piezas || 0) + 1 })
-            : item
-        );
-      }
-      return [...current, nextItem];
-    });
+
+    // ── Detección de duplicado ──────────────────────────────────────────────
+    const existing = items.find((item) => item.producto_codigo === nextItem.producto_codigo);
+    if (existing) {
+      setPendingDuplicate({ product, nextItem });
+      setProductStatus({
+        type: "error",
+        text: `${product.codigo} ya está en la preorden (${existing.piezas} pz). ¿Agregar línea duplicada?`,
+      });
+      return; // no agrega aún — espera confirmación
+    }
+
+    setItems((current) => [...current, nextItem]);
     markEdited();
     setProductSearch("");
+    setPendingDuplicate(null);
     setMsg(
       isConfigurableProductGroup(product)
         ? `${product.configurableTitle || product.descripcion} agregado. Configura el tipo de pieza en la tabla.`
@@ -718,7 +727,28 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
         ? "Base agregada. Ahora elige tipo de pieza en la fila de la preorden."
         : `${product.codigo} agregado. Listo para el siguiente.`,
     });
-    window.setTimeout(() => scannerInputRef.current?.focus(), 80);
+    // Foco vuelve a la barra que usó el usuario (no siempre la de arriba)
+    window.setTimeout(() => getActiveScannerRef().current?.focus(), 80);
+  };
+
+  // Confirma agregar el producto duplicado como línea separada
+  const confirmDuplicate = () => {
+    if (!pendingDuplicate) return;
+    const { product, nextItem } = pendingDuplicate;
+    setItems((current) => [...current, nextItem]);
+    markEdited();
+    setProductSearch("");
+    setPendingDuplicate(null);
+    setProductStatus({ type: "success", text: `${product.codigo} agregado como línea separada.` });
+    window.setTimeout(() => getActiveScannerRef().current?.focus(), 80);
+  };
+
+  // Cancela el duplicado — limpia sin agregar
+  const cancelDuplicate = () => {
+    setPendingDuplicate(null);
+    setProductSearch("");
+    setProductStatus({ type: "info", text: "Escanea o busca un producto para agregarlo." });
+    window.setTimeout(() => getActiveScannerRef().current?.focus(), 80);
   };
 
   const buildItemForProduct = (product, quantity = 1, comments = "", listItemsOverride = piecePriceItems, priceOverride = null) => {
@@ -938,17 +968,16 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     const code = productSearch.trim();
     if (!code) {
       setProductStatus({ type: "error", text: "Escanea, escribe un SKU o busca un producto primero." });
-      scannerInputRef.current?.focus();
+      getActiveScannerRef().current?.focus();
       return;
     }
     const product = findProductByScan(code);
     if (!product) {
       setProductStatus({ type: "error", text: `No encontre producto con codigo exacto: ${code}` });
-      window.setTimeout(() => scannerInputRef.current?.focus(), 80);
+      window.setTimeout(() => getActiveScannerRef().current?.focus(), 80);
       return;
     }
     addProduct(product);
-    window.setTimeout(() => scannerInputRef.current?.focus(), 80);
   };
 
   const adjustQuantity = (idx, delta) => {
@@ -1613,8 +1642,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   <input
                     ref={scannerInputRef}
                     value={productSearch}
+                    onFocus={() => { activeScannerRef.current = "top"; }}
                     onChange={(event) => {
+                      activeScannerRef.current = "top";
                       setProductSearch(event.target.value);
+                      setPendingDuplicate(null);
                       if (productStatus.type !== "info") {
                         setProductStatus({ type: "info", text: "Presiona Enter para agregar un codigo exacto o elige una sugerencia." });
                       }
@@ -1640,10 +1672,22 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   ) : null}
                   <p className={`scanner-status ${productStatus.type}`}>{productStatus.text}</p>
                 </div>
-                {productResults.length ? (
+                {/* Confirmación de duplicado — aparece en la barra que activó el warning */}
+                {pendingDuplicate && activeScannerRef.current === "top" ? (
+                  <div className="quote-duplicate-confirm">
+                    <span>⚠ <strong>{pendingDuplicate.product.codigo}</strong> ya está en la preorden</span>
+                    <button type="button" className="primary-button compact-action" onClick={confirmDuplicate}>
+                      Sí, agregar línea separada
+                    </button>
+                    <button type="button" className="secondary-button compact-action" onClick={cancelDuplicate}>
+                      Cancelar
+                    </button>
+                  </div>
+                ) : null}
+                {productResults.length && !pendingDuplicate ? (
                   <div className="quote-product-results">
                     {productResults.map((product) => (
-                      <button key={product.id || product.codigo} type="button" onClick={() => addProduct(product)}>
+                      <button key={product.id || product.codigo} type="button" onClick={() => { activeScannerRef.current = "top"; addProduct(product); }}>
                         <img
                           src={imageUrlForSize(product.fotoUrl, 120) || buildPlaceholderUrl()}
                           alt={product.descripcion}
@@ -1984,8 +2028,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 <input
                   ref={bottomScannerRef}
                   value={productSearch}
+                  onFocus={() => { activeScannerRef.current = "bottom"; }}
                   onChange={(event) => {
+                    activeScannerRef.current = "bottom";
                     setProductSearch(event.target.value);
+                    setPendingDuplicate(null);
                     if (productStatus.type !== "info") {
                       setProductStatus({ type: "info", text: "Presiona Enter para agregar un codigo exacto o elige una sugerencia." });
                     }
@@ -2000,15 +2047,27 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 />
               </label>
               <div className="quote-picker-actions">
-                <button className="primary-button compact-action" type="button" onClick={handleProductEntrySubmit}>
+                <button className="primary-button compact-action" type="button" onClick={() => { activeScannerRef.current = "bottom"; handleProductEntrySubmit(); }}>
                   Agregar por codigo
                 </button>
                 <p className={`scanner-status ${productStatus.type}`}>{productStatus.text}</p>
               </div>
-              {productResults.length ? (
+              {/* Confirmación de duplicado en barra inferior */}
+              {pendingDuplicate && activeScannerRef.current === "bottom" ? (
+                <div className="quote-duplicate-confirm">
+                  <span>⚠ <strong>{pendingDuplicate.product.codigo}</strong> ya está en la preorden</span>
+                  <button type="button" className="primary-button compact-action" onClick={confirmDuplicate}>
+                    Sí, agregar línea separada
+                  </button>
+                  <button type="button" className="secondary-button compact-action" onClick={cancelDuplicate}>
+                    Cancelar
+                  </button>
+                </div>
+              ) : null}
+              {productResults.length && !pendingDuplicate ? (
                 <div className="quote-product-results">
                   {productResults.map((product) => (
-                    <button key={product.id || product.codigo} type="button" onClick={() => addProduct(product)}>
+                    <button key={product.id || product.codigo} type="button" onClick={() => { activeScannerRef.current = "bottom"; addProduct(product); }}>
                       <img
                         src={imageUrlForSize(product.fotoUrl, 120) || buildPlaceholderUrl()}
                         alt={product.descripcion}
