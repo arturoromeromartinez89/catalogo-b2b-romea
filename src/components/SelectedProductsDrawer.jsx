@@ -1,5 +1,6 @@
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { useLanguage } from "../i18n/LanguageContext";
+import { downloadCatalogSelectionExcel } from "../utils/catalogExcel";
 
 const ProductMiniRow = ({ product, onRemove, mode }) => (
   <article className="selection-drawer-item">
@@ -55,6 +56,10 @@ export default function SelectedProductsDrawer({
       onQuoteLink();
     }
   };
+  const handleDownloadExcel = () => {
+    if (!catalogCount) return;
+    downloadCatalogSelectionExcel(catalogProducts, `seleccion-${catalogCount}`);
+  };
 
   return (
     <>
@@ -107,6 +112,20 @@ export default function SelectedProductsDrawer({
           <div className="selection-drawer-actions compact-row">
             <button className="tray-action quote-link" type="button" onClick={confirmQuoteLink} disabled={!catalogCount}>
               {t("generateQuoteLinkShort")}
+            </button>
+            <button
+              className="tray-action excel"
+              type="button"
+              onClick={handleDownloadExcel}
+              disabled={!catalogCount}
+              title="Descarga la selección en Excel — compatible con carga de catálogo por cliente"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Excel
             </button>
             <button className="tray-action clear" type="button" onClick={onClearCatalog} disabled={!catalogCount}>
               {t("clearSelectionShort")}

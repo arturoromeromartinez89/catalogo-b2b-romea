@@ -4542,6 +4542,16 @@ body > div[data-portal] {
   color: var(--romea-blue);
 }
 
+.tray-action.excel {
+  align-items: center;
+  background: #e8f4fd;
+  border: 1px solid #93c5fd;
+  color: #1d4ed8;
+  display: inline-flex;
+  gap: 4px;
+  justify-content: center;
+}
+
 .tray-action:disabled {
   cursor: not-allowed;
   opacity: 0.45;
@@ -6981,6 +6991,16 @@ textarea:focus {
   background: var(--color-warning-light);
   border-color: rgba(217, 119, 6, 0.28);
   color: var(--color-warning-text);
+}
+
+.tray-action.excel {
+  align-items: center;
+  background: var(--brand-50, #eff6ff);
+  border-color: var(--brand-200, #bfdbfe);
+  color: var(--brand-700, #1d4ed8);
+  display: inline-flex;
+  gap: 4px;
+  justify-content: center;
 }
 
 .tray-action.clear {
