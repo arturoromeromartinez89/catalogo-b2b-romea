@@ -39,7 +39,6 @@ import {
   setClientPriceList,
   updateClientAllowedSkus,
   updateClientLaborList,
-  updateProductsWebOrder,
   upsertProducts,
 } from "../services/supabaseCatalog";
 import { fetchTenants, makeTenantSlug, saveTenant } from "../services/tenantService";
@@ -272,7 +271,6 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [checkedIds, setCheckedIds] = useState(() => new Set());
   const [catalogSelectionIds, setCatalogSelectionIds] = useState(() => new Set());
   const [filtersCollapsed, setFiltersCollapsed] = useState(false);
-  const [reorderSaving, setReorderSaving] = useState(false);
   const [lastActionMessage, setLastActionMessage] = useState("");
   const [catalogPdfOpen, setCatalogPdfOpen] = useState(false);
   const [quoteLinkOpen, setQuoteLinkOpen] = useState(false);
@@ -469,51 +467,6 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     () => filteredProducts.length > 0 && filteredProducts.every((product) => checkedIds.has(product.codigo)),
     [filteredProducts, checkedIds]
   );
-
-  const handleProductReorder = async (draggedCode, targetCode) => {
-    if (!draggedCode || !targetCode || draggedCode === targetCode || reorderSaving) return;
-
-    const currentProducts = products.filter((product) => !isConfigurableProductGroup(product));
-    const fromIndex = currentProducts.findIndex((product) => product.codigo === draggedCode);
-    const toIndex = currentProducts.findIndex((product) => product.codigo === targetCode);
-    if (fromIndex < 0 || toIndex < 0) return;
-
-    const nextProducts = [...currentProducts];
-    const [moved] = nextProducts.splice(fromIndex, 1);
-    nextProducts.splice(toIndex, 0, moved);
-    const orderedProducts = nextProducts.map((product, index) => ({ ...product, ordenWeb: index + 1 }));
-    const orderByCode = new Map(orderedProducts.map((product) => [product.codigo, product]));
-
-    setData((current) => current
-      ? {
-          ...current,
-          products: current.products
-            .map((product) => orderByCode.get(product.codigo) || product)
-            .sort((a, b) => {
-              const orderA = Number(a.ordenWeb || 0);
-              const orderB = Number(b.ordenWeb || 0);
-              if (orderA !== orderB) return orderA - orderB;
-              return String(a.codigo || "").localeCompare(String(b.codigo || ""), "es");
-            }),
-        }
-      : current
-    );
-
-    setReorderSaving(true);
-    setStatus("Guardando nuevo orden del catalogo...");
-    try {
-      await updateProductsWebOrder(orderedProducts, tenantId);
-      setStatus("Orden del catalogo guardado.");
-      notifyAction("success", "Orden guardado", "La posicion de las tarjetas se actualizo en el catalogo.");
-    } catch (error) {
-      setStatus(`Error guardando orden: ${error.message}`);
-      notifyAction("error", "No se pudo guardar el orden", error.message || "Recarga e intenta de nuevo.");
-      load().catch((loadError) => setStatus(loadError.message));
-    } finally {
-      setReorderSaving(false);
-    }
-  };
-
   useEffect(() => {
     setVisibleProductLimit(PRODUCT_RENDER_BATCH);
   }, [deferredProductQuery, deferredSearchChips, deferredFilters, deferredQuickFilters]);
@@ -1327,8 +1280,6 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             addToCatalogSelection={addToCatalogSelection}
             removeFromCatalogSelection={removeFromCatalogSelection}
             setProductModal={setProductModal}
-            onProductReorder={handleProductReorder}
-            reorderSaving={reorderSaving}
             filterBar={!selectedProductCode ? (
               <CatalogFilterBar
                 totalCount={products.length}

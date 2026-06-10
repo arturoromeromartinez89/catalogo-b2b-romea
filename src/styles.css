@@ -2433,41 +2433,6 @@ dd {
   border-color: var(--color-success);
 }
 
-.admin-product-card.is-dragging {
-  opacity: 0.55;
-}
-
-.admin-product-card.is-drop-target {
-  border-color: #d97706;
-  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.18), var(--shadow-md);
-}
-
-.product-drag-handle {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(31, 51, 95, 0.22);
-  border-radius: 999px;
-  color: var(--romea-blue);
-  cursor: grab;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0;
-  padding: 5px 8px;
-  position: absolute;
-  right: 10px;
-  top: 10px;
-  user-select: none;
-  z-index: 3;
-}
-
-.product-drag-handle:active {
-  cursor: grabbing;
-}
-
-.product-drag-handle.disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
 .preorder-added-badge {
   background: var(--color-success);
   border-radius: 999px;
