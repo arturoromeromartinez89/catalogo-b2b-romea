@@ -424,11 +424,29 @@ export default function ClientCatalogApp({ profile }) {
         </section>
       </main>
 
-      {/* ── PreorderEditor como overlay a pantalla completa ──
-          IMPORTANTE: debe estar FUERA del grid (posición fixed) para no
-          quedar atrapado en la columna del sidebar (bug de CSS grid auto-placement) */}
+      {/* ── PreorderEditor: overlay fixed que arranca en left:270px ──
+          El sidebar (270px) queda siempre visible para que el usuario nunca
+          pierda el contexto. La barra superior ofrece regreso explícito. */}
       {isCartOpen ? (
         <div className="client-editor-overlay">
+
+          {/* Barra de navegación — siempre visible, siempre accesible */}
+          <div className="client-editor-topbar">
+            <button
+              type="button"
+              className="client-editor-back"
+              onClick={() => setIsCartOpen(false)}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              Volver al catálogo
+            </button>
+            <span className="client-editor-cart-info">
+              {cartItems.length} modelo{cartItems.length !== 1 ? "s" : ""} · {preorderPieces} pieza{preorderPieces !== 1 ? "s" : ""}
+            </span>
+          </div>
+
           <PreorderEditor
             preorder={cartToPreorder()}
             clients={clientData ? [clientData] : []}

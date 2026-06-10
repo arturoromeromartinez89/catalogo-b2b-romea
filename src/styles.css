@@ -1490,17 +1490,65 @@ dd {
    FIX: el PreorderEditor era un hijo directo del grid de admin-catalog-shell,
    por lo que CSS grid auto-placement lo ponía en la columna del sidebar (270px).
    Con position:fixed se saca del flujo del grid y ocupa toda la pantalla. ── */
+/* ── Editor de preorden (vista cliente) ─────────────────────────────────────
+   left: 270px  →  el sidebar queda siempre visible.
+   NO usar inset:0 — taparía toda la pantalla dejando al usuario sin salida. */
 .client-editor-overlay {
   background: #fff;
   bottom: 0;
   display: flex;
   flex-direction: column;
-  left: 0;
+  left: 270px;       /* coincide con grid-template-columns: 270px 1fr */
   overflow: hidden;
   position: fixed;
   right: 0;
   top: 0;
-  z-index: 500;
+  z-index: 100;
+}
+
+/* Barra de navegación superior del editor (cliente) */
+.client-editor-topbar {
+  align-items: center;
+  background: var(--romea-soft, #f8f7f4);
+  border-bottom: 1px solid var(--romea-line, #e5e3dc);
+  display: flex;
+  flex-shrink: 0;
+  gap: 12px;
+  height: 44px;
+  padding: 0 16px;
+}
+.client-editor-back {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--romea-line, #e5e3dc);
+  border-radius: 6px;
+  color: var(--romea-dark, #1a1a1a);
+  cursor: pointer;
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+  padding: 5px 12px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.client-editor-back:hover {
+  background: var(--romea-soft, #f8f7f4);
+  border-color: var(--romea-mid, #c8c4bb);
+}
+.client-editor-back svg {
+  flex-shrink: 0;
+}
+.client-editor-cart-info {
+  color: var(--romea-muted, #8b8680);
+  font-size: 12px;
+  margin-left: auto;
+}
+/* En el overlay del cliente el editor toma el espacio restante
+   (override de height:100% que no funciona en flex-column) */
+.client-editor-overlay .po-editor {
+  flex: 1;
+  height: auto;
+  min-height: 0;
 }
 
 .admin-catalog-header {

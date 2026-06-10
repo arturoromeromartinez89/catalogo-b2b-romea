@@ -190,21 +190,21 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   doc.setDrawColor(200,210,230); doc.setLineWidth(0.3);
   doc.line(page.margin, y, page.w - page.margin, y); y += 6;
 
-  const drawInfoBox = ({ x, boxY, w, title, lines, accent = [31, 51, 95] }) => {
+  const drawInfoBox = ({ x, boxY, w, title, lines, accent = [100, 100, 100] }) => {
     const wrapped = (lines || [])
       .filter(Boolean)
       .flatMap((line) => doc.splitTextToSize(String(line), w - 8));
-    const h = Math.max(18, 10 + wrapped.length * 4);
+    const h = Math.max(20, 12 + wrapped.length * 4);
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(220, 228, 240);
     doc.roundedRect(x, boxY, w, h, 1.5, 1.5, "FD");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(6.6);
+    doc.setFontSize(7);
     doc.setTextColor(...accent);
     txt(doc, title, x + 4, boxY + 5);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(6.4);
-    doc.setTextColor(60, 65, 78);
+    doc.setFontSize(7.5);
+    doc.setTextColor(60, 60, 60);
     txt(doc, wrapped, x + 4, boxY + 10);
     return h;
   };
@@ -217,7 +217,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
       w: page.col,
       title: t("COMENTARIOS", "COMMENTS"),
       lines: [documentNotes],
-      accent: [31, 51, 95],
+      accent: [100, 100, 100],
     });
     y += noteH + 6;
   }
