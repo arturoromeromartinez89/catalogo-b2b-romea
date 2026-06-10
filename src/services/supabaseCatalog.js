@@ -361,6 +361,11 @@ export const saveClient = async (client, tenantId = "") => {
       .upsert(fallbackRow, { onConflict: fallbackRow.id ? "id" : "email" })
       .select("*")
       .single();
+    // La columna type no existe aún en la BD — la restauramos en memoria para que
+    // isProspectRecord clasifique correctamente sin requerir un reload de página.
+    if (!result.error && result.data && type !== undefined) {
+      result = { ...result, data: { ...result.data, type } };
+    }
   }
   throwIfError(result);
   if (result.data?.email) {

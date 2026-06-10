@@ -2925,17 +2925,6 @@ dd {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.new-client-button {
-  background: #eaf8f1;
-  border: 1px solid #8ed7b3;
-  border-radius: 9px;
-  color: #087a45;
-  font-size: 13px;
-  font-weight: 900;
-  min-height: 38px;
-  padding: 8px 14px;
-}
-
 .prospect-scan-card {
   background: #ffffff;
   border: 1px solid var(--romea-line);
@@ -8773,6 +8762,32 @@ textarea:focus {
   width: 24px;
 }
 .sku-remove:hover { background: #fff5f5; border-color: #ef4444; color: #ef4444; }
+
+/* Importar SKUs desde Excel */
+.sku-import-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+.sku-import-btn {
+  align-items: center;
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+.sku-import-hint {
+  color: var(--neutral-400, #a0a8b5);
+  font-size: 11px;
+}
+.sku-import-msg {
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+  padding: 8px 12px;
+}
+.sku-import-msg--ok  { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+.sku-import-msg--err { background: #fff5f5; border: 1px solid #fecaca; color: #dc2626; }
 
 /* ─── Admin module tab — área de contenido ──────────────────────────────────── */
 

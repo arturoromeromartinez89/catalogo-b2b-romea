@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { normalizeText } from "../../utils/textNormalizer";
 
 const displayContactEmail = (email) =>
@@ -7,11 +7,91 @@ const displayContactEmail = (email) =>
 // ─── Panel de gestión de catálogo personalizado por cliente ───────────────────
 
 function ClientSkuPanel({ client, products = [], onSave, onClose }) {
-  const [search, setSearch]     = useState("");
+  const [search, setSearch]         = useState("");
   const [allowedSkus, setAllowedSkus] = useState(() => client?.allowed_skus || []);
-  const [saving, setSaving]     = useState(false);
-  const [msg, setMsg]           = useState("");
-  const isRestricted            = allowedSkus.length > 0;
+  const [saving, setSaving]         = useState(false);
+  const [msg, setMsg]               = useState("");
+  const [importing, setImporting]   = useState(false);
+  const [importMsg, setImportMsg]   = useState("");
+  const importFileRef               = useRef(null);
+  const isRestricted                = allowedSkus.length > 0;
+
+  const handleExcelImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset so the same file can be re-selected later
+    e.target.value = "";
+
+    setImporting(true);
+    setImportMsg("");
+    try {
+      const XLSX = await import("xlsx");
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+
+      // Prefer the "Preorden" sheet (same format as preorder download), else use first sheet
+      const sheetName = workbook.SheetNames.find((n) => normalizeText(n) === "preorden")
+        ?? workbook.SheetNames[0];
+
+      if (!sheetName) {
+        setImportMsg("❌ El archivo no contiene hojas.");
+        return;
+      }
+
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+      if (!rows.length) {
+        setImportMsg("❌ La hoja está vacía.");
+        return;
+      }
+
+      // Find the column whose name normalises to "codigo" (handles accents / case)
+      const sampleRow = rows[0];
+      const codigoKey = Object.keys(sampleRow).find(
+        (k) => normalizeText(String(k)) === "codigo"
+      );
+
+      if (!codigoKey) {
+        setImportMsg("❌ No se encontró columna 'codigo' en el archivo.");
+        return;
+      }
+
+      const rawCodes = rows
+        .map((row) => String(row[codigoKey] ?? "").trim())
+        .filter((c) => c && c.toLowerCase() !== "codigo");
+
+      const uniqueCodes = [...new Set(rawCodes)];
+
+      // Validate against the products catalog
+      const productCodes = new Set(products.map((p) => p.codigo));
+      const validCodes   = uniqueCodes.filter((c) => productCodes.has(c));
+      const invalidCodes = uniqueCodes.filter((c) => !productCodes.has(c));
+
+      // Merge into allowedSkus without duplicating
+      const existingSet = new Set(allowedSkus);
+      const newCodes    = validCodes.filter((c) => !existingSet.has(c));
+
+      if (newCodes.length > 0) {
+        setAllowedSkus((prev) => [...prev, ...newCodes]);
+      }
+
+      // Build a readable summary
+      let summary = `✅ ${newCodes.length} SKU${newCodes.length !== 1 ? "s" : ""} importados`;
+      const alreadyIn = validCodes.length - newCodes.length;
+      if (alreadyIn > 0) summary += ` (${alreadyIn} ya estaban en la lista)`;
+      if (invalidCodes.length > 0) {
+        const preview = invalidCodes.slice(0, 5).join(", ");
+        const extra   = invalidCodes.length > 5 ? ` y ${invalidCodes.length - 5} más…` : "";
+        summary += `. ${invalidCodes.length} no encontrados en el catálogo: ${preview}${extra}`;
+      }
+      setImportMsg(summary);
+    } catch (err) {
+      setImportMsg(`❌ Error al leer el archivo: ${err.message}`);
+    } finally {
+      setImporting(false);
+    }
+  };
 
   // Sugerencias de búsqueda para agregar SKUs
   const suggestions = useMemo(() => {
@@ -92,6 +172,43 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
               </span>
             )}
           </div>
+
+          {/* Importar desde Excel */}
+          <div className="sku-import-row">
+            <input
+              ref={importFileRef}
+              type="file"
+              accept=".xlsx,.xls"
+              style={{ display: "none" }}
+              onChange={handleExcelImport}
+            />
+            <button
+              type="button"
+              className="secondary-button sku-import-btn"
+              onClick={() => importFileRef.current?.click()}
+              disabled={importing}
+              title="Carga un Excel con el mismo formato que la descarga de preorden"
+            >
+              {importing ? (
+                "Importando…"
+              ) : (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  Cargar desde Excel
+                </>
+              )}
+            </button>
+            <span className="sku-import-hint">Usa el mismo archivo que descargas de la preorden</span>
+          </div>
+          {importMsg && (
+            <p className={`sku-import-msg ${importMsg.startsWith("✅") ? "sku-import-msg--ok" : "sku-import-msg--err"}`}>
+              {importMsg}
+            </p>
+          )}
 
           {/* Buscador para agregar SKUs */}
           <div style={{ position: "relative" }}>

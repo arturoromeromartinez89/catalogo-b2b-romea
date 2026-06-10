@@ -199,11 +199,10 @@ const isProspectRecord = (client) => {
   if ((client.type || "") === "cliente") return false;
   // type="prospecto" explícito → prospecto
   if ((client.type || "") === "prospecto") return true;
-  // Sin type explícito: usar señales secundarias (email fantasy, badge de feria)
-  return (
-    String(client.email || "").endsWith("@prospect.local") ||
-    Boolean(client.badge_raw)
-  );
+  // Sin type (BD antigua sin columna): solo el email fantasy es señal confiable.
+  // badge_raw NO se usa aquí — los prospectos convertidos a cliente conservan el badge
+  // y se clasificarían mal si lo usáramos como criterio.
+  return String(client.email || "").endsWith("@prospect.local");
 };
 const prospectForForm = (prospect) => ({
   ...blankProspect,
