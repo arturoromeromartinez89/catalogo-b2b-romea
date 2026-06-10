@@ -429,7 +429,7 @@ export const updateClientAllowedSkus = async (clientId, skus) => {
   const allowed = Array.isArray(skus) && skus.length > 0 ? skus : null;
   const { error } = await supabase
     .from("clients")
-    .update({ allowed_skus: allowed, updated_at: new Date().toISOString() })
+    .update({ allowed_skus: allowed })
     .eq("id", clientId);
   if (error) throw new Error(error.message);
 };
@@ -443,7 +443,7 @@ export const updateClientLaborList = async (clientId, laborListId) => {
   const value = laborListId || null;
   const { error } = await supabase
     .from("clients")
-    .update({ labor_list_id: value, updated_at: new Date().toISOString() })
+    .update({ labor_list_id: value })
     .eq("id", clientId);
   if (error) throw new Error(error.message);
 };
