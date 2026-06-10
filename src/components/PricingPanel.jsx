@@ -1,6 +1,8 @@
 import jsPDF from "jspdf";
 import { useEffect, useMemo, useState } from "react";
 import ActionNotice from "./ActionNotice";
+import { compressImageForPdf, imageAlias } from "../utils/pdfImageCompression";
+import { savePdfWithSize } from "../utils/pdfSave";
 import { fetchCompanySettings } from "../services/companySettings";
 import {
   buildPriceListName,
@@ -59,34 +61,15 @@ const money = (value, currency = "USD") =>
   })}`;
 
 const loadImageAsDataUrl = (url) =>
-  new Promise((resolve) => {
-    if (!url) return resolve(null);
-    if (String(url).startsWith("data:image")) return resolve(url);
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth || 400;
-        canvas.height = img.naturalHeight || 180;
-        canvas.getContext("2d").drawImage(img, 0, 0);
-        resolve(canvas.toDataURL("image/png"));
-      } catch {
-        resolve(null);
-      }
-    };
-    img.onerror = () => resolve(null);
-    img.src = url;
-    window.setTimeout(() => resolve(null), 3500);
-  });
+  compressImageForPdf(url, { boxWmm: 42, boxHmm: 22, dpi: 120, quality: 0.52, timeoutMs: 3500 });
 
-const addContainedImage = (doc, imageData, x, y, maxW, maxH) => {
+const addContainedImage = (doc, image, x, y, maxW, maxH) => {
   try {
-    const props = doc.getImageProperties(imageData);
+    const props = doc.getImageProperties(image.dataUrl);
     const ratio = Math.min(maxW / props.width, maxH / props.height);
     const width = props.width * ratio;
     const height = props.height * ratio;
-    doc.addImage(imageData, "PNG", x + (maxW - width) / 2, y + (maxH - height) / 2, width, height, undefined, "FAST");
+    doc.addImage(image.dataUrl, "JPEG", x + (maxW - width) / 2, y + (maxH - height) / 2, width, height, image.alias, "SLOW");
   } catch {
     // If the image cannot be read, leave the header clean.
   }
@@ -185,7 +168,7 @@ const makeDraftLines = (productLines = [], sourceLines = [], list = blankList) =
 function PriceListPdfButton({ list, lines, company, profile }) {
   const handlePdf = () => {
     try {
-      const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
+      const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait", compress: true });
       const blue = [31, 51, 95];
       const orange = [217, 119, 6];
       const gray = [105, 113, 130];
@@ -312,7 +295,8 @@ function PriceListPdfButton({ list, lines, company, profile }) {
       doc.text(`Elaborado por: ${pdfText(list.prepared_by || profile?.email || "usuario no identificado")}`, 12, 270);
       doc.text("Documento interno. No compartir con cliente final.", 12, 276);
       doc.text("1 / 1", 202, 276);
-      doc.save(`lista-precios-${(list.name || "interna").replace(/[\\/:*?"<>|]/g, "-")}.pdf`);
+      const sizeMb = savePdfWithSize(doc, `lista-precios-${(list.name || "interna").replace(/[\\/:*?"<>|]/g, "-")}.pdf`);
+      window.alert(`PDF generado. Peso: ${sizeMb.toFixed(2)} MB.`);
     } catch (error) {
       console.error("Error generating price list PDF", error);
       window.alert(`No se pudo generar el PDF interno: ${error.message || "error desconocido"}`);
@@ -721,8 +705,11 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
     setCompany(nextCompany || {});
     if (nextCompany?.logo_url) {
       loadImageAsDataUrl(nextCompany.logo_url)
-        .then((logoDataUrl) => {
-          if (logoDataUrl) setCompany((current) => ({ ...current, logoDataUrl }));
+        .then((logoImage) => {
+          if (logoImage) setCompany((current) => ({
+            ...current,
+            logoDataUrl: { ...logoImage, alias: imageAlias(nextCompany.logo_url) },
+          }));
         })
         .catch(() => {});
     }

@@ -1,53 +1,14 @@
 import jsPDF from "jspdf";
-import { buildPlaceholderUrl, formatCurrency, formatWeight, shortText } from "./formatters";
+import { formatCurrency, formatWeight, imageUrlForSize, shortText } from "./formatters";
+import { compressImageForPdf, imageAlias } from "./pdfImageCompression";
+import { savePdfWithSize } from "./pdfSave";
 
 const page = { w: 216, h: 279, margin: 14 };
 const IMAGE_TIMEOUT_MS = 900;
 const IMAGE_CONCURRENCY = 10;
 
-const getImageFormat = (dataUrl) => {
-  const match = String(dataUrl || "").match(/^data:image\/([^;]+)/i);
-  const format = match?.[1]?.toUpperCase();
-  if (format === "JPG") return "JPEG";
-  return format || "JPEG";
-};
-
 const loadImageAsDataUrl = (url, timeoutMs = IMAGE_TIMEOUT_MS) =>
-  new Promise((resolve) => {
-    const source = url || buildPlaceholderUrl();
-    const img = new Image();
-    let done = false;
-    const finish = (value) => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      resolve(value);
-    };
-    const timer = setTimeout(() => {
-      img.onload = null;
-      img.onerror = null;
-      finish(null);
-    }, timeoutMs);
-
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth || 320;
-        canvas.height = img.naturalHeight || 320;
-        canvas.getContext("2d").drawImage(img, 0, 0);
-        finish({
-          dataUrl: canvas.toDataURL("image/png"),
-          height: canvas.height,
-          width: canvas.width,
-        });
-      } catch {
-        finish(null);
-      }
-    };
-    img.onerror = () => finish(null);
-    img.src = source;
-  });
+  compressImageForPdf(url, { boxWmm: 52, boxHmm: 52, dpi: 175, quality: 0.6, timeoutMs });
 
 const mapWithConcurrency = async (items, limit, mapper, onProgress) => {
   const results = new Array(items.length).fill(null);
@@ -78,7 +39,7 @@ const addContainedImage = (doc, image, x, y, boxW, boxH) => {
   const drawH = Math.max(1, image.height * ratio);
   const drawX = x + (boxW - drawW) / 2;
   const drawY = y + (boxH - drawH) / 2;
-  doc.addImage(image.dataUrl, getImageFormat(image.dataUrl), drawX, drawY, drawW, drawH);
+  doc.addImage(image.dataUrl, "JPEG", drawX, drawY, drawW, drawH, image.alias, "SLOW");
   return true;
 };
 
@@ -130,7 +91,8 @@ const drawClientBlock = (doc, client, x, y, w, recipientType = "cliente") => {
 
 const drawCover = async (doc, { catalogName, company, client, recipientType }) => {
   const brandName = company.brand_name || company.legal_name || "";
-  const logo = await loadImageAsDataUrl(company.logo_url);
+  const logo = await compressImageForPdf(company.logo_url, { boxWmm: 48, boxHmm: 34, dpi: 150, quality: 0.62, timeoutMs: 2500 });
+  if (logo) logo.alias = imageAlias(company.logo_url || "catalog-logo");
   doc.setFillColor(31, 51, 95);
   doc.rect(0, 0, page.w, 64, "F");
 
@@ -151,7 +113,7 @@ const drawCover = async (doc, { catalogName, company, client, recipientType }) =
 };
 
 export const generateCatalogPdf = async (products, options = {}, company = {}) => {
-  const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
+  const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait", compress: true, precision: 2, putOnlyUsedFonts: true });
   const catalogName = options.catalogName || "Catalogo seleccionado";
   const columns = Number(options.columns || 3);
   const showPrice = options.showPrice !== false;
@@ -185,7 +147,12 @@ export const generateCatalogPdf = async (products, options = {}, company = {}) =
   const images = await mapWithConcurrency(
     products,
     IMAGE_CONCURRENCY,
-    (product) => loadImageAsDataUrl(product.fotoUrl),
+    async (product) => {
+      const source = imageUrlForSize(product.fotoUrl, 360);
+      const image = await loadImageAsDataUrl(source);
+      if (image) image.alias = imageAlias(source || product.codigo);
+      return image;
+    },
     (loaded, total) => onProgress?.("image", loaded, total)
   );
 
@@ -264,5 +231,5 @@ export const generateCatalogPdf = async (products, options = {}, company = {}) =
 
   drawFooter(doc, brandName);
   onProgress?.("download", products.length);
-  doc.save(`${catalogName.replace(/[\\/:*?"<>|]/g, "-")}.pdf`);
+  return savePdfWithSize(doc, `${catalogName.replace(/[\\/:*?"<>|]/g, "-")}.pdf`);
 };

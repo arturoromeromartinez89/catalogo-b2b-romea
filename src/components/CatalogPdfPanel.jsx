@@ -38,7 +38,7 @@ export default function CatalogPdfPanel({ products, company, clients = [], onClo
     setGenerating(true);
     setStatus("Generando PDF...");
     try {
-      await generateCatalogPdf(
+      const sizeMb = await generateCatalogPdf(
         products,
         {
           catalogName,
@@ -58,8 +58,9 @@ export default function CatalogPdfPanel({ products, company, clients = [], onClo
         },
         company
       );
-      setStatus("PDF generado correctamente.");
-      setNotice({ type: "success", title: "PDF generado", message: "El catalogo PDF se genero correctamente y ya se descargo." });
+      const sizeText = Number.isFinite(sizeMb) ? ` Peso: ${sizeMb.toFixed(2)} MB.` : "";
+      setStatus(`PDF generado correctamente.${sizeText}`);
+      setNotice({ type: "success", title: "PDF generado", message: `El catalogo PDF se genero correctamente y ya se descargo.${sizeText}` });
     } catch (error) {
       setStatus(`Error: ${error.message}`);
       setNotice({ type: "error", title: "No se pudo generar", message: `Error: ${error.message}` });
@@ -88,6 +89,10 @@ export default function CatalogPdfPanel({ products, company, clients = [], onClo
             <div>
               <span>Formato</span>
               <strong>{columns} columnas</strong>
+            </div>
+            <div>
+              <span>PDF</span>
+              <strong>Legible</strong>
             </div>
           </section>
 

@@ -16,7 +16,10 @@ export default function PdfButton({ cartItems, customer, company: companyOverrid
       const ok = window.confirm(t("customerWarning"));
       if (!ok) return;
     }
-    await generatePdf(cartItems, customer, language, company);
+    const sizeMb = await generatePdf(cartItems, customer, language, company);
+    if (Number.isFinite(sizeMb)) {
+      window.alert(`PDF generado. Peso: ${sizeMb.toFixed(2)} MB.`);
+    }
   };
 
   return (

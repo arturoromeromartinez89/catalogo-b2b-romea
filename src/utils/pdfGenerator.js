@@ -1,4 +1,7 @@
 import jsPDF from "jspdf";
+import { imageUrlForSize } from "./formatters";
+import { compressImageForPdf, imageAlias } from "./pdfImageCompression";
+import { savePdfWithSize } from "./pdfSave";
 
 const withTimeout = (promise, ms = 4000) =>
   Promise.race([
@@ -6,47 +9,10 @@ const withTimeout = (promise, ms = 4000) =>
     new Promise((resolve) => window.setTimeout(() => resolve(null), ms)),
   ]);
 
-const blobToDataUrl = (blob) =>
-  new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => resolve(null);
-    reader.readAsDataURL(blob);
-  });
-
-const loadImageViaFetch = async (url) => {
-  try {
-    const response = await fetch(url, { mode: "cors" });
-    if (!response.ok) return null;
-    return await blobToDataUrl(await response.blob());
-  } catch {
-    return null;
-  }
-};
-
-const loadImageViaCanvas = (url) =>
-  new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth || 1;
-        canvas.height = img.naturalHeight || 1;
-        canvas.getContext("2d").drawImage(img, 0, 0);
-        resolve(canvas.toDataURL("image/jpeg", 0.85));
-      } catch {
-        resolve(null);
-      }
-    };
-    img.onerror = () => resolve(null);
-    img.src = url;
-  });
-
-const loadImageAsDataUrl = async (url) => {
+const loadImageAsDataUrl = async (url, options = {}) => {
   if (!url) return null;
-  if (String(url).startsWith("data:image/")) return url;
-  return withTimeout(loadImageViaFetch(url).then((data) => data || loadImageViaCanvas(url)));
+  const compressed = await withTimeout(compressImageForPdf(url, options));
+  return compressed?.dataUrl || null;
 };
 
 const page = { w: 216, h: 279, margin: 12, col: 192 };
@@ -69,16 +35,16 @@ const imageFormat = (dataUrl = "") => {
   return "JPEG";
 };
 
-const addContainedImage = (doc, dataUrl, x, y, maxW, maxH) => {
+const addContainedImage = (doc, dataUrl, x, y, maxW, maxH, alias = undefined) => {
   if (!dataUrl) return;
   try {
     const props = doc.getImageProperties(dataUrl);
     const ratio = props.width && props.height ? Math.min(maxW / props.width, maxH / props.height) : 1;
     const w = Math.max(1, props.width * ratio);
     const h = Math.max(1, props.height * ratio);
-    doc.addImage(dataUrl, imageFormat(dataUrl), x + (maxW - w) / 2, y + (maxH - h) / 2, w, h);
+    doc.addImage(dataUrl, imageFormat(dataUrl), x + (maxW - w) / 2, y + (maxH - h) / 2, w, h, alias, "SLOW");
   } catch {
-    try { doc.addImage(dataUrl, imageFormat(dataUrl), x, y, maxW, maxH); } catch {}
+    try { doc.addImage(dataUrl, imageFormat(dataUrl), x, y, maxW, maxH, alias, "SLOW"); } catch {}
   }
 };
 
@@ -93,7 +59,7 @@ const buildFolio = (customer) => {
 };
 
 export async function generatePdf(cartItems, customer, language = "es", company = {}, opts = {}) {
-  const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
+  const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait", compress: true, precision: 2, putOnlyUsedFonts: true });
   const brandName = company.brand_name || company.legal_name || "";
   const t = (es, en) => language === "en" ? en : es;
   const folio = buildFolio(customer);
@@ -121,11 +87,11 @@ export async function generatePdf(cartItems, customer, language = "es", company 
   // ── HEADER ───────────────────────────────────────────────
   const storedLogo = typeof localStorage !== "undefined" ? localStorage.getItem("romea-logo-data") : "";
   const logoSource = company.logo_data_url || company.logoDataUrl || company.logo_url || company.logoPath || storedLogo;
-  const logo = await loadImageAsDataUrl(logoSource);
+  const logo = await loadImageAsDataUrl(logoSource, { boxWmm: 42, boxHmm: 24, dpi: 150, quality: 0.62 });
   doc.setFillColor(31, 51, 95);
   doc.rect(0, 0, page.w, 32, "F");
 
-  if (logo) addContainedImage(doc, logo, page.margin, 4, 42, 24);
+  if (logo) addContainedImage(doc, logo, page.margin, 4, 42, 24, imageAlias(logoSource || "logo"));
   doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(180,195,220);
   txt(doc, t("Catálogo B2B · Mayorista", "B2B Catalog · Wholesale"), page.margin, 27);
 
@@ -288,9 +254,10 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     doc.setDrawColor(225,230,242); doc.setLineWidth(0.2);
     doc.line(page.margin, y - 1, page.w - page.margin, y - 1);
 
-    const imgData = await loadImageAsDataUrl(item.product?.fotoUrl || item.producto_foto_url);
+    const imageSource = imageUrlForSize(item.product?.fotoUrl || item.producto_foto_url, 360);
+    const imgData = await loadImageAsDataUrl(imageSource, { boxWmm: 24, boxHmm: 24, dpi: 170, quality: 0.58 });
     if (imgData) {
-      addContainedImage(doc, imgData, C.img, y + 2, 24, 24);
+      addContainedImage(doc, imgData, C.img, y + 2, 24, 24, imageAlias(imageSource));
     } else {
       doc.setDrawColor(225,230,242);
       doc.setFillColor(248,250,252);
@@ -416,5 +383,5 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     txt(doc, `${i} / ${totalPages}`, page.w - page.margin, page.h - 5, { align: "right" });
   }
 
-  doc.save(`preorden-${folio}-${today.replace(/\//g,"-")}.pdf`);
+  return savePdfWithSize(doc, `preorden-${folio}-${today.replace(/\//g,"-")}.pdf`);
 }
