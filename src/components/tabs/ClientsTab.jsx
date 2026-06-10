@@ -158,114 +158,114 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
           </button>
         </header>
 
-        <div className="client-modal-body" style={{ gap: 16 }}>
+        {/* Usamos flex-column propio — el grid 2-col de client-modal-body
+            rompía el posicionamiento absoluto del dropdown de sugerencias */}
+        <div className="sku-panel-body">
 
-          {/* Estado actual */}
-          <div className="sku-restriction-status">
-            {isRestricted ? (
-              <span className="sku-badge sku-badge--restricted">
-                🔒 Catálogo limitado — solo verá {allowedSkus.length} de {products.length} productos
-              </span>
-            ) : (
-              <span className="sku-badge sku-badge--open">
-                🌐 Sin límite — verá todos los productos ({products.length})
-              </span>
-            )}
-          </div>
-
-          {/* Importar desde Excel */}
-          <div className="sku-import-row">
-            <input
-              ref={importFileRef}
-              type="file"
-              accept=".xlsx,.xls"
-              style={{ display: "none" }}
-              onChange={handleExcelImport}
-            />
-            <button
-              type="button"
-              className="secondary-button sku-import-btn"
-              onClick={() => importFileRef.current?.click()}
-              disabled={importing}
-              title="Carga un Excel con el mismo formato que la descarga de preorden"
-            >
-              {importing ? (
-                "Importando…"
+          {/* ── Fila superior: badge + importar Excel ──────────────────── */}
+          <div className="sku-panel-toprow">
+            <div className="sku-restriction-status">
+              {isRestricted ? (
+                <span className="sku-badge sku-badge--restricted">
+                  🔒 Catálogo limitado — solo verá {allowedSkus.length} de {products.length} productos
+                </span>
               ) : (
-                <>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="17 8 12 3 7 8"/>
-                    <line x1="12" y1="3" x2="12" y2="15"/>
-                  </svg>
-                  Cargar desde Excel
-                </>
+                <span className="sku-badge sku-badge--open">
+                  🌐 Sin límite — verá todos los productos ({products.length})
+                </span>
               )}
-            </button>
-            <span className="sku-import-hint">Usa el mismo archivo que descargas de la preorden</span>
+            </div>
+            <div className="sku-import-row">
+              <input
+                ref={importFileRef}
+                type="file"
+                accept=".xlsx,.xls"
+                style={{ display: "none" }}
+                onChange={handleExcelImport}
+              />
+              <button
+                type="button"
+                className="secondary-button sku-import-btn"
+                onClick={() => importFileRef.current?.click()}
+                disabled={importing}
+                title="Carga un Excel con el mismo formato que la descarga de preorden"
+              >
+                {importing ? "Importando…" : (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Cargar desde Excel
+                  </>
+                )}
+              </button>
+              <span className="sku-import-hint">Usa el mismo archivo que descargas de la preorden</span>
+            </div>
           </div>
+
           {importMsg && (
             <p className={`sku-import-msg ${importMsg.startsWith("✅") ? "sku-import-msg--ok" : "sku-import-msg--err"}`}>
               {importMsg}
             </p>
           )}
 
-          {/* Buscador para agregar SKUs */}
-          <div style={{ position: "relative" }}>
-            <label style={{ fontWeight: 700, fontSize: 12, display: "block", marginBottom: 6 }}>
-              Agregar producto al catálogo personalizado
-            </label>
-            <input
-              className="rem-search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por SKU, descripción, línea..."
-              autoFocus
-            />
-            {suggestions.length > 0 && (
-              <div className="sku-suggestions">
-                {suggestions.map((p) => (
-                  <button key={p.codigo} type="button" className="sku-suggestion-item" onClick={() => addSku(p.codigo)}>
-                    <strong>{p.codigo}</strong>
-                    <span>{p.descripcion?.slice(0, 60)}</span>
-                    <b>+ Agregar</b>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* ── Área de trabajo: buscador (izq) + lista asignada (der) ─── */}
+          <div className="sku-panel-workspace">
 
-          {/* Lista de SKUs asignados */}
-          {isRestricted ? (
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>
-                Productos visibles para el cliente ({allowedSkus.length})
-              </div>
-              <div className="sku-assigned-list">
-                {allowedSkus.map((codigo) => {
-                  const product = products.find((p) => p.codigo === codigo);
-                  return (
-                    <div key={codigo} className="sku-assigned-item">
-                      <span className="sku-code">{codigo}</span>
-                      {product && (
-                        <span className="sku-desc">{product.descripcion?.slice(0, 50)}</span>
-                      )}
-                      <button
-                        type="button"
-                        className="sku-remove"
-                        onClick={() => removeSku(codigo)}
-                        title={`Quitar ${codigo}`}
-                      >×</button>
-                    </div>
-                  );
-                })}
+            {/* Columna izquierda: buscador */}
+            <div className="sku-panel-search">
+              <label className="sku-search-label">Agregar producto al catálogo</label>
+              <div style={{ position: "relative" }}>
+                <input
+                  className="rem-search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar por SKU, descripción, línea..."
+                  autoFocus
+                />
+                {suggestions.length > 0 && (
+                  <div className="sku-suggestions">
+                    {suggestions.map((p) => (
+                      <button key={p.codigo} type="button" className="sku-suggestion-item" onClick={() => addSku(p.codigo)}>
+                        <strong>{p.codigo}</strong>
+                        <span>{p.descripcion?.slice(0, 60)}</span>
+                        <b>+ Agregar</b>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-          ) : (
-            <p style={{ color: "var(--romea-muted)", fontSize: 13 }}>
-              Sin límite activo — el cliente ve todos los productos. Carga un Excel o agrega productos arriba para definir qué productos puede ver.
-            </p>
-          )}
+
+            {/* Columna derecha: lista asignada */}
+            <div className="sku-panel-list">
+              {isRestricted ? (
+                <>
+                  <div className="sku-search-label">
+                    Productos visibles para el cliente ({allowedSkus.length})
+                  </div>
+                  <div className="sku-assigned-list">
+                    {allowedSkus.map((codigo) => {
+                      const product = products.find((p) => p.codigo === codigo);
+                      return (
+                        <div key={codigo} className="sku-assigned-item">
+                          <span className="sku-code">{codigo}</span>
+                          {product && <span className="sku-desc">{product.descripcion?.slice(0, 50)}</span>}
+                          <button type="button" className="sku-remove" onClick={() => removeSku(codigo)} title={`Quitar ${codigo}`}>×</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <p className="sku-empty-hint">
+                  Sin límite activo — el cliente ve todos los productos. Carga un Excel o busca productos para definir su catálogo personalizado.
+                </p>
+              )}
+            </div>
+          </div>
 
           {msg && (
             <p className={`sku-import-msg ${msg.startsWith("✅") ? "sku-import-msg--ok" : "sku-import-msg--err"}`}>
