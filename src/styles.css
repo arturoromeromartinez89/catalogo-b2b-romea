@@ -3452,6 +3452,57 @@ dd {
   min-width: 1280px;
 }
 
+.preorder-item-row {
+  transition: background-color 0.15s ease, opacity 0.15s ease, outline-color 0.15s ease;
+}
+
+.preorder-item-row.is-dragging {
+  opacity: 0.55;
+}
+
+.preorder-item-row.is-drop-target {
+  background: rgba(184, 150, 62, 0.12);
+  outline: 2px solid var(--accent, #b8963e);
+  outline-offset: -2px;
+}
+
+.preorder-row-move-head,
+.preorder-row-move-cell {
+  text-align: center;
+  width: 70px;
+}
+
+.preorder-row-drag-handle {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--romea-line);
+  border-radius: 6px;
+  color: var(--romea-blue);
+  cursor: grab;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 30px;
+  min-width: 52px;
+  padding: 0 9px;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.preorder-row-drag-handle:active {
+  cursor: grabbing;
+}
+
+.preorder-row-drag-handle.disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.cfg-drag-handle {
+  min-height: 28px;
+}
+
 .quote-product-picker {
   background: var(--romea-soft);
   border: 1px solid var(--romea-line);
@@ -3640,7 +3691,8 @@ dd {
   text-align: right;
 }
 
-.quote-items-table td:nth-child(11) input {
+.quote-item-comments-cell input,
+.quote-items-table td:nth-child(12) input {
   max-width: 180px;
   min-width: 150px;
   text-align: left;

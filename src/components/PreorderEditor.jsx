@@ -132,6 +132,21 @@ const isConfigurableItemComplete = (item) => {
 
 const hasUnconfiguredItems = (items = []) => items.some((item) => !isConfigurableItemComplete(item));
 
+const hasSortOrder = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+
+const orderPreorderItems = (items = []) =>
+  [...items].sort((a, b) => {
+    const hasA = hasSortOrder(a?.sort_order);
+    const hasB = hasSortOrder(b?.sort_order);
+    if (hasA && hasB) return Number(a.sort_order) - Number(b.sort_order);
+    if (hasA) return -1;
+    if (hasB) return 1;
+    return 0;
+  });
+
+const withPreorderSortOrder = (items = []) =>
+  items.map((item, index) => ({ ...item, sort_order: index }));
+
 const componentLabel = (component) => component?.nombre || component?.label || component?.codigo || "";
 
 const buildConfiguredDescription = (item, selections = {}) => {
@@ -271,7 +286,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const [po, setPo] = useState({ ...blank, ...(initial || {}) });
-  const [items, setItems] = useState((initial?.preorder_items || []).map((item) => ({ ...item })));
+  const [items, setItems] = useState(() => withPreorderSortOrder(orderPreorderItems(initial?.preorder_items || [])));
+  const [draggedItemIndex, setDraggedItemIndex] = useState(null);
+  const [dragOverItemIndex, setDragOverItemIndex] = useState(null);
   const [lines, setLines] = useState([]);
   const [laborLists, setLaborLists] = useState([]);
   const [piecePriceLists, setPiecePriceLists] = useState([]);
@@ -979,6 +996,62 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     }
     addProduct(product);
   };
+
+  const canDragPreorderItems = !pricingLocked && items.length > 1;
+
+  const movePreorderItem = (fromIndex, toIndex) => {
+    if (pricingLocked || fromIndex === null || toIndex === null || fromIndex === toIndex) return;
+    markEdited();
+    setItems((current) => {
+      if (!current[fromIndex] || !current[toIndex]) return current;
+      const next = [...current];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return withPreorderSortOrder(next);
+    });
+  };
+
+  const removePreorderItem = (idx) => {
+    markEdited();
+    setItems((current) => withPreorderSortOrder(current.filter((_, itemIndex) => itemIndex !== idx)));
+  };
+
+  const startPreorderItemDrag = (event, idx) => {
+    if (!canDragPreorderItems) return;
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(idx));
+    setDraggedItemIndex(idx);
+    setDragOverItemIndex(null);
+  };
+
+  const handlePreorderItemDragOver = (event, idx) => {
+    if (!canDragPreorderItems || draggedItemIndex === null || draggedItemIndex === idx) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverItemIndex(idx);
+  };
+
+  const handlePreorderItemDrop = (event, idx) => {
+    if (!canDragPreorderItems) return;
+    event.preventDefault();
+    const fromData = Number(event.dataTransfer.getData("text/plain"));
+    const fromIndex = Number.isFinite(fromData) ? fromData : draggedItemIndex;
+    movePreorderItem(fromIndex, idx);
+    setDraggedItemIndex(null);
+    setDragOverItemIndex(null);
+  };
+
+  const endPreorderItemDrag = () => {
+    setDraggedItemIndex(null);
+    setDragOverItemIndex(null);
+  };
+
+  const preorderRowDragClass = (idx) =>
+    [
+      "preorder-item-row",
+      draggedItemIndex === idx ? "is-dragging" : "",
+      dragOverItemIndex === idx ? "is-drop-target" : "",
+    ].filter(Boolean).join(" ");
 
   const adjustQuantity = (idx, delta) => {
     markEdited();
@@ -1712,6 +1785,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 <thead>
                   {isPieceMode ? (
                     <tr>
+                      <th className="preorder-row-move-head">Orden</th>
                       <th>Foto</th>
                       <th>SKU</th>
                       <th className="right">Cantidad</th>
@@ -1724,6 +1798,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     </tr>
                   ) : (
                     <tr>
+                      <th className="preorder-row-move-head">Orden</th>
                       <th>Foto</th>
                       <th>SKU</th>
                       <th className="right">Cantidad</th>
@@ -1747,10 +1822,16 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
                     // ── Fila configurable: tarjeta de ancho completo ────────────────
                     if (isConfigurableItem) {
-                      const colCount = isPieceMode ? 9 : 13;
+                      const colCount = isPieceMode ? 10 : 14;
                       const isComplete = isConfigurableItemComplete(item);
                       return (
-                        <tr key={`${item.producto_codigo}-${idx}`} className="cfg-item-row">
+                        <tr
+                          key={`${item.producto_codigo}-${idx}`}
+                          className={`cfg-item-row ${preorderRowDragClass(idx)}`}
+                          onDragOver={(event) => handlePreorderItemDragOver(event, idx)}
+                          onDrop={(event) => handlePreorderItemDrop(event, idx)}
+                          onDragEnd={endPreorderItemDrag}
+                        >
                           <td colSpan={colCount} className="cfg-item-cell">
                             <div className={`cfg-card${isComplete ? " cfg-card--complete" : ""}`}>
 
@@ -1777,11 +1858,20 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                                   </div>
                                 </div>
                                 <div className="cfg-card__header-right">
+                                  <span
+                                    className={`preorder-row-drag-handle cfg-drag-handle${canDragPreorderItems ? "" : " disabled"}`}
+                                    draggable={canDragPreorderItems}
+                                    onDragStart={(event) => startPreorderItemDrag(event, idx)}
+                                    onDragEnd={endPreorderItemDrag}
+                                    title="Arrastrar para mover esta pieza"
+                                  >
+                                    Mover
+                                  </span>
                                   {isComplete
                                     ? <span className="cfg-badge cfg-badge--ok">✓ Completo</span>
                                     : <span className="cfg-badge cfg-badge--pending">Pendiente</span>
                                   }
-                                  <button className="table-delete" type="button" onClick={() => setItems((c) => c.filter((_, i) => i !== idx))}>×</button>
+                                  <button className="table-delete" type="button" onClick={() => removePreorderItem(idx)}>×</button>
                                 </div>
                               </div>
 
@@ -1958,7 +2048,24 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
                     // ── Fila normal ────────────────────────────────────────────────
                     return (
-                      <tr key={`${item.producto_codigo}-${idx}`}>
+                      <tr
+                        key={`${item.producto_codigo}-${idx}`}
+                        className={preorderRowDragClass(idx)}
+                        onDragOver={(event) => handlePreorderItemDragOver(event, idx)}
+                        onDrop={(event) => handlePreorderItemDrop(event, idx)}
+                        onDragEnd={endPreorderItemDrag}
+                      >
+                        <td className="preorder-row-move-cell">
+                          <span
+                            className={`preorder-row-drag-handle${canDragPreorderItems ? "" : " disabled"}`}
+                            draggable={canDragPreorderItems}
+                            onDragStart={(event) => startPreorderItemDrag(event, idx)}
+                            onDragEnd={endPreorderItemDrag}
+                            title="Arrastrar para mover esta pieza"
+                          >
+                            Mover
+                          </span>
+                        </td>
                         <td className="quote-item-photo-cell">
                           {item.producto_foto_url ? (
                             <img
@@ -2005,13 +2112,13 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                             <td className="right">{fmt(toDisplayMoney(item.precio_gramo_mxn))}</td>
                           </>
                         )}
-                        <td><input value={item.comentarios || ""} onChange={(event) => setItem(idx, "comentarios", event.target.value)} placeholder="Color, piedra, medida..." /></td>
+                        <td className="quote-item-comments-cell"><input value={item.comentarios || ""} onChange={(event) => setItem(idx, "comentarios", event.target.value)} placeholder="Color, piedra, medida..." /></td>
                         <td className="right"><strong>{fmt(toDisplayMoney(item.subtotal_mxn))}</strong></td>
-                        <td><button className="table-delete" type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== idx))}>x</button></td>
+                        <td><button className="table-delete" type="button" onClick={() => removePreorderItem(idx)}>x</button></td>
                       </tr>
                     );
                   }) : (
-                    <tr><td colSpan={isPieceMode ? "9" : "13"} className="empty-row">Sin productos. Agrega productos desde el catalogo.</td></tr>
+                    <tr><td colSpan={isPieceMode ? "10" : "14"} className="empty-row">Sin productos. Agrega productos desde el catalogo.</td></tr>
                   )}
                 </tbody>
               </table>
