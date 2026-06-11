@@ -224,21 +224,11 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
   );
 }
 
-// Genera contraseña aleatoria de 12 caracteres — letras, números y un símbolo
-const genPassword = () => {
-  const pool = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
-  let pwd = "";
-  for (let i = 0; i < 12; i++) pwd += pool[Math.floor(Math.random() * pool.length)];
-  return pwd;
-};
-
 // ─── Mini-center de actividad y credenciales por cliente ──────────────────────
 
 function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, onAccessGranted }) {
   const rawEmail = client.email && !String(client.email).endsWith("@prospect.local") ? client.email : "";
   const [credEmail,    setCredEmail]    = useState(rawEmail);
-  const [credPwd,      setCredPwd]      = useState("");
-  const [showPwd,      setShowPwd]      = useState(false);
   const [creating,     setCreating]     = useState(false);
   const [accessStatus, setAccessStatus] = useState(hasAccess ? "active" : "none");
   const [msg,          setMsg]          = useState({ text: "", ok: true });
@@ -297,24 +287,21 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
     if (!emailForMsg) { showMsg("Ingresa el correo antes de copiar.", false); return; }
     const appUrl = window.location.origin;
     const clientName = client.company || client.name || "cliente";
-    const pwdLine = credPwd
-      ? `🔑 Contraseña sugerida: ${credPwd}\n   (úsala cuando el sistema te pida configurar tu contraseña)`
-      : "🔑 Recibirás un link en tu correo para configurar tu contraseña";
     const text =
       `Hola ${clientName},\n\n` +
       `Ya tienes acceso al Catálogo B2B Vanguardia Joyera.\n\n` +
-      `🔗 Enlace: ${appUrl}\n` +
-      `📧 Correo: ${emailForMsg}\n` +
-      `${pwdLine}\n\n` +
-      `Pasos:\n` +
+      `🔗 Enlace de acceso: ${appUrl}\n` +
+      `📧 Tu correo: ${emailForMsg}\n\n` +
+      `Pasos para entrar:\n` +
       `1. Entra al enlace de arriba\n` +
-      `2. Busca el correo que te enviamos con el link de acceso (revisa spam)\n` +
-      `3. Haz clic en el link del correo para entrar\n` +
-      `4. Una vez dentro podrás explorar el catálogo y generar preórdenes\n\n` +
-      `Si necesitas ayuda, contáctanos.`;
+      `2. Revisa tu correo (${emailForMsg}) — te llegó un link de acceso (revisa spam si no aparece)\n` +
+      `3. Haz clic en ese link y entrarás directo al catálogo\n` +
+      `4. La próxima vez puedes usar "¿Olvidaste tu contraseña?" para crear tu propia clave\n\n` +
+      `Desde el catálogo podrás explorar los productos y generar preórdenes.\n` +
+      `Si tienes dudas, contáctanos.`;
     try {
       await navigator.clipboard.writeText(text);
-      showMsg("Invitación copiada al portapapeles", true);
+      showMsg("Mensaje copiado — pégalo en WhatsApp o donde prefieras", true);
     } catch {
       window.prompt("Copia este mensaje y envíalo al cliente:", text);
     }
@@ -354,92 +341,92 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
         </div>
       </div>
 
-      {/* Sección de credenciales */}
+      {/* Sección de acceso */}
       <div className="client-credentials-section">
-        <div className="client-credentials-title">Gestión de acceso</div>
-        {isProspectEmail && (
+        <div className="client-credentials-title">Acceso al catálogo</div>
+
+        {isProspectEmail ? (
           <p className="client-credentials-hint warn">
-            Este cliente no tiene email real registrado. Edita su perfil para agregar un correo antes de crear acceso.
+            Sin correo real registrado. Edita el cliente y agrega su email antes de crear acceso.
           </p>
-        )}
-        <div className="client-credentials-row">
-          <label className="client-cred-label">
-            Correo
-            <input
-              className="client-cred-input"
-              type="email"
-              value={credEmail}
-              onChange={(e) => setCredEmail(e.target.value)}
-              placeholder="correo@empresa.com"
-              disabled={creating}
-            />
-          </label>
-          <label className="client-cred-label">
-            Contraseña
-            <div className="client-cred-pwd-row">
+        ) : (
+          <>
+            {/* Email */}
+            <label className="client-cred-label">
+              Correo del cliente
               <input
                 className="client-cred-input"
-                type={showPwd ? "text" : "password"}
-                value={credPwd}
-                onChange={(e) => setCredPwd(e.target.value)}
-                placeholder="Genera o escribe una contraseña"
+                type="email"
+                value={credEmail}
+                onChange={(e) => setCredEmail(e.target.value)}
+                placeholder="correo@empresa.com"
                 disabled={creating}
               />
-              <button
-                type="button"
-                className="secondary-button compact-action"
-                title={showPwd ? "Ocultar contraseña" : "Mostrar contraseña"}
-                onClick={() => setShowPwd((v) => !v)}
-                style={{ flexShrink: 0 }}
-              >
-                {showPwd ? "Ocultar" : "Ver"}
-              </button>
-              <button
-                type="button"
-                className="secondary-button compact-action"
-                onClick={() => { setCredPwd(genPassword()); setShowPwd(true); }}
-                disabled={creating}
-                style={{ flexShrink: 0 }}
-              >
-                Generar
-              </button>
+            </label>
+
+            {msg.text && (
+              <p className={`client-cred-msg${msg.ok ? "" : " client-cred-msg--err"}`}>{msg.text}</p>
+            )}
+
+            {/* Acciones con descripción */}
+            <div className="client-access-actions-grid">
+              {/* Acción 1 — Crear o reenviar */}
+              <div className="client-access-action-card">
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={handleCreateAccess}
+                  disabled={creating || !credEmail.trim()}
+                  style={{ width: "100%" }}
+                >
+                  {creating
+                    ? "Enviando..."
+                    : accessStatus === "active"
+                    ? "Reenviar link al correo"
+                    : "Crear cuenta y enviar link"}
+                </button>
+                <p className="client-access-action-desc">
+                  {accessStatus === "active"
+                    ? "El cliente recibirá un nuevo link de acceso en su correo electrónico."
+                    : "Crea la cuenta del cliente en el sistema y le envía automáticamente un link de acceso a su correo."}
+                </p>
+              </div>
+
+              {/* Acción 2 — Copiar para WhatsApp */}
+              <div className="client-access-action-card">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={handleCopyInvite}
+                  disabled={!credEmail.trim()}
+                  style={{ width: "100%" }}
+                >
+                  Copiar invitación
+                </button>
+                <p className="client-access-action-desc">
+                  Copia el mensaje de bienvenida con el enlace y el correo. Pégalo en WhatsApp o donde prefieras enviarlo.
+                </p>
+              </div>
+
+              {/* Acción 3 — Ver preórdenes */}
+              {total > 0 && (
+                <div className="client-access-action-card">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => { onViewPreorders(client.id); onClose(); }}
+                    style={{ width: "100%" }}
+                  >
+                    Ver preórdenes ({total}) ↗
+                  </button>
+                  <p className="client-access-action-desc">
+                    Abre el historial de preórdenes de este cliente en la pestaña Preórdenes.
+                  </p>
+                </div>
+              )}
             </div>
-          </label>
-        </div>
-
-        {msg.text && (
-          <p className={`client-cred-msg${msg.ok ? "" : " client-cred-msg--err"}`}>{msg.text}</p>
+          </>
         )}
-
-        <div className="client-mini-center-actions">
-          <button
-            type="button"
-            className="primary-button compact-action"
-            onClick={handleCreateAccess}
-            disabled={creating || !credEmail.trim() || !credPwd}
-            title={accessStatus === "active" ? "Actualizar contraseña del cliente" : "Crear cuenta en el sistema para este cliente"}
-          >
-            {creating ? "Creando..." : accessStatus === "active" ? "Actualizar contraseña" : "Crear acceso"}
-          </button>
-          <button
-            type="button"
-            className="secondary-button compact-action"
-            onClick={handleCopyInvite}
-            disabled={!credEmail.trim()}
-            title="Copia el mensaje con correo, contraseña y URL para enviar al cliente"
-          >
-            Copiar invitación
-          </button>
-          <button
-            type="button"
-            className="secondary-button compact-action"
-            onClick={() => { onViewPreorders(client.id); onClose(); }}
-            disabled={total === 0}
-            title={total === 0 ? "Sin preórdenes aún" : `Ver las ${total} preórdenes de este cliente`}
-          >
-            Ver preórdenes ↗
-          </button>
-        </div>
       </div>
     </div>
   );

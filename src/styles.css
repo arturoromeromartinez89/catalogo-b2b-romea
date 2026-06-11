@@ -9132,16 +9132,6 @@ tr.client-row--expanded td {
   outline: none;
 }
 
-.client-cred-pwd-row {
-  display: flex;
-  gap: 6px;
-}
-
-.client-cred-pwd-row .client-cred-input {
-  flex: 1;
-  min-width: 0;
-}
-
 .client-cred-msg {
   background: #dcfce7;
   border-radius: 6px;
@@ -9154,6 +9144,30 @@ tr.client-row--expanded td {
 .client-cred-msg--err {
   background: #fee2e2;
   color: #b91c1c;
+}
+
+/* Grid de acciones con descripción debajo de cada botón */
+.client-access-actions-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.client-access-action-card {
+  background: var(--neutral-50, #f8fafc);
+  border: 1px solid var(--romea-line, #e2e8f0);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+}
+
+.client-access-action-desc {
+  color: var(--neutral-500, #64748b);
+  font-size: 11px;
+  line-height: 1.45;
+  margin: 0;
 }
 
 /* ─── Preorder origin tag (Cliente / Admin) ─────────────────────────────────── */
