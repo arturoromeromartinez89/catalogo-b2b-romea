@@ -77,11 +77,28 @@ export const fetchAllPreorders = async (profile) => {
   const tenantId = isSuperAdmin(profile) ? "" : getTenantId(profile);
   let query = supabase
     .from("preorders")
-    .select("*, preorder_items(*), creator:profiles!created_by(role)")
+    .select("*, preorder_items(*)")
     .order("created_at", { ascending: false });
   query = withTenant(query, tenantId);
   const { data, error } = await query;
   if (error) throw error;
+  if (!data?.length) return [];
+
+  // Separate query for creator roles — inline FK join not available in this schema cache
+  const creatorIds = [...new Set(data.map((p) => p.created_by).filter(Boolean))];
+  if (creatorIds.length) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, role")
+      .in("id", creatorIds);
+    if (profiles?.length) {
+      const roleMap = new Map(profiles.map((p) => [p.id, p.role]));
+      return data.map((po) => ({
+        ...po,
+        creator: po.created_by ? { role: roleMap.get(po.created_by) || "admin" } : null,
+      }));
+    }
+  }
   return data;
 };
 

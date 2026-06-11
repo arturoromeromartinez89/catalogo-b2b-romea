@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { normalizeText } from "../../utils/textNormalizer";
 import { fetchClientAccessStatuses, fetchClientPreorderStats } from "../../services/supabaseCatalog";
+import { supabase } from "../../lib/supabaseClient";
 
 const displayContactEmail = (email) =>
   String(email || "").endsWith("@prospect.local") ? "-" : email || "-";
@@ -223,47 +224,127 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
   );
 }
 
-// ─── Mini-center de actividad por cliente ─────────────────────────────────────
+// Genera contraseña aleatoria de 12 caracteres — letras, números y un símbolo
+const genPassword = () => {
+  const pool = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
+  let pwd = "";
+  for (let i = 0; i < 12; i++) pwd += pool[Math.floor(Math.random() * pool.length)];
+  return pwd;
+};
 
-function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose }) {
-  const [inviteMsg, setInviteMsg] = useState("");
+// ─── Mini-center de actividad y credenciales por cliente ──────────────────────
 
-  const handleCopyInvite = () => {
-    const appUrl = window.location.origin;
-    const clientName = client.company || client.name || "cliente";
-    const text =
-      `Hola ${clientName}!\n\n` +
-      `Te invitamos a acceder a nuestro catálogo B2B en:\n${appUrl}\n\n` +
-      `Regístrate usando el correo: ${client.email}\n\n` +
-      `Una vez registrado podrás explorar el catálogo y generar preórdenes directamente.`;
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(text)
-        .then(() => { setInviteMsg("Mensaje copiado al portapapeles"); window.setTimeout(() => setInviteMsg(""), 3000); })
-        .catch(() => window.prompt("Copia este mensaje para el cliente:", text));
-    } else {
-      window.prompt("Copia este mensaje para el cliente:", text);
-    }
-  };
+function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, onAccessGranted }) {
+  const rawEmail = client.email && !String(client.email).endsWith("@prospect.local") ? client.email : "";
+  const [credEmail,    setCredEmail]    = useState(rawEmail);
+  const [credPwd,      setCredPwd]      = useState("");
+  const [showPwd,      setShowPwd]      = useState(false);
+  const [creating,     setCreating]     = useState(false);
+  const [accessStatus, setAccessStatus] = useState(hasAccess ? "active" : "none");
+  const [msg,          setMsg]          = useState({ text: "", ok: true });
 
   const total    = stats?.total    ?? 0;
   const active   = stats?.active   ?? 0;
   const skuCount = client.allowed_skus?.length ?? 0;
   const lastDate = fmtDate(stats?.lastDate);
 
+  const isProspectEmail = !rawEmail;
+
+  const showMsg = (text, ok = true) => {
+    setMsg({ text, ok });
+    if (ok) window.setTimeout(() => setMsg({ text: "", ok: true }), 4000);
+  };
+
+  const handleCreateAccess = async () => {
+    const emailTrimmed = credEmail.trim().toLowerCase();
+    if (!emailTrimmed) { showMsg("Ingresa el correo del cliente primero.", false); return; }
+    if (!credPwd)       { showMsg("Genera o escribe una contraseña primero.", false); return; }
+    if (credPwd.length < 6) { showMsg("La contraseña debe tener al menos 6 caracteres.", false); return; }
+
+    setCreating(true);
+    setMsg({ text: "", ok: true });
+    try {
+      // Guardar sesión del admin antes de crear la cuenta del cliente
+      const { data: { session: adminSession } } = await supabase.auth.getSession();
+
+      const { data: signUpData, error } = await supabase.auth.signUp({
+        email: emailTrimmed,
+        password: credPwd,
+      });
+
+      if (error) {
+        if (error.message?.toLowerCase().includes("already registered") ||
+            error.message?.toLowerCase().includes("user already")) {
+          showMsg("✅ Este correo ya tiene cuenta — puedes copiar la invitación con la nueva contraseña.", true);
+          setAccessStatus("active");
+          onAccessGranted?.();
+          setCreating(false);
+          return;
+        }
+        throw error;
+      }
+
+      // Si Supabase no requiere confirmación de email, la sesión cambió — restaurar admin
+      const { data: { session: afterSession } } = await supabase.auth.getSession();
+      if (afterSession && adminSession && afterSession.user?.id !== adminSession.user?.id) {
+        await supabase.auth.signOut();
+        await supabase.auth.setSession({
+          access_token: adminSession.access_token,
+          refresh_token: adminSession.refresh_token,
+        });
+      }
+
+      showMsg(
+        signUpData?.user?.identities?.length === 0
+          ? "✅ Cuenta ya existía — puedes copiar la invitación con la nueva contraseña."
+          : "✅ Cuenta creada correctamente. Ahora copia la invitación y envíala al cliente.",
+        true,
+      );
+      setAccessStatus("active");
+      onAccessGranted?.();
+    } catch (e) {
+      showMsg(`❌ ${e.message}`, false);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCopyInvite = async () => {
+    const emailForMsg = credEmail.trim() || rawEmail;
+    if (!emailForMsg) { showMsg("Ingresa el correo antes de copiar.", false); return; }
+    const appUrl = window.location.origin;
+    const clientName = client.company || client.name || "cliente";
+    const pwdLine = credPwd ? `🔑 Contraseña: ${credPwd}` : "🔑 Contraseña: (usa la que acordamos)";
+    const text =
+      `Hola ${clientName},\n\n` +
+      `Ya tienes acceso al Catálogo B2B.\n\n` +
+      `🔗 Enlace: ${appUrl}\n` +
+      `📧 Correo: ${emailForMsg}\n` +
+      `${pwdLine}\n\n` +
+      `Ingresa con estos datos y podrás explorar el catálogo y generar preórdenes.`;
+    try {
+      await navigator.clipboard.writeText(text);
+      showMsg("Invitación copiada al portapapeles", true);
+    } catch {
+      window.prompt("Copia este mensaje y envíalo al cliente:", text);
+    }
+  };
+
   return (
     <div className="client-mini-center">
+      {/* Encabezado */}
       <div className="client-mini-center-header">
-        <span className="client-mini-center-eyebrow">Centro de actividad — {client.company || client.name}</span>
-        {hasAccess ? (
+        <span className="client-mini-center-eyebrow">Centro de acceso — {client.company || client.name}</span>
+        {accessStatus === "active" ? (
           <span className="client-access-badge client-access-badge--active">
-            <span className="client-access-badge__dot" />
-            Con acceso
+            <span className="client-access-badge__dot" />Con acceso
           </span>
         ) : (
           <span className="client-access-badge client-access-badge--none">Sin cuenta activa</span>
         )}
       </div>
 
+      {/* Estadísticas */}
       <div className="client-mini-center-stats">
         <div className="client-stat-box">
           <div className="client-stat-value">{total}</div>
@@ -278,33 +359,97 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose }
           <div className="client-stat-label">{skuCount > 0 ? "SKUs asignados" : "Sin límite de SKU"}</div>
         </div>
         <div className="client-stat-box">
-          <div className="client-stat-value" style={{ fontSize: lastDate ? 13 : 20 }}>
-            {lastDate || "—"}
-          </div>
+          <div className="client-stat-value" style={{ fontSize: lastDate ? 13 : 20 }}>{lastDate || "—"}</div>
           <div className="client-stat-label">Última preorden</div>
         </div>
       </div>
 
-      <div className="client-mini-center-actions">
-        <button
-          type="button"
-          className="primary-button compact-action"
-          onClick={() => { onViewPreorders(client.id); onClose(); }}
-          disabled={total === 0}
-          title={total === 0 ? "Este cliente no tiene preórdenes aún" : `Ver las ${total} preórdenes de ${client.company || client.name}`}
-        >
-          Ver preórdenes del cliente ↗
-        </button>
-        {!hasAccess ? (
-          <button type="button" className="secondary-button compact-action" onClick={handleCopyInvite}>
-            Copiar invitación al portapapeles
-          </button>
-        ) : (
-          <button type="button" className="secondary-button compact-action" onClick={handleCopyInvite}>
-            Copiar link de acceso
-          </button>
+      {/* Sección de credenciales */}
+      <div className="client-credentials-section">
+        <div className="client-credentials-title">Gestión de acceso</div>
+        {isProspectEmail && (
+          <p className="client-credentials-hint warn">
+            Este cliente no tiene email real registrado. Edita su perfil para agregar un correo antes de crear acceso.
+          </p>
         )}
-        {inviteMsg && <span className="client-invite-msg">{inviteMsg}</span>}
+        <div className="client-credentials-row">
+          <label className="client-cred-label">
+            Correo
+            <input
+              className="client-cred-input"
+              type="email"
+              value={credEmail}
+              onChange={(e) => setCredEmail(e.target.value)}
+              placeholder="correo@empresa.com"
+              disabled={creating}
+            />
+          </label>
+          <label className="client-cred-label">
+            Contraseña
+            <div className="client-cred-pwd-row">
+              <input
+                className="client-cred-input"
+                type={showPwd ? "text" : "password"}
+                value={credPwd}
+                onChange={(e) => setCredPwd(e.target.value)}
+                placeholder="Genera o escribe una contraseña"
+                disabled={creating}
+              />
+              <button
+                type="button"
+                className="secondary-button compact-action"
+                title={showPwd ? "Ocultar contraseña" : "Mostrar contraseña"}
+                onClick={() => setShowPwd((v) => !v)}
+                style={{ flexShrink: 0 }}
+              >
+                {showPwd ? "Ocultar" : "Ver"}
+              </button>
+              <button
+                type="button"
+                className="secondary-button compact-action"
+                onClick={() => { setCredPwd(genPassword()); setShowPwd(true); }}
+                disabled={creating}
+                style={{ flexShrink: 0 }}
+              >
+                Generar
+              </button>
+            </div>
+          </label>
+        </div>
+
+        {msg.text && (
+          <p className={`client-cred-msg${msg.ok ? "" : " client-cred-msg--err"}`}>{msg.text}</p>
+        )}
+
+        <div className="client-mini-center-actions">
+          <button
+            type="button"
+            className="primary-button compact-action"
+            onClick={handleCreateAccess}
+            disabled={creating || !credEmail.trim() || !credPwd}
+            title={accessStatus === "active" ? "Actualizar contraseña del cliente" : "Crear cuenta en el sistema para este cliente"}
+          >
+            {creating ? "Creando..." : accessStatus === "active" ? "Actualizar contraseña" : "Crear acceso"}
+          </button>
+          <button
+            type="button"
+            className="secondary-button compact-action"
+            onClick={handleCopyInvite}
+            disabled={!credEmail.trim()}
+            title="Copia el mensaje con correo, contraseña y URL para enviar al cliente"
+          >
+            Copiar invitación
+          </button>
+          <button
+            type="button"
+            className="secondary-button compact-action"
+            onClick={() => { onViewPreorders(client.id); onClose(); }}
+            disabled={total === 0}
+            title={total === 0 ? "Sin preórdenes aún" : `Ver las ${total} preórdenes de este cliente`}
+          >
+            Ver preórdenes ↗
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -507,6 +652,10 @@ export default function ClientsTab({
                             stats={statsMap.get(client.id)}
                             onViewPreorders={onViewClientPreorders || (() => {})}
                             onClose={() => setExpandedClientId(null)}
+                            onAccessGranted={() => {
+                              const email = String(client.email || "").toLowerCase();
+                              if (email) setAccessMap((prev) => new Map(prev).set(email, true));
+                            }}
                           />
                         </td>
                       </tr>

@@ -285,7 +285,20 @@ export default function PreorderWorkspace({
     setActiveId(tabId);
   };
 
-  const openNewTab = () => openTab({});
+  const openNewTab = () => {
+    if (clientFilter) {
+      const cl = (clients || []).find((c) => c.id === clientFilter);
+      openTab({
+        client_id: clientFilter,
+        cliente_nombre: cl?.name || "",
+        cliente_empresa: cl?.company || "",
+        cliente_email: cl?.email && !String(cl.email).endsWith("@prospect.local") ? cl.email : "",
+        cliente_telefono: cl?.phone || "",
+      });
+    } else {
+      openTab({});
+    }
+  };
 
   const closeTab = (tabId, updatedDraft) => {
     const tab = tabs.find((t) => t.id === tabId);
