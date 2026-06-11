@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient";
+import { isAuthLocked } from "../lib/authLock";
 import { getSessionAndProfile } from "../services/supabaseCatalog";
 
 const copy = {
@@ -170,6 +171,8 @@ export default function AuthGate({ children }) {
     refreshSession();
 
     const { data } = supabase.auth.onAuthStateChange(async (event) => {
+      // Ignorar eventos mientras el admin crea una cuenta de cliente
+      if (isAuthLocked()) return;
       // Supabase emite PASSWORD_RECOVERY cuando el usuario vuelve desde el link de restablecimiento.
       // En ese momento tiene sesión temporal — mostramos el formulario de nueva contraseña.
       if (event === "PASSWORD_RECOVERY") {
@@ -451,6 +454,22 @@ export default function AuthGate({ children }) {
             </form>
           )}
         </main>
+      </section>
+    );
+  }
+
+  // Cuenta de cliente suspendida por el admin
+  if (profile?.role === "client" && profile?.active === false) {
+    return (
+      <section className="setup-screen">
+        <div className="setup-card">
+          <p className="eyebrow">Catálogo B2B</p>
+          <h1>Cuenta suspendida</h1>
+          <p>Tu acceso ha sido temporalmente desactivado. Contacta a tu proveedor para más información.</p>
+          <button className="secondary-button" type="button" onClick={() => supabase.auth.signOut()}>
+            Cerrar sesión
+          </button>
+        </div>
       </section>
     );
   }

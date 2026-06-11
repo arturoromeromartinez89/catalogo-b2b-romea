@@ -9007,6 +9007,45 @@ tr.client-row--expanded td {
   color: var(--neutral-500, #64748b);
 }
 
+.client-access-badge--suspended {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Toggle encender/apagar cuenta */
+.client-toggle-btn {
+  background: #d1d5db;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  height: 22px;
+  padding: 0;
+  position: relative;
+  transition: background 0.2s;
+  width: 40px;
+}
+
+.client-toggle-btn--on  { background: #22c55e; }
+.client-toggle-btn--off { background: #d1d5db; }
+
+.client-toggle-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.client-toggle-knob {
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  display: block;
+  height: 16px;
+  left: 3px;
+  position: absolute;
+  top: 3px;
+  transition: transform 0.2s;
+  width: 16px;
+}
+
+.client-toggle-btn--on  .client-toggle-knob { transform: translateX(18px); }
+.client-toggle-btn--off .client-toggle-knob { transform: translateX(0); }
+
 .client-access-badge__dot {
   background: currentColor;
   border-radius: 50%;
@@ -9130,6 +9169,16 @@ tr.client-row--expanded td {
 .client-cred-input:focus {
   border-color: var(--color-primary, #1e293b);
   outline: none;
+}
+
+.client-cred-pwd-row {
+  display: flex;
+  gap: 6px;
+}
+
+.client-cred-pwd-row .client-cred-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .client-cred-msg {

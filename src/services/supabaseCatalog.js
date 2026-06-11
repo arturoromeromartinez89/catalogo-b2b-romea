@@ -496,6 +496,26 @@ export const fetchClientPreorderStats = async (clientIds = [], tenantId = "") =>
   return result;
 };
 
+export const fetchClientProfileStatus = async (email) => {
+  if (!email || String(email).endsWith("@prospect.local")) return null;
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, active")
+    .eq("email", String(email).toLowerCase())
+    .eq("role", "client")
+    .maybeSingle();
+  return data; // null si no existe, { id, active } si existe
+};
+
+export const setClientProfileActive = async (email, active) => {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ active })
+    .eq("email", String(email).toLowerCase())
+    .eq("role", "client");
+  if (error) throw new Error(error.message);
+};
+
 export const fetchClientData = async (profile) => {
   const tenantId = getTenantId(profile);
 

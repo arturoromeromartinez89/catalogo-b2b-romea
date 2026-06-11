@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { normalizeText } from "../../utils/textNormalizer";
-import { fetchClientAccessStatuses, fetchClientPreorderStats } from "../../services/supabaseCatalog";
+import { fetchClientAccessStatuses, fetchClientPreorderStats, fetchClientProfileStatus, setClientProfileActive } from "../../services/supabaseCatalog";
 import { supabase } from "../../lib/supabaseClient";
+import { lockAuth, unlockAuth } from "../../lib/authLock";
 
 const displayContactEmail = (email) =>
   String(email || "").endsWith("@prospect.local") ? "-" : email || "-";
@@ -224,21 +225,40 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
   );
 }
 
+// Genera contraseña segura de 12 caracteres
+const genPassword = () => {
+  const pool = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
+  let p = "";
+  for (let i = 0; i < 12; i++) p += pool[Math.floor(Math.random() * pool.length)];
+  return p;
+};
+
 // ─── Mini-center de actividad y credenciales por cliente ──────────────────────
 
 function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, onAccessGranted }) {
   const rawEmail = client.email && !String(client.email).endsWith("@prospect.local") ? client.email : "";
   const [credEmail,    setCredEmail]    = useState(rawEmail);
+  const [credPwd,      setCredPwd]      = useState("");
+  const [showPwd,      setShowPwd]      = useState(false);
   const [creating,     setCreating]     = useState(false);
   const [accessStatus, setAccessStatus] = useState(hasAccess ? "active" : "none");
+  const [profileActive, setProfileActive] = useState(null);  // null=cargando, true/false
+  const [toggling,     setToggling]     = useState(false);
   const [msg,          setMsg]          = useState({ text: "", ok: true });
 
   const total    = stats?.total    ?? 0;
   const active   = stats?.active   ?? 0;
   const skuCount = client.allowed_skus?.length ?? 0;
   const lastDate = fmtDate(stats?.lastDate);
-
   const isProspectEmail = !rawEmail;
+
+  // Cargar estado activo/suspendido del perfil cuando hay cuenta
+  useEffect(() => {
+    if (!rawEmail || accessStatus !== "active") return;
+    fetchClientProfileStatus(rawEmail).then((p) => {
+      setProfileActive(p ? p.active !== false : true);
+    }).catch(() => setProfileActive(true));
+  }, [rawEmail, accessStatus]);
 
   const showMsg = (text, ok = true) => {
     setMsg({ text, ok });
@@ -248,37 +268,74 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
   const handleCreateAccess = async () => {
     const emailTrimmed = credEmail.trim().toLowerCase();
     if (!emailTrimmed) { showMsg("Ingresa el correo del cliente primero.", false); return; }
+    if (!credPwd)       { showMsg("Genera o escribe una contraseña primero.", false); return; }
+    if (credPwd.length < 6) { showMsg("La contraseña debe tener mínimo 6 caracteres.", false); return; }
 
     setCreating(true);
     setMsg({ text: "", ok: true });
+
+    // Guardar sesión del admin y bloquear AuthGate para evitar que la UI cambie
+    const { data: { session: adminSession } } = await supabase.auth.getSession();
+    lockAuth();
+
     try {
-      // signInWithOtp crea el usuario si no existe SIN cambiar la sesión del admin.
-      // El cliente recibe un link de acceso en su correo para ingresar la primera vez.
-      const { error } = await supabase.auth.signInWithOtp({
+      const { data: signUpData, error } = await supabase.auth.signUp({
         email: emailTrimmed,
-        options: { shouldCreateUser: true },
+        password: credPwd,
       });
 
       if (error) {
-        // "Email rate limit exceeded" → cuenta ya existe y Supabase limitó el OTP
-        if (error.message?.toLowerCase().includes("rate limit") ||
-            error.message?.toLowerCase().includes("email rate")) {
-          showMsg("✅ La cuenta ya existe. Copia la invitación y envíasela al cliente.", true);
+        if (error.message?.toLowerCase().includes("already registered") ||
+            error.message?.toLowerCase().includes("user already")) {
+          unlockAuth();
+          showMsg("✅ Este correo ya tiene cuenta. Copia la invitación con la contraseña nueva.", true);
           setAccessStatus("active");
           onAccessGranted?.();
           setCreating(false);
           return;
         }
+        unlockAuth();
         throw error;
       }
 
-      showMsg("✅ Acceso creado. David recibirá un link en su correo para entrar la primera vez. Copia la invitación.", true);
+      // Si Supabase creó una sesión para el cliente (email confirm desactivado),
+      // cerrarla y restaurar la del admin ANTES de desbloquear AuthGate.
+      const { data: { session: afterSession } } = await supabase.auth.getSession();
+      if (afterSession && adminSession && afterSession.user?.id !== adminSession.user?.id) {
+        await supabase.auth.signOut({ scope: "local" });
+        unlockAuth();  // Desbloquear ANTES de setSession para que AuthGate lo capture
+        await supabase.auth.setSession({
+          access_token:  adminSession.access_token,
+          refresh_token: adminSession.refresh_token,
+        });
+      } else {
+        unlockAuth();
+      }
+
+      showMsg("✅ Cuenta creada. Copia la invitación y mándala al cliente por WhatsApp.", true);
       setAccessStatus("active");
+      setProfileActive(true);
       onAccessGranted?.();
     } catch (e) {
+      unlockAuth();
       showMsg(`❌ ${e.message}`, false);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleToggleActive = async () => {
+    if (profileActive === null) return;
+    const next = !profileActive;
+    setToggling(true);
+    try {
+      await setClientProfileActive(rawEmail, next);
+      setProfileActive(next);
+      showMsg(next ? "✅ Cuenta reactivada." : "✅ Cuenta suspendida. El cliente no podrá acceder.", true);
+    } catch (e) {
+      showMsg(`❌ ${e.message}`, false);
+    } finally {
+      setToggling(false);
     }
   };
 
@@ -287,21 +344,20 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
     if (!emailForMsg) { showMsg("Ingresa el correo antes de copiar.", false); return; }
     const appUrl = window.location.origin;
     const clientName = client.company || client.name || "cliente";
+    const pwdLine = credPwd
+      ? `🔑 Contraseña: ${credPwd}`
+      : "🔑 Contraseña: (la que te compartí)";
     const text =
       `Hola ${clientName},\n\n` +
       `Ya tienes acceso al Catálogo B2B Vanguardia Joyera.\n\n` +
-      `🔗 Enlace de acceso: ${appUrl}\n` +
-      `📧 Tu correo: ${emailForMsg}\n\n` +
-      `Pasos para entrar:\n` +
-      `1. Entra al enlace de arriba\n` +
-      `2. Revisa tu correo (${emailForMsg}) — te llegó un link de acceso (revisa spam si no aparece)\n` +
-      `3. Haz clic en ese link y entrarás directo al catálogo\n` +
-      `4. La próxima vez puedes usar "¿Olvidaste tu contraseña?" para crear tu propia clave\n\n` +
-      `Desde el catálogo podrás explorar los productos y generar preórdenes.\n` +
+      `🔗 Enlace: ${appUrl}\n` +
+      `📧 Correo: ${emailForMsg}\n` +
+      `${pwdLine}\n\n` +
+      `Entra con esos datos y podrás explorar el catálogo y generar preórdenes.\n` +
       `Si tienes dudas, contáctanos.`;
     try {
       await navigator.clipboard.writeText(text);
-      showMsg("Mensaje copiado — pégalo en WhatsApp o donde prefieras", true);
+      showMsg("Invitación copiada — pégala en WhatsApp", true);
     } catch {
       window.prompt("Copia este mensaje y envíalo al cliente:", text);
     }
@@ -309,16 +365,31 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
 
   return (
     <div className="client-mini-center">
-      {/* Encabezado */}
+      {/* Encabezado con estado y toggle on/off */}
       <div className="client-mini-center-header">
-        <span className="client-mini-center-eyebrow">Centro de acceso — {client.company || client.name}</span>
-        {accessStatus === "active" ? (
-          <span className="client-access-badge client-access-badge--active">
-            <span className="client-access-badge__dot" />Con acceso
-          </span>
-        ) : (
-          <span className="client-access-badge client-access-badge--none">Sin cuenta activa</span>
-        )}
+        <span className="client-mini-center-eyebrow">Acceso y actividad — {client.company || client.name}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {accessStatus === "active" ? (
+            <span className={`client-access-badge ${profileActive === false ? "client-access-badge--suspended" : "client-access-badge--active"}`}>
+              <span className="client-access-badge__dot" />
+              {profileActive === false ? "Suspendida" : "Con acceso"}
+            </span>
+          ) : (
+            <span className="client-access-badge client-access-badge--none">Sin cuenta</span>
+          )}
+          {/* Toggle encender/apagar — solo visible cuando hay cuenta */}
+          {accessStatus === "active" && profileActive !== null && (
+            <button
+              type="button"
+              className={`client-toggle-btn${profileActive ? " client-toggle-btn--on" : " client-toggle-btn--off"}`}
+              onClick={handleToggleActive}
+              disabled={toggling}
+              title={profileActive ? "Suspender acceso del cliente" : "Reactivar acceso del cliente"}
+            >
+              <span className="client-toggle-knob" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Estadísticas */}
@@ -341,9 +412,9 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
         </div>
       </div>
 
-      {/* Sección de acceso */}
+      {/* Sección de credenciales */}
       <div className="client-credentials-section">
-        <div className="client-credentials-title">Acceso al catálogo</div>
+        <div className="client-credentials-title">Credenciales de acceso</div>
 
         {isProspectEmail ? (
           <p className="client-credentials-hint warn">
@@ -351,76 +422,80 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
           </p>
         ) : (
           <>
-            {/* Email */}
-            <label className="client-cred-label">
-              Correo del cliente
-              <input
-                className="client-cred-input"
-                type="email"
-                value={credEmail}
-                onChange={(e) => setCredEmail(e.target.value)}
-                placeholder="correo@empresa.com"
-                disabled={creating}
-              />
-            </label>
+            <div className="client-credentials-row">
+              {/* Correo */}
+              <label className="client-cred-label">
+                Correo
+                <input
+                  className="client-cred-input"
+                  type="email"
+                  value={credEmail}
+                  onChange={(e) => setCredEmail(e.target.value)}
+                  placeholder="correo@empresa.com"
+                  disabled={creating}
+                />
+              </label>
+              {/* Contraseña */}
+              <label className="client-cred-label">
+                Contraseña
+                <div className="client-cred-pwd-row">
+                  <input
+                    className="client-cred-input"
+                    type={showPwd ? "text" : "password"}
+                    value={credPwd}
+                    onChange={(e) => setCredPwd(e.target.value)}
+                    placeholder="Escribe o genera una contraseña"
+                    disabled={creating}
+                  />
+                  <button type="button" className="secondary-button compact-action" style={{ flexShrink: 0 }}
+                    onClick={() => setShowPwd((v) => !v)}>
+                    {showPwd ? "Ocultar" : "Ver"}
+                  </button>
+                  <button type="button" className="secondary-button compact-action" style={{ flexShrink: 0 }}
+                    onClick={() => { setCredPwd(genPassword()); setShowPwd(true); }} disabled={creating}>
+                    Generar
+                  </button>
+                </div>
+              </label>
+            </div>
 
             {msg.text && (
               <p className={`client-cred-msg${msg.ok ? "" : " client-cred-msg--err"}`}>{msg.text}</p>
             )}
 
-            {/* Acciones con descripción */}
+            {/* Acciones */}
             <div className="client-access-actions-grid">
-              {/* Acción 1 — Crear o reenviar */}
               <div className="client-access-action-card">
-                <button
-                  type="button"
-                  className="primary-button"
+                <button type="button" className="primary-button" style={{ width: "100%" }}
                   onClick={handleCreateAccess}
-                  disabled={creating || !credEmail.trim()}
-                  style={{ width: "100%" }}
-                >
-                  {creating
-                    ? "Enviando..."
-                    : accessStatus === "active"
-                    ? "Reenviar link al correo"
-                    : "Crear cuenta y enviar link"}
+                  disabled={creating || !credEmail.trim() || !credPwd}>
+                  {creating ? "Creando cuenta..." : accessStatus === "active" ? "Actualizar contraseña" : "Crear cuenta"}
                 </button>
                 <p className="client-access-action-desc">
                   {accessStatus === "active"
-                    ? "El cliente recibirá un nuevo link de acceso en su correo electrónico."
-                    : "Crea la cuenta del cliente en el sistema y le envía automáticamente un link de acceso a su correo."}
+                    ? "Actualiza la contraseña del cliente en el sistema."
+                    : "Registra al cliente en el sistema con el correo y contraseña que definiste arriba."}
                 </p>
               </div>
 
-              {/* Acción 2 — Copiar para WhatsApp */}
               <div className="client-access-action-card">
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={handleCopyInvite}
-                  disabled={!credEmail.trim()}
-                  style={{ width: "100%" }}
-                >
+                <button type="button" className="secondary-button" style={{ width: "100%" }}
+                  onClick={handleCopyInvite} disabled={!credEmail.trim()}>
                   Copiar invitación
                 </button>
                 <p className="client-access-action-desc">
-                  Copia el mensaje de bienvenida con el enlace y el correo. Pégalo en WhatsApp o donde prefieras enviarlo.
+                  Copia el mensaje con el enlace, correo y contraseña. Pégalo en WhatsApp o donde prefieras.
                 </p>
               </div>
 
-              {/* Acción 3 — Ver preórdenes */}
               {total > 0 && (
                 <div className="client-access-action-card">
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => { onViewPreorders(client.id); onClose(); }}
-                    style={{ width: "100%" }}
-                  >
+                  <button type="button" className="secondary-button" style={{ width: "100%" }}
+                    onClick={() => { onViewPreorders(client.id); onClose(); }}>
                     Ver preórdenes ({total}) ↗
                   </button>
                   <p className="client-access-action-desc">
-                    Abre el historial de preórdenes de este cliente en la pestaña Preórdenes.
+                    Abre el historial completo de preórdenes de este cliente.
                   </p>
                 </div>
               )}
