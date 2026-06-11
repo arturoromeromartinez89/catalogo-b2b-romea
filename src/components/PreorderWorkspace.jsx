@@ -17,6 +17,8 @@ const fmt = (n) =>
 const TAB_LIST = "list";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const isClientPreorder = (po) => po?.creator?.role === "client";
+
 // ─── Pestaña individual ───────────────────────────────────────────────────────
 function Tab({ tab, active, onClick, onClose }) {
   return (
@@ -48,12 +50,65 @@ function Tab({ tab, active, onClick, onClose }) {
 }
 
 // ─── Vista: lista de preórdenes ───────────────────────────────────────────────
-function PreorderListView({ clients, products, profile, tenantId, onOpen, onNew, preorders, loading, onReload, statusMsg }) {
+function PreorderListView({
+  clients,
+  products,
+  profile,
+  tenantId,
+  onOpen,
+  onNew,
+  preorders,
+  loading,
+  onReload,
+  statusMsg,
+  clientFilter,
+  onClearClientFilter,
+}) {
   const [filter, setFilter] = useState("all");
-  const filtered = filter === "all" ? preorders : preorders.filter((p) => p.status === filter);
+
+  // When an external clientFilter is applied, reset the status filter
+  useEffect(() => {
+    if (clientFilter) setFilter("all");
+  }, [clientFilter]);
+
+  // Find the client name for the filter banner
+  const filterClientName = clientFilter
+    ? (() => {
+        const po = preorders.find((p) => p.client_id === clientFilter);
+        if (po) return po.cliente_empresa || po.cliente_nombre || null;
+        const cl = (clients || []).find((c) => c.id === clientFilter);
+        return cl ? (cl.company || cl.name) : null;
+      })()
+    : null;
+
+  // Base list: if a clientFilter is active, show only that client's preorders
+  const baseList = clientFilter
+    ? preorders.filter((p) => p.client_id === clientFilter)
+    : preorders;
+
+  const filtered = (() => {
+    if (filter === "all")     return baseList;
+    if (filter === "clients") return baseList.filter(isClientPreorder);
+    return baseList.filter((p) => p.status === filter);
+  })();
+
+  const countFor = (key) => {
+    if (key === "clients") return baseList.filter(isClientPreorder).length;
+    return baseList.filter((p) => p.status === key).length;
+  };
 
   return (
     <div className="po-list-view">
+      {/* Banner de filtro por cliente */}
+      {clientFilter && (
+        <div className="po-client-filter-bar">
+          <strong>
+            Preórdenes de: {filterClientName || "cliente seleccionado"} ({baseList.length})
+          </strong>
+          <button type="button" onClick={onClearClientFilter}>Ver todas las preórdenes</button>
+        </div>
+      )}
+
       {/* Toolbar de la lista */}
       <div className="po-list-toolbar">
         <div className="po-filter-pills">
@@ -66,10 +121,24 @@ function PreorderListView({ clients, products, profile, tenantId, onOpen, onNew,
             >
               {label}
               {key !== "all" ? (
-                <span className="po-filter-count">{preorders.filter((p) => p.status === key).length}</span>
+                <span className="po-filter-count">{countFor(key)}</span>
               ) : null}
             </button>
           ))}
+          {/* Filtro "De clientes" — solo se muestra si hay alguna preorden de cliente */}
+          {baseList.some(isClientPreorder) ? (
+            <button
+              type="button"
+              className={filter === "clients" ? "primary-button compact-action" : "secondary-button compact-action"}
+              onClick={() => setFilter(filter === "clients" ? "all" : "clients")}
+              style={filter === "clients" ? { background: "#6d28d9", borderColor: "#6d28d9" } : { borderColor: "#7c3aed", color: "#6d28d9" }}
+            >
+              De clientes
+              <span className="po-filter-count" style={filter === "clients" ? { background: "rgba(255,255,255,0.25)" } : { background: "#6d28d9", color: "#fff" }}>
+                {countFor("clients")}
+              </span>
+            </button>
+          ) : null}
         </div>
         <button className="primary-button compact-action" type="button" onClick={onNew}>
           + Nueva preorden
@@ -92,6 +161,7 @@ function PreorderListView({ clients, products, profile, tenantId, onOpen, onNew,
             <thead>
               <tr>
                 <th>Folio</th>
+                <th>Origen</th>
                 <th>Cliente</th>
                 <th>Fecha</th>
                 <th className="right">Piezas</th>
@@ -104,9 +174,17 @@ function PreorderListView({ clients, products, profile, tenantId, onOpen, onNew,
             <tbody>
               {filtered.map((po) => {
                 const { label, color } = STATUS_LABELS[po.status] || STATUS_LABELS.pendiente;
+                const fromClient = isClientPreorder(po);
                 return (
                   <tr key={po.id} className="po-table-row" onClick={() => onOpen(po)}>
                     <td><strong>{po.folio || "—"}</strong></td>
+                    <td>
+                      {fromClient ? (
+                        <span className="po-origin-tag po-origin-tag--client">Cliente</span>
+                      ) : (
+                        <span className="po-origin-tag" style={{ background: "#f1f5f9", color: "#64748b" }}>Admin</span>
+                      )}
+                    </td>
                     <td>
                       <div className="po-client-cell">
                         <span>{po.cliente_empresa || po.cliente_nombre || "—"}</span>
@@ -153,6 +231,8 @@ export default function PreorderWorkspace({
   onDraftClose,
   onDraftSaved,
   onCreateRemision,
+  clientFilter = null,
+  onClearClientFilter,
 }) {
   const [tabs, setTabs] = useState([{ id: TAB_LIST, type: TAB_LIST, label: "Preórdenes", dirty: false }]);
   const [activeId, setActiveId] = useState(TAB_LIST);
@@ -192,7 +272,6 @@ export default function PreorderWorkspace({
     setActiveId(tabId);
   }, [isDraftOpen, draftPreorder]);
 
-  // Abre una preorden en una pestaña (si ya está abierta, activa esa pestaña)
   const openTab = (preorder) => {
     const currentActive = tabs.find((t) => t.id === activeId);
     if (currentActive?.dirty && currentActive.type !== TAB_LIST && !window.confirm("Hay una preorden con cambios sin guardar. Guarda antes de salir. ¿Quieres cambiar de pestaña sin guardar?")) {
@@ -236,7 +315,6 @@ export default function PreorderWorkspace({
       setListMsg("Preorden guardada. Ya puedes generar PDF.");
       return;
     }
-    // Update tab label with folio and mark clean
     setTabs((prev) =>
       prev.map((t) =>
         t.id === tabId
@@ -252,7 +330,6 @@ export default function PreorderWorkspace({
 
   return (
     <div className="po-workspace">
-      {/* Barra de pestañas */}
       <nav className="po-tab-bar" aria-label="Pestañas de preórdenes">
         {tabs.map((tab) => (
           <Tab
@@ -267,12 +344,9 @@ export default function PreorderWorkspace({
             onClose={closeTab}
           />
         ))}
-        <button className="po-tab-new" type="button" onClick={openNewTab} title="Nueva preorden">
-          +
-        </button>
+        <button className="po-tab-new" type="button" onClick={openNewTab} title="Nueva preorden">+</button>
       </nav>
 
-      {/* Contenido activo */}
       <div className="po-tab-content">
         {activeTab.type === TAB_LIST ? (
           <PreorderListView
@@ -286,6 +360,8 @@ export default function PreorderWorkspace({
             onOpen={openTab}
             onNew={openNewTab}
             onReload={loadPreorders}
+            clientFilter={clientFilter}
+            onClearClientFilter={onClearClientFilter}
           />
         ) : (
           <PreorderEditor

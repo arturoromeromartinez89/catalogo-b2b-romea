@@ -8936,3 +8936,182 @@ textarea:focus {
 .client-modal--wide {
   max-height: 94vh;
 }
+
+/* Botón "Actividad" activo cuando el mini-center está expandido */
+.active-detail {
+  background: var(--neutral-900, #1e293b) !important;
+  border-color: var(--neutral-900, #1e293b) !important;
+  color: #fff !important;
+}
+
+/* Fila expandida: resaltado sutil en la fila principal */
+tr.client-row--expanded td {
+  background: var(--neutral-50, #f8fafc);
+}
+
+/* ─── Client mini-center (accesos y actividad por cliente) ───────────────────── */
+
+.client-detail-row td {
+  background: var(--neutral-50, #f8fafc);
+  border-bottom: 2px solid var(--color-border, #e2e8f0);
+  padding: 0 !important;
+}
+
+.client-mini-center {
+  animation: mc-slide-in 0.14s ease;
+  border-left: 3px solid var(--color-primary, #1e293b);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 18px 16px;
+}
+
+@keyframes mc-slide-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.client-mini-center-header {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.client-mini-center-eyebrow {
+  color: var(--neutral-500, #888);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.client-access-badge {
+  align-items: center;
+  border-radius: 20px;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 5px;
+  padding: 3px 10px;
+}
+
+.client-access-badge--active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.client-access-badge--none {
+  background: var(--neutral-100, #f1f5f9);
+  color: var(--neutral-500, #64748b);
+}
+
+.client-access-badge__dot {
+  background: currentColor;
+  border-radius: 50%;
+  display: inline-block;
+  height: 5px;
+  width: 5px;
+}
+
+.client-mini-center-stats {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 700px) {
+  .client-mini-center-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+.client-stat-box {
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.client-stat-value {
+  color: var(--neutral-900, #1a1a2e);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.client-stat-value--warn {
+  color: #f59e0b;
+}
+
+.client-stat-label {
+  color: var(--neutral-500, #888);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  margin-top: 3px;
+  text-transform: uppercase;
+}
+
+.client-mini-center-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.client-invite-msg {
+  background: #dcfce7;
+  border-radius: 6px;
+  color: #15803d;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+/* ─── Preorder origin tag (Cliente / Admin) ─────────────────────────────────── */
+
+.po-origin-tag {
+  border-radius: 4px;
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.po-origin-tag--client {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+/* ─── Client filter banner in preorder list ─────────────────────────────────── */
+
+.po-client-filter-bar {
+  align-items: center;
+  background: #ede9fe;
+  border-bottom: 1px solid #c4b5fd;
+  display: flex;
+  gap: 10px;
+  padding: 8px 16px;
+}
+
+.po-client-filter-bar strong {
+  color: #4c1d95;
+  font-size: 13px;
+}
+
+.po-client-filter-bar button {
+  background: transparent;
+  border: 1px solid #7c3aed;
+  border-radius: 6px;
+  color: #7c3aed;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+}
+
+.po-client-filter-bar button:hover {
+  background: #7c3aed;
+  color: #fff;
+}

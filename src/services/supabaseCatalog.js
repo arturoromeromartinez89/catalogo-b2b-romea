@@ -448,6 +448,54 @@ export const updateClientLaborList = async (clientId, laborListId) => {
   if (error) throw new Error(error.message);
 };
 
+/**
+ * Verifica cuáles emails de cliente tienen una cuenta activa (profile con role='client').
+ * Retorna un Map<email_lowercase, true>.  Solo incluye emails con cuenta.
+ * Multi-tenant safe: los emails de clientes son únicos globalmente.
+ */
+export const fetchClientAccessStatuses = async (emails = []) => {
+  const result = new Map();
+  const clean = (emails || []).filter((e) => e && !String(e).endsWith("@prospect.local"));
+  if (!clean.length) return result;
+  const BATCH = 200;
+  for (let i = 0; i < clean.length; i += BATCH) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("email")
+      .in("email", clean.slice(i, i + BATCH))
+      .eq("role", "client");
+    (data || []).forEach((p) => result.set(String(p.email).toLowerCase(), true));
+  }
+  return result;
+};
+
+/**
+ * Obtiene estadísticas de preórdenes agrupadas por client_id.
+ * Retorna un Map<clientId, { total: number, active: number, lastDate: string|null }>.
+ * Se filtra por tenantId para garantizar aislamiento entre empresas.
+ */
+export const fetchClientPreorderStats = async (clientIds = [], tenantId = "") => {
+  const result = new Map();
+  if (!clientIds.length) return result;
+  let query = supabase
+    .from("preorders")
+    .select("client_id, status, created_at")
+    .in("client_id", clientIds)
+    .order("created_at", { ascending: false });
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { data } = await query;
+  if (!data) return result;
+  for (const row of data) {
+    if (!row.client_id) continue;
+    const entry = result.get(row.client_id) || { total: 0, active: 0, lastDate: null };
+    entry.total += 1;
+    if (row.status === "pendiente" || row.status === "revision") entry.active += 1;
+    if (!entry.lastDate) entry.lastDate = row.created_at;
+    result.set(row.client_id, entry);
+  }
+  return result;
+};
+
 export const fetchClientData = async (profile) => {
   const tenantId = getTenantId(profile);
   const visibleProducts = await fetchAllProducts({ visibleOnly: true, tenantId, columns: PUBLIC_PRODUCT_COLUMNS });

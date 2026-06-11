@@ -275,6 +275,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [quoteLinkOpen, setQuoteLinkOpen] = useState(false);
   const [selectionDrawerOpen, setSelectionDrawerOpen] = useState(false);
   const [tenantForm, setTenantForm] = useState({ name: "", slug: "", status: "active" });
+  const [preorderClientFilter, setPreorderClientFilter] = useState(null);
   const [signingOut, setSigningOut] = useState(false);
   const cameraVideoRef = useRef(null);
   const cameraControlsRef = useRef(null);
@@ -289,12 +290,18 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     setTab((current) => {
       if (current === "preorders" && nextTab !== "preorders" && draftPreorder?.preorder_items?.length) {
         setTabChangeModal({ open: true, nextTab });
-        return current; // espera confirmación del modal
+        return current;
       }
       return nextTab;
     });
+    if (nextTab !== "preorders") setPreorderClientFilter(null);
     setSelectedProductCode("");
   }, [draftPreorder]);
+
+  const handleViewClientPreorders = useCallback((clientId) => {
+    setPreorderClientFilter(clientId);
+    changeTab("preorders");
+  }, [changeTab]);
 
   const confirmTabChange = useCallback(() => {
     const { nextTab } = tabChangeModal;
@@ -1329,6 +1336,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             laborLists={data.laborLists || []}
             onSaveClientSkus={handleSaveClientSkus}
             onSaveClientLaborList={handleSaveClientLaborList}
+            tenantId={tenantId}
+            onViewClientPreorders={handleViewClientPreorders}
           />
         ) : null}
 
@@ -1387,6 +1396,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               setStatus("Preorden guardada correctamente. Puedes verla en el menu Preordenes.");
             }}
             onCreateRemision={handleCreateRemisionFromPreorder}
+            clientFilter={preorderClientFilter}
+            onClearClientFilter={() => setPreorderClientFilter(null)}
           />
         ) : null}
 

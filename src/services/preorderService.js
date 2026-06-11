@@ -77,7 +77,7 @@ export const fetchAllPreorders = async (profile) => {
   const tenantId = isSuperAdmin(profile) ? "" : getTenantId(profile);
   let query = supabase
     .from("preorders")
-    .select("*, preorder_items(*)")
+    .select("*, preorder_items(*), creator:profiles!created_by(role)")
     .order("created_at", { ascending: false });
   query = withTenant(query, tenantId);
   const { data, error } = await query;
