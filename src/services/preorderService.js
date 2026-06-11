@@ -129,6 +129,7 @@ export const savePreorder = async (preorder, items, { expectedUpdatedAt = null, 
   const {
     preorder_items,
     id,
+    creator,          // campo sintético — no existe como columna en DB
     aplicar_iva,
     mostrar_desglose,
     pf_mode,
