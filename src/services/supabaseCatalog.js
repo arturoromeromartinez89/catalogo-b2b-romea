@@ -531,9 +531,10 @@ export const fetchClientData = async (profile) => {
   if (allowedSkus?.length > 0) {
     // Cliente con catálogo restringido — traer solo sus productos asignados directamente.
     // No se filtra por visible_web: el cliente solo ve lo que el admin le asignó.
+    // PUBLIC_PRODUCT_COLUMNS ya es un string "col1,col2,..." — no aplicar .join
     let q = supabase
       .from("products")
-      .select(PUBLIC_PRODUCT_COLUMNS.join(","))
+      .select(PUBLIC_PRODUCT_COLUMNS)
       .in("codigo", allowedSkus);
     if (tenantId) q = q.eq("tenant_id", tenantId);
     const { data, error } = await q;
