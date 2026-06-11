@@ -258,24 +258,22 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
   const handleCreateAccess = async () => {
     const emailTrimmed = credEmail.trim().toLowerCase();
     if (!emailTrimmed) { showMsg("Ingresa el correo del cliente primero.", false); return; }
-    if (!credPwd)       { showMsg("Genera o escribe una contraseña primero.", false); return; }
-    if (credPwd.length < 6) { showMsg("La contraseña debe tener al menos 6 caracteres.", false); return; }
 
     setCreating(true);
     setMsg({ text: "", ok: true });
     try {
-      // Guardar sesión del admin antes de crear la cuenta del cliente
-      const { data: { session: adminSession } } = await supabase.auth.getSession();
-
-      const { data: signUpData, error } = await supabase.auth.signUp({
+      // signInWithOtp crea el usuario si no existe SIN cambiar la sesión del admin.
+      // El cliente recibe un link de acceso en su correo para ingresar la primera vez.
+      const { error } = await supabase.auth.signInWithOtp({
         email: emailTrimmed,
-        password: credPwd,
+        options: { shouldCreateUser: true },
       });
 
       if (error) {
-        if (error.message?.toLowerCase().includes("already registered") ||
-            error.message?.toLowerCase().includes("user already")) {
-          showMsg("✅ Este correo ya tiene cuenta — puedes copiar la invitación con la nueva contraseña.", true);
+        // "Email rate limit exceeded" → cuenta ya existe y Supabase limitó el OTP
+        if (error.message?.toLowerCase().includes("rate limit") ||
+            error.message?.toLowerCase().includes("email rate")) {
+          showMsg("✅ La cuenta ya existe. Copia la invitación y envíasela al cliente.", true);
           setAccessStatus("active");
           onAccessGranted?.();
           setCreating(false);
@@ -284,22 +282,7 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
         throw error;
       }
 
-      // Si Supabase no requiere confirmación de email, la sesión cambió — restaurar admin
-      const { data: { session: afterSession } } = await supabase.auth.getSession();
-      if (afterSession && adminSession && afterSession.user?.id !== adminSession.user?.id) {
-        await supabase.auth.signOut();
-        await supabase.auth.setSession({
-          access_token: adminSession.access_token,
-          refresh_token: adminSession.refresh_token,
-        });
-      }
-
-      showMsg(
-        signUpData?.user?.identities?.length === 0
-          ? "✅ Cuenta ya existía — puedes copiar la invitación con la nueva contraseña."
-          : "✅ Cuenta creada correctamente. Ahora copia la invitación y envíala al cliente.",
-        true,
-      );
+      showMsg("✅ Acceso creado. David recibirá un link en su correo para entrar la primera vez. Copia la invitación.", true);
       setAccessStatus("active");
       onAccessGranted?.();
     } catch (e) {
@@ -314,14 +297,21 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
     if (!emailForMsg) { showMsg("Ingresa el correo antes de copiar.", false); return; }
     const appUrl = window.location.origin;
     const clientName = client.company || client.name || "cliente";
-    const pwdLine = credPwd ? `🔑 Contraseña: ${credPwd}` : "🔑 Contraseña: (usa la que acordamos)";
+    const pwdLine = credPwd
+      ? `🔑 Contraseña sugerida: ${credPwd}\n   (úsala cuando el sistema te pida configurar tu contraseña)`
+      : "🔑 Recibirás un link en tu correo para configurar tu contraseña";
     const text =
       `Hola ${clientName},\n\n` +
-      `Ya tienes acceso al Catálogo B2B.\n\n` +
+      `Ya tienes acceso al Catálogo B2B Vanguardia Joyera.\n\n` +
       `🔗 Enlace: ${appUrl}\n` +
       `📧 Correo: ${emailForMsg}\n` +
       `${pwdLine}\n\n` +
-      `Ingresa con estos datos y podrás explorar el catálogo y generar preórdenes.`;
+      `Pasos:\n` +
+      `1. Entra al enlace de arriba\n` +
+      `2. Busca el correo que te enviamos con el link de acceso (revisa spam)\n` +
+      `3. Haz clic en el link del correo para entrar\n` +
+      `4. Una vez dentro podrás explorar el catálogo y generar preórdenes\n\n` +
+      `Si necesitas ayuda, contáctanos.`;
     try {
       await navigator.clipboard.writeText(text);
       showMsg("Invitación copiada al portapapeles", true);
