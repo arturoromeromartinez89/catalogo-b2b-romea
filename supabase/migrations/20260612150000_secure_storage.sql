@@ -17,29 +17,38 @@
 -- migration is safe to validate in staging (no public traffic); do NOT apply in
 -- production until the public-image story is resolved (see STORAGE-ROLLOUT.md).
 
--- 1. Bucket becomes private and gains size / MIME guardrails. ------------------
-update storage.buckets
-set public = false,
-    file_size_limit = 10485760,                                   -- 10 MB
-    allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp']
-where id = 'company-assets';
+-- 1. Create the bucket when rebuilding a disposable environment, or harden the
+--    existing production bucket in place.
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
+  'company-assets',
+  'company-assets',
+  false,
+  10485760,                                                       -- 10 MB
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
--- 2. Replace every legacy policy on storage.objects. Today there is a single
---    bucket, so clearing all object policies and recreating tenant-scoped ones
---    is safe. Validate in staging; review pg_policies on storage.objects first.
-do $$
-declare
-  pol record;
-begin
-  for pol in
-    select policyname
-    from pg_policies
-    where schemaname = 'storage' and tablename = 'objects'
-  loop
-    execute format('drop policy if exists %I on storage.objects', pol.policyname);
-  end loop;
-end;
-$$;
+-- 2. Replace only the three legacy policies verified in production. Never drop
+--    every storage.objects policy: other buckets may gain independent rules.
+drop policy if exists "admin update assets" on storage.objects;
+drop policy if exists "admin upload assets" on storage.objects;
+drop policy if exists "public read assets" on storage.objects;
+
+-- Keep the migration idempotent in disposable preview branches.
+drop policy if exists "company-assets read within tenant" on storage.objects;
+drop policy if exists "company-assets insert by tenant admin" on storage.objects;
+drop policy if exists "company-assets update by tenant admin" on storage.objects;
+drop policy if exists "company-assets delete by tenant admin" on storage.objects;
 
 -- 3. READ: superadmin everywhere; tenant admins and active clients may read the
 --    objects that live under their own tenant prefix. Anonymous role gets

@@ -15,6 +15,7 @@ values
 
 insert into auth.users (id, email)
 values
+  ('90000000-0000-4000-8000-000000000009', 'superadmin-security@example.test'),
   ('a1000000-0000-4000-8000-000000000001', 'admin-a-security@example.test'),
   ('b2000000-0000-4000-8000-000000000002', 'admin-b-security@example.test'),
   ('c1000000-0000-4000-8000-000000000001', 'client-a-security@example.test'),
@@ -22,6 +23,7 @@ values
 
 insert into public.profiles (id, email, role, client_id, tenant_id, active)
 values
+  ('90000000-0000-4000-8000-000000000009', 'superadmin-security@example.test', 'superadmin', null, '10000000-0000-4000-8000-000000000001', true),
   ('a1000000-0000-4000-8000-000000000001', 'admin-a-security@example.test', 'tenant_admin', null, '10000000-0000-4000-8000-000000000001', true),
   ('b2000000-0000-4000-8000-000000000002', 'admin-b-security@example.test', 'tenant_admin', null, '20000000-0000-4000-8000-000000000002', true),
   ('c1000000-0000-4000-8000-000000000001', 'client-a-security@example.test', 'client', 'ca000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', true),
@@ -66,6 +68,13 @@ values
   ('f1000000-0000-4000-8000-000000000001', 'SEC-A', 'pendiente', 'ca000000-0000-4000-8000-000000000001', 'c1000000-0000-4000-8000-000000000001', 'Client A', 'Company A', 'client-a-security@example.test', '', '', 'MXN', '10000000-0000-4000-8000-000000000001'),
   ('f2000000-0000-4000-8000-000000000002', 'SEC-B', 'pendiente', 'cb000000-0000-4000-8000-000000000002', 'd2000000-0000-4000-8000-000000000002', 'Client B', 'Company B', 'client-b-security@example.test', '', '', 'MXN', '20000000-0000-4000-8000-000000000002');
 
+insert into storage.objects (bucket_id, name, owner_id)
+values (
+  'company-assets',
+  '20000000-0000-4000-8000-000000000002/products/existing-b.jpg',
+  'b2000000-0000-4000-8000-000000000002'
+);
+
 -- Tenant A administrator cannot see or alter tenant B.
 select set_config('request.jwt.claim.sub', 'a1000000-0000-4000-8000-000000000001', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
@@ -77,6 +86,7 @@ declare
   visible_rows integer;
   affected integer;
   escalation_blocked boolean := false;
+  cross_storage_insert_blocked boolean := false;
 begin
   select count(*) into visible_rows from public.clients
   where tenant_id = '20000000-0000-4000-8000-000000000002';
@@ -106,6 +116,32 @@ begin
   where id = 'e2000000-0000-4000-8000-000000000002';
   get diagnostics affected = row_count;
   if affected <> 0 then raise exception 'FAILED: admin A updated tenant B product'; end if;
+
+  select count(*) into visible_rows from storage.objects
+  where bucket_id = 'company-assets'
+    and name like '20000000-0000-4000-8000-000000000002/%';
+  if visible_rows <> 0 then raise exception 'FAILED: admin A read tenant B storage'; end if;
+
+  insert into storage.objects (bucket_id, name, owner_id)
+  values (
+    'company-assets',
+    '10000000-0000-4000-8000-000000000001/products/inserted-a.jpg',
+    'a1000000-0000-4000-8000-000000000001'
+  );
+
+  begin
+    insert into storage.objects (bucket_id, name, owner_id)
+    values (
+      'company-assets',
+      '20000000-0000-4000-8000-000000000002/products/blocked-a.jpg',
+      'a1000000-0000-4000-8000-000000000001'
+    );
+  exception when insufficient_privilege then
+    cross_storage_insert_blocked := true;
+  end;
+  if not cross_storage_insert_blocked then
+    raise exception 'FAILED: admin A inserted into tenant B storage';
+  end if;
 
   begin
     update public.profiles set role = 'superadmin'
@@ -150,6 +186,15 @@ begin
   select count(*) into direct_rows from public.preorders;
   if direct_rows <> 0 then raise exception 'FAILED: client read preorders directly'; end if;
 
+  select count(*) into direct_rows from storage.objects
+  where bucket_id = 'company-assets'
+    and name like '10000000-0000-4000-8000-000000000001/%';
+  if direct_rows <> 1 then raise exception 'FAILED: client A cannot read own storage'; end if;
+  select count(*) into direct_rows from storage.objects
+  where bucket_id = 'company-assets'
+    and name like '20000000-0000-4000-8000-000000000002/%';
+  if direct_rows <> 0 then raise exception 'FAILED: client A read tenant B storage'; end if;
+
   perform public.submit_client_preorder(
     '{"notes":"Security test"}'::jsonb,
     '[{"codigo":"SKU-A","quantity":2,"comment":"test"}]'::jsonb
@@ -167,6 +212,36 @@ begin
   where id = 'f1000000-0000-4000-8000-000000000001';
   get diagnostics affected = row_count;
   if affected <> 0 then raise exception 'FAILED: client altered a preorder directly'; end if;
+end
+$$;
+
+-- Superadmin can support both tenants, while anonymous visitors cannot read
+-- private objects directly.
+reset role;
+select set_config('request.jwt.claim.sub', '90000000-0000-4000-8000-000000000009', true);
+select set_config('request.jwt.claims', '{"sub":"90000000-0000-4000-8000-000000000009","role":"authenticated"}', true);
+set local role authenticated;
+
+do $$
+declare visible_rows integer;
+begin
+  select count(*) into visible_rows from storage.objects
+  where bucket_id = 'company-assets';
+  if visible_rows <> 2 then raise exception 'FAILED: superadmin cannot read both tenant objects'; end if;
+end
+$$;
+
+reset role;
+select set_config('request.jwt.claims', '{}', true);
+select set_config('request.jwt.claim.sub', '', true);
+set local role anon;
+
+do $$
+declare visible_rows integer;
+begin
+  select count(*) into visible_rows from storage.objects
+  where bucket_id = 'company-assets';
+  if visible_rows <> 0 then raise exception 'FAILED: anon read private storage'; end if;
 end
 $$;
 
@@ -300,4 +375,4 @@ $$;
 reset role;
 rollback;
 
-select 'PASS: tenant isolation, privilege escalation, client pricing, preorder and suspension checks' as result;
+select 'PASS: tenant isolation, privilege escalation, client pricing, preorder, storage and suspension checks' as result;

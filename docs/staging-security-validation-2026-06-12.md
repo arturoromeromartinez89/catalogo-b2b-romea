@@ -17,6 +17,7 @@ Se aplicaron, en este orden y solo en staging:
 2. `20260612125000_enforce_tenant_admin_isolation.sql`
 3. `20260612130000_secure_client_portal.sql`
 4. `20260612140000_harden_public_quotes.sql`
+5. `20260612150000_secure_storage.sql`
 
 Todas terminaron correctamente.
 
@@ -53,6 +54,11 @@ La prueba verifico:
 - Aislamiento administrativo de configuracion de empresa, lineas de producto y preordenes.
 - Ligas publicas limitadas por cantidad de envios y con precio validado en servidor.
 - Branding publico sin datos legales, fiscales ni bancarios privados.
+- Bucket `company-assets` privado, con limite de 10 MB y MIME restringido a JPEG, PNG y WebP.
+- Lectura de objetos limitada al tenant para administradores y clientes.
+- Escritura, actualizacion y borrado limitados al administrador del tenant.
+- Bloqueo de lectura anonima y escritura cruzada entre tenants.
+- Acceso global de soporte conservado para `superadmin`.
 
 ## Verificaciones locales
 
@@ -64,7 +70,8 @@ La prueba verifico:
 
 ## Pendientes antes de produccion
 
-- Probar Storage privado por tenant; el preview branch no contiene buckets ni archivos clonados.
+- Implementar en el frontend las nuevas rutas `{tenant_id}/...` y URLs firmadas; la prueba SQL de Storage ya paso.
+- Resolver las imagenes de ligas publicas mediante una Edge Function antes de volver privado el bucket de produccion.
 - Probar el flujo visual completo con cuentas reales de staging, incluyendo catalogo, preorden y PDF.
 - Preparar respaldo y ventana de despliegue.
 - Aplicar primero migraciones en produccion, verificar RPC/RLS y solo despues desplegar el frontend compatible en Vercel.

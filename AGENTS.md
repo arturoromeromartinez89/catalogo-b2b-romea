@@ -29,6 +29,7 @@ La carpeta activa `catalogo-b2b-drag` es un worktree limpio del repositorio remo
 - `supabase/migrations/20260612125000_enforce_tenant_admin_isolation.sql` reemplaza 17 politicas globales `is_admin()` verificadas en produccion por politicas limitadas al tenant.
 - `supabase/migrations/20260612130000_secure_client_portal.sql` prepara RPCs para catalogo, precios y preordenes de cliente sin exponer tablas sensibles.
 - `supabase/migrations/20260612140000_harden_public_quotes.sql` valida en servidor los productos y precios de ligas publicas.
+- `supabase/migrations/20260612150000_secure_storage.sql` vuelve privado `company-assets` y aisla objetos por tenant.
 - Estas migraciones se aplicaron y pasaron la prueba completa en el preview branch de staging `staging-security` el 12 de junio de 2026. Produccion sigue sin cambios.
 - El registro de validacion esta en `docs/staging-security-validation-2026-06-12.md`.
 - El snapshot real de produccion del 12 de junio de 2026 esta en `docs/production-security-snapshot-2026-06-12.md`.
@@ -117,7 +118,7 @@ El frontend preparado usa `get_client_catalog`, `submit_client_preorder` y `get_
 - Las migraciones retiran acceso directo del cliente a precios y preordenes y pasaron la prueba de staging; falta desplegarlas y repetir la verificacion en produccion.
 - `tenant_features` existe pero no aplica feature-gating real; hoy ni siquiera se consume en la UI principal.
 - Las ligas publicas validan contra su snapshot y limitan envios; esto paso en staging, pero aun necesitan rate limiting perimetral.
-- Storage publico sin politicas versionadas en el repo.
+- Storage sigue publico en produccion. La migracion privada y sus pruebas de aislamiento pasaron en staging; faltan rutas frontend, URLs firmadas, migracion de objetos existentes y firma de imagenes para ligas publicas antes de produccion.
 - `npm audit --omit=dev` esta en cero despues de actualizar jsPDF y usar la distribucion oficial de SheetJS; vigilar futuras actualizaciones.
 - Hay CI y una prueba SQL transaccional de seguridad, pero faltan pruebas automatizadas de UI, TypeScript y un proyecto permanente e independiente de staging.
 - La estructura de Supabase CLI y CI ya existe, pero falta una migracion base verificada; hoy `supabase db reset` no puede reconstruir toda la base historica.

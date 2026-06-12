@@ -114,9 +114,12 @@ Using the existing two-tenant fixtures, assert:
 
 ## 8. Order of operations
 
-1. Apply `20260612150000_secure_storage.sql` in `staging-security`.
-2. Create disposable buckets/objects in staging (the preview branch did not
-   clone Storage) and run the section-7 assertions.
+1. Apply `20260612150000_secure_storage.sql` in `staging-security`. The migration
+   creates the disposable bucket when it does not exist and replaces only the
+   three legacy policies verified in production; it does not remove policies
+   belonging to other buckets.
+2. Run `supabase/tests/full_security_acceptance.sql`; its disposable fixtures
+   include the section-7 Storage assertions.
 3. Land the frontend path + signed-URL changes and the RPC path change.
 4. Build the `sign-public-image` Edge Function (section 5) — production blocker.
 5. Production: backup → move objects + backfill URLs (section 6) → apply
