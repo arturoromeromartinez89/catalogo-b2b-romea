@@ -3,6 +3,7 @@ import { normalizeText } from "../../utils/textNormalizer";
 import { fetchClientAccessStatuses, fetchClientPreorderStats, fetchClientProfileStatus, setClientProfileActive } from "../../services/supabaseCatalog";
 import { supabase } from "../../lib/supabaseClient";
 import { lockAuth, unlockAuth } from "../../lib/authLock";
+import { validateSpreadsheetFile, validateSpreadsheetRows } from "../../utils/fileLimits";
 
 const displayContactEmail = (email) =>
   String(email || "").endsWith("@prospect.local") ? "-" : email || "-";
@@ -32,6 +33,7 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
     setImporting(true);
     setImportMsg("");
     try {
+      validateSpreadsheetFile(file);
       const XLSX = await import("xlsx");
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: "array" });
@@ -43,8 +45,7 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
 
       const sheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-
-      if (!rows.length) { setImportMsg("❌ La hoja está vacía."); return; }
+      validateSpreadsheetRows(rows);
 
       const sampleRow = rows[0];
       const codigoKey = Object.keys(sampleRow).find(
@@ -255,7 +256,7 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
   // Cargar estado activo/suspendido del perfil cuando hay cuenta
   useEffect(() => {
     if (!rawEmail || accessStatus !== "active") return;
-    fetchClientProfileStatus(rawEmail).then((p) => {
+    fetchClientProfileStatus(rawEmail, client.tenant_id).then((p) => {
       setProfileActive(p ? p.active !== false : true);
     }).catch(() => setProfileActive(true));
   }, [rawEmail, accessStatus]);
@@ -329,7 +330,7 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
     const next = !profileActive;
     setToggling(true);
     try {
-      await setClientProfileActive(rawEmail, next);
+      await setClientProfileActive(rawEmail, next, client.tenant_id);
       setProfileActive(next);
       showMsg(next ? "✅ Cuenta reactivada." : "✅ Cuenta suspendida. El cliente no podrá acceder.", true);
     } catch (e) {

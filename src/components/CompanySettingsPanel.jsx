@@ -151,9 +151,9 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
             <div className="company-logo-actions">
               <label className="upload-logo-button">
                 {uploading ? "Subiendo..." : "Subir logo"}
-                <input type="file" accept="image/*" onChange={handleLogo} disabled={uploading} />
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleLogo} disabled={uploading} />
               </label>
-              <p>PNG, JPG o SVG. Recomendado: fondo transparente y formato horizontal.</p>
+              <p>PNG, JPG o WebP, maximo 8 MB.</p>
               <label>
                 URL de logo
                 <input placeholder="https://..." value={form.logo_url} onChange={set("logo_url")} />

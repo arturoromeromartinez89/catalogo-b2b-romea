@@ -368,17 +368,6 @@ export const saveClient = async (client, tenantId = "") => {
     }
   }
   throwIfError(result);
-  if (result.data?.email) {
-    const profileUpdate = { client_id: result.data.id, role: "client" };
-    if (tenantId) profileUpdate.tenant_id = tenantId;
-    await supabase
-      .from("profiles")
-      .update(profileUpdate)
-      .eq("email", result.data.email)
-      .neq("role", "admin")
-      .neq("role", "tenant_admin")
-      .neq("role", "superadmin");
-  }
   return result.data;
 };
 
@@ -496,58 +485,41 @@ export const fetchClientPreorderStats = async (clientIds = [], tenantId = "") =>
   return result;
 };
 
-export const fetchClientProfileStatus = async (email) => {
+export const fetchClientProfileStatus = async (email, tenantId = "") => {
   if (!email || String(email).endsWith("@prospect.local")) return null;
-  const { data } = await supabase
+  let query = supabase
     .from("profiles")
     .select("id, active")
     .eq("email", String(email).toLowerCase())
-    .eq("role", "client")
-    .maybeSingle();
+    .eq("role", "client");
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { data, error } = await query.maybeSingle();
+  if (error) throw new Error(error.message);
   return data; // null si no existe, { id, active } si existe
 };
 
-export const setClientProfileActive = async (email, active) => {
-  const { error } = await supabase
+export const setClientProfileActive = async (email, active, tenantId = "") => {
+  let query = supabase
     .from("profiles")
     .update({ active })
     .eq("email", String(email).toLowerCase())
     .eq("role", "client");
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { data, error } = await query.select("id").maybeSingle();
   if (error) throw new Error(error.message);
+  if (!data) throw new Error("No se encontro un perfil de cliente actualizable en esta empresa.");
 };
 
 export const fetchClientData = async (profile) => {
-  const tenantId = getTenantId(profile);
-
-  // Obtener el registro del cliente primero para saber sus allowed_skus
-  const clientResult = profile?.client_id
-    ? await withTenant(supabase.from("clients").select("*").eq("id", profile.client_id), tenantId).maybeSingle()
-    : { data: null, error: null };
-  throwIfError(clientResult);
-  const clientRecord = clientResult.data;
-  const allowedSkus = clientRecord?.allowed_skus;
-
-  let productList;
-  if (allowedSkus?.length > 0) {
-    // Cliente con catálogo restringido — traer solo sus productos asignados directamente.
-    // No se filtra por visible_web: el cliente solo ve lo que el admin le asignó.
-    // PUBLIC_PRODUCT_COLUMNS ya es un string "col1,col2,..." — no aplicar .join
-    let q = supabase
-      .from("products")
-      .select(PUBLIC_PRODUCT_COLUMNS)
-      .in("codigo", allowedSkus);
-    if (tenantId) q = q.eq("tenant_id", tenantId);
-    const { data, error } = await q;
-    if (error) throw new Error(error.message);
-    productList = data || [];
-  } else {
-    // Sin restricción de SKUs — ver todos los productos marcados visible_web
-    productList = await fetchAllProducts({ visibleOnly: true, tenantId, columns: PUBLIC_PRODUCT_COLUMNS });
-  }
+  if (!profile?.id) throw new Error("No se encontro una sesion de cliente valida.");
+  const { data, error } = await supabase.rpc("get_client_catalog");
+  if (error) throw new Error(error.message);
+  const payload = data || {};
+  const productList = Array.isArray(payload.products) ? payload.products : [];
 
   return {
     products: productList.map(dbProductToProduct).map(sanitizeProductForClient),
     priceItems: [],
-    client: clientRecord,
+    client: payload.client || null,
   };
 };

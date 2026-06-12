@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { MAX_IMAGE_BATCH, validateImageFile } from "../utils/fileLimits";
 
 const IMAGE_BUCKET = "company-assets";
 const CONCURRENCY = 5;
@@ -27,6 +28,7 @@ const buildProductMap = (products = []) => {
 };
 
 const uploadAndUpdateImage = async ({ file, product, tenantId }) => {
+  validateImageFile(file);
   const ext = imageExtension(file.name);
   const code = safeStorageName(product.codigo);
   const owner = tenantId || "global";
@@ -59,8 +61,10 @@ const uploadAndUpdateImage = async ({ file, product, tenantId }) => {
 };
 
 export const importProductImagesByCode = async ({ files = [], products = [], tenantId = "", onProgress }) => {
+  if (!tenantId) throw new Error("Selecciona una empresa antes de subir imagenes.");
+  if (files.length > MAX_IMAGE_BATCH) throw new Error(`Solo se permiten ${MAX_IMAGE_BATCH} imagenes por lote.`);
   const productMap = buildProductMap(products);
-  const imageFiles = Array.from(files).filter((file) => file.type?.startsWith("image/") || /\.(jpg|jpeg|png|webp)$/i.test(file.name));
+  const imageFiles = Array.from(files).filter((file) => /\.(jpg|jpeg|png|webp)$/i.test(file.name));
   const summary = {
     totalFiles: imageFiles.length,
     matched: 0,

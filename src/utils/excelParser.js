@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import { resolveImageUrl, toNumber, toOptionalNumber } from "./formatters";
 import { normalizeText } from "./textNormalizer";
+import { validateSpreadsheetFile, validateSpreadsheetRows } from "./fileLimits";
 
 export const REQUIRED_COLUMNS = [
   "codigo",
@@ -193,6 +194,7 @@ export const validateColumns = (headers) => {
 };
 
 export const parseExcelFile = async (file) => {
+  validateSpreadsheetFile(file);
   const data = await file.arrayBuffer();
   const workbook = XLSX.read(data, { type: "array" });
 
@@ -200,7 +202,7 @@ export const parseExcelFile = async (file) => {
 
   const { sheetName, sheet } = getSheet(workbook);
   const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-  if (!rows.length) throw new Error("El Excel no contiene productos en la hoja seleccionada.");
+  validateSpreadsheetRows(rows);
 
   const missingColumns = validateColumns(Object.keys(rows[0]));
   if (missingColumns.length) throw new Error(`Faltan columnas obligatorias: ${missingColumns.join(", ")}.`);

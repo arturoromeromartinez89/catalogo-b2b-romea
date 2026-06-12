@@ -243,50 +243,29 @@ export const deletePreorder = async (id) => {
 
 // ── CLIENTE ───────────────────────────────────────────────
 export const fetchClientPreorders = async (clientId) => {
-  const { data, error } = await supabase
-    .from("preorders")
-    .select("*, preorder_items(*)")
-    .eq("client_id", clientId)
-    .order("created_at", { ascending: false });
+  void clientId;
+  const { data, error } = await supabase.rpc("get_client_preorders");
   if (error) throw error;
-  return data;
+  return Array.isArray(data) ? data : [];
 };
 
-export const submitClientPreorder = async (profile, cartItems, customer) => {
-  const items = cartItems.map((item, idx) => ({
-    producto_codigo: item.product.codigo,
-    producto_descripcion: item.product.descripcion,
-    producto_metal: item.product.metal,
-    producto_kilataje: item.product.kilataje,
-    producto_linea: item.product.linea,
-    producto_foto_url: item.product.fotoUrl,
-    piezas: Number(item.quantity || 1),
-    gramos_por_pieza: Number(item.product.pesoPromedio || 0),
-    gramos_total: Number(item.product.pesoPromedio || 0) * Number(item.quantity || 1),
-    labor_mxn: Number(item.product.quoteLaborPerGram || 0),
-    precio_gramo_mxn: Number(item.product.quotePricePerGram || item.product.precioMinimo || 0),
-    subtotal_mxn:
-      Number(item.product.quotePricePerGram || item.product.precioMinimo || 0) *
-      Number(item.product.pesoPromedio || 0) *
-      Number(item.quantity || 1),
-    sort_order: idx,
+export const submitClientPreorderSecure = async (preorder, items) => {
+  if (isValidUuid(preorder?.id)) {
+    throw new Error("Las preordenes enviadas por clientes no se pueden sobrescribir.");
+  }
+  const payloadItems = (items || []).map((item) => ({
+    codigo: item.producto_codigo,
+    quantity: Number(item.piezas || 0),
+    comment: String(item.comentarios || "").slice(0, 500),
   }));
-
-  const preorder = {
-    folio: buildFolio(),
-    status: "pendiente",
-    client_id: profile.client_id,
-    created_by: profile.id,
-    cliente_nombre: customer.name,
-    cliente_empresa: customer.company,
-    cliente_email: customer.email,
-    cliente_telefono: customer.phone,
-    cliente_rfc: customer.rfc,
-    tipo_cambio: Number(customer.tipoCambio || 0),
-    moneda: customer.currency || "MXN",
-    notas: customer.notes,
-    tenant_id: profile.tenant_id || profile.tenantId || null,
+  const { data, error } = await supabase.rpc("submit_client_preorder", {
+    p_customer: { notes: preorder?.notas || "" },
+    p_items: payloadItems,
+  });
+  if (error) throw error;
+  return {
+    id: data?.id,
+    folio: data?.folio,
+    updatedAt: data?.updated_at,
   };
-
-  return savePreorder(preorder, items);
 };

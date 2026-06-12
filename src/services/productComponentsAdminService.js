@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { validateImageFile, validateSpreadsheetFile, validateSpreadsheetRows } from "../utils/fileLimits";
 
 // ─── Tipos disponibles ────────────────────────────────────────────────────────
 // Tejido = SKU base (tabla productos), NO es componente físico con peso.
@@ -128,6 +129,8 @@ export const toggleComponentStatus = async (id, currentStatus) => {
 
 // ─── Subir foto a Supabase Storage ───────────────────────────────────────────
 export const uploadComponentPhoto = async (file, tenantId, componentCodigo) => {
+  validateImageFile(file);
+  if (!tenantId) throw new Error("Selecciona una empresa antes de subir la imagen.");
   if (!file || !tenantId) throw new Error("Archivo y tenant requeridos");
   const ext = file.name.split(".").pop().toLowerCase();
   const path = `${tenantId}/components/${componentCodigo}-${Date.now()}.${ext}`;
@@ -142,13 +145,14 @@ export const uploadComponentPhoto = async (file, tenantId, componentCodigo) => {
 // ─── Importar desde Excel ─────────────────────────────────────────────────────
 // Columnas esperadas: codigo, nombre, tipo, descripcion, peso, unidad, orden, tags_busqueda
 export const parseComponentsExcel = async (file) => {
+  validateSpreadsheetFile(file);
   const XLSX = await import("xlsx");
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: "array" });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) throw new Error("El archivo no tiene hojas.");
   const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
-  if (!rows.length) throw new Error("El archivo no tiene filas.");
+  validateSpreadsheetRows(rows);
 
   return rows.map((row) => {
     const get = (...keys) => {

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import ActionNotice from "./ActionNotice";
 import { compressImageForPdf, imageAlias } from "../utils/pdfImageCompression";
 import { savePdfWithSize } from "../utils/pdfSave";
+import { validateSpreadsheetFile, validateSpreadsheetRows } from "../utils/fileLimits";
 import { fetchCompanySettings } from "../services/companySettings";
 import {
   buildPriceListName,
@@ -118,11 +119,13 @@ const toNumber = (value) => {
 };
 
 const parsePieceCostExcel = async (file) => {
+  validateSpreadsheetFile(file);
   const XLSX = await import("xlsx");
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: "array" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+  validateSpreadsheetRows(rows);
   return rows
     .map((row) => ({
       codigo: String(readFirst(row, ["codigo", "sku", "code", "modelo"])).trim(),

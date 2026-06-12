@@ -6,11 +6,10 @@ import PreorderEditor from "./PreorderEditor";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useCompany } from "../contexts/CompanyContext";
 import BrandLogo from "./BrandLogo";
-import { fetchCompanySettings } from "../services/companySettings";
+import { fetchPublicCompanySettings } from "../services/companySettings";
 import { supabase } from "../lib/supabaseClient";
 import { fastSignOut } from "../services/authService";
 import { fetchClientData } from "../services/supabaseCatalog";
-import { calculateProductQuotePrice, fetchLines, fetchMetalPrices } from "../services/pricingService";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
@@ -67,24 +66,13 @@ export default function ClientCatalogApp({ profile }) {
   // ── Carga inicial ──────────────────────────────────────────────────────────
   useEffect(() => {
     setStatus(t("loadingCatalog"));
-    Promise.all([
-      fetchClientData(profile),
-      fetchLines(tenantId).catch(() => []),
-      fetchMetalPrices(tenantId).catch(() => ({})),
-    ])
-      .then(([result, lines, metalPrices]) => {
-        setProducts(
-          result.products.map((product) => {
-            const quote = calculateProductQuotePrice(product, { lines, metalPrices });
-            return {
-              ...product,
-              precioMinimo: quote.pricePerGram,
-              quotePricePerGram: quote.pricePerGram,
-              quoteLaborPerGram: quote.laborPerGram,
-              quotePricingStatus: quote.status,
-            };
-          })
-        );
+    fetchClientData(profile)
+      .then((result) => {
+        setProducts(result.products.map((product) => ({
+          ...product,
+          quotePricePerGram: product.precioMinimo,
+          quotePricingStatus: product.precioMinimo > 0 ? "configured" : "missing-price",
+        })));
         if (result.client) {
           setClientData(result.client);
           setCustomer((current) => ({
@@ -94,7 +82,6 @@ export default function ClientCatalogApp({ profile }) {
             email:      result.client.email   || "",
             phone:      result.client.phone   || "",
             rfc:        result.client.rfc     || "",
-            tipoCambio: metalPrices?.tipo_cambio || current.tipoCambio || "",
           }));
         }
         setStatus("");
@@ -104,7 +91,7 @@ export default function ClientCatalogApp({ profile }) {
 
   useEffect(() => {
     if (!tenantId) { setTenantCompany(null); return; }
-    fetchCompanySettings(tenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
+    fetchPublicCompanySettings(tenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
   }, [tenantId]);
 
   useEffect(() => {
@@ -246,7 +233,7 @@ export default function ClientCatalogApp({ profile }) {
         piezas,
         gramos_por_pieza: gramos,
         gramos_total:     piezas * gramos,
-        labor_mxn:        Number(product.quoteLaborPerGram || 0),
+        labor_mxn:        0,
         precio_gramo_mxn: precio,
         subtotal_mxn:     piezas * gramos * precio,
         sort_order:       idx,

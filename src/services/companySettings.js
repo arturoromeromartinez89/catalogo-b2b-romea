@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { validateImageFile } from "../utils/fileLimits";
 
 export const defaultSettings = {
   brand_name: "",
@@ -27,6 +28,13 @@ export const fetchCompanySettings = async (tenantId = "") => {
   return { ...defaultSettings, ...data };
 };
 
+export const fetchPublicCompanySettings = async (tenantId) => {
+  if (!tenantId) return defaultSettings;
+  const { data, error } = await supabase.rpc("get_public_company_branding", { p_tenant_id: tenantId });
+  if (error) throw error;
+  return { ...defaultSettings, ...(data || {}) };
+};
+
 export const saveCompanySettings = async (settings, tenantId = "") => {
   const row = { ...settings };
   if (tenantId) row.tenant_id = tenantId;
@@ -44,6 +52,7 @@ export const saveCompanySettings = async (settings, tenantId = "") => {
 };
 
 export const uploadLogo = async (file, tenantId = "") => {
+  validateImageFile(file);
   const ext = file.name.split(".").pop();
   const owner = tenantId || "global";
   const path = `logos/${owner}/logo.${ext}`;

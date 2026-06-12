@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCompany } from "../contexts/CompanyContext";
-import { fetchCompanySettings } from "../services/companySettings";
+import { fetchCompanySettings, fetchPublicCompanySettings } from "../services/companySettings";
 import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice, fetchLaborLists, fetchLaborListLines, fetchPiecePriceLists, fetchPiecePriceListItems, roundUp2 } from "../services/pricingService";
 import { fetchProductComponents, groupProductComponents } from "../services/productComponentsService";
 import { saveClient } from "../services/supabaseCatalog";
-import { savePreorder, deletePreorder } from "../services/preorderService";
+import { savePreorder, deletePreorder, submitClientPreorderSecure } from "../services/preorderService";
 import { generatePdf } from "../utils/pdfGenerator";
 import { useLanguage } from "../i18n/LanguageContext";
 import { buildPlaceholderUrl, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 import { buildPreorderItemFromProduct } from "../utils/preorderUtils";
+import { validateSpreadsheetFile, validateSpreadsheetRows } from "../utils/fileLimits";
 import { buildConfigurableCatalogProducts, hasConfigurableCatalogProducts, isConfigurableCatalogCompany, isConfigurableProductGroup } from "../utils/configurableCatalog";
 
 const STATUS = {
@@ -207,13 +208,14 @@ const parseExcelNumber = (value) => {
 
 const parsePreorderExcel = async (file) => {
   if (!file) return [];
+  validateSpreadsheetFile(file);
   const XLSX = await import("xlsx");
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: "array" });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) throw new Error("El archivo Excel no tiene hojas.");
   const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
-  if (!rows.length) throw new Error("El Excel no tiene filas.");
+  validateSpreadsheetRows(rows);
 
   const parsed = rows.map((row) => {
     const item = {};
@@ -369,8 +371,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   useEffect(() => {
-    if (resolvedTenantId) fetchCompanySettings(resolvedTenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
+    if (resolvedTenantId) {
+      const fetchSettings = pricingLocked ? fetchPublicCompanySettings : fetchCompanySettings;
+      fetchSettings(resolvedTenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
+    }
     else setTenantCompany(null);
+    if (pricingLocked) return;
     fetchLines(resolvedTenantId).then(setLines).catch((error) => setMsg(`Error: ${error.message}`));
     fetchLaborLists(resolvedTenantId).then(setLaborLists).catch(() => setLaborLists([]));
     fetchProductComponents(resolvedTenantId).then(setProductComponents).catch(() => setProductComponents([]));
@@ -1203,20 +1209,19 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     try {
       const resolvedClientId = await resolveClientForSave();
       if (!resolvedClientId) { setMsg("Debes seleccionar un cliente o registrar un prospecto para guardar la preorden."); return; }
-      const savedResult = await savePreorder(
-        {
-          ...po,
-          pricing_mode: pricingMode,
-          labor_list_id: isPieceMode ? "" : selectedLaborListId,
-          piece_price_list_id: isPieceMode ? selectedPiecePriceListId : "",
-          client_id: resolvedClientId,
-          total_mxn: totalFinalMxn,
-          tenant_id: resolvedTenantId,
-          created_by: po.created_by || profile?.id || null,
-        },
-        items,
-        { expectedUpdatedAt: loadedAt, forceOverwrite }
-      );
+      const preorderToSave = {
+        ...po,
+        pricing_mode: pricingMode,
+        labor_list_id: isPieceMode ? "" : selectedLaborListId,
+        piece_price_list_id: isPieceMode ? selectedPiecePriceListId : "",
+        client_id: resolvedClientId,
+        total_mxn: totalFinalMxn,
+        tenant_id: resolvedTenantId,
+        created_by: po.created_by || profile?.id || null,
+      };
+      const savedResult = profile?.role === "client"
+        ? await submitClientPreorderSecure(preorderToSave, items)
+        : await savePreorder(preorderToSave, items, { expectedUpdatedAt: loadedAt, forceOverwrite });
       const savedId     = savedResult.id;
       const savedFolio  = savedResult.folio;
       const newUpdatedAt = savedResult.updatedAt || new Date().toISOString();
@@ -1718,7 +1723,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               </div>
             ) : null}
 
-          {!isPieceMode ? (
+          {!pricingLocked && !isPieceMode ? (
           <section className="quote-block quote-block--pricing">
             <h3>Costeo de plata fina</h3>
 
@@ -1858,7 +1863,19 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             >
               <table className="simple-admin-table quote-items-table">
                 <thead>
-                  {isPieceMode ? (
+                  {pricingLocked ? (
+                    <tr>
+                      <th>Foto</th>
+                      <th>SKU</th>
+                      <th className="right">Cantidad</th>
+                      <th>Descripcion</th>
+                      <th>Linea</th>
+                      <th className="right">Precio final {moneyLabel}</th>
+                      <th>Comentarios</th>
+                      <th className="right">Subtotal</th>
+                      <th></th>
+                    </tr>
+                  ) : isPieceMode ? (
                     <tr>
                       <th className="preorder-row-move-head">Orden</th>
                       <th>Foto</th>
@@ -1897,7 +1914,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
                     // ── Fila configurable: tarjeta de ancho completo ────────────────
                     if (isConfigurableItem) {
-                      const colCount = isPieceMode ? 10 : 14;
+                      const colCount = pricingLocked ? 9 : isPieceMode ? 10 : 14;
                       const isComplete = isConfigurableItemComplete(item);
                       return (
                         <tr
@@ -2072,7 +2089,14 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                                     </div>
                                   </div>
 
-                                  {isPieceMode ? (
+                                  {pricingLocked ? (
+                                    <div className="cfg-pricing__field cfg-pricing__field--readonly">
+                                      <span className="cfg-pricing__label">Precio final {moneyLabel}</span>
+                                      <span className="cfg-pricing__value">
+                                        {fmt(toDisplayMoney(isPieceMode ? item.precio_pieza_mxn : item.precio_gramo_mxn))}
+                                      </span>
+                                    </div>
+                                  ) : isPieceMode ? (
                                     <div className="cfg-pricing__field">
                                       <span className="cfg-pricing__label">Precio/pza {moneyLabel}</span>
                                       <input type="number" step="0.01" value={toDisplayMoney(item.precio_pieza_mxn) || ""} onChange={(e) => setItem(idx, "precio_pieza_mxn", fromDisplayMoney(e.target.value))} readOnly={pricingLocked} />
@@ -2130,17 +2154,19 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                         onDrop={(event) => handlePreorderItemDrop(event, idx)}
                         onDragEnd={endPreorderItemDrag}
                       >
-                        <td className="preorder-row-move-cell">
-                          <span
-                            className={`preorder-row-drag-handle${canDragPreorderItems ? "" : " disabled"}`}
-                            draggable={canDragPreorderItems}
-                            onDragStart={(event) => startPreorderItemDrag(event, idx)}
-                            onDragEnd={endPreorderItemDrag}
-                            title="Arrastrar para mover esta pieza"
-                          >
-                            Mover
-                          </span>
-                        </td>
+                        {!pricingLocked ? (
+                          <td className="preorder-row-move-cell">
+                            <span
+                              className={`preorder-row-drag-handle${canDragPreorderItems ? "" : " disabled"}`}
+                              draggable={canDragPreorderItems}
+                              onDragStart={(event) => startPreorderItemDrag(event, idx)}
+                              onDragEnd={endPreorderItemDrag}
+                              title="Arrastrar para mover esta pieza"
+                            >
+                              Mover
+                            </span>
+                          </td>
+                        ) : null}
                         <td className="quote-item-photo-cell">
                           {item.producto_foto_url ? (
                             <img
@@ -2168,7 +2194,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                           <small>{[item.producto_metal, item.producto_kilataje].filter(Boolean).join(" / ")}</small>
                         </td>
                         <td><strong>{item.producto_linea || "-"}</strong></td>
-                        {isPieceMode ? (
+                        {pricingLocked ? (
+                          <td className="right">
+                            <strong>{fmt(toDisplayMoney(isPieceMode ? item.precio_pieza_mxn : item.precio_gramo_mxn))}</strong>
+                          </td>
+                        ) : isPieceMode ? (
                           <td className="right">
                             <input
                               type="number"
@@ -2193,7 +2223,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                       </tr>
                     );
                   }) : (
-                    <tr><td colSpan={isPieceMode ? "10" : "14"} className="empty-row">Sin productos. Agrega productos desde el catalogo.</td></tr>
+                    <tr><td colSpan={pricingLocked ? "9" : isPieceMode ? "10" : "14"} className="empty-row">Sin productos. Agrega productos desde el catalogo.</td></tr>
                   )}
                 </tbody>
               </table>

@@ -3,7 +3,7 @@ import BrandLogo from "../components/BrandLogo";
 import LanguageToggle from "../components/LanguageToggle";
 import { useCompany } from "../contexts/CompanyContext";
 import { useLanguage } from "../i18n/LanguageContext";
-import { fetchCompanySettings } from "../services/companySettings";
+import { fetchPublicCompanySettings } from "../services/companySettings";
 import { fetchQuoteLinkByToken, submitQuoteLinkSelection } from "../services/quoteLinkService";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 
@@ -38,7 +38,7 @@ export default function QuotePage() {
       setTenantCompany(null);
       return;
     }
-    fetchCompanySettings(quote.tenant_id).then(setTenantCompany).catch(() => setTenantCompany(null));
+    fetchPublicCompanySettings(quote.tenant_id).then(setTenantCompany).catch(() => setTenantCompany(null));
   }, [quote?.tenant_id]);
 
   const products = Array.isArray(quote?.products) ? quote.products : [];
