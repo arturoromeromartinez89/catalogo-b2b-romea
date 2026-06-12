@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabaseClient";
 import { resolveImageUrl } from "../utils/formatters";
 import { getTenantId, withTenant } from "./tenantUtils";
 import { normalizeText } from "../utils/textNormalizer";
+import { attachSignedImageUrls } from "./storageImages";
 
 const PAGE_SIZE = 500;
 const UPSERT_BATCH_SIZE = 500;
@@ -517,8 +518,15 @@ export const fetchClientData = async (profile) => {
   const payload = data || {};
   const productList = Array.isArray(payload.products) ? payload.products : [];
 
+  // Catálogo del cliente: pocos productos (restringido por allowed_skus /
+  // visible_web), así que firmar las fotos de Storage en lote es barato y deja
+  // el render síncrono. Las imágenes externas (Drive) pasan sin tocar.
+  const products = await attachSignedImageUrls(
+    productList.map(dbProductToProduct).map(sanitizeProductForClient),
+  );
+
   return {
-    products: productList.map(dbProductToProduct).map(sanitizeProductForClient),
+    products,
     priceItems: [],
     client: payload.client || null,
   };
