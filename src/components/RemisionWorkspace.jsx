@@ -7,7 +7,8 @@
  */
 import { useEffect, useState } from "react";
 import RemisionEditor from "./RemisionEditor";
-import { fetchRemisiones, generateFolio } from "../services/adminModuleService";
+import CobrarModal from "./CobrarModal";
+import { fetchRemisiones, generateFolio, registrarCobro, fetchCuentas } from "../services/adminModuleService";
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
@@ -71,7 +72,7 @@ function Tab({ tab, active, onClick, onClose }) {
 
 // ─── Vista: lista de remisiones ────────────────────────────────────────────────
 
-function RemisionListView({ remisiones, loading, statusMsg, onOpen, onNew }) {
+function RemisionListView({ remisiones, loading, statusMsg, onOpen, onNew, onCobrar }) {
   const [filter, setFilter] = useState("all");
 
   const filtered =
@@ -135,9 +136,10 @@ function RemisionListView({ remisiones, loading, statusMsg, onOpen, onNew }) {
                 <th>Folio</th>
                 <th>Cliente</th>
                 <th>Fecha</th>
-                <th>Entrega</th>
                 <th className="right">Gramos</th>
                 <th className="right">Total</th>
+                <th className="right">Cobrado</th>
+                <th className="right">Saldo</th>
                 <th>Estado</th>
                 <th />
               </tr>
@@ -145,35 +147,31 @@ function RemisionListView({ remisiones, loading, statusMsg, onOpen, onNew }) {
             <tbody>
               {filtered.map((rem) => {
                 const { label, color } = STATUS_LABELS[rem.estado] || STATUS_LABELS.borrador;
+                const conSaldo = (Number(rem.saldoDinero) > 0 || Number(rem.saldoPlataGramos) > 0) && rem.estado !== "cancelada";
                 return (
                   <tr key={rem.id} className="po-table-row" onClick={() => onOpen(rem)}>
                     <td><strong>{rem.folio || "—"}</strong></td>
                     <td>
                       <div className="po-client-cell">
-                        <span>{rem.cliente_empresa || rem.cliente_nombre || "—"}</span>
-                        {rem.cliente_email ? <small>{rem.cliente_email}</small> : null}
+                        <span>{rem.clienteEmpresa || rem.clienteNombre || "—"}</span>
                       </div>
                     </td>
                     <td className="po-date-cell">
                       {rem.fecha
                         ? new Date(rem.fecha).toLocaleDateString("es-MX")
-                        : new Date(rem.created_at).toLocaleDateString("es-MX")}
-                    </td>
-                    <td className="po-date-cell">
-                      {rem.fecha_entrega
-                        ? new Date(rem.fecha_entrega).toLocaleDateString("es-MX")
-                        : "—"}
+                        : rem.createdAt ? new Date(rem.createdAt).toLocaleDateString("es-MX") : "—"}
                     </td>
                     <td className="right">
-                      {rem.total_gramos != null
-                        ? Number(rem.total_gramos).toFixed(2)
-                        : "—"}
+                      {Number(rem.totalGramos) > 0 ? Number(rem.totalGramos).toFixed(2) : "—"}
                     </td>
                     <td className="right">
+                      <strong>{fmt(rem.total, rem.moneda === "MXN" ? "MXN" : "USD")}</strong>
+                    </td>
+                    <td className="right">{fmt(rem.montoCobrado, rem.moneda === "MXN" ? "MXN" : "USD")}</td>
+                    <td className={`right ${conSaldo ? "rem-saldo--pendiente" : "rem-saldo--ok"}`}>
                       <strong>
-                        {rem.moneda === "MXN"
-                          ? fmt(rem.total_mxn, "MXN")
-                          : fmt(rem.total_usd, "USD")}
+                        {Number(rem.saldoDinero) > 0 ? fmt(rem.saldoDinero, rem.moneda === "MXN" ? "MXN" : "USD") : "—"}
+                        {Number(rem.saldoPlataGramos) > 0 ? ` · ${Number(rem.saldoPlataGramos).toFixed(1)} g` : ""}
                       </strong>
                     </td>
                     <td>
@@ -189,13 +187,24 @@ function RemisionListView({ remisiones, loading, statusMsg, onOpen, onNew }) {
                       </span>
                     </td>
                     <td>
-                      <button
-                        className="secondary-button compact-action"
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); onOpen(rem); }}
-                      >
-                        Abrir
-                      </button>
+                      <div className="rem-row-actions">
+                        {conSaldo && (
+                          <button
+                            className="primary-button compact-action"
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onCobrar(rem); }}
+                          >
+                            Cobrar
+                          </button>
+                        )}
+                        <button
+                          className="secondary-button compact-action"
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onOpen(rem); }}
+                        >
+                          Abrir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -228,6 +237,30 @@ export default function RemisionWorkspace({
   const [remisiones, setRemisiones]   = useState([]);
   const [loading, setLoading]         = useState(true);
   const [listMsg, setListMsg]         = useState("");
+  const [cobrarRem, setCobrarRem]     = useState(null);
+  const [cuentas, setCuentas]         = useState([]);
+  const [savingCobro, setSavingCobro] = useState(false);
+
+  // Cuentas de destino para registrar cobros
+  useEffect(() => {
+    const tid = tenantId || profile?.tenant_id || "";
+    if (!tid) return;
+    fetchCuentas(tid).then(setCuentas).catch(() => setCuentas([]));
+  }, [tenantId, profile?.tenant_id]);
+
+  const handleCobrar = async (cobro) => {
+    setSavingCobro(true);
+    try {
+      await registrarCobro(cobro, tenantId || profile?.tenant_id || "");
+      setCobrarRem(null);
+      setListMsg("Cobro registrado correctamente.");
+      loadRemisiones();
+    } catch (e) {
+      alert(`No se pudo registrar el cobro: ${e.message}`);
+    } finally {
+      setSavingCobro(false);
+    }
+  };
 
   // Cargar listado
   const loadRemisiones = async () => {
@@ -397,6 +430,7 @@ export default function RemisionWorkspace({
             statusMsg={listMsg}
             onOpen={openTab}
             onNew={openNewTab}
+            onCobrar={setCobrarRem}
           />
         ) : (
           <RemisionEditor
@@ -413,6 +447,16 @@ export default function RemisionWorkspace({
           />
         )}
       </div>
+
+      {cobrarRem && (
+        <CobrarModal
+          remision={cobrarRem}
+          cuentas={cuentas}
+          onSave={handleCobrar}
+          onClose={() => setCobrarRem(null)}
+          saving={savingCobro}
+        />
+      )}
     </div>
   );
 }

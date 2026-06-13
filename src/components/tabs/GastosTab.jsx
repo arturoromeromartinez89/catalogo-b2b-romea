@@ -41,7 +41,7 @@ const emptyForm = () => ({
 // Flujo en lenguaje del dueño: qué pagaste → cuánto → clasifícalo → ¿ya lo
 // pagaste? Registrar la obligación y el pago son pasos relacionados pero
 // distintos; aquí se capturan juntos y el guardado los encadena.
-function GastoForm({ initial, categorias, cuentas, onSave, onClose, saving }) {
+function GastoForm({ initial, categorias, cuentas, beneficiarios = [], onSave, onClose, saving }) {
   const isEdit = Boolean(initial?.id);
   const [form, setForm] = useState(() => initial ? { ...emptyForm(), ...initial } : emptyForm());
   const [showNotas, setShowNotas] = useState(Boolean(initial?.notas));
@@ -95,10 +95,16 @@ function GastoForm({ initial, categorias, cuentas, onSave, onClose, saving }) {
               <input
                 className="gf-input"
                 type="text"
+                list="gf-proveedores"
                 value={form.beneficiario}
                 onChange={(e) => set("beneficiario", e.target.value)}
-                placeholder="¿A quién? (opcional)"
+                placeholder="¿A quién? — escribe o elige"
               />
+              {/* Registro rápido de proveedor: sugiere los ya usados; uno nuevo
+                  queda guardado con el gasto y aparece como sugerencia después */}
+              <datalist id="gf-proveedores">
+                {beneficiarios.map((b) => <option key={b} value={b} />)}
+              </datalist>
             </div>
           </div>
 
@@ -310,9 +316,7 @@ export default function GastosTab({ tenantId, notifyAction, setStatus }) {
   const [cuentas, setCuentas]         = useState([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState(null);
-  const [filtroEstado, setFiltroEstado] = useState("");
-  const [filtroTipo, setFiltroTipo]   = useState("");
-  const [filtroCateg, setFiltroCateg] = useState("");
+  const [vista, setVista]             = useState("todos"); // todos | porpagar | pagados
   const [busqueda, setBusqueda]       = useState("");
   const [showForm, setShowForm]       = useState(false);
   const [editGasto, setEditGasto]     = useState(null);
@@ -328,11 +332,7 @@ export default function GastosTab({ tenantId, notifyAction, setStatus }) {
     setLoading(true);
     try {
       const [g, c, cu] = await Promise.all([
-        fetchGastos(tenantId, {
-          estado: filtroEstado || undefined,
-          tipoGasto: filtroTipo || undefined,
-          categoriaId: filtroCateg || undefined,
-        }),
+        fetchGastos(tenantId),
         seedCategoriasDefault(tenantId),
         seedCuentasDefault(tenantId),
       ]);
@@ -344,7 +344,7 @@ export default function GastosTab({ tenantId, notifyAction, setStatus }) {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, filtroEstado, filtroTipo, filtroCateg]);
+  }, [tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -402,7 +402,12 @@ export default function GastosTab({ tenantId, notifyAction, setStatus }) {
     } catch (e) { alert(e.message); }
   };
 
+  // Proveedores usados antes — sugerencias para registro rápido en el formulario
+  const beneficiarios = [...new Set(gastos.map((g) => (g.beneficiario || "").trim()).filter(Boolean))].sort();
+
   const filtered = gastos.filter((g) => {
+    if (vista === "porpagar" && !(Number(g.saldoMxn) > 0 && g.estado !== "cancelado")) return false;
+    if (vista === "pagados" && g.estado !== "pagado") return false;
     if (!busqueda) return true;
     const q = busqueda.toLowerCase();
     return (g.descripcion || "").toLowerCase().includes(q) ||
@@ -431,21 +436,14 @@ export default function GastosTab({ tenantId, notifyAction, setStatus }) {
       </div>
 
       <div className="rem-filters">
-        <input className="rem-search" placeholder="Buscar descripción, proveedor..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
-        <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
-          <option value="">Todos los estados</option>
-          {Object.entries(ESTADO_LABELS).map(([k, { label }]) => <option key={k} value={k}>{label}</option>)}
-        </select>
-        <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
-          <option value="">Fijos + variables</option>
-          <option value="fijo">Solo fijos</option>
-          <option value="variable">Solo variables</option>
-        </select>
-        <select value={filtroCateg} onChange={(e) => setFiltroCateg(e.target.value)}>
-          <option value="">Todas las categorías</option>
-          {categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-        </select>
-        <button className="secondary-button compact-action" onClick={load}>↻</button>
+        <input className="rem-search" placeholder="Buscar gasto o proveedor…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        <div className="gf-segmented" role="radiogroup" aria-label="Filtrar gastos">
+          {[["todos", "Todos"], ["porpagar", "Por pagar"], ["pagados", "Pagados"]].map(([k, label]) => (
+            <button key={k} type="button" className={vista === k ? "on" : ""} onClick={() => setVista(k)}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {filtered.length > 0 && (
@@ -459,7 +457,7 @@ export default function GastosTab({ tenantId, notifyAction, setStatus }) {
       {loading ? <div className="rem-loading">Cargando gastos…</div>
         : error ? <div className="rem-error">{error}</div>
         : filtered.length === 0 ? (
-          <div className="rem-empty">No hay gastos registrados{busqueda || filtroEstado || filtroTipo || filtroCateg ? " con esos filtros" : ". Agrega el primero arriba."}.</div>
+          <div className="rem-empty">{busqueda || vista !== "todos" ? "No hay gastos con ese filtro." : "No hay gastos registrados. Agrega el primero arriba."}</div>
         ) : (
           <div className="rem-table-wrap">
             <table className="rem-table">
@@ -515,6 +513,7 @@ export default function GastosTab({ tenantId, notifyAction, setStatus }) {
           initial={editGasto}
           categorias={categorias}
           cuentas={cuentas}
+          beneficiarios={beneficiarios}
           onSave={handleSave}
           onClose={() => { setShowForm(false); setEditGasto(null); }}
           saving={saving}
