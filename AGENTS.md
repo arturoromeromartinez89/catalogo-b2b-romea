@@ -6,7 +6,7 @@ Este repositorio contiene un catalogo B2B multi-tenant para joyerias. Incluye ca
 
 La meta del negocio es convertirlo en una empresa SaaS para cientos de joyerias, con onboarding self-service, planes, suscripciones y cobro con Stripe. El dueno del proyecto no es programador y dirige el desarrollo con agentes de IA. Toda decision tecnica debe explicarse en lenguaje claro, incluyendo riesgo y efecto comercial.
 
-La carpeta activa `catalogo-b2b-drag` es un worktree limpio del repositorio remoto `arturoromeromartinez89/catalogo-b2b-romea`; no es otro producto. No trabajar sobre `catalogo-b2b`, que conserva una copia antigua con conflictos.
+La carpeta activa para integrar el SaaS es `catalogo-b2b-saas-integration`, rama `codex/saas-security-integration`. Parte del `main` de produccion en `36072bd` e incorpora seguridad y Storage sin modificar produccion. `catalogo-b2b-drag` conserva el historial original de esos cambios; `catalogo-b2b` es una copia antigua con conflictos y no debe usarse.
 
 ## 2. Stack real
 
@@ -31,6 +31,7 @@ La carpeta activa `catalogo-b2b-drag` es un worktree limpio del repositorio remo
 - `supabase/migrations/20260612140000_harden_public_quotes.sql` valida en servidor los productos y precios de ligas publicas.
 - `supabase/migrations/20260612150000_secure_storage.sql` vuelve privado `company-assets` y aisla objetos por tenant.
 - Estas migraciones se aplicaron y pasaron la prueba completa en el preview branch de staging `staging-security` el 12 de junio de 2026. Produccion sigue sin cambios.
+- La integracion con el modulo administrativo actual esta documentada en `docs/SAAS-INTEGRATION-STATUS-2026-06-13.md`.
 - El registro de validacion esta en `docs/staging-security-validation-2026-06-12.md`.
 - El snapshot real de produccion del 12 de junio de 2026 esta en `docs/production-security-snapshot-2026-06-12.md`.
 - Listas por pieza, componentes y modulo administrativo tienen SQLs separados.
