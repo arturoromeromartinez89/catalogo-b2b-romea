@@ -21,8 +21,23 @@ const ESTADO_LABELS = {
   cancelado: { label: "Cancelado", color: "#dc2626" },
 };
 
+// Estado de vencimiento de un gasto con saldo: vencido, vence pronto (≤7 días)
+// o nada. Solo aplica si tiene fecha de vencimiento y saldo pendiente.
+const vencimientoInfo = (g) => {
+  if (!g.fechaVencimiento || !(Number(g.saldoMxn) > 0) || g.estado === "pagado" || g.estado === "cancelado") return {};
+  const venc = new Date(g.fechaVencimiento + "T00:00:00");
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const dias = Math.round((venc - hoy) / 86400000);
+  if (dias < 0) return { estado: "vencido", label: `vencido hace ${Math.abs(dias)}d` };
+  if (dias === 0) return { estado: "vencido", label: "vence hoy" };
+  if (dias <= 7) return { estado: "pronto", label: `en ${dias}d` };
+  return {};
+};
+
 const emptyForm = () => ({
   fecha:        today(),
+  fechaVencimiento: "",
+  numeroDocumento: "",
   descripcion:  "",
   categoriaId:  "",
   montoMxn:     "",
@@ -130,6 +145,32 @@ function GastoForm({ initial, categorias, cuentas, beneficiarios = [], onSave, o
                 onChange={(e) => set("fecha", e.target.value)}
                 required
               />
+            </div>
+          </div>
+
+          {/* 2b · Vencimiento y documento — para saber "cuánto debo" con calendario */}
+          <div className="gf-step">
+            <span className="gf-step__label">Vencimiento y documento <span className="gf-step__opt">(opcional)</span></span>
+            <div className="gf-row">
+              <label className="gf-labeled">
+                <span>¿Cuándo se debe pagar?</span>
+                <input
+                  className="gf-input gf-input--date"
+                  type="date"
+                  value={form.fechaVencimiento}
+                  onChange={(e) => set("fechaVencimiento", e.target.value)}
+                />
+              </label>
+              <label className="gf-labeled">
+                <span>Factura / referencia</span>
+                <input
+                  className="gf-input"
+                  type="text"
+                  value={form.numeroDocumento}
+                  onChange={(e) => set("numeroDocumento", e.target.value)}
+                  placeholder="N.º de factura o nota"
+                />
+              </label>
             </div>
           </div>
 
@@ -449,6 +490,7 @@ export default function GastosTab({ tenantId, notifyAction, setStatus }) {
               <thead>
                 <tr>
                   <th>Fecha</th>
+                  <th>Vence</th>
                   <th>Descripción</th>
                   <th>Categoría</th>
                   <th>Tipo</th>
@@ -462,9 +504,17 @@ export default function GastosTab({ tenantId, notifyAction, setStatus }) {
               <tbody>
                 {filtered.map((g) => {
                   const { label, color } = ESTADO_LABELS[g.estado] || { label: g.estado, color: "#888" };
+                  const venc = vencimientoInfo(g);
                   return (
                     <tr key={g.id} className={g.estado === "cancelado" ? "rem-row--cancelled" : ""}>
                       <td>{g.fecha}</td>
+                      <td>
+                        {g.fechaVencimiento ? (
+                          <span className={`gf-venc${venc.estado ? ` gf-venc--${venc.estado}` : ""}`}>
+                            {g.fechaVencimiento}{venc.label ? <small>{venc.label}</small> : null}
+                          </span>
+                        ) : <span className="muted">—</span>}
+                      </td>
                       <td>
                         <div>{g.descripcion}</div>
                         {g.beneficiario && <small className="muted">{g.beneficiario}</small>}

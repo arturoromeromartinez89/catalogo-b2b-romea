@@ -9844,3 +9844,16 @@ tr.client-row--expanded td {
   text-transform: uppercase;
   white-space: nowrap;
 }
+
+/* Gastos 2.0 — campos etiquetados, opcional y badge de vencimiento */
+.gf-step__opt { color: var(--color-text-disabled); font-weight: var(--weight-normal); text-transform: none; letter-spacing: 0; }
+.gf-labeled { display: flex; flex-direction: column; gap: 4px; flex: 1 1 200px; }
+.gf-labeled > span { color: var(--color-text-secondary); font-size: var(--text-xs); font-weight: var(--weight-semibold); }
+.gf-labeled .gf-input { width: 100%; }
+
+.gf-venc { display: inline-flex; flex-direction: column; font-size: var(--text-base); line-height: 1.2; }
+.gf-venc small { font-size: var(--text-xs); font-weight: var(--weight-semibold); }
+.gf-venc--vencido { color: var(--color-error); }
+.gf-venc--vencido small { color: var(--color-error); }
+.gf-venc--pronto { color: var(--color-warning-hover); }
+.gf-venc--pronto small { color: var(--color-warning-hover); }

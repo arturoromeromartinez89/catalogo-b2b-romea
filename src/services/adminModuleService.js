@@ -481,6 +481,9 @@ const normalizeGasto = (row) => ({
   beneficiario:    row.beneficiario,
   comprobanteUrl:  row.comprobante_url,
   notas:           row.notas,
+  fechaVencimiento: row.fecha_vencimiento || null,
+  numeroDocumento:  row.numero_documento || "",
+  moneda:          row.moneda || "MXN",
   createdAt:       row.created_at,
 });
 
