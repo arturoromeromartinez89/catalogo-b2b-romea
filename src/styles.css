@@ -7986,9 +7986,9 @@ textarea:focus {
   flex-direction: column;
   gap: 2px;
   padding: 8px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--neutral-50);
-  border: 1px solid var(--romea-line, #e5e5e5);
+  border: 1px solid var(--color-border);
   min-width: 120px;
 }
 .rem-kpi-bar__item span {
@@ -7999,9 +7999,9 @@ textarea:focus {
   letter-spacing: .4px;
 }
 .rem-kpi-bar__item strong {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--romea-ink);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
 }
 .rem-kpi-bar__item--alert { background: #fef3c7; border-color: #fcd34d; }
 .rem-kpi-bar__item--alert strong { color: #92400e; }
@@ -8245,15 +8245,15 @@ textarea:focus {
 .rem-kpi {
   padding: 10px 14px;
   background: var(--neutral-50);
-  border-radius: 8px;
-  border: 1px solid var(--romea-line);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 110px;
 }
 .rem-kpi span { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--romea-muted); }
-.rem-kpi strong { font-size: 16px; font-weight: 800; color: var(--romea-ink); }
+.rem-kpi strong { font-size: var(--text-lg); font-weight: 700; color: var(--color-text-primary); }
 .rem-kpi--cobrado strong { color: #059669; }
 .rem-kpi--saldo strong { color: #b45309; }
 .rem-kpi--ok strong { color: #059669; }
@@ -8282,7 +8282,7 @@ textarea:focus {
   gap: 2px;
 }
 .bal-period-picker label span { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--romea-muted); }
-.bal-period-picker input { padding: 6px 10px; border: 1.5px solid var(--romea-line); border-radius: 7px; font-size: 13px; }
+.bal-period-picker input { padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-base); }
 .bal-content { padding: 0 24px 40px; display: flex; flex-direction: column; gap: 0; }
 .bal-section { padding: 24px 0 0; }
 .bal-section + .bal-section { border-top: 1px solid var(--romea-line, #e5e5e5); margin-top: 8px; }
@@ -8293,9 +8293,9 @@ textarea:focus {
   align-items: center;
   gap: 12px;
   padding: 14px 18px;
-  background: var(--neutral-50);
-  border: 1.5px solid var(--romea-line);
-  border-radius: 10px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   min-width: 150px;
   flex: 0 0 auto;
 }
@@ -8305,7 +8305,7 @@ textarea:focus {
 .bal-kpi--plata { background: #ede9fe; border-color: #c4b5fd; }
 .bal-kpi__icon { font-size: 22px; }
 .bal-kpi__label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--romea-muted); }
-.bal-kpi__value { font-size: 20px; font-weight: 800; color: var(--romea-ink); line-height: 1.1; }
+.bal-kpi__value { font-size: var(--text-xl); font-weight: 700; color: var(--color-text-primary); line-height: 1.1; }
 .bal-kpi__sub { font-size: 11px; color: var(--romea-muted); }
 .bal-kpi__body { display: flex; flex-direction: column; gap: 2px; }
 .bal-empty-note { font-size: 13px; color: var(--romea-muted); padding: 12px 0; }
@@ -8320,11 +8320,11 @@ textarea:focus {
 .bal-progress__bar { height: 100%; border-radius: 99px; transition: width .4s; }
 
 /* Estado de resultados */
-.bal-result-table { border: 1.5px solid var(--romea-line); border-radius: 10px; overflow: hidden; max-width: 500px; }
-.bal-result-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--romea-line); font-size: 13px; }
+.bal-result-table { border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; max-width: 500px; }
+.bal-result-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--color-border); font-size: 13px; }
 .bal-result-row:last-child { border-bottom: none; }
-.bal-result-row--expense { background: #fff5f5; }
-.bal-result-row--total { background: #fafaf5; font-weight: 700; font-size: 15px; }
+.bal-result-row--expense { background: var(--color-error-light); }
+.bal-result-row--total { background: var(--neutral-50); font-weight: 700; font-size: 15px; }
 .bal-result-row .green { color: #059669; }
 .bal-result-row .red { color: #dc2626; }
 .bal-disclaimer { font-size: 11px; color: var(--romea-muted); margin-top: 8px; max-width: 500px; }
