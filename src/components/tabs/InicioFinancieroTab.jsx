@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchBalanceData, fetchCuentas } from "../../services/adminModuleService";
+import { fetchMovimientosCapital, fetchActivosFijos, resumenCapital } from "../../services/capitalService";
 
 // ─── Inicio financiero ────────────────────────────────────────────────────────
 // Dashboard que responde las 6 preguntas del dueño:
@@ -32,6 +33,7 @@ export default function InicioFinancieroTab({ tenantId, onNavigate }) {
   const [hasta, setHasta] = useState(hoy());
   const [data, setData] = useState(null);
   const [cuentas, setCuentas] = useState([]);
+  const [capital, setCapital] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -45,6 +47,16 @@ export default function InicioFinancieroTab({ tenantId, onNavigate }) {
       ]);
       setData(balance);
       setCuentas(ctas);
+      // Capital es opcional: si el SQL aún no corre, no rompe el dashboard.
+      try {
+        const [movs, activos] = await Promise.all([
+          fetchMovimientosCapital(tenantId),
+          fetchActivosFijos(tenantId),
+        ]);
+        setCapital(resumenCapital(movs, activos));
+      } catch {
+        setCapital(null);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -180,6 +192,17 @@ export default function InicioFinancieroTab({ tenantId, onNavigate }) {
           </span>
           <span className="fin-card__link">Ver resultados →</span>
         </button>
+
+        {capital && (capital.aportado > 0 || capital.valorActivosLibros > 0) && (
+          <button type="button" className="fin-card" onClick={() => go("capital")}>
+            <span className="fin-card__q">¿Cuánto he invertido?</span>
+            <span className="fin-card__value">{fmtMXN(capital.deudaSocios)}</span>
+            <span className="fin-card__detail">
+              El negocio te debe esto · Maquinaria vale <strong>{fmtMXN(capital.valorActivosLibros)}</strong>
+            </span>
+            <span className="fin-card__link">Ver mi inversión →</span>
+          </button>
+        )}
 
       </div>
 

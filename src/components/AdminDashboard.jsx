@@ -23,6 +23,7 @@ import RemisionWorkspace from "./RemisionWorkspace";
 import GastosTab from "./tabs/GastosTab";
 import BalanceTab from "./tabs/BalanceTab";
 import InicioFinancieroTab from "./tabs/InicioFinancieroTab";
+import CapitalTab from "./tabs/CapitalTab";
 import CentrosCostosTab from "./tabs/CentrosCostosTab";
 import CuentasAdminTab from "./tabs/CuentasAdminTab";
 import CategoriasGastoTab from "./tabs/CategoriasGastoTab";
@@ -64,6 +65,7 @@ const ADMIN_SUB_TABS = [
   { id: "inicio",     label: "Inicio",               group: "operaciones" },
   { id: "remisiones", label: "Ventas y cobros",      group: "operaciones" },
   { id: "gastos",     label: "Gastos y compras",     group: "operaciones" },
+  { id: "capital",    label: "Mi inversión",         group: "operaciones" },
   { id: "cuentas",    label: "Dinero y cuentas",     group: "operaciones" },
   { id: "balance",    label: "Resultados",           group: "operaciones" },
   { id: "estados",    label: "Estados financieros",  group: "operaciones" },
@@ -1440,6 +1442,9 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           <div className="admin-module-content">
             {adminSubTab === "inicio" ? (
               <InicioFinancieroTab tenantId={tenantId} onNavigate={setAdminSubTab} />
+            ) : null}
+            {adminSubTab === "capital" ? (
+              <CapitalTab tenantId={tenantId} notifyAction={notifyAction} setStatus={setStatus} />
             ) : null}
             {adminSubTab === "remisiones" ? (
               <RemisionWorkspace
