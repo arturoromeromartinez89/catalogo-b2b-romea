@@ -9,24 +9,17 @@ Integrar la seguridad multi-tenant, el portal seguro y Storage privado sobre el
 
 - Worktree: `C:\Users\Vanguardia\Documents\New project\catalogo-b2b-saas-integration`
 - Rama: `codex/saas-security-integration`
-- Base de produccion: `36072bd` (`Mi inversion`).
+- Base administrativa integrada: `e9dfade` (`Mi inversion` tolera tablas pendientes).
 - Produccion y Supabase de produccion no fueron modificados.
 - La rama fue subida a GitHub como `origin/codex/saas-security-integration`.
 - Se creo un proyecto Vercel separado para pruebas; no se cambio el proyecto
   publico `catalogo-b2b-romea`.
 
-## Cambios administrativos preservados
+## Modulo administrativo
 
-La comparacion contra `origin/main` confirma que la integracion no modifica:
-
-- `AdminDashboard.jsx`;
-- `InicioFinancieroTab.jsx`;
-- `GastosTab.jsx`;
-- `RemisionWorkspace.jsx`;
-- `CapitalTab.jsx`.
-
-Por tanto se conservan Inicio financiero, captura guiada de gastos, cobros desde
-Ventas y el modulo Mi inversion exactamente como estan en `main`.
+Se integro `main` hasta `e9dfade` y el trabajo de Claude de Gastos 2.0. El modulo
+administrativo ahora depende de `tenant_features.modulo_admin` y falla cerrado
+si no existe una habilitacion explicita.
 
 ## Bloques integrados
 
@@ -36,6 +29,18 @@ Ventas y el modulo Mi inversion exactamente como estan en `main`.
 4. Resolucion de URLs firmadas para portal (`6f2f6ae`).
 5. Flujo completo de imagen privada, PDFs y Edge Function (`671e4a7`).
 6. Registro actualizado de validacion en staging (`7c75391`).
+7. Gastos 2.0: vencimientos, documento, RPCs atomicas y UI (`d7b528b` a
+   `b4fc068`, integrados y endurecidos en esta rama).
+
+Las migraciones nuevas son:
+
+- `20260614010000_add_expense_due_fields.sql`;
+- `20260614011000_secure_expense_transactions.sql`;
+- `20260614012000_enable_romea_admin_module.sql`.
+
+La prueba `expense_transactions_acceptance.sql` cubre pagos pendientes,
+completos y parciales, sobrepago, ataques entre tenants, cuentas/categorias/
+centros ajenos, suspensiones y rollback total ante fallo del libro bancario.
 
 No se incorporo el commit de productos personalizados `a1a7ea4`. El unico
 conflicto se resolvio conservando el comportamiento actual de componentes y
@@ -47,6 +52,7 @@ aplicando solamente `StorageImage` para sus fotos.
 - `npm run build`: correcto, 972 modulos transformados.
 - Edge Function `sign-public-images`: bundle correcto con esbuild.
 - Las cinco migraciones pasan `scripts/validate_sql.py`.
+- Las tres migraciones de Gastos 2.0 y su prueba pasan el parser PostgreSQL.
 - `git diff --check`: correcto.
 - El bundle principal sigue por encima de 500 kB; optimizacion pendiente.
 - `@zxing/library` declara Node >= 24 mientras la estacion usa Node 22. El build
@@ -73,8 +79,8 @@ sin consultar primero el historial del branch.
    catalogo, precios, preordenes, drag and drop, PDFs y acceso suspendido.
 4. Subir una imagen fisica a Storage de staging, obtener URL firmada, descargarla
    y validar la liga publica de cotizacion.
-5. Probar el modulo administrativo en el mismo preview, sin dar por confiables
-   sus saldos hasta que Claude implemente RPCs atomicas de gastos y cobros.
+5. Aplicar y ejecutar en staging las migraciones y la prueba de Gastos 2.0;
+   despues redesplegar el frontend de staging y probar el flujo visual.
 6. Preparar el script de migracion de objetos existentes de produccion a rutas
    `{tenant_id}/...`, con conteos y rollback.
 7. Preparar respaldo y runbook de produccion: base de datos, objetos, frontend,
@@ -86,8 +92,6 @@ sin consultar primero el historial del branch.
 
 ## Trabajo paralelo de Claude
 
-Claude puede continuar el modulo administrativo en otra rama. Sus prioridades
-son RPCs atomicas para gastos/pagos y cobros, uso real de
-`movimientos_caja_banco`, vencimientos y feature flag `modulo_admin`. No mezclar
-ese trabajo en esta rama hasta que tenga pruebas propias y un commit claramente
-delimitado.
+Claude puede continuar la banda operativa, dialogos y la adaptacion de Capital
+en su rama. No debe desplegar su frontend antes de que las RPCs de Gastos 2.0
+esten aplicadas y aprobadas en el ambiente correspondiente.

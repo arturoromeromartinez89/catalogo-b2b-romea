@@ -510,6 +510,7 @@ export const fetchGastos = async (tenantId, { estado, categoriaId, desde, hasta,
 // React. saveGasto()/pagarGasto() quedan como LEGACY (no usar desde la UI nueva).
 
 const expensePayload = (form) => ({
+  gasto_id:          form.id || null,
   descripcion:       form.descripcion,
   monto_mxn:         Number(form.montoMxn || 0),
   fecha:             form.fecha,

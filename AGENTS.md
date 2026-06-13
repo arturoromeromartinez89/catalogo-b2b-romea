@@ -117,7 +117,8 @@ El frontend preparado usa `get_client_catalog`, `submit_client_preorder` y `get_
 - Produccion tiene 17 politicas administrativas globales confirmadas que permiten acceso entre tenants; la correccion paso en staging pero aun no se aplica a produccion.
 - Produccion tiene un perfil cliente activo sin `client_id` y sin cliente coincidente por correo. La migracion de perfiles lo desactivara; no vincularlo automaticamente.
 - Las migraciones retiran acceso directo del cliente a precios y preordenes y pasaron la prueba de staging; falta desplegarlas y repetir la verificacion en produccion.
-- `tenant_features` existe pero no aplica feature-gating real; hoy ni siquiera se consume en la UI principal.
+- `tenant_features.modulo_admin` ya controla la visibilidad del modulo administrativo y las RPC de Gastos 2.0. Falta extender el mismo control a todos los modulos y operaciones del servidor.
+- Gastos 2.0 usa RPCs atomicas para gasto, pago, saldo de cuenta y movimiento bancario. Tras desplegar frontend y RPCs de forma compatible, falta revocar o restringir las escrituras financieras directas heredadas por PostgREST.
 - Las ligas publicas validan contra su snapshot y limitan envios; esto paso en staging, pero aun necesitan rate limiting perimetral.
 - Storage sigue publico en produccion. La migracion privada y sus pruebas de aislamiento pasaron en staging.
 - Las rutas frontend, URLs firmadas y PDFs estan implementados localmente. La Edge Function `sign-public-images` esta desplegada en staging y paso pruebas de token invalido y bloqueo de rutas ajenas; falta probar la descarga de un archivo fisico y migrar los objetos existentes antes de produccion.

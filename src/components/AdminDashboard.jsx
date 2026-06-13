@@ -60,8 +60,6 @@ const PRODUCT_RENDER_BATCH = 60;
 const baseTabs = ["catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
 const configurableOnlyTabs = ["components"];
 const adminModuleTabs = ["administracion"];
-// Fallback temporal del feature flag (ver adminModuleEnabled). Tenant Romea.
-const ROMEA_TENANT_ID = "3b5a512d-c7e8-4700-87a9-78cfd4d63d18";
 // Navegación organizada por las preguntas del negocio, no por tablas.
 // "Configuración" agrupa los catálogos internos con jerarquía visual menor.
 const ADMIN_SUB_TABS = [
@@ -409,17 +407,9 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     () => isConfigurableCatalogCompany({ activeTenant, activeCompany, supportTenantName }) || hasConfigurableCatalogProducts(products),
     [activeTenant, activeCompany, supportTenantName, products]
   );
-  // Módulo administrativo: depende de tenant_features.modulo_admin, NO del
-  // catálogo configurable. Una joyería puede tener Administración sin productos
-  // configurables.
-  // Fallback temporal acotado SOLO al tenant Romea (por id conocido) para no
-  // apagarle el módulo mientras Codex aplica el upsert versionado de
-  // tenant_features. TODO (Codex): retirar este fallback tras aplicar el upsert
-  // y dejar únicamente `tenantFeatures?.modulo_admin === true`.
-  const adminModuleEnabled = useMemo(() => {
-    if (tenantFeatures && typeof tenantFeatures.modulo_admin === "boolean") return tenantFeatures.modulo_admin;
-    return tenantId === ROMEA_TENANT_ID;
-  }, [tenantFeatures, tenantId]);
+  // Fail closed: the module is visible only when the server-owned feature flag
+  // explicitly enables it for the active tenant.
+  const adminModuleEnabled = tenantFeatures?.modulo_admin === true;
   const allTabs = [
     ...tabs,
     ...(configurableCatalogEnabled ? configurableOnlyTabs : []),
