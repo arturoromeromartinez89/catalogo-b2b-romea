@@ -213,6 +213,11 @@
   --color-border-brand:   var(--brand-500);     /* borde de acento */
   --color-border-tertiary: var(--neutral-200);
 
+  /* Acento del módulo de administración — antes dorado (#b8963e), ahora
+     alineado al azul de marca para homologar con el resto de la UI. */
+  --accent:      var(--brand-700);
+  --accent-soft: var(--brand-50);
+
   /* Compatibilidad con variables antiguas (para no romper CSS existente) */
   --romea-blue:   var(--brand-700);
   --romea-blue-2: var(--brand-600);
