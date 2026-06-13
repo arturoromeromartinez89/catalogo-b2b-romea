@@ -10,8 +10,10 @@ Integrar la seguridad multi-tenant, el portal seguro y Storage privado sobre el
 - Worktree: `C:\Users\Vanguardia\Documents\New project\catalogo-b2b-saas-integration`
 - Rama: `codex/saas-security-integration`
 - Base de produccion: `36072bd` (`Mi inversion`).
-- Produccion, Vercel y Supabase de produccion no fueron modificados.
-- La rama no se ha subido a GitHub.
+- Produccion y Supabase de produccion no fueron modificados.
+- La rama fue subida a GitHub como `origin/codex/saas-security-integration`.
+- Se creo un proyecto Vercel separado para pruebas; no se cambio el proyecto
+  publico `catalogo-b2b-romea`.
 
 ## Cambios administrativos preservados
 
@@ -56,16 +58,17 @@ El preview branch `staging-security` (`vafqcvpzksjlrborxoos`) ya contiene las
 cinco migraciones y la Edge Function. Esa validacion se hizo antes de integrar
 el `main` administrativo actual.
 
-La siguiente validacion debe desplegar el frontend de esta rama en un ambiente
-de preview conectado a staging y comprobar que seguridad y administracion
-conviven. No aplicar nuevamente migraciones ya presentes sin consultar primero
-el historial del branch.
+El frontend integrado ya esta desplegado en un proyecto Vercel aislado:
+`https://catalogo-b2b-staging-security.vercel.app`. Sus variables apuntan al
+project ref de staging y el bundle publicado contiene `vafqcvpzksjlrborxoos`,
+sin contener el ref de produccion `pyignizeoevafifzfnik`. La pantalla de acceso
+carga sin errores de navegador. No aplicar nuevamente migraciones ya presentes
+sin consultar primero el historial del branch.
 
 ## Siguiente secuencia
 
 1. Confirmar si `client-access-setup.sql` ya fue aplicado en produccion.
-2. Configurar un preview de Vercel para esta rama apuntando exclusivamente a
-   `staging-security`.
+2. Completado: Vercel aislado apunta exclusivamente a `staging-security`.
 3. Probar con dos tenant_admin y dos clientes reales de tenants distintos:
    catalogo, precios, preordenes, drag and drop, PDFs y acceso suspendido.
 4. Subir una imagen fisica a Storage de staging, obtener URL firmada, descargarla
@@ -88,4 +91,3 @@ son RPCs atomicas para gastos/pagos y cobros, uso real de
 `movimientos_caja_banco`, vencimientos y feature flag `modulo_admin`. No mezclar
 ese trabajo en esta rama hasta que tenga pruebas propias y un commit claramente
 delimitado.
-
