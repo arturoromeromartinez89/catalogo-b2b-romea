@@ -12,6 +12,7 @@ import ProductFormModal from "./ProductFormModal";
 import LanguageToggle from "./LanguageToggle";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings } from "../services/companySettings";
+import { fetchTenantFeatures } from "../services/adminModuleService";
 // Tabs extraídos — step 1 del refactor progresivo
 import TenantsTab from "./tabs/TenantsTab";
 import CatalogTab from "./tabs/CatalogTab";
@@ -218,6 +219,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const { t, language } = useLanguage();
   const company = useCompany();
   const [tenantCompany, setTenantCompany] = useState(null);
+  const [tenantFeatures, setTenantFeatures] = useState(null);
   const superadmin = isSuperAdmin(profile) && !supportMode;
   const [tenants, setTenants] = useState([]);
   const [selectedTenantId, setSelectedTenantId] = useState(() => localStorage.getItem("catalogo-b2b-selected-tenant") || profile?.tenant_id || profile?.tenantId || "");
@@ -379,6 +381,13 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     fetchCompanySettings(tenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
   }, [tenantId]);
 
+  // Carga las banderas de módulos del tenant (modulo_admin / modulo_configurable).
+  // Si falla o no hay fila, queda null y aplica el fallback temporal.
+  useEffect(() => {
+    if (!tenantId) { setTenantFeatures(null); return; }
+    fetchTenantFeatures(tenantId).then(setTenantFeatures).catch(() => setTenantFeatures(null));
+  }, [tenantId]);
+
   useEffect(() => {
     const refreshTenantCompany = (event) => {
       if (!tenantId || event.detail?.tenantId !== tenantId) return;
@@ -398,10 +407,19 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     () => isConfigurableCatalogCompany({ activeTenant, activeCompany, supportTenantName }) || hasConfigurableCatalogProducts(products),
     [activeTenant, activeCompany, supportTenantName, products]
   );
+  // Módulo administrativo: ahora depende de tenant_features.modulo_admin, NO del
+  // catálogo configurable. Una joyería puede tener Administración sin productos
+  // configurables. Fallback temporal: si la fila aún no existe en este tenant,
+  // se mantiene encendido para empresas configurables (Romea) para no apagarlo
+  // durante la transición. TODO: retirar el fallback tras poblar tenant_features.
+  const adminModuleEnabled = useMemo(() => {
+    if (tenantFeatures && typeof tenantFeatures.modulo_admin === "boolean") return tenantFeatures.modulo_admin;
+    return configurableCatalogEnabled; // fallback temporal
+  }, [tenantFeatures, configurableCatalogEnabled]);
   const allTabs = [
     ...tabs,
     ...(configurableCatalogEnabled ? configurableOnlyTabs : []),
-    ...(configurableCatalogEnabled ? adminModuleTabs : []),
+    ...(adminModuleEnabled ? adminModuleTabs : []),
   ];
   const catalogProducts = useMemo(
     () => configurableCatalogEnabled ? buildConfigurableCatalogProducts(products) : products,
@@ -1133,7 +1151,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   }
 
   return (
-    <div className={`admin-catalog-shell${tab === "administracion" && configurableCatalogEnabled ? " has-secondary-sidebar" : ""}`}>
+    <div className={`admin-catalog-shell${tab === "administracion" && adminModuleEnabled ? " has-secondary-sidebar" : ""}`}>
       <aside className="admin-romea-sidebar">
         <div className="brand-block">
           <BrandLogo company={activeCompany} />
@@ -1208,7 +1226,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       </aside>
 
       {/* ── Sidebar secundario: se muestra solo en Administración ── */}
-      {tab === "administracion" && configurableCatalogEnabled ? (
+      {tab === "administracion" && adminModuleEnabled ? (
         <aside className="admin-secondary-sidebar">
           {/* Cabecera alineada con la zona del logo del sidebar primario:
               misma altura y misma línea divisoria para que ambas columnas
@@ -1438,7 +1456,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           <ComponentsTab tenantId={tenantId} />
         ) : null}
 
-        {tab === "administracion" && configurableCatalogEnabled ? (
+        {tab === "administracion" && adminModuleEnabled ? (
           <div className="admin-module-content">
             {adminSubTab === "inicio" ? (
               <InicioFinancieroTab tenantId={tenantId} onNavigate={setAdminSubTab} />
