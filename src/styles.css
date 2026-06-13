@@ -9831,3 +9831,16 @@ tr.client-row--expanded td {
 .cap-asset__bar { background: var(--neutral-200); border-radius: var(--radius-full); height: 6px; overflow: hidden; }
 .cap-asset__fill { background: var(--color-warning); border-radius: var(--radius-full); display: block; height: 100%; transition: width var(--transition-slow); }
 .cap-asset__foot { color: var(--color-text-disabled); font-size: var(--text-xs); }
+
+/* Etiqueta "estimado / saldo inicial" — advierte cifras no conciliadas */
+.fin-tag-estimado {
+  background: var(--color-warning-light);
+  border-radius: var(--radius-sm);
+  color: var(--color-warning-text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.02em;
+  padding: 1px 7px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

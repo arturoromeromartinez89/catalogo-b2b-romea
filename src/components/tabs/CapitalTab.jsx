@@ -205,7 +205,30 @@ export default function CapitalTab({ tenantId, notifyAction, setStatus }) {
   const handleDelActivo = async (a) => { if (!window.confirm(`¿Eliminar "${a.nombre}"?`)) return; await deleteActivoFijo(a.id); load(); };
 
   if (loading) return <div className="fin-loading">Cargando tu capital…</div>;
-  if (error) return <div className="fin-error">Error: {error}</div>;
+  // Si las tablas aún no existen en la base, no es un error: el módulo está en
+  // preparación (se activa cuando se cree su esquema por el flujo de migraciones).
+  if (error) {
+    const enPreparacion = /does not exist|schema cache|relation/i.test(error);
+    if (enPreparacion) {
+      return (
+        <div className="fin-dashboard">
+          <div className="fin-header"><div>
+            <h2 className="fin-title">Mi inversión</h2>
+            <p className="fin-subtitle">Aportaciones, retiros y maquinaria</p>
+          </div></div>
+          <div className="fin-panel" style={{ textAlign: "center", padding: "var(--sp-12) var(--sp-6)" }}>
+            <p style={{ color: "var(--color-text-primary)", fontSize: "var(--text-md)", fontWeight: 600, margin: "0 0 6px" }}>
+              Módulo en preparación
+            </p>
+            <p style={{ color: "var(--color-text-secondary)", margin: 0 }}>
+              Se activará cuando se cree su base de datos (vía el flujo de migraciones, sin afectar tus datos actuales).
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return <div className="fin-error">Error: {error}</div>;
+  }
 
   return (
     <div className="fin-dashboard cap-dashboard">
