@@ -8349,26 +8349,45 @@ textarea:focus {
   overflow: hidden;
 }
 
-.admin-secondary-sidebar .secondary-sidebar-header {
+/* Cabecera del sidebar secundario — replica la altura de la zona del logo del
+   primario (padding 12 + brand-block ≈126 = 138px hasta la línea divisoria),
+   para que la división horizontal corra a la MISMA altura en ambas columnas
+   y los menús queden justificados de arriba a abajo. */
+.secondary-sidebar-head {
   border-bottom: 1px solid var(--neutral-200, #e6eaf1);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   flex-shrink: 0;
-  padding: 14px 14px 12px;
+  gap: 2px;
+  height: 138px;
+  justify-content: flex-end;
+  padding: 0 14px 14px;
 }
 
-.admin-secondary-sidebar .secondary-sidebar-header h3 {
-  color: var(--neutral-500, #6f7787);
-  font-size: 10px;
+.secondary-sidebar-head h3 {
+  color: var(--neutral-800, #1d2433);
+  font-size: var(--text-md, 14px);
   font-weight: var(--weight-bold, 700);
-  letter-spacing: 0.10em;
   margin: 0;
-  text-transform: uppercase;
 }
 
-/* Nav container — scrollable */
+.secondary-sidebar-head p {
+  color: var(--neutral-500, #6f7787);
+  font-size: var(--text-xs, 11px);
+  margin: 0;
+}
+
+/* Nav container — scrollable. padding-top 10 = gap del grid del primario,
+   para que el primer label ("Operación") quede a la altura de "ADMIN". */
 .secondary-nav {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 6px;
+  padding: 10px 6px 8px;
+}
+
+.secondary-nav .secondary-nav-section-title:first-child {
+  margin-top: 0;
 }
 
 /* Group label — jerarquía clara: NO parece botón, separa secciones */

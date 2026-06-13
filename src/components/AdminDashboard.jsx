@@ -1208,7 +1208,15 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       {/* ── Sidebar secundario: se muestra solo en Administración ── */}
       {tab === "administracion" && configurableCatalogEnabled ? (
         <aside className="admin-secondary-sidebar">
+          {/* Cabecera alineada con la zona del logo del sidebar primario:
+              misma altura y misma línea divisoria para que ambas columnas
+              queden justificadas de arriba a abajo */}
+          <div className="secondary-sidebar-head">
+            <h3>Administración</h3>
+            <p>Centro financiero</p>
+          </div>
           <nav className="secondary-nav">
+            <div className="secondary-nav-section-title">Operación</div>
             {ADMIN_SUB_TABS.filter((s) => s.group === "operaciones").map((sub) => (
               <button
                 key={sub.id}
