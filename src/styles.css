@@ -9534,3 +9534,186 @@ tr.client-row--expanded td {
   font-size: var(--text-xs);
   margin: var(--sp-5) 0 0;
 }
+
+/* ─── Captura guiada de gasto (gf-*) ───────────────────────────────────────── */
+
+.gf-modal {
+  max-width: 620px;
+  width: min(620px, calc(100vw - 32px));
+}
+
+.gf-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  max-height: min(62vh, 560px);
+  overflow-y: auto;
+  padding: var(--sp-5) var(--sp-6);
+}
+
+.gf-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.gf-step__label {
+  color: var(--color-text-primary);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+}
+
+.gf-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.gf-input {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+  padding: 10px 12px;
+}
+.gf-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(31, 51, 95, 0.12);
+  outline: none;
+}
+.gf-input--desc { flex: 2 1 260px; }
+.gf-row .gf-input:not(.gf-input--desc):not(.gf-input--date) { flex: 1 1 180px; }
+.gf-input--date { flex: 0 0 auto; }
+.gf-input--metodo { flex: 0 0 auto; min-width: 160px; }
+
+/* Monto grande — el dato más importante del registro */
+.gf-amount {
+  align-items: center;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex: 1 1 220px;
+  gap: 6px;
+  padding: 6px 14px;
+}
+.gf-amount:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(31, 51, 95, 0.12);
+}
+.gf-amount__symbol {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+}
+.gf-amount input {
+  background: transparent;
+  border: none;
+  flex: 1;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-bold);
+  min-width: 0;
+  outline: none;
+  padding: 4px 0;
+}
+.gf-amount__currency {
+  color: var(--color-text-disabled);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+.gf-amount--sm input { font-size: var(--text-lg); }
+.gf-amount--sm { flex: 0 1 200px; }
+
+/* Chips de categoría / cuenta */
+.gf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.gf-chip {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  padding: 6px 14px;
+  transition: all var(--transition-fast);
+}
+.gf-chip:hover { border-color: var(--color-border-strong); background: var(--color-bg-hover); }
+.gf-chip--on {
+  background: var(--brand-900);
+  border-color: var(--brand-900);
+  color: #fff;
+}
+
+/* Control segmentado (variable/fijo · pendiente/pagado/parcial) */
+.gf-segmented {
+  background: var(--neutral-100);
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  width: fit-content;
+}
+.gf-segmented button {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  padding: 7px 14px;
+  transition: all var(--transition-fast);
+}
+.gf-segmented button.on {
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-xs);
+  color: var(--color-text-primary);
+  font-weight: var(--weight-semibold);
+}
+.gf-segmented button.on--ok { color: var(--color-success); }
+
+/* Bloque de pago */
+.gf-pay {
+  border-left: 3px solid var(--brand-200);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: 4px;
+  padding: var(--sp-2) 0 var(--sp-1) var(--sp-4);
+}
+
+.gf-add-notes {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--color-text-brand);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  padding: 0;
+}
+
+.gf-saved {
+  background: var(--color-success-light);
+  border-radius: var(--radius-md);
+  color: var(--color-success-text);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  margin: 0;
+  padding: 8px 14px;
+}
+
+.gf-footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+.gf-footer__actions { display: flex; gap: var(--sp-2); }

@@ -30,67 +30,216 @@ const emptyForm = () => ({
   tipoGasto:    "variable",
   beneficiario: "",
   notas:        "",
+  // Estado del pago al registrar: pendiente | pagado | parcial
+  pagoEstado:   "pendiente",
+  pagoMonto:    "",
+  pagoCuentaId: "",
+  pagoMetodo:   "transferencia",
 });
 
-function GastoForm({ initial, categorias, onSave, onClose, saving }) {
-  const [form, setForm] = useState(initial || emptyForm());
+// ─── Captura guiada de gasto ──────────────────────────────────────────────────
+// Flujo en lenguaje del dueño: qué pagaste → cuánto → clasifícalo → ¿ya lo
+// pagaste? Registrar la obligación y el pago son pasos relacionados pero
+// distintos; aquí se capturan juntos y el guardado los encadena.
+function GastoForm({ initial, categorias, cuentas, onSave, onClose, saving }) {
+  const isEdit = Boolean(initial?.id);
+  const [form, setForm] = useState(() => initial ? { ...emptyForm(), ...initial } : emptyForm());
+  const [showNotas, setShowNotas] = useState(Boolean(initial?.notas));
+  const [savedMsg, setSavedMsg] = useState("");
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave(form);
+  const cuentasDinero = cuentas.filter((c) => c.tipo !== "plata");
+  const monto = Number(form.montoMxn || 0);
+  const pagoMonto = form.pagoEstado === "pagado" ? monto : Number(form.pagoMonto || 0);
+
+  const pagoValido =
+    form.pagoEstado === "pendiente" ||
+    (pagoMonto > 0 && pagoMonto <= monto && (cuentasDinero.length === 0 || form.pagoCuentaId));
+
+  const valido = form.descripcion.trim() && monto > 0 && pagoValido;
+
+  const submit = async (keepOpen) => {
+    if (!valido || saving) return;
+    const ok = await onSave(form, { keepOpen });
+    if (ok && keepOpen) {
+      setForm((f) => ({ ...emptyForm(), fecha: f.fecha, categoriaId: f.categoriaId, tipoGasto: f.tipoGasto }));
+      setShowNotas(false);
+      setSavedMsg("Gasto guardado. Captura el siguiente.");
+      window.setTimeout(() => setSavedMsg(""), 3000);
+    }
   };
 
   return (
     <div className="client-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="client-modal">
+      <div className="client-modal gf-modal">
         <header>
-          <h2>{initial?.id ? "Editar gasto" : "Nuevo gasto"}</h2>
+          <h2>{isEdit ? "Editar gasto" : "Registrar gasto"}</h2>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar">×</button>
         </header>
-        <form id="gasto-form" className="rem-modal__body" onSubmit={handleSubmit}>
-          <div className="rem-form-grid">
-            <label className="rem-field">
-              <span>Fecha</span>
-              <input type="date" value={form.fecha} onChange={(e) => set("fecha", e.target.value)} required />
-            </label>
-            <label className="rem-field">
-              <span>Categoría</span>
-              <select value={form.categoriaId} onChange={(e) => set("categoriaId", e.target.value)}>
-                <option value="">— Sin categoría —</option>
-                {categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </select>
-            </label>
-            <label className="rem-field rem-field--full">
-              <span>Descripción</span>
-              <input type="text" value={form.descripcion} onChange={(e) => set("descripcion", e.target.value)} required placeholder="Ej. Renta local julio 2026" />
-            </label>
-            <label className="rem-field">
-              <span>Monto MXN</span>
-              <input type="number" step="0.01" min="0" value={form.montoMxn} onChange={(e) => set("montoMxn", e.target.value)} required placeholder="0.00" />
-            </label>
-            <label className="rem-field">
-              <span>Tipo</span>
-              <select value={form.tipoGasto} onChange={(e) => set("tipoGasto", e.target.value)}>
-                <option value="fijo">Fijo (recurrente)</option>
-                <option value="variable">Variable</option>
-              </select>
-            </label>
-            <label className="rem-field">
-              <span>Beneficiario / proveedor</span>
-              <input type="text" value={form.beneficiario} onChange={(e) => set("beneficiario", e.target.value)} placeholder="Arrendadora, proveedor..." />
-            </label>
-            <label className="rem-field rem-field--full">
-              <span>Notas</span>
-              <textarea value={form.notas} onChange={(e) => set("notas", e.target.value)} rows={2} />
-            </label>
+
+        <form className="gf-body" onSubmit={(e) => { e.preventDefault(); submit(false); }}>
+
+          {/* 1 · Qué pagaste y a quién */}
+          <div className="gf-step">
+            <span className="gf-step__label">¿Qué pagaste o compraste?</span>
+            <div className="gf-row">
+              <input
+                className="gf-input gf-input--desc"
+                type="text"
+                value={form.descripcion}
+                onChange={(e) => set("descripcion", e.target.value)}
+                placeholder="Ej. Renta del local, gasolina, plata .925…"
+                autoFocus={!isEdit}
+                required
+              />
+              <input
+                className="gf-input"
+                type="text"
+                value={form.beneficiario}
+                onChange={(e) => set("beneficiario", e.target.value)}
+                placeholder="¿A quién? (opcional)"
+              />
+            </div>
           </div>
+
+          {/* 2 · Cuánto y cuándo */}
+          <div className="gf-step">
+            <span className="gf-step__label">¿Cuánto y cuándo?</span>
+            <div className="gf-row">
+              <div className="gf-amount">
+                <span className="gf-amount__symbol">$</span>
+                <input
+                  type="number" step="0.01" min="0"
+                  value={form.montoMxn}
+                  onChange={(e) => set("montoMxn", e.target.value)}
+                  placeholder="0.00"
+                  required
+                />
+                <span className="gf-amount__currency">MXN</span>
+              </div>
+              <input
+                className="gf-input gf-input--date"
+                type="date"
+                value={form.fecha}
+                onChange={(e) => set("fecha", e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          {/* 3 · Clasificación: categoría como chips + fijo/variable */}
+          <div className="gf-step">
+            <span className="gf-step__label">Clasifícalo</span>
+            <div className="gf-chips">
+              {categorias.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={`gf-chip${form.categoriaId === c.id ? " gf-chip--on" : ""}`}
+                  onClick={() => set("categoriaId", form.categoriaId === c.id ? "" : c.id)}
+                >
+                  {c.nombre}
+                </button>
+              ))}
+            </div>
+            <div className="gf-segmented" role="radiogroup" aria-label="Tipo de gasto">
+              <button type="button" className={form.tipoGasto === "variable" ? "on" : ""} onClick={() => set("tipoGasto", "variable")}>
+                Variable
+              </button>
+              <button type="button" className={form.tipoGasto === "fijo" ? "on" : ""} onClick={() => set("tipoGasto", "fijo")}>
+                Fijo (recurrente)
+              </button>
+            </div>
+          </div>
+
+          {/* 4 · ¿Ya lo pagaste? — solo al crear; al editar, el pago va por su flujo */}
+          {!isEdit && (
+            <div className="gf-step">
+              <span className="gf-step__label">¿Ya lo pagaste?</span>
+              <div className="gf-segmented gf-segmented--pay" role="radiogroup" aria-label="Estado del pago">
+                <button type="button" className={form.pagoEstado === "pendiente" ? "on" : ""} onClick={() => set("pagoEstado", "pendiente")}>
+                  Queda pendiente
+                </button>
+                <button type="button" className={form.pagoEstado === "pagado" ? "on on--ok" : ""} onClick={() => set("pagoEstado", "pagado")}>
+                  Ya lo pagué
+                </button>
+                <button type="button" className={form.pagoEstado === "parcial" ? "on" : ""} onClick={() => set("pagoEstado", "parcial")}>
+                  Pago parcial
+                </button>
+              </div>
+
+              {form.pagoEstado !== "pendiente" && (
+                <div className="gf-pay">
+                  {form.pagoEstado === "parcial" && (
+                    <div className="gf-amount gf-amount--sm">
+                      <span className="gf-amount__symbol">$</span>
+                      <input
+                        type="number" step="0.01" min="0.01" max={monto || undefined}
+                        value={form.pagoMonto}
+                        onChange={(e) => set("pagoMonto", e.target.value)}
+                        placeholder="Monto pagado"
+                      />
+                    </div>
+                  )}
+                  {cuentasDinero.length > 0 && (
+                    <div className="gf-chips">
+                      {cuentasDinero.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          className={`gf-chip${form.pagoCuentaId === c.id ? " gf-chip--on" : ""}`}
+                          onClick={() => set("pagoCuentaId", c.id)}
+                        >
+                          {c.nombre}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <select
+                    className="gf-input gf-input--metodo"
+                    value={form.pagoMetodo}
+                    onChange={(e) => set("pagoMetodo", e.target.value)}
+                  >
+                    <option value="transferencia">Transferencia</option>
+                    <option value="efectivo">Efectivo</option>
+                    <option value="tarjeta">Tarjeta</option>
+                    <option value="mercado_pago">Mercado Pago</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 5 · Notas (opcional, colapsado) */}
+          {showNotas ? (
+            <div className="gf-step">
+              <span className="gf-step__label">Notas</span>
+              <textarea className="gf-input" value={form.notas} onChange={(e) => set("notas", e.target.value)} rows={2} />
+            </div>
+          ) : (
+            <button type="button" className="gf-add-notes" onClick={() => setShowNotas(true)}>
+              + Agregar nota
+            </button>
+          )}
+
+          {savedMsg && <p className="gf-saved">{savedMsg}</p>}
         </form>
-        <footer>
-          <button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancelar</button>
-          <button type="submit" form="gasto-form" className="primary-button" disabled={saving || !form.descripcion || !form.montoMxn}>
-            {saving ? "Guardando…" : initial?.id ? "Guardar cambios" : "Crear gasto"}
+
+        <footer className="gf-footer">
+          <button type="button" className="secondary-button" onClick={onClose} disabled={saving}>
+            Cerrar
           </button>
+          <div className="gf-footer__actions">
+            {!isEdit && (
+              <button type="button" className="secondary-button" disabled={saving || !valido} onClick={() => submit(true)}>
+                Guardar y registrar otro
+              </button>
+            )}
+            <button type="button" className="primary-button" disabled={saving || !valido} onClick={() => submit(false)}>
+              {saving ? "Guardando…" : isEdit ? "Guardar cambios" : "Guardar gasto"}
+            </button>
+          </div>
         </footer>
       </div>
     </div>
@@ -199,16 +348,38 @@ export default function GastosTab({ tenantId, notifyAction, setStatus }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleSave = async (form) => {
+  // Guarda el gasto y, si el usuario indicó que ya lo pagó (total o parcial),
+  // registra también el pago. Son dos escrituras encadenadas — la versión
+  // atómica (RPC) llega con la Fase B del módulo financiero.
+  const handleSave = async (form, { keepOpen = false } = {}) => {
     setSaving(true);
     try {
-      await saveGasto(form, tenantId);
-      notify(form.id ? "Gasto actualizado." : "Gasto creado.");
-      setShowForm(false);
-      setEditGasto(null);
+      const saved = await saveGasto(form, tenantId);
+      if (!form.id && form.pagoEstado && form.pagoEstado !== "pendiente") {
+        const montoPago = form.pagoEstado === "pagado"
+          ? Number(form.montoMxn || 0)
+          : Number(form.pagoMonto || 0);
+        if (montoPago > 0) {
+          try {
+            await pagarGasto(saved.id, montoPago, form.pagoCuentaId || null, tenantId, form.pagoMetodo || "transferencia");
+          } catch (payErr) {
+            notify(`Gasto guardado, pero el pago no se registró: ${payErr.message}. Regístralo con el botón Pagar.`, "warning");
+            if (!keepOpen) { setShowForm(false); setEditGasto(null); }
+            load();
+            return true;
+          }
+        }
+      }
+      notify(form.id ? "Gasto actualizado." : form.pagoEstado === "pagado" ? "Gasto registrado y pagado." : "Gasto registrado.");
+      if (!keepOpen) { setShowForm(false); setEditGasto(null); }
       load();
-    } catch (e) { alert(e.message); }
-    finally { setSaving(false); }
+      return true;
+    } catch (e) {
+      alert(e.message);
+      return false;
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handlePagar = async (gastoId, monto, cuentaId, metodo) => {
@@ -343,6 +514,7 @@ export default function GastosTab({ tenantId, notifyAction, setStatus }) {
         <GastoForm
           initial={editGasto}
           categorias={categorias}
+          cuentas={cuentas}
           onSave={handleSave}
           onClose={() => { setShowForm(false); setEditGasto(null); }}
           saving={saving}
