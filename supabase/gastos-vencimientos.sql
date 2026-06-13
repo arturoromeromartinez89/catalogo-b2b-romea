@@ -15,6 +15,16 @@ alter table public.gastos add column if not exists fecha_vencimiento date;
 alter table public.gastos add column if not exists numero_documento  text;
 alter table public.gastos add column if not exists moneda            text not null default 'MXN';
 
+-- Mientras todos los importes sean monto_mxn, restringir moneda a MXN (Codex).
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'gastos_moneda_mxn_chk'
+  ) then
+    alter table public.gastos add constraint gastos_moneda_mxn_chk check (moneda = 'MXN');
+  end if;
+end $$;
+
 -- Índices por tenant para las vistas de "Por pagar / vencidos / próximos".
 create index if not exists idx_gastos_tenant_venc   on public.gastos(tenant_id, fecha_vencimiento);
 create index if not exists idx_gastos_tenant_estado on public.gastos(tenant_id, estado);

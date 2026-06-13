@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   fetchGastos,
-  saveGasto,
+  registerExpenseTransaction,
+  registerExpensePaymentTransaction,
   deleteGasto,
-  pagarGasto,
   fetchCategoriasGasto,
   seedCategoriasDefault,
   fetchCuentas,
@@ -348,34 +348,19 @@ export default function GastosTab({ tenantId, notifyAction, setStatus }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // Guarda el gasto y, si el usuario indicó que ya lo pagó (total o parcial),
-  // registra también el pago. Son dos escrituras encadenadas — la versión
-  // atómica (RPC) llega con la Fase B del módulo financiero.
+  // Gasto + pago en UNA transacción del servidor (RPC atómica). Si algo falla,
+  // no queda nada a medias. Sólo aplica a gastos nuevos; la edición de un gasto
+  // existente no pasa por aquí en este bloque.
   const handleSave = async (form, { keepOpen = false } = {}) => {
     setSaving(true);
     try {
-      const saved = await saveGasto(form, tenantId);
-      if (!form.id && form.pagoEstado && form.pagoEstado !== "pendiente") {
-        const montoPago = form.pagoEstado === "pagado"
-          ? Number(form.montoMxn || 0)
-          : Number(form.pagoMonto || 0);
-        if (montoPago > 0) {
-          try {
-            await pagarGasto(saved.id, montoPago, form.pagoCuentaId || null, tenantId, form.pagoMetodo || "transferencia");
-          } catch (payErr) {
-            notify(`Gasto guardado, pero el pago no se registró: ${payErr.message}. Regístralo con el botón Pagar.`, "warning");
-            if (!keepOpen) { setShowForm(false); setEditGasto(null); }
-            load();
-            return true;
-          }
-        }
-      }
-      notify(form.id ? "Gasto actualizado." : form.pagoEstado === "pagado" ? "Gasto registrado y pagado." : "Gasto registrado.");
+      await registerExpenseTransaction(form);
+      notify(form.pagoEstado === "pagado" ? "Gasto registrado y pagado." : form.pagoEstado === "parcial" ? "Gasto registrado con abono." : "Gasto registrado.");
       if (!keepOpen) { setShowForm(false); setEditGasto(null); }
       load();
       return true;
     } catch (e) {
-      alert(e.message);
+      notify(`No se pudo registrar: ${e.message}`, "error");
       return false;
     } finally {
       setSaving(false);
@@ -385,11 +370,11 @@ export default function GastosTab({ tenantId, notifyAction, setStatus }) {
   const handlePagar = async (gastoId, monto, cuentaId, metodo) => {
     setSaving(true);
     try {
-      await pagarGasto(gastoId, monto, cuentaId, tenantId, metodo);
+      await registerExpensePaymentTransaction({ gastoId, monto, cuentaId, metodo });
       notify("Pago registrado.");
       setShowPagar(null);
       load();
-    } catch (e) { alert(e.message); }
+    } catch (e) { notify(`No se pudo registrar el pago: ${e.message}`, "error"); }
     finally { setSaving(false); }
   };
 

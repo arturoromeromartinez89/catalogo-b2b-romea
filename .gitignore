@@ -5,3 +5,6 @@ dist/
 npm-debug.log*
 .DS_Store
 .vercel
+
+# Local agent workspace
+.claude/

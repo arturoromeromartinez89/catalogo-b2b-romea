@@ -60,6 +60,8 @@ const PRODUCT_RENDER_BATCH = 60;
 const baseTabs = ["catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
 const configurableOnlyTabs = ["components"];
 const adminModuleTabs = ["administracion"];
+// Fallback temporal del feature flag (ver adminModuleEnabled). Tenant Romea.
+const ROMEA_TENANT_ID = "3b5a512d-c7e8-4700-87a9-78cfd4d63d18";
 // Navegación organizada por las preguntas del negocio, no por tablas.
 // "Configuración" agrupa los catálogos internos con jerarquía visual menor.
 const ADMIN_SUB_TABS = [
@@ -407,15 +409,17 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     () => isConfigurableCatalogCompany({ activeTenant, activeCompany, supportTenantName }) || hasConfigurableCatalogProducts(products),
     [activeTenant, activeCompany, supportTenantName, products]
   );
-  // Módulo administrativo: ahora depende de tenant_features.modulo_admin, NO del
+  // Módulo administrativo: depende de tenant_features.modulo_admin, NO del
   // catálogo configurable. Una joyería puede tener Administración sin productos
-  // configurables. Fallback temporal: si la fila aún no existe en este tenant,
-  // se mantiene encendido para empresas configurables (Romea) para no apagarlo
-  // durante la transición. TODO: retirar el fallback tras poblar tenant_features.
+  // configurables.
+  // Fallback temporal acotado SOLO al tenant Romea (por id conocido) para no
+  // apagarle el módulo mientras Codex aplica el upsert versionado de
+  // tenant_features. TODO (Codex): retirar este fallback tras aplicar el upsert
+  // y dejar únicamente `tenantFeatures?.modulo_admin === true`.
   const adminModuleEnabled = useMemo(() => {
     if (tenantFeatures && typeof tenantFeatures.modulo_admin === "boolean") return tenantFeatures.modulo_admin;
-    return configurableCatalogEnabled; // fallback temporal
-  }, [tenantFeatures, configurableCatalogEnabled]);
+    return tenantId === ROMEA_TENANT_ID;
+  }, [tenantFeatures, tenantId]);
   const allTabs = [
     ...tabs,
     ...(configurableCatalogEnabled ? configurableOnlyTabs : []),

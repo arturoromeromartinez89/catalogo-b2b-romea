@@ -502,6 +502,52 @@ export const fetchGastos = async (tenantId, { estado, categoriaId, desde, hasta,
   return (data || []).map(normalizeGasto);
 };
 
+// ── Gastos 2.0 — RPCs atómicas (gasto + pago + cuenta + movimiento) ──────────
+// El tenant y el rol se validan en el servidor; no se confía en lo que manda
+// React. saveGasto()/pagarGasto() quedan como LEGACY (no usar desde la UI nueva).
+
+const expensePayload = (form) => ({
+  descripcion:       form.descripcion,
+  monto_mxn:         Number(form.montoMxn || 0),
+  fecha:             form.fecha,
+  fecha_vencimiento: form.fechaVencimiento || null,
+  numero_documento:  form.numeroDocumento || null,
+  categoria_id:      form.categoriaId || null,
+  centro_costo_id:   form.centroCostoId || null,
+  tipo_gasto:        form.tipoGasto || "variable",
+  beneficiario:      form.beneficiario || "",
+  notas:             form.notas || "",
+  moneda:            "MXN",
+  payment_mode:      form.pagoEstado === "pagado" ? "paid" : form.pagoEstado === "parcial" ? "partial" : "pending",
+  pago_monto:        form.pagoEstado === "parcial" ? Number(form.pagoMonto || 0) : undefined,
+  pago_cuenta_id:    form.pagoCuentaId || null,
+  pago_metodo:       form.pagoMetodo || "transferencia",
+  pago_fecha:        form.fecha,
+});
+
+export const registerExpenseTransaction = async (form) => {
+  const { data, error } = await supabase.rpc("register_expense_transaction", { p_payload: expensePayload(form) });
+  if (error) throw new Error(error.message);
+  return normalizeGasto(data);
+};
+
+export const registerExpensePaymentTransaction = async ({ gastoId, monto, cuentaId, metodo, fecha, referencia }) => {
+  const { data, error } = await supabase.rpc("register_expense_payment_transaction", {
+    p_payload: {
+      gasto_id: gastoId,
+      pago_monto: Number(monto || 0),
+      pago_cuenta_id: cuentaId || null,
+      pago_metodo: metodo || "transferencia",
+      pago_fecha: fecha || new Date().toISOString().split("T")[0],
+      pago_referencia: referencia || null,
+    },
+  });
+  if (error) throw new Error(error.message);
+  return normalizeGasto(data);
+};
+
+// LEGACY — no usar desde la UI nueva (escrituras no atómicas). Se conserva para
+// compatibilidad hasta terminar el rollout de Gastos 2.0.
 export const saveGasto = async (gasto, tenantId) => {
   const payload = {
     tenant_id:       tenantId,
