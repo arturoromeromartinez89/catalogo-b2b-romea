@@ -8371,15 +8371,28 @@ textarea:focus {
   padding: 8px 6px;
 }
 
-/* Group label */
+/* Group label — jerarquía clara: NO parece botón, separa secciones */
 .secondary-nav-section-title {
-  color: var(--neutral-500, #6f7787);
+  color: var(--neutral-400, #8491a6);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  margin-top: 14px;
-  padding: 3px 8px;
+  letter-spacing: 0.1em;
+  margin: 6px 0 2px;
+  padding: 3px 10px;
   text-transform: uppercase;
+  user-select: none;
+}
+
+/* Divisor entre operación y configuración */
+.secondary-nav-divider {
+  border-top: 1px solid var(--neutral-200, #e6eaf1);
+  margin: 14px 8px 8px;
+}
+
+/* Items de configuración — jerarquía menor que la operación diaria */
+.secondary-nav-item--config {
+  color: var(--neutral-500, #6f7787);
+  font-size: 12px;
 }
 
 /* Nav item button */
@@ -9267,4 +9280,238 @@ tr.client-row--expanded td {
 .po-client-filter-bar button:hover {
   background: #7c3aed;
   color: #fff;
+}
+
+/* ─── Inicio financiero — dashboard de las 6 preguntas ──────────────────────── */
+
+.fin-dashboard {
+  margin: 0 auto;
+  max-width: 1200px;
+  padding: var(--sp-5) var(--sp-6) var(--sp-12);
+}
+
+.fin-loading,
+.fin-error {
+  color: var(--color-text-secondary);
+  font-size: var(--text-md);
+  padding: var(--sp-12) var(--sp-6);
+  text-align: center;
+}
+.fin-error { color: var(--color-error); }
+
+/* Encabezado */
+.fin-header {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  justify-content: space-between;
+  margin-bottom: var(--sp-5);
+}
+.fin-title {
+  color: var(--color-text-primary);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  margin: 0;
+}
+.fin-subtitle {
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+  margin: 4px 0 0;
+}
+.fin-period {
+  align-items: flex-end;
+  display: flex;
+  gap: var(--sp-2);
+}
+.fin-period label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fin-period label span {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.fin-period input {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  padding: 7px 10px;
+}
+.fin-period input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(31, 51, 95, 0.12);
+  outline: none;
+}
+
+/* Banda 1 — tarjetas de las 6 preguntas */
+.fin-grid {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.fin-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+  gap: 4px;
+  padding: var(--sp-4) var(--sp-5);
+  text-align: left;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.fin-card:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-sm);
+}
+.fin-card:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(31, 51, 95, 0.12);
+  outline: none;
+}
+
+.fin-card__q {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.fin-card__value {
+  color: var(--color-text-primary);
+  font-size: 26px;
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.fin-card__value--ok    { color: var(--color-success); }
+.fin-card__value--warn  { color: var(--color-warning); }
+.fin-card__value--alert { color: var(--color-error); }
+.fin-card__alt {
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.fin-card__detail {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  margin-top: 2px;
+}
+.fin-card__detail strong { color: var(--color-text-primary); font-weight: var(--weight-semibold); }
+.fin-card__link {
+  color: var(--color-text-brand);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  margin-top: var(--sp-2);
+}
+
+/* Banda 2 — paneles de detalle */
+.fin-row {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  margin-top: var(--sp-4);
+}
+.fin-panel {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4) var(--sp-5);
+}
+.fin-panel__title {
+  color: var(--color-text-primary);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  margin: 0 0 var(--sp-3);
+}
+.fin-panel__empty {
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+  margin: 0;
+  padding: var(--sp-3) 0;
+}
+
+/* Lista de cuentas */
+.fin-account-list { display: flex; flex-direction: column; gap: 2px; list-style: none; margin: 0; padding: 0; }
+.fin-account {
+  align-items: center;
+  border-radius: var(--radius-sm);
+  display: flex;
+  gap: var(--sp-3);
+  padding: 8px 8px;
+}
+.fin-account:hover { background: var(--color-bg-hover); }
+.fin-account__dot { border-radius: 50%; flex-shrink: 0; height: 9px; width: 9px; }
+.fin-account__dot--efectivo   { background: var(--color-success); }
+.fin-account__dot--banco      { background: var(--brand-500); }
+.fin-account__dot--plataforma { background: var(--color-info); }
+.fin-account__dot--plata      { background: var(--neutral-400); }
+.fin-account__name {
+  color: var(--color-text-primary);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  min-width: 0;
+}
+.fin-account__name small { color: var(--color-text-secondary); font-size: var(--text-xs); }
+.fin-account__amount {
+  color: var(--color-text-primary);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-bold);
+}
+
+/* Top categorías de gasto */
+.fin-cat-list { display: flex; flex-direction: column; gap: var(--sp-2); list-style: none; margin: 0; padding: 0; }
+.fin-cat {
+  align-items: center;
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: minmax(90px, 150px) 1fr 90px;
+}
+.fin-cat__name {
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fin-cat__bar {
+  background: var(--neutral-150);
+  border-radius: var(--radius-full);
+  height: 8px;
+  overflow: hidden;
+}
+.fin-cat__fill {
+  background: var(--brand-600);
+  border-radius: var(--radius-full);
+  display: block;
+  height: 100%;
+  transition: width var(--transition-slow);
+}
+.fin-cat__amount {
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-bold);
+  text-align: right;
+}
+
+.fin-disclaimer {
+  color: var(--color-text-disabled);
+  font-size: var(--text-xs);
+  margin: var(--sp-5) 0 0;
 }

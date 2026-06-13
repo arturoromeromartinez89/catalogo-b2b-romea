@@ -22,6 +22,7 @@ import ComponentsTab from "./tabs/ComponentsTab";
 import RemisionWorkspace from "./RemisionWorkspace";
 import GastosTab from "./tabs/GastosTab";
 import BalanceTab from "./tabs/BalanceTab";
+import InicioFinancieroTab from "./tabs/InicioFinancieroTab";
 import CentrosCostosTab from "./tabs/CentrosCostosTab";
 import CuentasAdminTab from "./tabs/CuentasAdminTab";
 import CategoriasGastoTab from "./tabs/CategoriasGastoTab";
@@ -57,17 +58,17 @@ const PRODUCT_RENDER_BATCH = 60;
 const baseTabs = ["catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
 const configurableOnlyTabs = ["components"];
 const adminModuleTabs = ["administracion"];
+// Navegación organizada por las preguntas del negocio, no por tablas.
+// "Configuración" agrupa los catálogos internos con jerarquía visual menor.
 const ADMIN_SUB_TABS = [
-  // Grupo operaciones
-  { id: "resumen",    label: "Resumen",            group: "operaciones" },
-  { id: "remisiones", label: "Remisiones",          group: "operaciones" },
-  { id: "gastos",     label: "Gastos",              group: "operaciones" },
-  { id: "balance",    label: "Balance",             group: "operaciones" },
-  { id: "estados",    label: "Estados financieros", group: "operaciones" },
-  // Grupo catálogos internos
-  { id: "cuentas",    label: "Cuentas",             group: "catalogos" },
-  { id: "categorias", label: "Categorías de gasto", group: "catalogos" },
-  { id: "centros",    label: "Centros de costos",   group: "catalogos" },
+  { id: "inicio",     label: "Inicio",               group: "operaciones" },
+  { id: "remisiones", label: "Ventas y cobros",      group: "operaciones" },
+  { id: "gastos",     label: "Gastos y compras",     group: "operaciones" },
+  { id: "cuentas",    label: "Dinero y cuentas",     group: "operaciones" },
+  { id: "balance",    label: "Resultados",           group: "operaciones" },
+  { id: "estados",    label: "Estados financieros",  group: "operaciones" },
+  { id: "categorias", label: "Categorías de gasto",  group: "configuracion" },
+  { id: "centros",    label: "Centros de costos",    group: "configuracion" },
 ];
 const tabKeys = {
   tenants:       "tenants",
@@ -223,7 +224,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
   const tabs = superadmin ? ["tenants", ...baseTabs] : [...baseTabs]; // se extiende abajo con extraTabs
   const [tab, setTab] = useState("catalog");
-  const [adminSubTab, setAdminSubTab] = useState("resumen");
+  const [adminSubTab, setAdminSubTab] = useState("inicio");
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("");
   const [actionNotice, setActionNotice] = useState(null);
@@ -1208,7 +1209,6 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       {tab === "administracion" && configurableCatalogEnabled ? (
         <aside className="admin-secondary-sidebar">
           <nav className="secondary-nav">
-            <div className="secondary-nav-section-title">Operaciones</div>
             {ADMIN_SUB_TABS.filter((s) => s.group === "operaciones").map((sub) => (
               <button
                 key={sub.id}
@@ -1219,12 +1219,13 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                 {sub.label}
               </button>
             ))}
-            <div className="secondary-nav-section-title" style={{ marginTop: 12 }}>Catálogos internos</div>
-            {ADMIN_SUB_TABS.filter((s) => s.group === "catalogos").map((sub) => (
+            <div className="secondary-nav-divider" />
+            <div className="secondary-nav-section-title">Configuración</div>
+            {ADMIN_SUB_TABS.filter((s) => s.group === "configuracion").map((sub) => (
               <button
                 key={sub.id}
                 type="button"
-                className={`secondary-nav-item${adminSubTab === sub.id ? " active" : ""}`}
+                className={`secondary-nav-item secondary-nav-item--config${adminSubTab === sub.id ? " active" : ""}`}
                 onClick={() => setAdminSubTab(sub.id)}
               >
                 {sub.label}
@@ -1429,12 +1430,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
 
         {tab === "administracion" && configurableCatalogEnabled ? (
           <div className="admin-module-content">
-            {adminSubTab === "resumen" ? (
-              <div className="admin-placeholder-panel">
-                <span className="placeholder-icon">📊</span>
-                <h3>Resumen ejecutivo</h3>
-                <p>Próximamente: KPIs de remisiones, cobros y gastos del mes en un solo vistazo. Por ahora usa Balance para el detalle.</p>
-              </div>
+            {adminSubTab === "inicio" ? (
+              <InicioFinancieroTab tenantId={tenantId} onNavigate={setAdminSubTab} />
             ) : null}
             {adminSubTab === "remisiones" ? (
               <RemisionWorkspace
@@ -1507,19 +1504,23 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           onClose={() => setProductModal({ open: false, product: null, mode: "create" })}
         />
       ) : null}
-      <SelectedProductsDrawer
-        preorderProducts={preorderProducts}
-        catalogProducts={catalogSelectionProducts}
-        isOpen={selectionDrawerOpen}
-        onOpen={() => setSelectionDrawerOpen(true)}
-        onClose={() => setSelectionDrawerOpen(false)}
-        onOpenPreorder={openDraftPreorderWorkspace}
-        onRemovePreorder={removeFromPreorder}
-        onRemoveCatalog={removeFromCatalogSelection}
-        onCatalogPdf={openCatalogPdfPanel}
-        onQuoteLink={openQuoteLinkPanel}
-        onClearCatalog={() => setCatalogSelectionIds(new Set())}
-      />
+      {/* El cajón de selección es del flujo de catálogo/preórdenes — no estorba
+          en el módulo financiero ni en empresa/base de datos */}
+      {tab !== "administracion" && tab !== "company" && tab !== "database" ? (
+        <SelectedProductsDrawer
+          preorderProducts={preorderProducts}
+          catalogProducts={catalogSelectionProducts}
+          isOpen={selectionDrawerOpen}
+          onOpen={() => setSelectionDrawerOpen(true)}
+          onClose={() => setSelectionDrawerOpen(false)}
+          onOpenPreorder={openDraftPreorderWorkspace}
+          onRemovePreorder={removeFromPreorder}
+          onRemoveCatalog={removeFromCatalogSelection}
+          onCatalogPdf={openCatalogPdfPanel}
+          onQuoteLink={openQuoteLinkPanel}
+          onClearCatalog={() => setCatalogSelectionIds(new Set())}
+        />
+      ) : null}
 
       {catalogPdfOpen ? (
         <CatalogPdfPanel

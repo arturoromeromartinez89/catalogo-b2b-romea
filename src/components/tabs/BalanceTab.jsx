@@ -100,13 +100,13 @@ export default function BalanceTab({ tenantId }) {
 
           {/* ── Ventas del periodo ── */}
           <section className="bal-section">
-            <h3 className="bal-section__title">📦 Ventas del periodo</h3>
+            <h3 className="bal-section__title">Ventas del periodo</h3>
             <div className="bal-kpi-grid">
               {data.ventas.usd > 0 && (
-                <KpiCard label="Ventas USD" value={fmtUSD(data.ventas.usd)} icon="🇺🇸" variant="primary" />
+                <KpiCard label="Ventas USD" value={fmtUSD(data.ventas.usd)} variant="primary" />
               )}
               {data.ventas.mxn > 0 && (
-                <KpiCard label="Ventas MXN" value={fmtMXN(data.ventas.mxn)} icon="🇲🇽" variant="primary" />
+                <KpiCard label="Ventas MXN" value={fmtMXN(data.ventas.mxn)} variant="primary" />
               )}
               {data.ventas.usd === 0 && data.ventas.mxn === 0 && (
                 <div className="bal-empty-note">Sin remisiones en este periodo.</div>
@@ -116,13 +116,13 @@ export default function BalanceTab({ tenantId }) {
 
           {/* ── Cobros del periodo ── */}
           <section className="bal-section">
-            <h3 className="bal-section__title">💰 Cobros del periodo</h3>
+            <h3 className="bal-section__title">Cobros del periodo</h3>
             <div className="bal-kpi-grid">
               {data.cobrado.usd > 0 && (
-                <KpiCard label="Cobrado USD" value={fmtUSD(data.cobrado.usd)} icon="✓" variant="ok" />
+                <KpiCard label="Cobrado USD" value={fmtUSD(data.cobrado.usd)} variant="ok" />
               )}
               {data.cobrado.mxn > 0 && (
-                <KpiCard label="Cobrado MXN" value={fmtMXN(data.cobrado.mxn)} icon="✓" variant="ok" />
+                <KpiCard label="Cobrado MXN" value={fmtMXN(data.cobrado.mxn)} variant="ok" />
               )}
               {data.gananciaCambiaria !== 0 && (
                 <KpiCard
@@ -141,32 +141,32 @@ export default function BalanceTab({ tenantId }) {
 
           {/* ── Cuentas por cobrar (todas, no solo el periodo) ── */}
           <section className="bal-section">
-            <h3 className="bal-section__title">⏳ Cuentas por cobrar (saldo total)</h3>
+            <h3 className="bal-section__title">Cuentas por cobrar (saldo total)</h3>
             <div className="bal-kpi-grid">
               {data.cxc.usd > 0 && (
-                <KpiCard label="CxC en USD" value={fmtUSD(data.cxc.usd)} icon="$" variant="alert" />
+                <KpiCard label="CxC en USD" value={fmtUSD(data.cxc.usd)} variant="alert" />
               )}
               {data.cxc.mxn > 0 && (
-                <KpiCard label="CxC en MXN" value={fmtMXN(data.cxc.mxn)} icon="$" variant="alert" />
+                <KpiCard label="CxC en MXN" value={fmtMXN(data.cxc.mxn)} variant="alert" />
               )}
               {data.cxc.plataGramos > 0 && (
-                <KpiCard label="CxC Plata" value={fmtG(data.cxc.plataGramos)} icon="⬡" variant="plata" sub="gramos pendientes" />
+                <KpiCard label="CxC Plata" value={fmtG(data.cxc.plataGramos)} variant="plata" sub="gramos pendientes" />
               )}
               {data.cxc.usd === 0 && data.cxc.mxn === 0 && data.cxc.plataGramos === 0 && (
-                <div className="bal-empty-note">✓ Sin cuentas por cobrar pendientes.</div>
+                <div className="bal-empty-note">Sin cuentas por cobrar pendientes.</div>
               )}
             </div>
           </section>
 
           {/* ── Gastos del periodo ── */}
           <section className="bal-section">
-            <h3 className="bal-section__title">📉 Gastos del periodo</h3>
+            <h3 className="bal-section__title">Gastos del periodo</h3>
             <div className="bal-kpi-grid">
-              <KpiCard label="Total gastos" value={fmtMXN(data.gastos.total)} icon="🧾" />
-              <KpiCard label="Gastos fijos" value={fmtMXN(data.gastos.fijos)} icon="📌" />
-              <KpiCard label="Gastos variables" value={fmtMXN(data.gastos.variables)} icon="⚡" />
+              <KpiCard label="Total gastos" value={fmtMXN(data.gastos.total)} />
+              <KpiCard label="Gastos fijos" value={fmtMXN(data.gastos.fijos)} />
+              <KpiCard label="Gastos variables" value={fmtMXN(data.gastos.variables)} />
               {data.gastos.pendientes > 0 && (
-                <KpiCard label="Por pagar" value={fmtMXN(data.gastos.pendientes)} icon="⚠️" variant="alert" sub="gastos sin liquidar" />
+                <KpiCard label="Por pagar" value={fmtMXN(data.gastos.pendientes)} variant="alert" sub="gastos sin liquidar" />
               )}
             </div>
 
@@ -190,7 +190,7 @@ export default function BalanceTab({ tenantId }) {
           {/* ── Estado de resultados simplificado ── */}
           {(data.cobrado.usd > 0 || data.cobrado.mxn > 0) && data.gastos.total > 0 && (
             <section className="bal-section">
-              <h3 className="bal-section__title">📊 Resultado del periodo (estimado)</h3>
+              <h3 className="bal-section__title">Resultado del periodo (estimado)</h3>
               <div className="bal-result-table">
                 {data.cobrado.usd > 0 && (
                   <div className="bal-result-row">
@@ -228,7 +228,7 @@ export default function BalanceTab({ tenantId }) {
           {/* ── Remisiones por estado ── */}
           {Object.keys(data.remisionesPorEstado).length > 0 && (
             <section className="bal-section">
-              <h3 className="bal-section__title">📋 Remisiones por estado (total histórico)</h3>
+              <h3 className="bal-section__title">Remisiones por estado (total histórico)</h3>
               <div className="bal-kpi-grid">
                 {Object.entries(data.remisionesPorEstado).map(([estado, count]) => (
                   <KpiCard
