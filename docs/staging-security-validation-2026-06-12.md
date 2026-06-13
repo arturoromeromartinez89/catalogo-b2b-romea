@@ -65,14 +65,27 @@ La prueba verifico:
 - Sintaxis de las cuatro migraciones: correcta.
 - Sintaxis de la prueba completa: correcta.
 - `npm run build`: correcto.
-- `npm audit --omit=dev`: `0` vulnerabilidades.
+- `npm audit --omit=dev`: 3 alertas altas en la cadena Vite/esbuild. La correccion automatica exige un salto mayor a Vite 8 y se dejo para un cambio separado.
 - `git diff --check`: sin errores de whitespace; solo avisos de conversion LF/CRLF en Windows.
+
+## Edge Function de imagenes publicas
+
+Se desplego `sign-public-images` exclusivamente en `staging-security`:
+
+- Endpoint: `https://vafqcvpzksjlrborxoos.supabase.co/functions/v1/sign-public-images`.
+- `Verify JWT` esta desactivado porque el visitante de una cotizacion es anonimo; la funcion valida el token de cotizacion mediante RPC antes de usar el `service_role` interno.
+- Un token inexistente devolvio `404 Quote not found`.
+- Un token valido con una ruta autorizada y otra de un tenant distinto devolvio solamente la ruta autorizada.
+- La URL firmada expira en 600 segundos.
+- Los registros de tenant, empresa y cotizacion usados para la prueba se eliminaron al terminar.
+
+La carga y descarga fisica de un PNG no se completo porque la extension local de Chrome no tiene habilitado acceso a archivos locales. La autorizacion y lista permitida si quedaron probadas usando un metadato desechable de Storage. Quedo un metadato huerfano bajo `70000000-0000-4000-8000-000000000007/`; desaparecera al eliminar este preview branch.
 
 ## Pendientes antes de produccion
 
-- Implementar en el frontend las nuevas rutas `{tenant_id}/...` y URLs firmadas; la prueba SQL de Storage ya paso.
-- Resolver las imagenes de ligas publicas mediante una Edge Function antes de volver privado el bucket de produccion.
+- Repetir la prueba con un archivo fisico y verificar su descarga por URL firmada.
 - Probar el flujo visual completo con cuentas reales de staging, incluyendo catalogo, preorden y PDF.
+- Migrar objetos existentes de produccion a rutas `{tenant_id}/...` y convertir las URLs guardadas en paths.
 - Preparar respaldo y ventana de despliegue.
 - Aplicar primero migraciones en produccion, verificar RPC/RLS y solo despues desplegar el frontend compatible en Vercel.
 - Mantener produccion sin cambios hasta aprobar expresamente ese despliegue.

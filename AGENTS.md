@@ -15,7 +15,7 @@ La carpeta activa `catalogo-b2b-drag` es un worktree limpio del repositorio remo
 - Supabase es el backend actual: PostgreSQL, Auth, RLS, RPC y Storage.
 - El navegador consulta Supabase directamente con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 - Vercel despliega la SPA desde `main`.
-- No existe todavia un servidor propio ni una capa estable de Supabase Edge Functions.
+- No existe todavia un servidor propio. La primera Supabase Edge Function, `sign-public-images`, ya esta desplegada y probada en staging.
 - PDFs con jsPDF; Excel con SheetJS/xlsx.
 
 ## 3. Arquitectura multi-tenant
@@ -119,7 +119,7 @@ El frontend preparado usa `get_client_catalog`, `submit_client_preorder` y `get_
 - `tenant_features` existe pero no aplica feature-gating real; hoy ni siquiera se consume en la UI principal.
 - Las ligas publicas validan contra su snapshot y limitan envios; esto paso en staging, pero aun necesitan rate limiting perimetral.
 - Storage sigue publico en produccion. La migracion privada y sus pruebas de aislamiento pasaron en staging.
-- Las rutas frontend, URLs firmadas, PDFs y la Edge Function `sign-public-images` estan implementadas localmente. La funcion aun debe desplegarse y probarse en staging; tambien falta migrar los objetos existentes antes de produccion.
+- Las rutas frontend, URLs firmadas y PDFs estan implementados localmente. La Edge Function `sign-public-images` esta desplegada en staging y paso pruebas de token invalido y bloqueo de rutas ajenas; falta probar la descarga de un archivo fisico y migrar los objetos existentes antes de produccion.
 - `npm audit --omit=dev` reporta 3 alertas altas en la cadena Vite/esbuild. La correccion automatica salta a Vite 8 y es breaking; actualizar y probar en un cambio separado.
 - Hay CI y una prueba SQL transaccional de seguridad, pero faltan pruebas automatizadas de UI, TypeScript y un proyecto permanente e independiente de staging.
 - La estructura de Supabase CLI y CI ya existe, pero falta una migracion base verificada; hoy `supabase db reset` no puede reconstruir toda la base historica.

@@ -1,9 +1,10 @@
 # Storage rollout — private buckets + tenant isolation
 
-Status: **database validated in staging; frontend and Edge Function implemented locally.**
+Status: **database and Edge Function authorization validated in staging; frontend implemented locally.**
 Migration `supabase/migrations/20260612150000_secure_storage.sql` passed in
-`staging-security`. The remaining staging step is deploying and smoke-testing
-`supabase/functions/sign-public-images`. Do **not** apply in production yet.
+`staging-security`. `supabase/functions/sign-public-images` is deployed there
+and rejects invalid tokens and cross-tenant paths. A physical image upload and
+download smoke test is still pending. Do **not** apply in production yet.
 
 ## 1. Goal
 
@@ -76,7 +77,7 @@ A private bucket cannot be read by `anon`, and `anon` cannot create signed URLs.
 **Therefore making the bucket private breaks public-quote images** unless we add
 a signing path for anonymous viewers:
 
-- **Implemented locally:** Edge Function `sign-public-images` receives a quote
+- **Implemented and deployed in staging:** Edge Function `sign-public-images` receives a quote
   token and object paths, verifies the token server-side, only accepts paths
   present in that quote or its tenant logo, and returns ten-minute signed URLs
   using the service role.
@@ -125,6 +126,6 @@ Using the existing two-tenant fixtures, assert:
    include the section-7 Storage assertions.
 3. Completed locally: frontend path + signed-URL changes. Existing RPCs already
    return the stored `foto_url` value, so they return paths once paths are stored.
-4. Deploy and smoke-test `sign-public-images` in staging — production blocker.
+4. Completed in staging: deploy `sign-public-images`; invalid tokens are rejected and only quote-authorized paths are signed. Pending: repeat with a physically uploaded image and fetch the returned URL.
 5. Production: backup → move objects + backfill URLs (section 6) → apply
    migration → deploy frontend → smoke test catalog, portal, PDFs, quote links.

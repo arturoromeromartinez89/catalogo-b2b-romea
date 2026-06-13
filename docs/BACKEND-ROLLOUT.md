@@ -20,7 +20,7 @@ The baseline must be generated only after comparing the production snapshot with
 
 ## Staging status - 2026-06-12
 
-A Supabase preview branch named `staging-security` (`vafqcvpzksjlrborxoos`) is active. The five security migrations, including private tenant-scoped Storage, were applied successfully and `supabase/tests/full_security_acceptance.sql` passed. Production was not modified.
+A Supabase preview branch named `staging-security` (`vafqcvpzksjlrborxoos`) is active. The five security migrations, including private tenant-scoped Storage, were applied successfully and `supabase/tests/full_security_acceptance.sql` passed. The `sign-public-images` Edge Function is also deployed there and its token and tenant allow-list behavior passed. Production was not modified.
 
 The branch cloned schema but not production rows or Storage buckets. See `docs/staging-security-validation-2026-06-12.md` for the exact checks and remaining limitations.
 
@@ -35,8 +35,8 @@ The branch cloned schema but not production rows or Storage buckets. See `docs/s
 
 1. Completed in staging: apply the five security migrations in timestamp order.
 2. Completed in staging: run `supabase/tests/full_security_acceptance.sql` with disposable fixtures for two tenants, admins, clients and Storage objects.
-3. Implemented locally: frontend paths, batched signed URLs, PDF signing and the public-quote Edge Function. Pending deployment and UI smoke tests in staging.
-4. Pending: run UI smoke tests with persistent staging accounts.
+3. Completed in staging: deploy and test the public-quote Edge Function. Frontend paths, batched signed URLs and PDF signing remain local until the coordinated rollout.
+4. Pending: run a physical image fetch test and UI smoke tests with persistent staging accounts.
 5. Pending: back up production, schedule a maintenance window, migrate existing objects and URLs, apply the same migrations, and repeat smoke tests.
 
 Do not deploy the frontend RPC changes before the matching database migration is active. Deploy database first, verify RPCs, then deploy Vercel.
