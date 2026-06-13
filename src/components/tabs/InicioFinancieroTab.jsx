@@ -172,23 +172,23 @@ export default function InicioFinancieroTab({ tenantId, onNavigate }) {
 
         <button type="button" className="fin-card" onClick={() => go("cuentas")}>
           <span className="fin-card__q">¿Dónde está el dinero?</span>
-          <span className="fin-card__value">{fmtMXN(dineroTotal)}</span>
+          <span className="fin-card__value fin-card__value--muted">{fmtMXN(dineroTotal)}</span>
           {plataGramos > 0 && <span className="fin-card__alt">+ {fmtG(plataGramos)} de plata</span>}
           <span className="fin-card__detail">
-            {cuentasDinero.length
-              ? `En ${cuentasDinero.length} cuenta${cuentasDinero.length !== 1 ? "s" : ""} activa${cuentasDinero.length !== 1 ? "s" : ""}`
-              : "Configura tus cuentas de dinero"}
+            <span className="fin-tag-estimado">Saldo inicial</span>
+            {" "}Aún no descuenta pagos ni cobros — se conectará pronto.
           </span>
-          <span className="fin-card__link">Ver cuentas y saldos →</span>
+          <span className="fin-card__link">Ver cuentas →</span>
         </button>
 
         <button type="button" className="fin-card" onClick={() => go("balance")}>
-          <span className="fin-card__q">¿Cómo van mis utilidades?</span>
+          <span className="fin-card__q">Resultado operativo del periodo</span>
           <span className={`fin-card__value ${resultadoOperativo >= 0 ? "fin-card__value--ok" : "fin-card__value--alert"}`}>
             {fmtMXN(resultadoOperativo)}
           </span>
           <span className="fin-card__detail">
-            Resultado operativo estimado del periodo (cobrado − gastado)
+            <span className="fin-tag-estimado">Estimado</span>
+            {" "}Cobrado menos gastado. No es la utilidad contable (falta costo, plata y depreciación).
           </span>
           <span className="fin-card__link">Ver resultados →</span>
         </button>
@@ -211,7 +211,7 @@ export default function InicioFinancieroTab({ tenantId, onNavigate }) {
 
         {/* Dónde está el dinero — por cuenta */}
         <section className="fin-panel">
-          <h3 className="fin-panel__title">Saldos por cuenta</h3>
+          <h3 className="fin-panel__title">Saldos por cuenta <span className="fin-tag-estimado">Saldo inicial</span></h3>
           {cuentas.length === 0 ? (
             <p className="fin-panel__empty">Aún no tienes cuentas configuradas.</p>
           ) : (
