@@ -13,6 +13,7 @@ import {
   bulkCreateComponents,
 } from "../../services/productComponentsAdminService";
 import { buildPlaceholderUrl, imageUrlForSize } from "../../utils/formatters";
+import StorageImage from "../StorageImage";
 
 // ─── Formulario vacío ─────────────────────────────────────────────────────────
 const emptyForm = (tipo = "tejido") => ({
@@ -165,8 +166,10 @@ function ComponentForm({ initial, onSave, onCancel, tenantId, saving }) {
           <div className="components-field components-field--span2 components-photo-row">
             <span className="components-field-label">Foto</span>
             <div className="components-photo-preview">
-              <img
-                src={form.fotoUrl ? imageUrlForSize(form.fotoUrl, 120) : buildPlaceholderUrl()}
+              <StorageImage
+                src={form.fotoUrl}
+                width={120}
+                fallback={form.fotoUrl ? imageUrlForSize(form.fotoUrl, 120) : buildPlaceholderUrl()}
                 alt="Foto componente"
                 onError={(e) => { e.currentTarget.src = buildPlaceholderUrl(); }}
               />
@@ -418,9 +421,11 @@ export default function ComponentsTab({ tenantId }) {
                 {byType.map((comp) => (
                   <tr key={comp.id} className={comp.estatus === "inactivo" ? "row-inactive" : ""}>
                     <td>
-                      <img
+                      <StorageImage
                         className="component-thumb"
-                        src={comp.fotoUrl ? imageUrlForSize(comp.fotoUrl, 80) : buildPlaceholderUrl()}
+                        src={comp.fotoUrl}
+                        width={80}
+                        fallback={comp.fotoUrl ? imageUrlForSize(comp.fotoUrl, 80) : buildPlaceholderUrl()}
                         alt={comp.nombre}
                         onError={(e) => { e.currentTarget.src = buildPlaceholderUrl(); }}
                       />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings, saveCompanySettings, uploadLogo } from "../services/companySettings";
+import StorageImage from "./StorageImage";
 
 export default function CompanySettingsPanel({ tenantId = "" }) {
   const company = useCompany();
@@ -143,7 +144,7 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
           <div className="company-logo-row">
             <div className="company-logo-preview">
               {form.logo_url ? (
-                <img src={form.logo_url} alt="Logo de empresa" />
+                <StorageImage src={form.logo_url} width={360} alt="Logo de empresa" />
               ) : (
                 <span aria-hidden="true">□</span>
               )}

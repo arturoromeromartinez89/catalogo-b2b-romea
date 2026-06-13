@@ -4,6 +4,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { useCompany } from "../contexts/CompanyContext";
 import { calculateCartTotals } from "../utils/filters";
 import { formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
+import StorageImage from "./StorageImage";
 
 const generalFields = [
   ["serie", "series", "PRE"],
@@ -184,9 +185,10 @@ export default function CartDrawer({
                         <tr key={product.codigo}>
                           <td>{index + 1}</td>
                           <td>
-                            <img
+                            <StorageImage
                               className="quote-item-photo"
-                              src={imageUrlForSize(product.fotoUrl, 240)}
+                              src={product.fotoUrl}
+                              width={240}
                               alt={product.codigo}
                               loading="lazy"
                               decoding="async"

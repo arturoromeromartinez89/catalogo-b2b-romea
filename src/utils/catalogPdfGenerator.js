@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import { formatCurrency, formatWeight, imageUrlForSize, shortText } from "./formatters";
 import { compressImageForPdf, imageAlias } from "./pdfImageCompression";
 import { savePdfWithSize } from "./pdfSave";
+import { resolveStorageReferences } from "../services/storageImages";
 
 const page = { w: 216, h: 279, margin: 14 };
 const IMAGE_TIMEOUT_MS = 900;
@@ -113,6 +114,13 @@ const drawCover = async (doc, { catalogName, company, client, recipientType }) =
 };
 
 export const generateCatalogPdf = async (products, options = {}, company = {}) => {
+  const references = [company.logo_url, ...products.map((product) => product.fotoUrl)].filter(Boolean);
+  const resolvedReferences = await resolveStorageReferences(references);
+  company = { ...company, logo_url: resolvedReferences.get(company.logo_url) || company.logo_url || "" };
+  products = products.map((product) => ({
+    ...product,
+    fotoUrl: resolvedReferences.get(product.fotoUrl) || product.fotoUrl || "",
+  }));
   const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait", compress: true, precision: 2, putOnlyUsedFonts: true });
   const catalogName = options.catalogName || "Catalogo seleccionado";
   const columns = Number(options.columns || 3);

@@ -8,6 +8,7 @@ import { saveRemision, generateFolio, fetchRemisiones } from "../services/adminM
 import { fetchAllPreorders } from "../services/preorderService";
 import { buildPlaceholderUrl, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
+import StorageImage from "./StorageImage";
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
@@ -515,8 +516,10 @@ export default function RemisionEditor({
                 <div className="quote-product-results">
                   {productResults.map((p) => (
                     <button key={p.codigo} type="button" onClick={() => addProduct(p)}>
-                      <img
-                        src={imageUrlForSize(p.fotoUrl, 120) || buildPlaceholderUrl()}
+                      <StorageImage
+                        src={p.fotoUrl}
+                        width={120}
+                        fallback={imageUrlForSize(p.fotoUrl, 120) || buildPlaceholderUrl()}
                         alt={p.descripcion}
                         loading="lazy"
                         onError={(e) => { e.currentTarget.src = buildPlaceholderUrl(); }}
@@ -576,8 +579,10 @@ export default function RemisionEditor({
                   <tr key={idx}>
                     <td>
                       {item.productoFotoUrl ? (
-                        <img
-                          src={imageUrlForSize(item.productoFotoUrl, 80) || buildPlaceholderUrl()}
+                        <StorageImage
+                          src={item.productoFotoUrl}
+                          width={80}
+                          fallback={imageUrlForSize(item.productoFotoUrl, 80) || buildPlaceholderUrl()}
                           alt={item.productoCodigo}
                           style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 4, display: "block" }}
                           onError={(e) => { e.currentTarget.src = buildPlaceholderUrl(); }}

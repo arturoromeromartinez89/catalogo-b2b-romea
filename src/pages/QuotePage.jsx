@@ -4,7 +4,7 @@ import LanguageToggle from "../components/LanguageToggle";
 import { useCompany } from "../contexts/CompanyContext";
 import { useLanguage } from "../i18n/LanguageContext";
 import { fetchPublicCompanySettings } from "../services/companySettings";
-import { fetchQuoteLinkByToken, submitQuoteLinkSelection } from "../services/quoteLinkService";
+import { fetchQuoteLinkByToken, resolvePublicQuoteImages, submitQuoteLinkSelection } from "../services/quoteLinkService";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 
 const readToken = () => {
@@ -26,20 +26,21 @@ export default function QuotePage() {
 
   useEffect(() => {
     fetchQuoteLinkByToken(token)
-      .then((data) => {
-        setQuote(data);
+      .then(async (data) => {
+        const publicCompany = data?.tenant_id
+          ? await fetchPublicCompanySettings(data.tenant_id).catch(() => null)
+          : null;
+        const resolved = await resolvePublicQuoteImages({
+          token,
+          products: Array.isArray(data?.products) ? data.products : [],
+          company: publicCompany || {},
+        }).catch(() => ({ products: data?.products || [], company: publicCompany || {} }));
+        setQuote({ ...data, products: resolved.products });
+        setTenantCompany(resolved.company);
         setStatus("");
       })
       .catch(() => setStatus(t("quoteNotFound")));
   }, [token]);
-
-  useEffect(() => {
-    if (!quote?.tenant_id) {
-      setTenantCompany(null);
-      return;
-    }
-    fetchPublicCompanySettings(quote.tenant_id).then(setTenantCompany).catch(() => setTenantCompany(null));
-  }, [quote?.tenant_id]);
 
   const products = Array.isArray(quote?.products) ? quote.products : [];
   const selectedItems = useMemo(

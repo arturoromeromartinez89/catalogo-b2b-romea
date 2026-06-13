@@ -35,7 +35,7 @@ The branch cloned schema but not production rows or Storage buckets. See `docs/s
 
 1. Completed in staging: apply the five security migrations in timestamp order.
 2. Completed in staging: run `supabase/tests/full_security_acceptance.sql` with disposable fixtures for two tenants, admins, clients and Storage objects.
-3. Pending: update frontend paths and signed URLs, including the public-quote Edge Function.
+3. Implemented locally: frontend paths, batched signed URLs, PDF signing and the public-quote Edge Function. Pending deployment and UI smoke tests in staging.
 4. Pending: run UI smoke tests with persistent staging accounts.
 5. Pending: back up production, schedule a maintenance window, migrate existing objects and URLs, apply the same migrations, and repeat smoke tests.
 

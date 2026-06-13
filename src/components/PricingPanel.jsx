@@ -5,6 +5,7 @@ import { compressImageForPdf, imageAlias } from "../utils/pdfImageCompression";
 import { savePdfWithSize } from "../utils/pdfSave";
 import { validateSpreadsheetFile, validateSpreadsheetRows } from "../utils/fileLimits";
 import { fetchCompanySettings } from "../services/companySettings";
+import { signOnePath } from "../services/storageImages";
 import {
   buildPriceListName,
   calculatePiecePriceListItem,
@@ -707,7 +708,8 @@ export default function PricingPanel({ products = [], tenantId = "", profile }) 
     setProductLines(nextLines);
     setCompany(nextCompany || {});
     if (nextCompany?.logo_url) {
-      loadImageAsDataUrl(nextCompany.logo_url)
+      signOnePath(nextCompany.logo_url)
+        .then((url) => loadImageAsDataUrl(url))
         .then((logoImage) => {
           if (logoImage) setCompany((current) => ({
             ...current,

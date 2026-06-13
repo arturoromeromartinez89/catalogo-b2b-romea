@@ -9,6 +9,7 @@ import { generatePdf } from "../utils/pdfGenerator";
 import { useLanguage } from "../i18n/LanguageContext";
 import { buildPlaceholderUrl, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
+import StorageImage from "./StorageImage";
 import { buildPreorderItemFromProduct } from "../utils/preorderUtils";
 import { validateSpreadsheetFile, validateSpreadsheetRows } from "../utils/fileLimits";
 import { buildConfigurableCatalogProducts, hasConfigurableCatalogProducts, isConfigurableCatalogCompany, isConfigurableProductGroup } from "../utils/configurableCatalog";
@@ -1837,8 +1838,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   <div className="quote-product-results">
                     {productResults.map((product) => (
                       <button key={product.id || product.codigo} type="button" onClick={() => { activeScannerRef.current = "top"; addProduct(product); }}>
-                        <img
-                          src={imageUrlForSize(product.fotoUrl, 120) || buildPlaceholderUrl()}
+                        <StorageImage
+                          src={product.fotoUrl}
+                          width={120}
+                          fallback={imageUrlForSize(product.fotoUrl, 120) || buildPlaceholderUrl()}
                           alt={product.descripcion}
                           loading="lazy"
                           decoding="async"
@@ -1931,9 +1934,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                               <div className="cfg-card__header">
                                 <div className="cfg-card__header-left">
                                   {item._configurable_base_foto_url || item.producto_foto_url ? (
-                                    <img
+                                    <StorageImage
                                       className="cfg-card__tejido-thumb"
-                                      src={imageUrlForSize(item._configurable_base_foto_url || item.producto_foto_url, 120)}
+                                      src={item._configurable_base_foto_url || item.producto_foto_url}
+                                      width={120}
                                       alt={item._configurable_base_code}
                                       loading="lazy"
                                       onError={(e) => { e.currentTarget.style.display = "none"; }}
@@ -1995,9 +1999,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                                   <label className={`cfg-field cfg-field--broche${item._configurable_selections?.broche ? " cfg-field--selected" : ""}`}>
                                     <span className="cfg-field__label">Broche</span>
                                     {item._configurable_selections?.broche?.fotoUrl ? (
-                                      <img
+                                      <StorageImage
                                         className="cfg-field__photo"
-                                        src={imageUrlForSize(item._configurable_selections.broche.fotoUrl, 80)}
+                                        src={item._configurable_selections.broche.fotoUrl}
+                                        width={80}
                                         alt={item._configurable_selections.broche.nombre}
                                         loading="lazy"
                                         onError={(e) => { e.currentTarget.style.display = "none"; }}
@@ -2169,9 +2174,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                         ) : null}
                         <td className="quote-item-photo-cell">
                           {item.producto_foto_url ? (
-                            <img
+                            <StorageImage
                               className="quote-item-photo"
-                              src={imageUrlForSize(item.producto_foto_url, 240)}
+                              src={item.producto_foto_url}
+                              width={240}
                               alt={item.producto_codigo}
                               loading="lazy"
                               decoding="async"
@@ -2280,8 +2286,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 <div className="quote-product-results">
                   {productResults.map((product) => (
                     <button key={product.id || product.codigo} type="button" onClick={() => { activeScannerRef.current = "bottom"; addProduct(product); }}>
-                      <img
-                        src={imageUrlForSize(product.fotoUrl, 120) || buildPlaceholderUrl()}
+                      <StorageImage
+                        src={product.fotoUrl}
+                        width={120}
+                        fallback={imageUrlForSize(product.fotoUrl, 120) || buildPlaceholderUrl()}
                         alt={product.descripcion}
                         loading="lazy"
                         decoding="async"

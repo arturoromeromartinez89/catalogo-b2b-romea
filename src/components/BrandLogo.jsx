@@ -1,4 +1,5 @@
 import { useCompany } from "../contexts/CompanyContext";
+import StorageImage from "./StorageImage";
 
 export default function BrandLogo({ size = "md", company: companyOverride = null }) {
   const contextCompany = useCompany();
@@ -7,8 +8,9 @@ export default function BrandLogo({ size = "md", company: companyOverride = null
 
   if (company.logo_url) {
     return (
-      <img
+      <StorageImage
         src={company.logo_url}
+        width={360}
         alt={alt}
         style={{
           maxHeight: size === "sm" ? 36 : 82,

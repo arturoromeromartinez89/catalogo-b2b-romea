@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { extractStoragePath } from "./storageImages";
 
 const cleanNumber = (value) => {
   const number = Number(value || 0);
@@ -60,6 +61,28 @@ export const fetchQuoteLinkByToken = async (token) => {
   const quote = Array.isArray(data) ? data[0] : data;
   if (!quote) throw new Error("La liga no existe o ya expiro.");
   return quote;
+};
+
+export const resolvePublicQuoteImages = async ({ token, products = [], company = {} }) => {
+  const productRefs = products.map((product) => product.fotoUrl).filter((value) => extractStoragePath(value));
+  const logoRef = extractStoragePath(company.logo_url) ? company.logo_url : "";
+  const references = [...productRefs, logoRef].filter(Boolean);
+  if (!references.length) return { products, company };
+
+  const { data, error } = await supabase.functions.invoke("sign-public-images", {
+    body: { token, references },
+  });
+  if (error) throw error;
+
+  const signedByPath = new Map(
+    (data?.signed || []).map((entry) => [entry.path, entry.signedUrl])
+  );
+  const resolve = (value) => signedByPath.get(extractStoragePath(value)) || value || "";
+
+  return {
+    products: products.map((product) => ({ ...product, fotoUrl: resolve(product.fotoUrl) })),
+    company: { ...company, logo_url: resolve(company.logo_url) },
+  };
 };
 
 export const submitQuoteLinkSelection = async ({ token, customer, items }) => {

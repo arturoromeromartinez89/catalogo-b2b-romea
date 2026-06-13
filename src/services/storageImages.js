@@ -12,6 +12,10 @@ const PUBLIC_MARKER = `/storage/v1/object/public/${BUCKET}/`;
 const SIGN_MARKER = `/storage/v1/object/sign/${BUCKET}/`;
 const DEFAULT_TTL = 60 * 60 * 4; // 4 hours — generous so open catalogs don't break
 const SIGN_BATCH = 100;
+const CACHE_SAFETY_MS = 60 * 1000;
+const signedUrlCache = new Map();
+const pendingResolvers = new Map();
+let flushTimer = null;
 
 // Returns the in-bucket path for a value, or null when it is not a
 // company-assets object (Drive/external/data/blob/local are not ours to sign).
@@ -45,10 +49,41 @@ export const signStoragePaths = async (paths = [], expiresIn = DEFAULT_TTL) => {
     const { data, error } = await supabase.storage.from(BUCKET).createSignedUrls(slice, expiresIn);
     if (error || !data) continue; // non-fatal: missing images just show placeholder
     data.forEach((entry) => {
-      if (entry?.signedUrl && entry?.path) result.set(entry.path, entry.signedUrl);
+      if (entry?.signedUrl && entry?.path) {
+        result.set(entry.path, entry.signedUrl);
+        signedUrlCache.set(entry.path, {
+          url: entry.signedUrl,
+          expiresAt: Date.now() + expiresIn * 1000 - CACHE_SAFETY_MS,
+        });
+      }
     });
   }
   return result;
+};
+
+const flushPendingPaths = async () => {
+  flushTimer = null;
+  const paths = [...pendingResolvers.keys()];
+  if (!paths.length) return;
+  const signed = await signStoragePaths(paths);
+  paths.forEach((path) => {
+    const resolvers = pendingResolvers.get(path) || [];
+    pendingResolvers.delete(path);
+    const url = signed.get(path) || "";
+    resolvers.forEach((resolve) => resolve(url));
+  });
+};
+
+const signPathQueued = (path) => {
+  const cached = signedUrlCache.get(path);
+  if (cached?.url && cached.expiresAt > Date.now()) return Promise.resolve(cached.url);
+
+  return new Promise((resolve) => {
+    const resolvers = pendingResolvers.get(path) || [];
+    resolvers.push(resolve);
+    pendingResolvers.set(path, resolvers);
+    if (!flushTimer) flushTimer = globalThis.setTimeout(flushPendingPaths, 0);
+  });
 };
 
 // Given a list of objects and the image fields to resolve, replaces each
@@ -92,6 +127,17 @@ export const attachSignedImageUrls = async (
 export const signOnePath = async (value, expiresIn = DEFAULT_TTL) => {
   const path = extractStoragePath(value);
   if (!path) return String(value || ""); // pass through external/local refs
+  if (expiresIn === DEFAULT_TTL) return signPathQueued(path);
   const map = await signStoragePaths([path], expiresIn);
   return map.get(path) || "";
+};
+
+export const resolveStorageReferences = async (values = [], expiresIn = DEFAULT_TTL) => {
+  const signed = await signStoragePaths(values.map(extractStoragePath).filter(Boolean), expiresIn);
+  const result = new Map();
+  values.forEach((value) => {
+    const path = extractStoragePath(value);
+    result.set(value, path ? signed.get(path) || "" : String(value || ""));
+  });
+  return result;
 };

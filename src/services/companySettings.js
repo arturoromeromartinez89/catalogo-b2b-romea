@@ -53,11 +53,10 @@ export const saveCompanySettings = async (settings, tenantId = "") => {
 
 export const uploadLogo = async (file, tenantId = "") => {
   validateImageFile(file);
+  if (!tenantId) throw new Error("Selecciona una empresa antes de subir el logo.");
   const ext = file.name.split(".").pop();
-  const owner = tenantId || "global";
-  const path = `logos/${owner}/logo.${ext}`;
+  const path = `${tenantId}/logos/logo.${ext}`;
   const { error } = await supabase.storage.from("company-assets").upload(path, file, { upsert: true });
   if (error) throw error;
-  const { data } = supabase.storage.from("company-assets").getPublicUrl(path);
-  return data.publicUrl;
+  return path;
 };

@@ -1,11 +1,14 @@
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { useLanguage } from "../i18n/LanguageContext";
 import { downloadCatalogSelectionExcel } from "../utils/catalogExcel";
+import StorageImage from "./StorageImage";
 
 const ProductMiniRow = ({ product, onRemove, mode }) => (
   <article className="selection-drawer-item">
-    <img
-      src={imageUrlForSize(product.fotoUrl, 120) || buildPlaceholderUrl()}
+    <StorageImage
+      src={product.fotoUrl}
+      width={120}
+      fallback={imageUrlForSize(product.fotoUrl, 120) || buildPlaceholderUrl()}
       alt={product.descripcion}
       loading="lazy"
       decoding="async"

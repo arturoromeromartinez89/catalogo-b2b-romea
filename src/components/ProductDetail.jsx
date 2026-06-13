@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize } from "../utils/formatters";
 import { useLanguage } from "../i18n/LanguageContext";
+import StorageImage from "./StorageImage";
 
 export default function ProductDetail({
   product,
@@ -58,13 +59,12 @@ export default function ProductDetail({
       <div className="detail-layout">
         <div className="detail-gallery">
           <div className="detail-main-image">
-            <img
-              src={mainImage}
+            <StorageImage
+              src={selectedImage || images[0]}
+              width={1200}
+              fallback={mainImage}
               alt={product.descripcion || product.codigo}
               decoding="async"
-              onError={(event) => {
-                event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
-              }}
             />
           </div>
           {images.length > 1 ? (
@@ -76,8 +76,10 @@ export default function ProductDetail({
                   type="button"
                   onClick={() => setSelectedImage(image)}
                 >
-                  <img
-                    src={imageUrlForSize(image, 160) || buildPlaceholderUrl(t("noPhoto"))}
+                  <StorageImage
+                    src={image}
+                    width={160}
+                    fallback={imageUrlForSize(image, 160) || buildPlaceholderUrl(t("noPhoto"))}
                     alt={product.codigo}
                     loading="lazy"
                     decoding="async"

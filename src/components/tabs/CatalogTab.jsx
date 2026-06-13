@@ -1,6 +1,7 @@
 import ProductDetail from "../ProductDetail";
 import { isConfigurableProductGroup } from "../../utils/configurableCatalog";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../../utils/formatters";
+import StorageImage from "../StorageImage";
 
 const PRODUCT_RENDER_BATCH = 60; // debe coincidir con AdminDashboard
 
@@ -113,15 +114,14 @@ export default function CatalogTab({
                   {inPreorder ? <span className="preorder-added-badge">En preorden</span> : null}
                   {inCatalogSelection ? <span className="catalog-added-badge">Catalogo</span> : null}
                   <button className="admin-product-image" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
-                    <img
-                      src={imageUrlForSize(product.fotoUrl, 360) || buildPlaceholderUrl(t("noPhoto"))}
+                    <StorageImage
+                      src={product.fotoUrl}
+                      width={360}
+                      fallback={imageUrlForSize(product.fotoUrl, 360) || buildPlaceholderUrl(t("noPhoto"))}
                       alt={product.descripcion}
                       loading="lazy"
                       decoding="async"
                       fetchPriority="low"
-                      onError={(event) => {
-                        event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
-                      }}
                     />
                   </button>
                   <div className="admin-product-info">

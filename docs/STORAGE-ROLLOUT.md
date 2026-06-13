@@ -1,8 +1,9 @@
 # Storage rollout — private buckets + tenant isolation
 
-Status: **prepared, not applied.** Migration `supabase/migrations/20260612150000_secure_storage.sql`
-is ready to validate in `staging-security`. Do **not** apply in production until the
-public-quote image story (section 5) is resolved.
+Status: **database validated in staging; frontend and Edge Function implemented locally.**
+Migration `supabase/migrations/20260612150000_secure_storage.sql` passed in
+`staging-security`. The remaining staging step is deploying and smoke-testing
+`supabase/functions/sign-public-images`. Do **not** apply in production yet.
 
 ## 1. Goal
 
@@ -28,14 +29,16 @@ covers all asset types.
 
 ## 3. Frontend changes required (deploy AFTER the migration)
 
-All three upload helpers must (a) write under the new `{tenant}/...` prefix and
-(b) stop persisting public URLs. Persist the **path**; sign on read.
+All three upload helpers now write under the new `{tenant}/...` prefix and persist
+the path instead of a public URL.
 
 - `src/services/productImageService.js` → path `${tenantId}/products/${code}.${ext}`; store `foto_url` = path (or a `foto_path` column).
 - `src/services/companySettings.js` (`uploadLogo`) → path `${tenantId}/logos/logo.${ext}`.
 - `src/services/productComponentsAdminService.js` (`uploadComponentPhoto`) → keep `${tenantId}/components/...`.
 
-Add one shared resolver (new `src/services/storageImages.js`):
+The shared resolver lives in `src/services/storageImages.js`. It batches and
+caches signed URLs. `StorageImage.jsx` resolves only rendered images, avoiding a
+request for every product in a large admin catalog.
 
 ```js
 // Returns a short-lived signed URL for a stored object path.
@@ -73,10 +76,10 @@ A private bucket cannot be read by `anon`, and `anon` cannot create signed URLs.
 **Therefore making the bucket private breaks public-quote images** unless we add
 a signing path for anonymous viewers:
 
-- **Recommended:** a small **Edge Function** `sign-public-image` that, given a
-  quote token + object path, verifies the token server-side (reusing
-  `get_quote_link_by_token`) and returns a short-lived signed URL using the
-  service role. This is the first concrete piece of Phase 3's Edge Functions.
+- **Implemented locally:** Edge Function `sign-public-images` receives a quote
+  token and object paths, verifies the token server-side, only accepts paths
+  present in that quote or its tenant logo, and returns ten-minute signed URLs
+  using the service role.
 - Alternative (faster, weaker): keep ONLY quote-linked images in a separate
   small public bucket. Leaves an intentional public surface; acceptable only if
   the catalog is not considered confidential.
@@ -120,7 +123,8 @@ Using the existing two-tenant fixtures, assert:
    belonging to other buckets.
 2. Run `supabase/tests/full_security_acceptance.sql`; its disposable fixtures
    include the section-7 Storage assertions.
-3. Land the frontend path + signed-URL changes and the RPC path change.
-4. Build the `sign-public-image` Edge Function (section 5) — production blocker.
+3. Completed locally: frontend path + signed-URL changes. Existing RPCs already
+   return the stored `foto_url` value, so they return paths once paths are stored.
+4. Deploy and smoke-test `sign-public-images` in staging — production blocker.
 5. Production: backup → move objects + backfill URLs (section 6) → apply
    migration → deploy frontend → smoke test catalog, portal, PDFs, quote links.

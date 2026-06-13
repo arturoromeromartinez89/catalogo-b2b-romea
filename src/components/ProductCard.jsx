@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { useLanguage } from "../i18n/LanguageContext";
+import StorageImage from "./StorageImage";
 
 function ProductCard({ product, onAdd, onOpenDetail }) {
   const { t } = useLanguage();
@@ -9,15 +10,14 @@ function ProductCard({ product, onAdd, onOpenDetail }) {
   return (
     <article className="product-card">
       <button className="product-image-button" type="button" onClick={() => onOpenDetail(product.codigo)}>
-        <img
-          src={imageUrl}
+        <StorageImage
+          src={product.fotoUrl}
+          width={360}
+          fallback={imageUrl}
           alt={product.descripcion || product.codigo}
           loading="lazy"
           decoding="async"
           fetchPriority="low"
-          onError={(event) => {
-                event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
-          }}
         />
       </button>
       <div className="product-info">

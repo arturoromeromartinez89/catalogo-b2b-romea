@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 import { validateImageFile, validateSpreadsheetFile, validateSpreadsheetRows } from "../utils/fileLimits";
+import { attachSignedImageUrls } from "./storageImages";
 
 // ─── Tipos disponibles ────────────────────────────────────────────────────────
 // Tejido = SKU base (tabla productos), NO es componente físico con peso.
@@ -50,7 +51,7 @@ export const fetchAllComponents = async (tenantId) => {
     .order("orden")
     .order("nombre");
   if (error) throw error;
-  return (data || []).map(normalizeAdminComponent);
+  return attachSignedImageUrls((data || []).map(normalizeAdminComponent), ["fotoUrl"]);
 };
 
 // ─── Crear componente ─────────────────────────────────────────────────────────
@@ -138,8 +139,7 @@ export const uploadComponentPhoto = async (file, tenantId, componentCodigo) => {
     .from("company-assets")
     .upload(path, file, { upsert: true, contentType: file.type });
   if (uploadError) throw uploadError;
-  const { data } = supabase.storage.from("company-assets").getPublicUrl(path);
-  return data.publicUrl;
+  return path;
 };
 
 // ─── Importar desde Excel ─────────────────────────────────────────────────────

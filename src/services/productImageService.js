@@ -31,8 +31,7 @@ const uploadAndUpdateImage = async ({ file, product, tenantId }) => {
   validateImageFile(file);
   const ext = imageExtension(file.name);
   const code = safeStorageName(product.codigo);
-  const owner = tenantId || "global";
-  const path = `products/${owner}/${code}.${ext}`;
+  const path = `${tenantId}/products/${code}.${ext}`;
 
   const upload = await supabase.storage
     .from(IMAGE_BUCKET)
@@ -44,12 +43,9 @@ const uploadAndUpdateImage = async ({ file, product, tenantId }) => {
 
   if (upload.error) throw upload.error;
 
-  const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
-  const publicUrl = data.publicUrl;
-
   let query = supabase
     .from("products")
-    .update({ foto_url: publicUrl, updated_at: new Date().toISOString() })
+    .update({ foto_url: path, updated_at: new Date().toISOString() })
     .eq("id", product.id);
 
   if (tenantId) query = query.eq("tenant_id", tenantId);
@@ -57,7 +53,7 @@ const uploadAndUpdateImage = async ({ file, product, tenantId }) => {
   const update = await query.select("id,codigo,foto_url").single();
   if (update.error) throw update.error;
 
-  return { code: product.codigo, publicUrl };
+  return { code: product.codigo, path };
 };
 
 export const importProductImagesByCode = async ({ files = [], products = [], tenantId = "", onProgress }) => {

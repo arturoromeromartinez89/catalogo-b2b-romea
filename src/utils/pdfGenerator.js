@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import { imageUrlForSize } from "./formatters";
 import { compressImageForPdf, imageAlias } from "./pdfImageCompression";
 import { savePdfWithSize } from "./pdfSave";
+import { resolveStorageReferences } from "../services/storageImages";
 
 const withTimeout = (promise, ms = 4000) =>
   Promise.race([
@@ -59,6 +60,21 @@ const buildFolio = (customer) => {
 };
 
 export async function generatePdf(cartItems, customer, language = "es", company = {}, opts = {}) {
+  const references = [
+    company.logo_url,
+    ...cartItems.map((item) => item.product?.fotoUrl || item.producto_foto_url),
+  ].filter(Boolean);
+  const resolvedReferences = await resolveStorageReferences(references);
+  company = { ...company, logo_url: resolvedReferences.get(company.logo_url) || company.logo_url || "" };
+  cartItems = cartItems.map((item) => {
+    const original = item.product?.fotoUrl || item.producto_foto_url || "";
+    const resolved = resolvedReferences.get(original) || original;
+    return {
+      ...item,
+      producto_foto_url: resolved,
+      product: item.product ? { ...item.product, fotoUrl: resolved } : item.product,
+    };
+  });
   const doc = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait", compress: true, precision: 2, putOnlyUsedFonts: true });
   const brandName = company.brand_name || company.legal_name || "";
   const t = (es, en) => language === "en" ? en : es;
