@@ -9857,3 +9857,6 @@ tr.client-row--expanded td {
 .gf-venc--vencido small { color: var(--color-error); }
 .gf-venc--pronto { color: var(--color-warning-hover); }
 .gf-venc--pronto small { color: var(--color-warning-hover); }
+
+/* Cobros — chip de anticipo */
+.gf-chip--anticipo { border-style: dashed; }

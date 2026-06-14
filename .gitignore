@@ -5,6 +5,7 @@ dist/
 npm-debug.log*
 .DS_Store
 .vercel
+supabase/.temp/
 
 # Local agent workspace
 .claude/

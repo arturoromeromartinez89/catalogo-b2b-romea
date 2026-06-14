@@ -24,6 +24,7 @@ import RemisionWorkspace from "./RemisionWorkspace";
 import GastosTab from "./tabs/GastosTab";
 import BalanceTab from "./tabs/BalanceTab";
 import InicioFinancieroTab from "./tabs/InicioFinancieroTab";
+import CobrosTab from "./tabs/CobrosTab";
 import CapitalTab from "./tabs/CapitalTab";
 import CentrosCostosTab from "./tabs/CentrosCostosTab";
 import CuentasAdminTab from "./tabs/CuentasAdminTab";
@@ -64,7 +65,8 @@ const adminModuleTabs = ["administracion"];
 // "Configuración" agrupa los catálogos internos con jerarquía visual menor.
 const ADMIN_SUB_TABS = [
   { id: "inicio",     label: "Inicio",               group: "operaciones" },
-  { id: "remisiones", label: "Ventas y cobros",      group: "operaciones" },
+  { id: "cobros",     label: "Cobros",               group: "operaciones" },
+  { id: "remisiones", label: "Ventas / remisiones",  group: "operaciones" },
   { id: "gastos",     label: "Gastos y compras",     group: "operaciones" },
   { id: "capital",    label: "Mi inversión",         group: "operaciones" },
   { id: "cuentas",    label: "Dinero y cuentas",     group: "operaciones" },
@@ -1454,6 +1456,9 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           <div className="admin-module-content">
             {adminSubTab === "inicio" ? (
               <InicioFinancieroTab tenantId={tenantId} onNavigate={setAdminSubTab} />
+            ) : null}
+            {adminSubTab === "cobros" ? (
+              <CobrosTab tenantId={tenantId} clients={data?.clients || []} notifyAction={notifyAction} setStatus={setStatus} />
             ) : null}
             {adminSubTab === "capital" ? (
               <CapitalTab tenantId={tenantId} notifyAction={notifyAction} setStatus={setStatus} />

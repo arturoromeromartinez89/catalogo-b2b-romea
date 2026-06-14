@@ -392,15 +392,24 @@ const normalizeCobro = (row) => ({
   valorMxnPlata:         Number(row.valor_mxn_plata_recibida || 0),
   gananciaCambiariaMxn:  Number(row.ganancia_cambiaria_mxn || 0),
   referenciaBancaria:    row.referencia_bancaria,
+  cajaBancoId:           row.caja_banco_id,
+  cuentaPlataId:         row.cuenta_plata_id,
   notas:                 row.notas,
   createdAt:             row.created_at,
 });
 
 export const registrarCobro = async (cobro, tenantId) => {
-  // 1. Insertar cobro
+  if (!cobro.cuentaId) {
+    throw new Error("Selecciona una caja o cuenta real antes de registrar el cobro.");
+  }
+
+  const esPlataFisica = cobro.medioPago === "plata_fisica";
+
+  // 1. Insertar cobro. remision_id null = anticipo (cliente adelanta dinero sin
+  //    venta asociada → genera saldo a favor de ese cliente).
   const payload = {
     tenant_id:              tenantId,
-    remision_id:            cobro.remisionId,
+    remision_id:            cobro.remisionId || null,
     client_id:              cobro.clienteId || null,
     fecha_cobro:            cobro.fechaCobro,
     tipo_abono:             cobro.tipoAbono,
@@ -408,8 +417,8 @@ export const registrarCobro = async (cobro, tenantId) => {
     abono_plata_gramos:     Number(cobro.abonoPlataGramos || 0),
     abono_usd:              Number(cobro.abonoUsd || 0),
     medio_pago:             cobro.medioPago,
-    monto_recibido:         Number(cobro.montoRecibido || 0),
-    moneda_recibida:        cobro.monedaRecibida || "MXN",
+    monto_recibido:         esPlataFisica ? null : Number(cobro.montoRecibido || 0),
+    moneda_recibida:        esPlataFisica ? null : (cobro.monedaRecibida || "MXN"),
     tipo_cambio:            Number(cobro.tipoCambio || 0) || null,
     monto_mxn_equivalente:  Number(cobro.montoMxnEquivalente || 0),
     gramos_recibidos:       Number(cobro.gramosRecibidos || 0) || null,
@@ -417,6 +426,8 @@ export const registrarCobro = async (cobro, tenantId) => {
     valor_mxn_plata_recibida: Number(cobro.valorMxnPlata || 0) || null,
     ganancia_cambiaria_mxn: Number(cobro.gananciaCambiariaMxn || 0),
     referencia_bancaria:    cobro.referenciaBancaria || null,
+    caja_banco_id:          esPlataFisica ? null : cobro.cuentaId,
+    cuenta_plata_id:        esPlataFisica ? cobro.cuentaId : null,
     notas:                  cobro.notas || null,
   };
 
@@ -427,26 +438,29 @@ export const registrarCobro = async (cobro, tenantId) => {
     .single();
   if (cobroErr) handleError(cobroErr, "registrarCobro.insert");
 
-  // 2. Actualizar saldos de la remisión (SIN cambiar estado — es delivery-based)
-  const remision = await fetchRemisionById(cobro.remisionId);
-  const nuevoMontoCobrado = remision.montoCobrado + Number(cobro.abonoUsd || cobro.abonoLaborMxn || 0);
-  const nuevoSaldo = Math.max(0, remision.total - nuevoMontoCobrado);
-  const nuevoSaldoPlata = Math.max(0, remision.saldoPlataGramos - Number(cobro.abonoPlataGramos || 0));
+  // 2. Si está asociado a una remisión, actualizar sus saldos (SIN cambiar
+  //    estado — es delivery-based). Un anticipo no toca ninguna remisión.
+  if (cobro.remisionId) {
+    const remision = await fetchRemisionById(cobro.remisionId);
+    const nuevoMontoCobrado = remision.montoCobrado + Number(cobro.abonoUsd || cobro.abonoLaborMxn || 0);
+    const nuevoSaldo = Math.max(0, remision.total - nuevoMontoCobrado);
+    const nuevoSaldoPlata = Math.max(0, remision.saldoPlataGramos - Number(cobro.abonoPlataGramos || 0));
 
-  await supabase
-    .from("remisiones")
-    .update({
-      monto_cobrado:          nuevoMontoCobrado,
-      saldo_dinero:           nuevoSaldo,
-      plata_entregada_gramos: remision.plataEntregadaGramos + Number(cobro.abonoPlataGramos || 0),
-      saldo_plata_gramos:     nuevoSaldoPlata,
-      // NO actualizamos estado — los estados son de entrega, no de pago
-      updated_at:             new Date().toISOString(),
-    })
-    .eq("id", cobro.remisionId);
+    await supabase
+      .from("remisiones")
+      .update({
+        monto_cobrado:          nuevoMontoCobrado,
+        saldo_dinero:           nuevoSaldo,
+        plata_entregada_gramos: remision.plataEntregadaGramos + Number(cobro.abonoPlataGramos || 0),
+        saldo_plata_gramos:     nuevoSaldoPlata,
+        updated_at:             new Date().toISOString(),
+      })
+      .eq("id", cobro.remisionId);
+  }
 
   return newCobro;
 };
+
 
 export const fetchCobros = async (tenantId, { remisionId, desde, hasta } = {}) => {
   let q = supabase
