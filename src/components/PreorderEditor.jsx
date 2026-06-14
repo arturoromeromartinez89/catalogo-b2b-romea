@@ -412,10 +412,45 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const activeScannerRef = useRef("top");      // "top" | "bottom" — cuál barra usó el usuario por última vez
   const [pendingDuplicate, setPendingDuplicate] = useState(null); // { product, nextItem } esperando confirmación
   const [showImportPreorder, setShowImportPreorder] = useState(false); // modal "Importar preorden" (modo remisión)
+  // ── Modo consulta vs edición ──────────────────────────────────────────────
+  // Al abrir una nota guardada se ve en SOLO LECTURA; hay que pulsar "Editar"
+  // para activarla. Una nota nueva arranca ya en edición (hay que capturarla).
+  const [editMode, setEditMode] = useState(isNew);
+  const editSnapshotRef = useRef(null);
+  // pricingLocked = vista de cliente (siempre bloqueada, sin botón Editar).
+  // adminViewOnly = admin abrió una nota y aún no activó la edición.
+  const adminViewOnly = !pricingLocked && !editMode;
+  const inputsLocked = pricingLocked || adminViewOnly;
   const activeCompany = resolvedTenantId ? (tenantCompany || {}) : company;
   const markEdited = () => {
     onDirty?.();
     setSaved(false);
+  };
+
+  // Entra a edición: guarda una "foto" del estado para poder cancelar.
+  const enterEditMode = () => {
+    editSnapshotRef.current = {
+      po,
+      items,
+      plataFinaMxn,
+      selectedLaborListId,
+      selectedPiecePriceListId,
+    };
+    setEditMode(true);
+  };
+  // Cancela edición: restaura la foto y vuelve a solo lectura.
+  const cancelEditMode = () => {
+    const snap = editSnapshotRef.current;
+    if (snap) {
+      setPo(snap.po);
+      setItems(snap.items);
+      setPlataFinaMxn(snap.plataFinaMxn);
+      setSelectedLaborListId(snap.selectedLaborListId);
+      setSelectedPiecePriceListId(snap.selectedPiecePriceListId);
+    }
+    editSnapshotRef.current = null;
+    setMsg("");
+    setEditMode(false);
   };
 
   const stopPreorderAutoScroll = () => {
@@ -542,7 +577,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const fromDisplayMoney = (value) => (useUsd ? Number(value || 0) * exchangeRate : Number(value || 0));
   const displayFineSilver = roundUp2(toDisplayMoney(plataFinaMxn));
   const markCustomPricing = () => {
-    if (pricingLocked) return;
+    if (inputsLocked) return;
     setPricingDirty(true);
     if (isPieceMode) {
       setSelectedPiecePriceListId(CUSTOM_PRICE_LIST_VALUE);
@@ -553,11 +588,13 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     }
   };
   const set = (key, options = {}) => (event) => {
+    if (inputsLocked) return;
     markEdited();
     if (options.pricing) markCustomPricing();
     setPo((current) => ({ ...current, [key]: event.target.value }));
   };
   const setChecked = (key) => (event) => {
+    if (inputsLocked) return;
     markEdited();
     setPo((current) => ({ ...current, [key]: event.target.checked }));
   };
@@ -620,6 +657,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const setItem = (idx, key, value) => {
+    if (adminViewOnly) return;
     if (pricingLocked && key !== "piezas") return;
     markEdited();
     if (key === "precio_pieza_mxn") markCustomPricing();
@@ -633,7 +671,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const setGTotal = (idx, value) => {
-    if (pricingLocked) return;
+    if (inputsLocked) return;
     markEdited();
     setItems((current) => {
       const next = [...current];
@@ -646,7 +684,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const setLabor = (idx, value) => {
-    if (pricingLocked) return;
+    if (inputsLocked) return;
     markEdited();
     markCustomPricing();
     setItems((current) => {
@@ -657,7 +695,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const setSilverFine = (value) => {
-    if (pricingLocked) return;
+    if (inputsLocked) return;
     markEdited();
     markCustomPricing();
     const nextSilver = fromDisplayMoney(value);
@@ -666,7 +704,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const calculateSilverFineByKitco = () => {
-    if (pricingLocked) return;
+    if (inputsLocked) return;
     const nextSilver = getSilverFinePrice({
       kitco_usd_oz: po.kitco_usd_oz,
       tipo_cambio: po.tipo_cambio || metalPrices.tipo_cambio,
@@ -765,7 +803,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const changePricingMode = (mode) => {
-    if (pricingLocked) return;
+    if (inputsLocked) return;
     markEdited();
     setPo((current) => ({
       ...current,
@@ -799,6 +837,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   }, [isPieceMode, selectedPiecePriceListId, piecePriceLists.length]);
 
   const precargarPrecios = () => {
+    if (inputsLocked) return;
     if (!po.client_id) { setMsg("Debes seleccionar un cliente existente."); return; }
     if (isPieceMode) {
       const selectedList = piecePriceLists.find((entry) => entry.id === selectedPiecePriceListId);
@@ -1141,7 +1180,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     addProduct(product);
   };
 
-  const canDragPreorderItems = !pricingLocked && items.length > 1;
+  const canDragPreorderItems = !inputsLocked && items.length > 1;
 
   useEffect(() => {
     if (draggedItemIndex === null || !canDragPreorderItems) {
@@ -1232,6 +1271,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const handleClientSelect = (event) => {
+    if (inputsLocked) return;
     const value = event.target.value;
     setPo((current) => ({
       ...current,
@@ -1319,6 +1359,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       setLoadedAt(newUpdatedAt);  // actualizamos la versión de referencia
       setSavedAt(newUpdatedAt);
       setSaved(true);
+      editSnapshotRef.current = null;
+      setEditMode(false); // tras guardar, vuelve a solo lectura
       const hora = new Date(newUpdatedAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
       setMsg(`Guardada a las ${hora}`);
       window.setTimeout(() => onSaved?.({ id: savedId, folio: savedFolio || po.folio }), 900);
@@ -1526,26 +1568,33 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   return (
-    <div className="po-editor">
+    <div className={`po-editor${editMode ? " po-editor--editing" : ""}${adminViewOnly ? " po-editor--readonly" : ""}`}>
       <header className="po-editor-toolbar po-editor-toolbar--remission">
         <div className="po-editor-toolbar-left">
           <span className="tool-eyebrow">{isNew ? (docLabels.eyebrowNew || "Nueva preorden") : po.folio}</span>
+          {!pricingLocked ? (
+            <span className={`po-mode-pill${editMode ? " po-mode-pill--editing" : " po-mode-pill--readonly"}`}>
+              {editMode ? (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+              ) : (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+              )}
+              {editMode ? "Editando" : "Solo lectura"}
+            </span>
+          ) : null}
           <div className="po-status-pills">
             {Object.entries(statusConfig).map(([key, { label, color }]) => (
               <button
                 key={key}
                 type="button"
-                className="po-status-pill"
+                className={`po-status-pill${po.status === key ? " is-active" : ""}`}
+                disabled={inputsLocked}
                 onClick={() => {
-                  if (pricingLocked) return;
+                  if (inputsLocked) return;
                   markEdited();
                   setPo((current) => ({ ...current, status: key }));
                 }}
-                style={{
-                  borderColor: color,
-                  background: po.status === key ? color : "transparent",
-                  color: po.status === key ? "#fff" : color,
-                }}
+                style={po.status === key ? { background: color, color: "#fff" } : undefined}
               >
                 {label}
               </button>
@@ -1583,7 +1632,15 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             </button>
           ) : null}
 
-          {enableImportFromPreorder ? (
+          {/* Modo consulta: botón prominente para activar la edición */}
+          {adminViewOnly ? (
+            <button className="primary-button compact-action po-edit-btn" type="button" onClick={enterEditMode}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+              Editar
+            </button>
+          ) : null}
+
+          {editMode && enableImportFromPreorder ? (
             <button
               className="secondary-button compact-action"
               type="button"
@@ -1593,7 +1650,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               ↑ Importar preorden
             </button>
           ) : null}
-          {!isNew ? (
+          {(editMode || pricingLocked) && !isNew ? (
             <button className="danger-button compact-action" type="button" onClick={handleDelete}>
               Eliminar
             </button>
@@ -1614,14 +1671,23 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               ↓ Crear remisión
             </button>
           ) : null}
-          <button
-            className="primary-button compact-action"
-            type="button"
-            onClick={handleSave}
-            disabled={saving || saved}
-          >
-            {saving ? "Guardando..." : saved ? "Guardado ✓" : "Guardar"}
-          </button>
+          {editMode || pricingLocked ? (
+            <>
+              {editMode && !isNew ? (
+                <button className="secondary-button compact-action" type="button" onClick={cancelEditMode}>
+                  Cancelar
+                </button>
+              ) : null}
+              <button
+                className="primary-button compact-action"
+                type="button"
+                onClick={handleSave}
+                disabled={saving || saved}
+              >
+                {saving ? "Guardando..." : saved ? "Guardado ✓" : "Guardar"}
+              </button>
+            </>
+          ) : null}
         </div>
         <div className="po-remission-info">
           <section className="po-remission-group po-remission-group--client">
@@ -1907,7 +1973,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           <section className="quote-block">
             <h3>Productos cotizados</h3>
             {msg ? <p className="status info">{msg}</p> : null}
-            {!pricingLocked && products.length ? (
+            {!inputsLocked && products.length ? (
               <div className="quote-product-picker">
                 <label>
                   Agregar producto a esta preorden
@@ -2331,7 +2397,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           {/* ── Barra inferior de búsqueda ───────────────────────────────────────
               Solo visible cuando hay productos en la tabla y no está en modo cliente.
               Evita tener que scrollear hasta arriba para agregar más artículos. */}
-          {!pricingLocked && items.length >= 3 && products.length ? (
+          {!inputsLocked && items.length >= 3 && products.length ? (
             <div className="quote-product-picker quote-product-picker--bottom">
               <label>
                 Agregar otro producto

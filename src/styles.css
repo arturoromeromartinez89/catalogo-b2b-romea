@@ -9856,3 +9856,141 @@ tr.client-row--expanded td {
 
 /* Cobros — chip de anticipo */
 .gf-chip--anticipo { border-style: dashed; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * EDITOR DE NOTA (preorden / remisión) — rediseño v2
+ * Superficie continua, escala 13px, modo consulta vs edición evidente.
+ * Aplica a TODAS las preórdenes y remisiones de TODAS las empresas.
+ * ═════════════════════════════════════════════════════════════════════════ */
+
+/* Superficie continua: toda la nota se apoya en gris, las tarjetas flotan */
+.po-editor { background: var(--neutral-50); }
+.po-editor-toolbar--remission { background: var(--neutral-50); border-bottom: 1px solid var(--neutral-200); }
+
+/* Títulos de sección de las tarjetas del encabezado — sentence case, legibles */
+.po-remission-title {
+  color: var(--neutral-500);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Selects del editor: la flechita tiene su espacio, el texto ya no se encima */
+.po-remission-group select,
+.quote-block select,
+.po-pricing-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 26px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236f7787' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  text-overflow: ellipsis;
+}
+
+/* Barra de agregar productos: discreta, ya no domina la jerarquía */
+.quote-product-picker { background: var(--neutral-50); }
+.quote-product-picker > label input {
+  border-color: var(--neutral-200);
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 36px;
+}
+
+/* Títulos de bloque (Costeo de plata fina, Productos cotizados) */
+.quote-block h3 {
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Totales como tarjetas-métrica */
+.po-remission-group--totals { gap: 7px; }
+.po-remission-total-row {
+  align-items: flex-start;
+  background: var(--neutral-50);
+  border-bottom: none;
+  border-radius: var(--radius-sm);
+  flex-direction: column;
+  gap: 1px;
+  min-height: 0;
+  padding: 6px 9px;
+}
+.po-remission-total-row span { color: var(--neutral-500); font-size: 11px; }
+.po-remission-total-row strong { color: var(--neutral-800); font-size: 16px; font-weight: 600; }
+.po-remission-total-row--money { background: var(--brand-50); }
+.po-remission-total-row--money span { color: var(--brand-600); }
+.po-remission-total-row--money strong { color: var(--accent); }
+
+/* Estatus como control segmentado */
+.po-status-pills {
+  background: #ffffff;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  gap: 0;
+  overflow: hidden;
+}
+.po-status-pill {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  border-right: 1px solid var(--neutral-200);
+  color: var(--neutral-500);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 11px;
+}
+.po-status-pill:last-child { border-right: none; }
+.po-status-pill:disabled { cursor: default; }
+
+/* Pastilla de modo: consulta vs edición — bien evidente */
+.po-mode-pill {
+  align-items: center;
+  border: 1px solid;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 5px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.po-mode-pill--editing { background: var(--brand-50); border-color: var(--brand-200); color: var(--accent); }
+.po-mode-pill--readonly { background: var(--neutral-100); border-color: var(--neutral-200); color: var(--neutral-600); }
+@keyframes poEditPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.po-mode-pill--editing svg { animation: poEditPulse 1.6s ease-in-out infinite; }
+
+.po-edit-btn { align-items: center; display: inline-flex; gap: 5px; }
+
+/* ── Señal de EDICIÓN: filo de acento + toolbar teñido ── */
+.po-editor--editing { box-shadow: inset 0 4px 0 0 var(--accent); }
+.po-editor--editing .po-editor-toolbar--remission { background: var(--brand-50); border-bottom-color: var(--brand-200); }
+
+/* ── Señal de SOLO LECTURA: bloquea interacción y aplana los campos ── */
+.po-editor--readonly .po-editor-body,
+.po-editor--readonly .po-remission-info { pointer-events: none; }
+.po-editor--readonly .po-remission-group input,
+.po-editor--readonly .po-remission-group select,
+.po-editor--readonly .po-remission-group textarea,
+.po-editor--readonly .quote-block input,
+.po-editor--readonly .quote-block select,
+.po-editor--readonly .quote-block textarea,
+.po-editor--readonly .po-pricing-field input,
+.po-editor--readonly .po-pricing-field select {
+  background-color: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--neutral-800) !important;
+  font-weight: 500;
+}
+/* En consulta se ocultan los controles de edición de filas */
+.po-editor--readonly .qty-stepper button,
+.po-editor--readonly .table-delete,
+.po-editor--readonly .preorder-row-move-cell,
+.po-editor--readonly .preorder-row-move-head,
+.po-editor--readonly .po-pricing-field--action { display: none; }
