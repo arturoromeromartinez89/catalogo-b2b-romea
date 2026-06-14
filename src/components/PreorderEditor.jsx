@@ -13,10 +13,10 @@ import { buildPreorderItemFromProduct } from "../utils/preorderUtils";
 import { buildConfigurableCatalogProducts, hasConfigurableCatalogProducts, isConfigurableProductGroup } from "../utils/configurableCatalog";
 
 const STATUS = {
-  pendiente: { label: "Pendiente de revision", color: "#d97706" },
-  revision: { label: "En revision", color: "#2563eb" },
-  confirmada: { label: "Confirmada", color: "#059669" },
-  cancelada: { label: "Cancelada", color: "#dc2626" },
+  pendiente: { label: "Pendiente", tone: "amber" },
+  revision: { label: "En revisión", tone: "blue" },
+  confirmada: { label: "Confirmada", tone: "green" },
+  cancelada: { label: "Cancelada", tone: "red" },
 };
 
 const fmt = (value) =>
@@ -173,7 +173,7 @@ const configuredWeight = (item, selections = {}) => {
 };
 
 const Field = ({ label, children }) => (
-  <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: "var(--color-text-secondary)" }}>
+  <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13, fontWeight: 400, color: "var(--color-text-secondary)" }}>
     {label}
     {children}
   </label>
@@ -346,6 +346,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   saveDocument = null,          // override de guardado: async (po, items) => { id, folio, updatedAt }
   enableImportFromPreorder = false, // muestra botón + modal "Importar preorden"
   labels = null,                // { eyebrowNew, sheetTitle, notesPlaceholder }
+  defaultStatusKey = null,      // estatus por defecto al crear (si no, el 1er key)
 }) {
   const { language } = useLanguage();
   const company = useCompany();
@@ -356,7 +357,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const isRemision = documentType === "remision";
   const statusConfig = statusMap || STATUS;
   const docLabels = labels || {};
-  const defaultStatus = Object.keys(statusConfig)[0] || "pendiente";
+  const defaultStatus = defaultStatusKey || Object.keys(statusConfig)[0] || "pendiente";
 
   const blank = {
     folio: "",
@@ -1572,37 +1573,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       <header className="po-editor-toolbar po-editor-toolbar--remission">
         <div className="po-editor-toolbar-left">
           <span className="tool-eyebrow">{isNew ? (docLabels.eyebrowNew || "Nueva preorden") : po.folio}</span>
-          {!pricingLocked ? (
-            <span className={`po-mode-pill${editMode ? " po-mode-pill--editing" : " po-mode-pill--readonly"}`}>
-              {editMode ? (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-              ) : (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-              )}
-              {editMode ? "Editando" : "Solo lectura"}
-            </span>
-          ) : null}
-          <div className="po-status-pills">
-            {Object.entries(statusConfig).map(([key, { label, color }]) => (
-              <button
-                key={key}
-                type="button"
-                className={`po-status-pill${po.status === key ? " is-active" : ""}`}
-                disabled={inputsLocked}
-                onClick={() => {
-                  if (inputsLocked) return;
-                  markEdited();
-                  setPo((current) => ({ ...current, status: key }));
-                }}
-                style={po.status === key ? { background: color, color: "#fff" } : undefined}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {po.cliente_empresa || po.cliente_nombre ? (
-            <span className="po-client-chip">
-              {po.cliente_empresa || po.cliente_nombre}
+          {/* En edición: pastilla verde "Editando". En consulta: nada. */}
+          {!pricingLocked && editMode ? (
+            <span className="po-mode-pill po-mode-pill--editing">
+              <span className="po-mode-dot" aria-hidden="true" />
+              Editando
             </span>
           ) : null}
         </div>
@@ -1719,6 +1694,25 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               <Field label="Telefono"><input value={po.cliente_telefono || ""} readOnly style={inp} /></Field>
               <Field label="RFC"><input value={po.cliente_rfc || ""} readOnly style={inp} /></Field>
             </div>
+            {/* Estatus de la nota — segmentado justificado bajo el cliente.
+                Solo el activo se colorea (tono); los demás en gris casi invisible. */}
+            <div className="po-status-seg">
+              {Object.entries(statusConfig).map(([key, value]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`po-status-seg-btn po-status-seg-btn--${value.tone || "gray"}${po.status === key ? " is-active" : ""}`}
+                  disabled={inputsLocked}
+                  onClick={() => {
+                    if (inputsLocked) return;
+                    markEdited();
+                    setPo((current) => ({ ...current, status: key }));
+                  }}
+                >
+                  {value.label}
+                </button>
+              ))}
+            </div>
           </section>
 
           <section className="po-remission-group">
@@ -1768,17 +1762,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               <Field label="Tipo de cambio">
                 <input type="number" step="0.01" placeholder="Ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
               </Field>
-              <Field label="Estatus">
-                <select value={po.status || defaultStatus} onChange={set("status")} style={inp}>
-                  {Object.entries(statusConfig).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
-                </select>
-              </Field>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <Field label="Comentarios">
+                  <textarea value={po.notas || ""} onChange={set("notas")} placeholder={docLabels.notesPlaceholder || "Observaciones generales de la preorden"} />
+                </Field>
+              </div>
             </div>
-          </section>
-
-          <section className="po-remission-group po-remission-group--notes">
-            <div className="po-remission-title">Comentarios</div>
-            <textarea value={po.notas || ""} onChange={set("notas")} placeholder="Observaciones generales de la preorden" />
           </section>
 
           <section className="po-remission-group po-remission-group--totals">

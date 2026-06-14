@@ -444,6 +444,7 @@ export default function RemisionWorkspace({
             documentType="remision"
             statusMap={REMISION_STATUS}
             labels={REMISION_LABELS}
+            defaultStatusKey="borrador"
             enableImportFromPreorder
             saveDocument={makeRemisionSaveDocument(tenantId || profile?.tenant_id || "")}
             onClose={(updatedDraft) => closeTab(activeTab.id, updatedDraft)}

@@ -9858,25 +9858,54 @@ tr.client-row--expanded td {
 .gf-chip--anticipo { border-style: dashed; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * EDITOR DE NOTA (preorden / remisión) — rediseño v2
- * Superficie continua, escala 13px, modo consulta vs edición evidente.
+ * EDITOR DE NOTA (preorden / remisión) — rediseño v3 (tarjetas suaves)
+ * Tipografía unificada 13px, estatus bajo el cliente, consulta vs edición.
  * Aplica a TODAS las preórdenes y remisiones de TODAS las empresas.
  * ═════════════════════════════════════════════════════════════════════════ */
 
-/* Superficie continua: toda la nota se apoya en gris, las tarjetas flotan */
+/* Superficie continua + placeholders tenues */
 .po-editor { background: var(--neutral-50); }
 .po-editor-toolbar--remission { background: var(--neutral-50); border-bottom: 1px solid var(--neutral-200); }
+.po-remission-info ::placeholder,
+.po-editor-body ::placeholder { color: #c2cad6 !important; opacity: 1; }
 
-/* Títulos de sección de las tarjetas del encabezado — sentence case, legibles */
+/* Encabezado: 3 tarjetas balanceadas */
+.po-remission-info { grid-template-columns: 1.25fr 1.15fr 1fr; }
+
+/* Tarjetas ("galletas"): blancas en edición */
+.po-remission-group {
+  background: #ffffff;
+  border: 1px solid #eef1f6;
+  border-radius: 14px;
+  gap: 11px;
+  padding: 13px;
+}
 .po-remission-title {
-  color: var(--neutral-500);
-  font-size: 11px;
+  color: var(--neutral-800);
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
 }
+.po-remission-fields { gap: 9px; }
+.po-remission-group label { color: var(--neutral-500); font-size: 13px !important; font-weight: 400 !important; gap: 4px !important; }
+.po-remission-group input,
+.po-remission-group select,
+.po-remission-group textarea {
+  background: var(--neutral-50);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--neutral-800);
+  font-size: 13px !important;
+  min-height: 32px !important;
+  padding: 7px 9px !important;
+}
+.po-remission-group input:focus,
+.po-remission-group select:focus,
+.po-remission-group textarea:focus { background: #ffffff; border-color: var(--brand-200); outline: none; }
+.po-remission-group textarea { min-height: 44px; }
 
-/* Selects del editor: la flechita tiene su espacio, el texto ya no se encima */
+/* Selects: la flechita tiene su espacio (el texto no se encima) */
 .po-remission-group select,
 .quote-block select,
 .po-pricing-field select {
@@ -9889,89 +9918,95 @@ tr.client-row--expanded td {
   text-overflow: ellipsis;
 }
 
-/* Barra de agregar productos: discreta, ya no domina la jerarquía */
-.quote-product-picker { background: var(--neutral-50); }
+/* Estatus segmentado bajo el cliente — justificado a lo ancho */
+.po-status-seg { display: flex; gap: 6px; margin-top: 12px; }
+.po-status-seg-btn {
+  background: #f4f6f9;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #c5cdd9;
+  cursor: pointer;
+  flex: 1;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 0;
+  text-align: center;
+}
+.po-status-seg-btn:disabled { cursor: default; }
+.po-status-seg-btn.is-active.po-status-seg-btn--green { background: #d6efe0; color: #15803d; }
+.po-status-seg-btn.is-active.po-status-seg-btn--blue  { background: #dbe7fb; color: var(--accent); }
+.po-status-seg-btn.is-active.po-status-seg-btn--red   { background: #fbd8d8; color: #c0392b; }
+.po-status-seg-btn.is-active.po-status-seg-btn--amber { background: #fbeecb; color: #92560a; }
+.po-status-seg-btn.is-active.po-status-seg-btn--gray  { background: #eef1f6; color: var(--neutral-700); }
+
+/* Totales: filas con divisores finos, llenan la tarjeta */
+.po-remission-group--totals { display: flex; flex-direction: column; gap: 0; }
+.po-remission-group--totals .po-remission-title { margin-bottom: 8px; }
+.po-remission-total-row {
+  align-items: center;
+  background: transparent;
+  border-bottom: 1px solid #f1f3f7;
+  border-radius: 0;
+  flex: 1;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 0;
+  padding: 9px 0;
+}
+.po-remission-total-row:last-child { border-bottom: none; }
+.po-remission-total-row span { color: var(--neutral-500); font-size: 13px; }
+.po-remission-total-row strong { color: var(--neutral-800); font-size: 13px; font-weight: 600; }
+.po-remission-total-row--money strong { color: var(--accent); }
+
+/* Bloques (Costeo, Productos): relleno suave, título 13px oscuro */
+.quote-block { background: var(--neutral-50); border-color: #eef1f6; border-radius: 14px; }
+.quote-block h3 { color: var(--neutral-800); font-family: var(--font-sans); font-size: 13px; font-weight: 600; }
+
+/* Barra de agregar productos: discreta */
+.quote-product-picker { background: #ffffff; }
 .quote-product-picker > label input {
   border-color: var(--neutral-200);
   box-shadow: none;
   font-size: 13px;
-  font-weight: 500;
-  min-height: 36px;
+  font-weight: 400;
+  min-height: 34px;
 }
 
-/* Títulos de bloque (Costeo de plata fina, Productos cotizados) */
-.quote-block h3 {
-  color: var(--accent);
-  font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 600;
+/* Botones del toolbar: mini, con relleno suave de color */
+.po-editor-toolbar--remission .compact-action {
+  border-radius: 5px;
+  font-size: 11px !important;
+  min-height: 0 !important;
+  padding: 4px 9px !important;
 }
+.po-editor-toolbar--remission .secondary-button.compact-action { background: #f1f3f7; border-color: transparent; color: #5a6480; }
+.po-editor-toolbar--remission .danger-button.compact-action { background: #fdecec; border-color: transparent; color: #c0392b; }
+.po-edit-btn { align-items: center; display: inline-flex; gap: 5px; }
 
-/* Totales como tarjetas-métrica */
-.po-remission-group--totals { gap: 7px; }
-.po-remission-total-row {
-  align-items: flex-start;
-  background: var(--neutral-50);
-  border-bottom: none;
-  border-radius: var(--radius-sm);
-  flex-direction: column;
-  gap: 1px;
-  min-height: 0;
-  padding: 6px 9px;
-}
-.po-remission-total-row span { color: var(--neutral-500); font-size: 11px; }
-.po-remission-total-row strong { color: var(--neutral-800); font-size: 16px; font-weight: 600; }
-.po-remission-total-row--money { background: var(--brand-50); }
-.po-remission-total-row--money span { color: var(--brand-600); }
-.po-remission-total-row--money strong { color: var(--accent); }
-
-/* Estatus como control segmentado */
-.po-status-pills {
-  background: #ffffff;
-  border: 1px solid var(--neutral-200);
-  border-radius: var(--radius-md);
-  display: inline-flex;
-  gap: 0;
-  overflow: hidden;
-}
-.po-status-pill {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  border-right: 1px solid var(--neutral-200);
-  color: var(--neutral-500);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 11px;
-}
-.po-status-pill:last-child { border-right: none; }
-.po-status-pill:disabled { cursor: default; }
-
-/* Pastilla de modo: consulta vs edición — bien evidente */
+/* Pastilla verde "Editando" (en consulta no aparece) */
 .po-mode-pill {
   align-items: center;
   border: 1px solid;
   border-radius: var(--radius-full);
   display: inline-flex;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   gap: 5px;
-  padding: 3px 10px;
+  padding: 2px 9px;
   white-space: nowrap;
 }
-.po-mode-pill--editing { background: var(--brand-50); border-color: var(--brand-200); color: var(--accent); }
-.po-mode-pill--readonly { background: var(--neutral-100); border-color: var(--neutral-200); color: var(--neutral-600); }
+.po-mode-pill--editing { background: #e7f6ed; border-color: #c3e6d1; color: #15803d; }
+.po-mode-dot { background: #16a34a; border-radius: 50%; height: 6px; width: 6px; }
 @keyframes poEditPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-.po-mode-pill--editing svg { animation: poEditPulse 1.6s ease-in-out infinite; }
+.po-mode-pill--editing .po-mode-dot { animation: poEditPulse 1.6s ease-in-out infinite; }
 
-.po-edit-btn { align-items: center; display: inline-flex; gap: 5px; }
+/* Señal de EDICIÓN: filo verde arriba */
+.po-editor--editing { box-shadow: inset 0 3px 0 0 #16a34a; }
 
-/* ── Señal de EDICIÓN: filo de acento + toolbar teñido ── */
-.po-editor--editing { box-shadow: inset 0 4px 0 0 var(--accent); }
-.po-editor--editing .po-editor-toolbar--remission { background: var(--brand-50); border-bottom-color: var(--brand-200); }
-
-/* ── Señal de SOLO LECTURA: bloquea interacción y aplana los campos ── */
-/* Bloquea solo los controles (no el contenedor) para no matar el scroll */
+/* Señal de SOLO LECTURA: tarjetas grises + controles bloqueados (sin matar scroll) */
+.po-editor--readonly .po-remission-group,
+.po-editor--readonly .quote-block { background: var(--neutral-50); border-color: transparent; }
 .po-editor--readonly .po-editor-body input,
 .po-editor--readonly .po-editor-body select,
 .po-editor--readonly .po-editor-body textarea,
@@ -9993,9 +10028,7 @@ tr.client-row--expanded td {
   border-color: transparent !important;
   box-shadow: none !important;
   color: var(--neutral-800) !important;
-  font-weight: 500;
 }
-/* En consulta se ocultan los controles de edición de filas */
 .po-editor--readonly .qty-stepper button,
 .po-editor--readonly .table-delete,
 .po-editor--readonly .preorder-row-move-cell,

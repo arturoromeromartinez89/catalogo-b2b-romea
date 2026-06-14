@@ -16,12 +16,13 @@
  */
 import { saveRemision } from "../services/adminModuleService";
 
-// Estados de la remisión (mismas pastillas que la preorden, distinto ciclo)
+// Estados de la remisión — 3 estatus (sin "Entregada"). El "tone" define el
+// color tenue cuando el estatus está activo (los inactivos van en gris).
+// Orden visual de izquierda a derecha: Activa, Borrador, Cancelada.
 export const REMISION_STATUS = {
-  borrador:  { label: "Borrador",   color: "#94a3b8" },
-  emitida:   { label: "Emitida",    color: "#2563eb" },
-  entregada: { label: "Entregada",  color: "#059669" },
-  cancelada: { label: "Cancelada",  color: "#dc2626" },
+  activa:    { label: "Activa",    tone: "green" },
+  borrador:  { label: "Borrador",  tone: "blue" },
+  cancelada: { label: "Cancelada", tone: "red" },
 };
 
 export const REMISION_LABELS = {
