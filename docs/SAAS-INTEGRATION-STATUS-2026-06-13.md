@@ -10,7 +10,9 @@ Integrar la seguridad multi-tenant, el portal seguro y Storage privado sobre el
 - Worktree: `C:\Users\Vanguardia\Documents\New project\catalogo-b2b-saas-integration`
 - Rama: `codex/saas-security-integration`
 - Base administrativa integrada: `e9dfade` (`Mi inversion` tolera tablas pendientes).
-- Produccion y Supabase de produccion no fueron modificados.
+- La seguridad SaaS y Storage privado siguen sin aplicarse en produccion.
+- Excepcion controlada del 14 de junio de 2026: se aplico en produccion la
+  migracion aditiva que permite anticipos sin remision asociada.
 - La rama fue subida a GitHub como `origin/codex/saas-security-integration`.
 - Se creo un proyecto Vercel separado para pruebas; no se cambio el proyecto
   publico `catalogo-b2b-romea`.
@@ -37,6 +39,7 @@ Las migraciones nuevas son:
 - `20260614010000_add_expense_due_fields.sql`;
 - `20260614011000_secure_expense_transactions.sql`;
 - `20260614012000_enable_romea_admin_module.sql`.
+- `20260614013000_allow_unassigned_customer_advances.sql`.
 
 La prueba `expense_transactions_acceptance.sql` cubre pagos pendientes,
 completos y parciales, sobrepago, ataques entre tenants, cuentas/categorias/
@@ -44,6 +47,13 @@ centros ajenos, suspensiones y rollback total ante fallo del libro bancario.
 Las tres migraciones fueron aplicadas en `staging-security` el 14 de junio de
 2026 y la prueba completa termino correctamente. El historial remoto quedo
 alineado con los ocho archivos de migracion versionados.
+
+La migracion de anticipos se aplico primero de forma aislada en produccion y se
+registro en su historial sin empujar las migraciones de seguridad pendientes.
+Luego se aplico tambien en `staging-security`. En ambos ambientes
+`cobros.remision_id` devuelve `is_nullable = YES`. La prueba transaccional
+`customer_advances_smoke.sql` inserto en produccion un anticipo sin remision y
+un cobro ligado a una venta, valido ambos casos y revirtio todos los datos.
 
 No se incorporo el commit de productos personalizados `a1a7ea4`. El unico
 conflicto se resolvio conservando el comportamiento actual de componentes y
@@ -57,6 +67,8 @@ aplicando solamente `StorageImage` para sus fotos.
 - Las cinco migraciones pasan `scripts/validate_sql.py`.
 - Las tres migraciones de Gastos 2.0 y su prueba pasan el parser PostgreSQL.
 - `git diff --check`: correcto.
+- Anticipos: prueba SQL con rollback correcta en produccion; no dejo cobros de
+  prueba.
 - El bundle principal sigue por encima de 500 kB; optimizacion pendiente.
 - `@zxing/library` declara Node >= 24 mientras la estacion usa Node 22. El build
   funciona, pero debe revisarse antes de estandarizar CI.
@@ -93,6 +105,19 @@ sin consultar primero el historial del branch.
    compatible y finalmente volver privado el bucket.
 9. Eliminar `staging-security` cuando todas las pruebas terminen para detener su
    costo.
+
+## Correccion puntual en produccion: anticipos
+
+El 14 de junio de 2026 se confirmo que Vercel produccion usa el proyecto
+Supabase `pyignizeoevafifzfnik`. La columna `public.cobros.remision_id` seguia
+con `NOT NULL`, aunque el frontend ya enviaba `NULL` correctamente al registrar
+un anticipo. Se aplico unicamente
+`20260614013000_allow_unassigned_customer_advances.sql`, se recargo el esquema
+de PostgREST y se verificaron los dos tipos de cobro mediante una transaccion
+con rollback. No fue necesario redesplegar el frontend.
+
+Pendiente funcional: aplicar un anticipo existente a una venta futura y probar
+una captura real desde la interfaz con autorizacion del usuario.
 
 ## Trabajo paralelo de Claude
 

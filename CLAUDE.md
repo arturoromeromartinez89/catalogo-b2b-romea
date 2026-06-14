@@ -30,7 +30,7 @@ La carpeta activa para integrar el SaaS es `catalogo-b2b-saas-integration`, rama
 - `supabase/migrations/20260612130000_secure_client_portal.sql` prepara RPCs para catalogo, precios y preordenes de cliente sin exponer tablas sensibles.
 - `supabase/migrations/20260612140000_harden_public_quotes.sql` valida en servidor los productos y precios de ligas publicas.
 - `supabase/migrations/20260612150000_secure_storage.sql` vuelve privado `company-assets` y aisla objetos por tenant.
-- Estas migraciones se aplicaron y pasaron la prueba completa en el preview branch de staging `staging-security` el 12 de junio de 2026. Produccion sigue sin cambios.
+- Estas migraciones se aplicaron y pasaron la prueba completa en el preview branch de staging `staging-security` el 12 de junio de 2026. Siguen pendientes de produccion. La unica correccion posterior aplicada directamente en produccion fue `20260614013000_allow_unassigned_customer_advances.sql`, que permite `cobros.remision_id = NULL` para anticipos sin venta asociada.
 - La integracion con el modulo administrativo actual esta documentada en `docs/SAAS-INTEGRATION-STATUS-2026-06-13.md`.
 - El registro de validacion esta en `docs/staging-security-validation-2026-06-12.md`.
 - El snapshot real de produccion del 12 de junio de 2026 esta en `docs/production-security-snapshot-2026-06-12.md`.
@@ -131,6 +131,7 @@ El frontend preparado usa `get_client_catalog`, `submit_client_preorder` y `get_
 - Configurables parcialmente hardcodeados.
 - Creacion de cuentas cliente desde el navegador con `authLock`; migrar a Edge Function.
 - Sin auditoria de impersonacion de superadmin.
+- Los anticipos ya pueden registrarse sin remision. Falta el flujo para aplicar saldo a favor a una venta futura y una RPC atomica que actualice tambien la cuenta financiera.
 
 ## Regla final
 
