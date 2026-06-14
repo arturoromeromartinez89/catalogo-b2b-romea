@@ -41,6 +41,9 @@ Las migraciones nuevas son:
 La prueba `expense_transactions_acceptance.sql` cubre pagos pendientes,
 completos y parciales, sobrepago, ataques entre tenants, cuentas/categorias/
 centros ajenos, suspensiones y rollback total ante fallo del libro bancario.
+Las tres migraciones fueron aplicadas en `staging-security` el 14 de junio de
+2026 y la prueba completa termino correctamente. El historial remoto quedo
+alineado con los ocho archivos de migracion versionados.
 
 No se incorporo el commit de productos personalizados `a1a7ea4`. El unico
 conflicto se resolvio conservando el comportamiento actual de componentes y
@@ -79,8 +82,9 @@ sin consultar primero el historial del branch.
    catalogo, precios, preordenes, drag and drop, PDFs y acceso suspendido.
 4. Subir una imagen fisica a Storage de staging, obtener URL firmada, descargarla
    y validar la liga publica de cotizacion.
-5. Aplicar y ejecutar en staging las migraciones y la prueba de Gastos 2.0;
-   despues redesplegar el frontend de staging y probar el flujo visual.
+5. Completado: migraciones y prueba transaccional de Gastos 2.0 en staging.
+   Falta redesplegar el frontend de staging y probar el flujo visual con una
+   cuenta de prueba, ya que el preview branch no copia usuarios/datos reales.
 6. Preparar el script de migracion de objetos existentes de produccion a rutas
    `{tenant_id}/...`, con conteos y rollback.
 7. Preparar respaldo y runbook de produccion: base de datos, objetos, frontend,

@@ -2,6 +2,13 @@
 
 begin;
 
+-- Management API queries may carry an operator JWT. Fixture setup must run as
+-- a trusted migration operation, not as that application user.
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', '', true);
+select set_config('request.jwt.claims', '{}', true);
+alter table public.profiles disable trigger protect_profile_privileged_fields;
+
 insert into public.tenants (id, name, slug, status)
 values
   ('41000000-0000-4000-8000-000000000001', 'Expense Tenant A', 'expense-a', 'active'),
@@ -46,6 +53,8 @@ insert into public.cuentas_caja_banco (
 ) values
   ('4a300000-0000-4000-8000-000000000001', '41000000-0000-4000-8000-000000000001', 'Bank A', 'banco', 'MXN', 1000, 1000, 0, 0, true, 1),
   ('4b300000-0000-4000-8000-000000000002', '42000000-0000-4000-8000-000000000002', 'Bank B', 'banco', 'MXN', 500, 500, 0, 0, true, 1);
+
+alter table public.profiles enable trigger protect_profile_privileged_fields;
 
 create or replace function public.test_reject_expense_movement()
 returns trigger
@@ -303,6 +312,9 @@ $$;
 
 -- Suspended administrators and tenants fail closed.
 reset role;
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', '', true);
+select set_config('request.jwt.claims', '{}', true);
 update public.profiles set active = false
 where id = '4a000000-0000-4000-8000-000000000001';
 select set_config('request.jwt.claim.sub', '4a000000-0000-4000-8000-000000000001', true);
@@ -321,6 +333,9 @@ end
 $$;
 
 reset role;
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', '', true);
+select set_config('request.jwt.claims', '{}', true);
 update public.profiles set active = true
 where id = '4a000000-0000-4000-8000-000000000001';
 update public.tenants set status = 'suspended'
