@@ -173,7 +173,11 @@ function PreorderListView({
             </thead>
             <tbody>
               {filtered.map((po) => {
-                const { label, color } = STATUS_LABELS[po.status] || STATUS_LABELS.pendiente;
+                const incomplete = po._integrity_issue === "missing_items";
+                const status = incomplete
+                  ? { label: "Incompleta: sin articulos", color: "#b42318" }
+                  : (STATUS_LABELS[po.status] || STATUS_LABELS.pendiente);
+                const { label, color } = status;
                 const fromClient = isClientPreorder(po);
                 return (
                   <tr key={po.id} className="po-table-row" onClick={() => onOpen(po)}>
@@ -233,6 +237,7 @@ export default function PreorderWorkspace({
   onCreateRemision,
   clientFilter = null,
   onClearClientFilter,
+  configurableCatalogEnabled = false,
 }) {
   const [tabs, setTabs] = useState([{ id: TAB_LIST, type: TAB_LIST, label: "Preórdenes", dirty: false }]);
   const [activeId, setActiveId] = useState(TAB_LIST);
@@ -388,6 +393,7 @@ export default function PreorderWorkspace({
             onSaved={(savedData) => handleSaved(activeTab.id, savedData)}
             onDirty={() => markDirty(activeTab.id)}
             onCreateRemision={onCreateRemision}
+            configurableCatalogEnabled={configurableCatalogEnabled}
           />
         )}
       </div>

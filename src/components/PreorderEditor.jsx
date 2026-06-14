@@ -10,7 +10,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { buildPlaceholderUrl, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 import { buildPreorderItemFromProduct } from "../utils/preorderUtils";
-import { buildConfigurableCatalogProducts, hasConfigurableCatalogProducts, isConfigurableCatalogCompany, isConfigurableProductGroup } from "../utils/configurableCatalog";
+import { buildConfigurableCatalogProducts, hasConfigurableCatalogProducts, isConfigurableProductGroup } from "../utils/configurableCatalog";
 
 const STATUS = {
   pendiente: { label: "Pendiente de revision", color: "#d97706" },
@@ -256,7 +256,7 @@ const downloadWorkbook = (XLSX, workbook, fileName) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, onCreateRemision, pricingLocked = false, tenantId = "", profile }) {
+function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, onCreateRemision, pricingLocked = false, tenantId = "", profile, configurableCatalogEnabled = false }) {
   const { language } = useLanguage();
   const company = useCompany();
   const hasSavedInitialId = UUID_RE.test(String(initial?.id || ""));
@@ -732,8 +732,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const totalFinalMxn = totals.mxn + ivaMxn;
 
   const preorderConfigurableEnabled = useMemo(
-    () => isConfigurableCatalogCompany({ activeCompany }) || hasConfigurableCatalogProducts(products || []),
-    [activeCompany, products]
+    () => configurableCatalogEnabled || hasConfigurableCatalogProducts(products || []),
+    [configurableCatalogEnabled, products]
   );
   const preorderCatalogProducts = useMemo(
     () => preorderConfigurableEnabled ? buildConfigurableCatalogProducts(products || []) : (products || []),

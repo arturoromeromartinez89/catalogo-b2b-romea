@@ -5,16 +5,21 @@ import { supabase } from "../lib/supabaseClient";
 // Tipo de pieza = selector lógico del configurador, NO tiene entrada aquí.
 // Solo se gestionan componentes físicos con peso propio.
 export const COMPONENT_TYPES = [
-  { key: "broche",       label: "Broches",            icon: "◉" },
-  { key: "diseño_placa", label: "Diseños de placa",   icon: "▣" },
-  { key: "largo",        label: "Largos",             icon: "↔" },
-  { key: "terminado",    label: "Terminados",         icon: "◎" },
-  { key: "piedra",       label: "Piedras",            icon: "◆" },
-  { key: "accesorio",    label: "Accesorios",         icon: "◇" },
-  { key: "otro",         label: "Otros",              icon: "○" },
+  { key: "broche",       label: "Broches",            icon: "◉", physical: true },
+  { key: "diseño_placa", label: "Diseños de placa",   icon: "▣", physical: true },
+  { key: "largo",        label: "Largos",             icon: "↔", physical: false },
+  { key: "terminado",    label: "Terminados",         icon: "◎", physical: true },
+  { key: "piedra",       label: "Piedras",            icon: "◆", physical: true },
+  { key: "accesorio",    label: "Accesorios",         icon: "◇", physical: true },
+  { key: "otro",         label: "Otros",              icon: "○", physical: true },
 ];
 
 export const COMPONENT_TYPE_KEYS = COMPONENT_TYPES.map((t) => t.key);
+
+export const componentIsPhysical = (tipo) => {
+  const found = COMPONENT_TYPES.find((item) => item.key === tipo);
+  return found ? found.physical !== false : true;
+};
 
 export const UNIDADES = ["g", "mm", "cm", "pza"];
 
@@ -55,6 +60,7 @@ export const fetchAllComponents = async (tenantId) => {
 // ─── Crear componente ─────────────────────────────────────────────────────────
 export const createComponent = async (fields, tenantId) => {
   if (!tenantId) throw new Error("tenant_id requerido");
+  const physical = componentIsPhysical(fields.tipo || "otro");
   const { data, error } = await supabase
     .from("product_components")
     .insert([{
@@ -63,9 +69,9 @@ export const createComponent = async (fields, tenantId) => {
       nombre:        String(fields.nombre || "").trim(),
       tipo:          fields.tipo || "otro",
       descripcion:   fields.descripcion || "",
-      peso:          Number(fields.peso || 0),
+      peso:          physical ? Number(fields.peso || 0) : 0,
       unidad:        fields.unidad || "g",
-      foto_url:      fields.fotoUrl || "",
+      foto_url:      physical ? (fields.fotoUrl || "") : "",
       visible_web:   fields.visibleWeb !== false,
       estatus:       fields.estatus || "activo",
       orden:         Number(fields.orden || 0),
@@ -80,6 +86,7 @@ export const createComponent = async (fields, tenantId) => {
 
 // ─── Actualizar componente ────────────────────────────────────────────────────
 export const updateComponent = async (id, fields) => {
+  const physical = componentIsPhysical(fields.tipo || "otro");
   const { data, error } = await supabase
     .from("product_components")
     .update({
@@ -87,9 +94,9 @@ export const updateComponent = async (id, fields) => {
       nombre:        String(fields.nombre || "").trim(),
       tipo:          fields.tipo || "otro",
       descripcion:   fields.descripcion || "",
-      peso:          Number(fields.peso || 0),
+      peso:          physical ? Number(fields.peso || 0) : 0,
       unidad:        fields.unidad || "g",
-      foto_url:      fields.fotoUrl || "",
+      foto_url:      physical ? (fields.fotoUrl || "") : "",
       visible_web:   fields.visibleWeb !== false,
       estatus:       fields.estatus || "activo",
       orden:         Number(fields.orden || 0),

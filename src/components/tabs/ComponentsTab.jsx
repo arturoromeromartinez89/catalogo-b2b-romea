@@ -3,6 +3,7 @@ import {
   COMPONENT_TYPES,
   COMPONENT_TYPE_KEYS,
   UNIDADES,
+  componentIsPhysical,
   fetchAllComponents,
   createComponent,
   updateComponent,
@@ -126,17 +127,19 @@ function ComponentForm({ initial, onSave, onCancel, tenantId, saving }) {
           </label>
 
           {/* Peso */}
-          <label className="components-field">
-            <span>Peso</span>
-            <input
-              type="number"
-              step="0.0001"
-              min="0"
-              value={form.peso}
-              onChange={set("peso")}
-              placeholder="0.00"
-            />
-          </label>
+          {componentIsPhysical(form.tipo) ? (
+            <label className="components-field">
+              <span>Peso</span>
+              <input
+                type="number"
+                step="0.0001"
+                min="0"
+                value={form.peso}
+                onChange={set("peso")}
+                placeholder="0.00"
+              />
+            </label>
+          ) : null}
 
           {/* Unidad */}
           <label className="components-field">
@@ -162,6 +165,7 @@ function ComponentForm({ initial, onSave, onCancel, tenantId, saving }) {
           </label>
 
           {/* Foto */}
+          {componentIsPhysical(form.tipo) ? (
           <div className="components-field components-field--span2 components-photo-row">
             <span className="components-field-label">Foto</span>
             <div className="components-photo-preview">
@@ -185,6 +189,7 @@ function ComponentForm({ initial, onSave, onCancel, tenantId, saving }) {
             </div>
             {uploadMsg ? <span className="components-upload-msg">{uploadMsg}</span> : null}
           </div>
+          ) : null}
 
           {/* Metadata condicional */}
           <div className="components-field components-field--span2">
@@ -418,12 +423,18 @@ export default function ComponentsTab({ tenantId }) {
                 {byType.map((comp) => (
                   <tr key={comp.id} className={comp.estatus === "inactivo" ? "row-inactive" : ""}>
                     <td>
-                      <img
-                        className="component-thumb"
-                        src={comp.fotoUrl ? imageUrlForSize(comp.fotoUrl, 80) : buildPlaceholderUrl()}
-                        alt={comp.nombre}
-                        onError={(e) => { e.currentTarget.src = buildPlaceholderUrl(); }}
-                      />
+                      {componentIsPhysical(comp.tipo) ? (
+                        <img
+                          className="component-thumb"
+                          src={comp.fotoUrl ? imageUrlForSize(comp.fotoUrl, 80) : buildPlaceholderUrl()}
+                          alt={comp.nombre}
+                          onError={(e) => { e.currentTarget.src = buildPlaceholderUrl(); }}
+                        />
+                      ) : (
+                        <span className="component-thumb component-thumb--attr" title="Medida (sin foto)">
+                          {COMPONENT_TYPES.find((item) => item.key === comp.tipo)?.icon || "-"}
+                        </span>
+                      )}
                     </td>
                     <td><code className="component-code">{comp.codigo}</code></td>
                     <td><strong>{comp.nombre}</strong>{comp.descripcion ? <small>{comp.descripcion}</small> : null}</td>

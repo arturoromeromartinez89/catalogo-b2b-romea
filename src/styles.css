@@ -7403,6 +7403,15 @@ textarea:focus {
   background: var(--neutral-50);
 }
 
+.components-table .component-thumb--attr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--neutral-400, #94a3b8);
+  border-style: dashed;
+}
+
 .components-table code.component-code {
   font-size: 11px;
   font-weight: 800;

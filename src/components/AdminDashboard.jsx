@@ -12,6 +12,7 @@ import ProductFormModal from "./ProductFormModal";
 import LanguageToggle from "./LanguageToggle";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings } from "../services/companySettings";
+import { fetchTenantFeatures } from "../services/adminModuleService";
 // Tabs extraídos — step 1 del refactor progresivo
 import TenantsTab from "./tabs/TenantsTab";
 import CatalogTab from "./tabs/CatalogTab";
@@ -47,7 +48,7 @@ import {
 import { fetchTenants, makeTenantSlug, saveTenant } from "../services/tenantService";
 import { isSuperAdmin } from "../services/tenantUtils";
 import { normalizeProduct, parseExcelFile } from "../utils/excelParser";
-import { buildConfigurableCatalogProducts, hasConfigurableCatalogProducts, isConfigurableCatalogCompany, isConfigurableProductGroup } from "../utils/configurableCatalog";
+import { buildConfigurableCatalogProducts, isConfigurableProductGroup } from "../utils/configurableCatalog";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
@@ -220,6 +221,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const { t, language } = useLanguage();
   const company = useCompany();
   const [tenantCompany, setTenantCompany] = useState(null);
+  const [tenantFeatures, setTenantFeatures] = useState(null);
   const superadmin = isSuperAdmin(profile) && !supportMode;
   const [tenants, setTenants] = useState([]);
   const [selectedTenantId, setSelectedTenantId] = useState(() => localStorage.getItem("catalogo-b2b-selected-tenant") || profile?.tenant_id || profile?.tenantId || "");
@@ -382,6 +384,14 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   }, [tenantId]);
 
   useEffect(() => {
+    if (!tenantId) {
+      setTenantFeatures(null);
+      return;
+    }
+    fetchTenantFeatures(tenantId).then(setTenantFeatures).catch(() => setTenantFeatures(null));
+  }, [tenantId]);
+
+  useEffect(() => {
     const refreshTenantCompany = (event) => {
       if (!tenantId || event.detail?.tenantId !== tenantId) return;
       if (event.detail?.settings) {
@@ -396,14 +406,12 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
 
   const products = data ? data.products : sampleProducts;
   const selectedClient = useMemo(() => data?.clients.find((client) => client.id === selectedClientId), [data?.clients, selectedClientId]);
-  const configurableCatalogEnabled = useMemo(
-    () => isConfigurableCatalogCompany({ activeTenant, activeCompany, supportTenantName }) || hasConfigurableCatalogProducts(products),
-    [activeTenant, activeCompany, supportTenantName, products]
-  );
+  const configurableCatalogEnabled = tenantFeatures?.modulo_configurable === true;
+  const adminModuleEnabled = tenantFeatures?.modulo_admin === true;
   const allTabs = [
     ...tabs,
     ...(configurableCatalogEnabled ? configurableOnlyTabs : []),
-    ...(configurableCatalogEnabled ? adminModuleTabs : []),
+    ...(adminModuleEnabled ? adminModuleTabs : []),
   ];
   const catalogProducts = useMemo(
     () => configurableCatalogEnabled ? buildConfigurableCatalogProducts(products) : products,
@@ -1135,7 +1143,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   }
 
   return (
-    <div className={`admin-catalog-shell${tab === "administracion" && configurableCatalogEnabled ? " has-secondary-sidebar" : ""}`}>
+    <div className={`admin-catalog-shell${tab === "administracion" && adminModuleEnabled ? " has-secondary-sidebar" : ""}`}>
       <aside className="admin-romea-sidebar">
         <div className="brand-block">
           <BrandLogo company={activeCompany} />
@@ -1210,7 +1218,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       </aside>
 
       {/* ── Sidebar secundario: se muestra solo en Administración ── */}
-      {tab === "administracion" && configurableCatalogEnabled ? (
+      {tab === "administracion" && adminModuleEnabled ? (
         <aside className="admin-secondary-sidebar">
           {/* Cabecera alineada con la zona del logo del sidebar primario:
               misma altura y misma línea divisoria para que ambas columnas
@@ -1409,6 +1417,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               setStatus("Preorden guardada correctamente. Puedes verla en el menu Preordenes.");
             }}
             onCreateRemision={handleCreateRemisionFromPreorder}
+            configurableCatalogEnabled={configurableCatalogEnabled}
             clientFilter={preorderClientFilter}
             onClearClientFilter={() => setPreorderClientFilter(null)}
           />
@@ -1440,7 +1449,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           <ComponentsTab tenantId={tenantId} />
         ) : null}
 
-        {tab === "administracion" && configurableCatalogEnabled ? (
+        {tab === "administracion" && adminModuleEnabled ? (
           <div className="admin-module-content">
             {adminSubTab === "inicio" ? (
               <InicioFinancieroTab tenantId={tenantId} onNavigate={setAdminSubTab} />

@@ -437,7 +437,7 @@ export default function RemisionEditor({
             <div className="po-remission-fields">
               <Field label="Moneda">
                 <select value={rem.moneda} onChange={setRf("moneda")} style={inp}>
-                  <option value="USD">USD — Exportación</option>
+                  <option value="USD">USD — Venta de exportación</option>
                   <option value="MXN">MXN — México</option>
                 </select>
               </Field>

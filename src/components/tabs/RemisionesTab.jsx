@@ -354,7 +354,7 @@ function NuevaRemisionModal({ folios, clients, onSave, onClose, saving }) {
             <label className="rem-field">
               <span>Moneda</span>
               <select value={form.moneda} onChange={(e) => set("moneda", e.target.value)}>
-                <option value="USD">USD — Exportación</option>
+                <option value="USD">USD — Venta de exportación</option>
                 <option value="MXN">MXN — México</option>
               </select>
             </label>

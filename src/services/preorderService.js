@@ -51,21 +51,89 @@ const cleanItemNumbers = (item, idx) => ({
   sort_order: toDbNumber(item.sort_order, idx),
 });
 
-const CLIENT_ONLY_ITEM_FIELDS = new Set([
-  "id",
-  "preorder_id",
-  "created_at",
-  "comentarios",
-  "costo_pieza_mxn",
-  "margen_pieza_pct",
-]);
+const publicComponentSelection = (selection) => selection ? {
+  id: selection.id || null,
+  codigo: selection.codigo || "",
+  nombre: selection.nombre || "",
+  tipo: selection.tipo || "",
+  peso: Number(selection.peso || 0),
+  unidad: selection.unidad || "",
+  fotoUrl: selection.fotoUrl || "",
+  metadata: selection.metadata || {},
+} : null;
 
-const stripClientOnlyItemFields = (item) =>
-  Object.fromEntries(
-    Object.entries(item || {}).filter(
-      ([key]) => !key.startsWith("_") && !CLIENT_ONLY_ITEM_FIELDS.has(key)
-    )
+const itemConfiguration = (item) => {
+  if (!item?._configurable_group) return null;
+  const selections = Object.fromEntries(
+    Object.entries(item._configurable_selections || {})
+      .map(([key, selection]) => [key, publicComponentSelection(selection)])
+      .filter(([, selection]) => selection)
   );
+  return {
+    version: 1,
+    group: true,
+    base_code: item._configurable_base_code || "",
+    title: item._configurable_title || "",
+    base_description: item._configurable_base_description || "",
+    base_photo_url: item._configurable_base_foto_url || "",
+    base_weight: Number(item._configurable_base_weight || 0),
+    selections,
+    variants: (item._configurable_variants || []).map((variant) => ({
+      code: variant.code || "",
+      label: variant.label || "",
+    })),
+    variant_code: item._configurable_variant_code || "",
+  };
+};
+
+const hydratePreorderItem = (item) => {
+  const config = item?.configuracion;
+  if (!config?.group) return item;
+  return {
+    ...item,
+    _configurable_group: true,
+    _configurable_base_code: config.base_code || "",
+    _configurable_title: config.title || "",
+    _configurable_base_description: config.base_description || "",
+    _configurable_base_foto_url: config.base_photo_url || "",
+    _configurable_base_weight: Number(config.base_weight || 0),
+    _configurable_selections: config.selections || {},
+    _configurable_variants: config.variants || [],
+    _configurable_variant_code: config.variant_code || "",
+  };
+};
+
+const hydratePreorder = (preorder) => {
+  const items = (preorder?.preorder_items || []).map(hydratePreorderItem);
+  return {
+    ...preorder,
+    preorder_items: items,
+    _integrity_issue: items.length === 0 && Number(preorder?.total_piezas || 0) > 0
+      ? "missing_items"
+      : null,
+  };
+};
+
+const buildItemPayload = (item, idx) => cleanItemNumbers({
+  producto_codigo: item.producto_codigo,
+  producto_descripcion: item.producto_descripcion || "",
+  producto_metal: item.producto_metal || "",
+  producto_kilataje: item.producto_kilataje || "",
+  producto_linea: item.producto_linea || "",
+  producto_foto_url: item.producto_foto_url || "",
+  piezas: item.piezas,
+  gramos_por_pieza: item.gramos_por_pieza,
+  gramos_total: item.gramos_total,
+  labor_mxn: item.labor_mxn,
+  precio_gramo_mxn: item.precio_gramo_mxn,
+  pricing_mode: item.pricing_mode || "gram",
+  piece_price_list_id: isValidUuid(item.piece_price_list_id) ? item.piece_price_list_id : null,
+  precio_pieza_mxn: item.precio_pieza_mxn,
+  subtotal_mxn: item.subtotal_mxn,
+  sort_order: idx,
+  comentarios: item.comentarios || "",
+  configuracion: itemConfiguration(item),
+}, idx);
 
 const normalizePreorderStatus = (status) => {
   const allowed = new Set(["pendiente", "revision", "confirmada", "cancelada"]);
@@ -93,13 +161,13 @@ export const fetchAllPreorders = async (profile) => {
       .in("id", creatorIds);
     if (profiles?.length) {
       const roleMap = new Map(profiles.map((p) => [p.id, p.role]));
-      return data.map((po) => ({
+      return data.map((po) => hydratePreorder({
         ...po,
         creator: po.created_by ? { role: roleMap.get(po.created_by) || "admin" } : null,
       }));
     }
   }
-  return data;
+  return data.map(hydratePreorder);
 };
 
 export const fetchPreorder = async (id) => {
@@ -109,7 +177,7 @@ export const fetchPreorder = async (id) => {
     .eq("id", id)
     .single();
   if (error) throw error;
-  return data;
+  return hydratePreorder(data);
 };
 
 /**
@@ -122,7 +190,6 @@ export const fetchPreorder = async (id) => {
 export const savePreorder = async (preorder, items, { expectedUpdatedAt = null, forceOverwrite = false } = {}) => {
   const totals = calcTotals(items, preorder);
   const isExisting = isValidUuid(preorder.id);
-  const isNew = !isExisting;
   const newUpdatedAt = new Date().toISOString();
 
   // Limpiar campos vacíos que son UUID en Supabase
@@ -160,75 +227,37 @@ export const savePreorder = async (preorder, items, { expectedUpdatedAt = null, 
     updated_at: newUpdatedAt,
   });
 
-  let preorderId = isExisting ? preorder.id : null;
+  const itemsData = items.map(buildItemPayload);
+  const rpcPreorder = {
+    ...preorderData,
+    id: isExisting ? preorder.id : null,
+  };
 
-  if (isNew) {
-    const { data, error } = await supabase
-      .from("preorders")
-      .insert(preorderData)
-      .select("id")
-      .single();
-    if (error) throw error;
-    preorderId = data.id;
-  } else {
-    // ── Optimistic locking ──────────────────────────────────────────────────
-    // Si tenemos un timestamp de referencia Y no se fuerza la sobreescritura,
-    // verificamos que la DB no haya sido modificada por otra sesión.
-    let updateQuery = supabase
-      .from("preorders")
-      .update(preorderData)
-      .eq("id", preorderId);
+  const { data, error } = await supabase.rpc("save_preorder_transaction", {
+    p_preorder: rpcPreorder,
+    p_items: itemsData,
+    p_expected_updated_at: expectedUpdatedAt || null,
+    p_force: forceOverwrite,
+  });
 
-    if (expectedUpdatedAt && !forceOverwrite) {
-      updateQuery = updateQuery.eq("updated_at", expectedUpdatedAt);
-    }
-
-    const { data: updatedRows, error } = await updateQuery.select("id");
-    if (error) throw error;
-
-    // Si no se actualizó ninguna fila con el filtro de updated_at → conflicto
-    if (expectedUpdatedAt && !forceOverwrite && (!updatedRows || updatedRows.length === 0)) {
-      // Leemos la versión actual de la DB para mostrar su timestamp al usuario
-      const { data: current } = await supabase
-        .from("preorders")
-        .select("updated_at, folio")
-        .eq("id", preorderId)
-        .single();
-      const conflictError = new Error(
-        `CONFLICT:${current?.updated_at || ""}:${current?.folio || ""}`
-      );
+  if (error) {
+    const errorMessage = String(error.message || "");
+    if (errorMessage.startsWith("CONFLICT|")) {
+      const [, dbUpdatedAt = "", folio = ""] = errorMessage.split("|");
+      const conflictError = new Error(error.message);
       conflictError.isConflict = true;
-      conflictError.dbUpdatedAt = current?.updated_at || null;
+      conflictError.dbUpdatedAt = dbUpdatedAt || null;
+      conflictError.folio = folio || null;
       throw conflictError;
     }
-
-    // Borrar items anteriores y reinsertarlos
-    await supabase.from("preorder_items").delete().eq("preorder_id", preorderId);
+    throw error;
   }
 
-  if (items.length > 0) {
-    const itemsData = items.map((item, idx) => {
-      const comentarios = item.comentarios;
-      const cleanItem = stripClientOnlyItemFields(item);
-      if (comentarios) {
-        cleanItem.producto_descripcion = [cleanItem.producto_descripcion, `Nota: ${comentarios}`].filter(Boolean).join("\n");
-      }
-      const cleanedItem = cleanItemNumbers({
-        ...cleanItem,
-        preorder_id: preorderId,
-        sort_order: idx,
-        updated_at: newUpdatedAt,
-      }, idx);
-      cleanOptionalUuid(cleanedItem, "piece_price_list_id");
-      cleanOptionalUuid(cleanedItem, "labor_list_id");
-      cleanOptionalUuid(cleanedItem, "tenant_id");
-      return cleanedItem;
-    });
-    const { error } = await supabase.from("preorder_items").insert(itemsData);
-    if (error) throw error;
-  }
-
-  return { id: preorderId, folio: preorderData.folio, updatedAt: newUpdatedAt };
+  return {
+    id: data.id,
+    folio: data.folio,
+    updatedAt: data.updated_at || newUpdatedAt,
+  };
 };
 
 export const updatePreorderStatus = async (id, status) => {
@@ -249,7 +278,7 @@ export const fetchClientPreorders = async (clientId) => {
     .eq("client_id", clientId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data;
+  return (data || []).map(hydratePreorder);
 };
 
 export const submitClientPreorder = async (profile, cartItems, customer) => {
