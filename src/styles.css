@@ -9844,3 +9844,6 @@ tr.client-row--expanded td {
   text-transform: uppercase;
   white-space: nowrap;
 }
+
+/* Cobros — chip de anticipo */
+.gf-chip--anticipo { border-style: dashed; }
