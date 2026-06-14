@@ -6,9 +6,10 @@
  * - Editor abierto en pestañas (RemisionEditor).
  */
 import { useEffect, useState } from "react";
-import RemisionEditor from "./RemisionEditor";
+import PreorderEditor from "./PreorderEditor";
 import CobrarModal from "./CobrarModal";
 import { fetchRemisiones, generateFolio, registrarCobro, fetchCuentas } from "../services/adminModuleService";
+import { remisionToPreorderInitial, REMISION_STATUS, REMISION_LABELS, makeRemisionSaveDocument } from "../utils/remisionPreorderBridge";
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
@@ -433,14 +434,18 @@ export default function RemisionWorkspace({
             onCobrar={setCobrarRem}
           />
         ) : (
-          <RemisionEditor
+          <PreorderEditor
             key={activeTab.id}
-            remision={activeTab.remision}
+            preorder={remisionToPreorderInitial(activeTab.remision)}
             clients={clients}
             products={products}
             tenantId={tenantId}
             profile={profile}
-            existingFolios={remisiones.map((r) => r.folio)}
+            documentType="remision"
+            statusMap={REMISION_STATUS}
+            labels={REMISION_LABELS}
+            enableImportFromPreorder
+            saveDocument={makeRemisionSaveDocument(tenantId || profile?.tenant_id || "")}
             onClose={(updatedDraft) => closeTab(activeTab.id, updatedDraft)}
             onSaved={(savedData) => handleSaved(activeTab.id, savedData)}
             onDirty={() => markDirty(activeTab.id)}

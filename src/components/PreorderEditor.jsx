@@ -4,7 +4,7 @@ import { fetchCompanySettings } from "../services/companySettings";
 import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice, fetchLaborLists, fetchLaborListLines, fetchPiecePriceLists, fetchPiecePriceListItems, roundUp2 } from "../services/pricingService";
 import { fetchProductComponents, groupProductComponents } from "../services/productComponentsService";
 import { saveClient } from "../services/supabaseCatalog";
-import { savePreorder, deletePreorder } from "../services/preorderService";
+import { savePreorder, deletePreorder, fetchAllPreorders } from "../services/preorderService";
 import { generatePdf } from "../utils/pdfGenerator";
 import { useLanguage } from "../i18n/LanguageContext";
 import { buildPlaceholderUrl, imageUrlForSize, shortText } from "../utils/formatters";
@@ -256,16 +256,111 @@ const downloadWorkbook = (XLSX, workbook, fileName) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, onCreateRemision, pricingLocked = false, tenantId = "", profile, configurableCatalogEnabled = false }) {
+// ─── Modal: importar desde preorden (solo modo remisión) ────────────────────────
+function ImportarPreordenModal({ tenantId, profile, onSelect, onClose }) {
+  const [preorders, setPreorders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    setLoading(true);
+    fetchAllPreorders({ ...profile, tenant_id: tenantId })
+      .then((data) => setPreorders((data || []).filter((p) => p.status !== "cancelada")))
+      .catch(() => setPreorders([]))
+      .finally(() => setLoading(false));
+  }, [tenantId, profile]);
+
+  const filtered = useMemo(() => {
+    if (!search) return preorders;
+    const q = normalizeText(search);
+    return preorders.filter((p) =>
+      normalizeText([p.folio, p.cliente_empresa, p.cliente_nombre].join(" ")).includes(q)
+    );
+  }, [preorders, search]);
+
+  return (
+    <div className="client-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="client-modal">
+        <header>
+          <h2>Importar desde preorden</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar">×</button>
+        </header>
+        <div className="rem-modal__body">
+          <input
+            className="rem-search"
+            style={{ marginBottom: 12 }}
+            placeholder="Buscar folio, cliente..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+          {loading ? (
+            <div className="rem-loading">Cargando preórdenes...</div>
+          ) : filtered.length === 0 ? (
+            <div className="rem-empty">Sin preórdenes disponibles.</div>
+          ) : (
+            <div className="rem-table-wrap">
+              <table className="rem-table">
+                <thead>
+                  <tr>
+                    <th>Folio</th>
+                    <th>Cliente</th>
+                    <th>Fecha</th>
+                    <th className="right">Gramos</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((po) => (
+                    <tr key={po.id}>
+                      <td><strong>{po.folio || "—"}</strong></td>
+                      <td>{po.cliente_empresa || po.cliente_nombre || "—"}</td>
+                      <td>{new Date(po.created_at).toLocaleDateString("es-MX")}</td>
+                      <td className="right">{Number(po.total_gramos || 0).toFixed(2)} g</td>
+                      <td>
+                        <button className="primary-button compact-action" type="button" onClick={() => onSelect(po)}>
+                          Importar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        <footer>
+          <button type="button" className="secondary-button" onClick={onClose}>Cancelar</button>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, onCreateRemision, pricingLocked = false, tenantId = "", profile, configurableCatalogEnabled = false,
+  // ── Modo documento ────────────────────────────────────────────────────────
+  // documentType="preorden" (default) deja la Preorden 100% idéntica.
+  // documentType="remision" reutiliza el mismo editor como Remisión.
+  documentType = "preorden",
+  statusMap = null,             // mapa de estados (default: STATUS de preorden)
+  saveDocument = null,          // override de guardado: async (po, items) => { id, folio, updatedAt }
+  enableImportFromPreorder = false, // muestra botón + modal "Importar preorden"
+  labels = null,                // { eyebrowNew, sheetTitle, notesPlaceholder }
+}) {
   const { language } = useLanguage();
   const company = useCompany();
   const hasSavedInitialId = UUID_RE.test(String(initial?.id || ""));
   const isNew = !hasSavedInitialId;
   const resolvedTenantId = tenantId || initial?.tenant_id || initial?.tenantId || profile?.tenant_id || "";
 
+  const isRemision = documentType === "remision";
+  const statusConfig = statusMap || STATUS;
+  const docLabels = labels || {};
+  const defaultStatus = Object.keys(statusConfig)[0] || "pendiente";
+
   const blank = {
     folio: "",
-    status: "pendiente",
+    status: defaultStatus,
     tenant_id: resolvedTenantId,
     created_by: profile?.id || "",
     client_id: "",
@@ -316,6 +411,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const bottomScannerRef = useRef(null);       // barra de búsqueda inferior (misma lógica, distinto ref)
   const activeScannerRef = useRef("top");      // "top" | "bottom" — cuál barra usó el usuario por última vez
   const [pendingDuplicate, setPendingDuplicate] = useState(null); // { product, nextItem } esperando confirmación
+  const [showImportPreorder, setShowImportPreorder] = useState(false); // modal "Importar preorden" (modo remisión)
   const activeCompany = resolvedTenantId ? (tenantCompany || {}) : company;
   const markEdited = () => {
     onDirty?.();
@@ -1203,20 +1299,19 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     try {
       const resolvedClientId = await resolveClientForSave();
       if (!resolvedClientId) { setMsg("Debes seleccionar un cliente o registrar un prospecto para guardar la preorden."); return; }
-      const savedResult = await savePreorder(
-        {
-          ...po,
-          pricing_mode: pricingMode,
-          labor_list_id: isPieceMode ? "" : selectedLaborListId,
-          piece_price_list_id: isPieceMode ? selectedPiecePriceListId : "",
-          client_id: resolvedClientId,
-          total_mxn: totalFinalMxn,
-          tenant_id: resolvedTenantId,
-          created_by: po.created_by || profile?.id || null,
-        },
-        items,
-        { expectedUpdatedAt: loadedAt, forceOverwrite }
-      );
+      const payload = {
+        ...po,
+        pricing_mode: pricingMode,
+        labor_list_id: isPieceMode ? "" : selectedLaborListId,
+        piece_price_list_id: isPieceMode ? selectedPiecePriceListId : "",
+        client_id: resolvedClientId,
+        total_mxn: totalFinalMxn,
+        tenant_id: resolvedTenantId,
+        created_by: po.created_by || profile?.id || null,
+      };
+      const savedResult = saveDocument
+        ? await saveDocument(payload, items, { expectedUpdatedAt: loadedAt, forceOverwrite })
+        : await savePreorder(payload, items, { expectedUpdatedAt: loadedAt, forceOverwrite });
       const savedId     = savedResult.id;
       const savedFolio  = savedResult.folio;
       const newUpdatedAt = savedResult.updatedAt || new Date().toISOString();
@@ -1403,6 +1498,29 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     onSaved?.();
   };
 
+  // Importar artículos + cliente desde una preorden (solo modo remisión).
+  // Los preorder_items ya vienen en el formato del editor, así que la PF
+  // (labor_mxn + precio_gramo_mxn) entra editable tal cual.
+  const handleImportPreorder = (preorderRow) => {
+    setPo((current) => ({
+      ...current,
+      client_id:        preorderRow.client_id || current.client_id || "",
+      cliente_nombre:   preorderRow.cliente_nombre || "",
+      cliente_empresa:  preorderRow.cliente_empresa || "",
+      cliente_email:    preorderRow.cliente_email || "",
+      cliente_telefono: preorderRow.cliente_telefono || "",
+      cliente_rfc:      preorderRow.cliente_rfc || "",
+      moneda:           preorderRow.moneda || current.moneda,
+      tipo_cambio:      preorderRow.tipo_cambio ? String(preorderRow.tipo_cambio) : current.tipo_cambio,
+      preorder_id:      preorderRow.id || null,
+    }));
+    const imported = withPreorderSortOrder(orderPreorderItems(preorderRow.preorder_items || []));
+    setItems(imported.length ? imported : []);
+    setShowImportPreorder(false);
+    markEdited();
+    setMsg(`Artículos importados de la preorden ${preorderRow.folio || ""}. Puedes editar precios y PF.`);
+  };
+
   const handleClose = () => {
     onClose?.({ ...po, preorder_items: items });
   };
@@ -1411,9 +1529,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     <div className="po-editor">
       <header className="po-editor-toolbar po-editor-toolbar--remission">
         <div className="po-editor-toolbar-left">
-          <span className="tool-eyebrow">{isNew ? "Nueva preorden" : po.folio}</span>
+          <span className="tool-eyebrow">{isNew ? (docLabels.eyebrowNew || "Nueva preorden") : po.folio}</span>
           <div className="po-status-pills">
-            {Object.entries(STATUS).map(([key, { label, color }]) => (
+            {Object.entries(statusConfig).map(([key, { label, color }]) => (
               <button
                 key={key}
                 type="button"
@@ -1465,6 +1583,16 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             </button>
           ) : null}
 
+          {enableImportFromPreorder ? (
+            <button
+              className="secondary-button compact-action"
+              type="button"
+              onClick={() => setShowImportPreorder(true)}
+              title="Importar artículos y cliente desde una preorden"
+            >
+              ↑ Importar preorden
+            </button>
+          ) : null}
           {!isNew ? (
             <button className="danger-button compact-action" type="button" onClick={handleDelete}>
               Eliminar
@@ -1575,8 +1703,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 <input type="number" step="0.01" placeholder="Ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
               </Field>
               <Field label="Estatus">
-                <select value={po.status || "pendiente"} onChange={set("status")} style={inp}>
-                  {Object.entries(STATUS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
+                <select value={po.status || defaultStatus} onChange={set("status")} style={inp}>
+                  {Object.entries(statusConfig).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
                 </select>
               </Field>
             </div>
@@ -1602,7 +1730,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           <section className="po-header-sheet">
             <div className="po-header-section po-header-section--client">
               <div className="po-header-line">
-                <strong>Preorden</strong>
+                <strong>{docLabels.sheetTitle || "Preorden"}</strong>
                 <span>{new Date(initial?.created_at || Date.now()).toLocaleDateString("es-MX")}</span>
               </div>
               <Field label="Cliente">
@@ -1678,8 +1806,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 <input type="number" step="0.01" placeholder="Ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
               </Field>
               <Field label="Estatus">
-                <select value={po.status || "pendiente"} onChange={set("status")} style={inp}>
-                  {Object.entries(STATUS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
+                <select value={po.status || defaultStatus} onChange={set("status")} style={inp}>
+                  {Object.entries(statusConfig).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
                 </select>
               </Field>
             </div>
@@ -1688,7 +1816,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               <div className="po-header-line">
                 <strong>Comentarios</strong>
               </div>
-              <textarea value={po.notas || ""} onChange={set("notas")} placeholder="Observaciones generales de la preorden" />
+              <textarea value={po.notas || ""} onChange={set("notas")} placeholder={docLabels.notesPlaceholder || "Observaciones generales de la preorden"} />
             </div>
 
             <div className="po-header-section po-header-section--totals">
@@ -2278,6 +2406,15 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             <div className="po-total-highlight"><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
           </section>
       </main>
+
+      {showImportPreorder ? (
+        <ImportarPreordenModal
+          tenantId={resolvedTenantId}
+          profile={profile}
+          onSelect={handleImportPreorder}
+          onClose={() => setShowImportPreorder(false)}
+        />
+      ) : null}
     </div>
   );
 }
