@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  fetchCobros, registrarCobro, fetchRemisiones, fetchCuentas, seedCuentasDefault,
+  fetchCobros, registrarCobro, fetchRemisiones, fetchCuentas,
 } from "../../services/adminModuleService";
 
 const today = () => new Date().toISOString().split("T")[0];
@@ -11,6 +11,18 @@ const fmtG = (n) => `${Number(n || 0).toLocaleString("es-MX", { maximumFractionD
 const MEDIO_LABELS = {
   efectivo_mxn: "Efectivo", transferencia_usd: "Transferencia", plata_fisica: "Plata física",
   mercado_pago: "Mercado Pago", otro: "Otro",
+};
+
+const mediosPorForma = (forma) => {
+  if (forma === "PLATA") return ["plata_fisica"];
+  if (forma === "USD") return ["transferencia_usd", "otro"];
+  return ["efectivo_mxn", "mercado_pago", "otro"];
+};
+
+const cuentaCompatible = (cuenta, forma) => {
+  if (!cuenta?.activo) return false;
+  if (forma === "PLATA") return cuenta.tipo === "plata" && cuenta.moneda === "GRM";
+  return cuenta.tipo !== "plata" && cuenta.moneda === forma;
 };
 
 // ─── Modal: nuevo cobro ───────────────────────────────────────────────────────
@@ -32,14 +44,23 @@ function NuevoCobroModal({ clients, remisiones, cuentas, onSave, onClose, saving
     [remisiones, clienteId]
   );
 
-  const cuentasDinero = cuentas.filter((c) => c.tipo !== "plata");
+  const cuentasCompatibles = cuentas.filter((c) => cuentaCompatible(c, forma));
+  const mediosCompatibles = mediosPorForma(forma);
   const num = Number(monto || 0);
-  const valido = clienteId && destino && num > 0 && (forma !== "USD" || Number(tipoCambio) > 0);
+  const cuentaValida = cuentasCompatibles.some((c) => c.id === cuentaId);
+  const valido = clienteId && destino && num > 0 && cuentaValida
+    && (forma !== "USD" || Number(tipoCambio) > 0);
+
+  const cambiarForma = (nextForma) => {
+    setForma(nextForma);
+    setCuentaId("");
+    setMedio(mediosPorForma(nextForma)[0]);
+  };
 
   const submit = () => {
     if (!valido || saving) return;
     const remisionId = destino === "anticipo" ? null : destino;
-    const base = { clienteId, remisionId, fechaCobro: fecha, medioPago: medio, cuentaId: cuentaId || null, referenciaBancaria: referencia };
+    const base = { clienteId, remisionId, fechaCobro: fecha, medioPago: medio, cuentaId, referenciaBancaria: referencia };
     let cobro;
     if (forma === "MXN") {
       cobro = { ...base, tipoAbono: "labor_mxn", abonoLaborMxn: num, montoRecibido: num, monedaRecibida: "MXN", montoMxnEquivalente: num };
@@ -47,7 +68,7 @@ function NuevoCobroModal({ clients, remisiones, cuentas, onSave, onClose, saving
       const tc = Number(tipoCambio || 0);
       cobro = { ...base, tipoAbono: "total_usd", abonoUsd: num, montoRecibido: num, monedaRecibida: "USD", tipoCambio: tc, montoMxnEquivalente: num * tc };
     } else {
-      cobro = { ...base, tipoAbono: "plata_gramos", abonoPlataGramos: num, gramosRecibidos: num, monedaRecibida: "GRM" };
+      cobro = { ...base, tipoAbono: "plata_gramos", abonoPlataGramos: num, gramosRecibidos: num, monedaRecibida: null };
     }
     onSave(cobro);
   };
@@ -93,9 +114,9 @@ function NuevoCobroModal({ clients, remisiones, cuentas, onSave, onClose, saving
               <div className="gf-step">
                 <span className="gf-step__label">¿Cómo pagó?</span>
                 <div className="gf-segmented">
-                  <button type="button" className={forma === "MXN" ? "on" : ""} onClick={() => setForma("MXN")}>Pesos</button>
-                  <button type="button" className={forma === "USD" ? "on" : ""} onClick={() => setForma("USD")}>Dólares</button>
-                  <button type="button" className={forma === "PLATA" ? "on" : ""} onClick={() => setForma("PLATA")}>Plata (gramos)</button>
+                  <button type="button" className={forma === "MXN" ? "on" : ""} onClick={() => cambiarForma("MXN")}>Pesos</button>
+                  <button type="button" className={forma === "USD" ? "on" : ""} onClick={() => cambiarForma("USD")}>Dólares</button>
+                  <button type="button" className={forma === "PLATA" ? "on" : ""} onClick={() => cambiarForma("PLATA")}>Plata (gramos)</button>
                 </div>
               </div>
 
@@ -121,15 +142,18 @@ function NuevoCobroModal({ clients, remisiones, cuentas, onSave, onClose, saving
                 <span className="gf-step__label">Medio y cuenta</span>
                 <div className="gf-row">
                   <select className="gf-input" value={medio} onChange={(e) => setMedio(e.target.value)} style={{ flex: "0 0 auto" }}>
-                    {Object.entries(MEDIO_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    {mediosCompatibles.map((key) => <option key={key} value={key}>{MEDIO_LABELS[key]}</option>)}
                   </select>
-                  {forma !== "PLATA" && cuentasDinero.length > 0 && (
-                    <select className="gf-input" value={cuentaId} onChange={(e) => setCuentaId(e.target.value)}>
-                      <option value="">¿A qué cuenta entró? (opcional)</option>
-                      {cuentasDinero.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                    </select>
-                  )}
+                  <select className="gf-input" value={cuentaId} onChange={(e) => setCuentaId(e.target.value)} required>
+                    <option value="">Selecciona una caja o cuenta...</option>
+                    {cuentasCompatibles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </select>
                 </div>
+                {cuentasCompatibles.length === 0 && (
+                  <p className="cap-hint">
+                    No hay una cuenta activa en {forma === "PLATA" ? "gramos de plata" : forma}. Créala primero en Dinero y cuentas.
+                  </p>
+                )}
                 <input className="gf-input" type="text" value={referencia} onChange={(e) => setReferencia(e.target.value)} placeholder="Referencia / folio (opcional)" />
               </div>
             </>
@@ -164,7 +188,7 @@ export default function CobrosTab({ tenantId, clients = [], notifyAction, setSta
       const [cb, rm, cu] = await Promise.all([
         fetchCobros(tenantId),
         fetchRemisiones(tenantId),
-        seedCuentasDefault(tenantId).catch(() => fetchCuentas(tenantId)),
+        fetchCuentas(tenantId),
       ]);
       setCobros(cb); setRemisiones(rm); setCuentas(cu || []);
     } catch (e) { setError(e.message); }

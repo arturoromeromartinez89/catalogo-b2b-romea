@@ -392,11 +392,19 @@ const normalizeCobro = (row) => ({
   valorMxnPlata:         Number(row.valor_mxn_plata_recibida || 0),
   gananciaCambiariaMxn:  Number(row.ganancia_cambiaria_mxn || 0),
   referenciaBancaria:    row.referencia_bancaria,
+  cajaBancoId:           row.caja_banco_id,
+  cuentaPlataId:         row.cuenta_plata_id,
   notas:                 row.notas,
   createdAt:             row.created_at,
 });
 
 export const registrarCobro = async (cobro, tenantId) => {
+  if (!cobro.cuentaId) {
+    throw new Error("Selecciona una caja o cuenta real antes de registrar el cobro.");
+  }
+
+  const esPlataFisica = cobro.medioPago === "plata_fisica";
+
   // 1. Insertar cobro. remision_id null = anticipo (cliente adelanta dinero sin
   //    venta asociada → genera saldo a favor de ese cliente).
   const payload = {
@@ -409,8 +417,8 @@ export const registrarCobro = async (cobro, tenantId) => {
     abono_plata_gramos:     Number(cobro.abonoPlataGramos || 0),
     abono_usd:              Number(cobro.abonoUsd || 0),
     medio_pago:             cobro.medioPago,
-    monto_recibido:         Number(cobro.montoRecibido || 0),
-    moneda_recibida:        cobro.monedaRecibida || "MXN",
+    monto_recibido:         esPlataFisica ? null : Number(cobro.montoRecibido || 0),
+    moneda_recibida:        esPlataFisica ? null : (cobro.monedaRecibida || "MXN"),
     tipo_cambio:            Number(cobro.tipoCambio || 0) || null,
     monto_mxn_equivalente:  Number(cobro.montoMxnEquivalente || 0),
     gramos_recibidos:       Number(cobro.gramosRecibidos || 0) || null,
@@ -418,6 +426,8 @@ export const registrarCobro = async (cobro, tenantId) => {
     valor_mxn_plata_recibida: Number(cobro.valorMxnPlata || 0) || null,
     ganancia_cambiaria_mxn: Number(cobro.gananciaCambiariaMxn || 0),
     referencia_bancaria:    cobro.referenciaBancaria || null,
+    caja_banco_id:          esPlataFisica ? null : cobro.cuentaId,
+    cuenta_plata_id:        esPlataFisica ? cobro.cuentaId : null,
     notas:                  cobro.notas || null,
   };
 

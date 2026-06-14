@@ -18,6 +18,10 @@ const MEDIO_PAGO_LABELS = {
   otro:              "Otro",
 };
 
+const mediosDinero = (moneda) => moneda === "USD"
+  ? ["transferencia_usd", "otro"]
+  : ["efectivo_mxn", "mercado_pago", "otro"];
+
 const emptyCobro = (remision) => ({
   remisionId: remision?.id || "",
   clienteId: remision?.clienteId || null,
@@ -45,6 +49,13 @@ export default function CobrarModal({ remision, cuentas = [], onSave, onClose, s
   const esUSD = remision.moneda === "USD";
   const saldoPendiente = remision.saldoDinero;
   const saldoPlata = remision.saldoPlataGramos;
+  const esPlataFisica = form.tipoAbono === "plata_gramos";
+  const monedaCuenta = esPlataFisica ? "GRM" : form.monedaRecibida;
+  const cuentasCompatibles = cuentas.filter((cuenta) => cuenta.activo
+    && (esPlataFisica
+      ? cuenta.tipo === "plata" && cuenta.moneda === "GRM"
+      : cuenta.tipo !== "plata" && cuenta.moneda === monedaCuenta));
+  const cuentaValida = cuentasCompatibles.some((cuenta) => cuenta.id === form.cuentaId);
 
   const calcMxnEquiv = (monto, moneda, tc) => {
     if (moneda === "MXN") return Number(monto);
@@ -53,6 +64,7 @@ export default function CobrarModal({ remision, cuentas = [], onSave, onClose, s
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!cuentaValida) return;
     const cobro = {
       ...form,
       montoMxnEquivalente: calcMxnEquiv(form.montoRecibido, form.monedaRecibida, form.tipoCambio),
@@ -82,7 +94,18 @@ export default function CobrarModal({ remision, cuentas = [], onSave, onClose, s
 
             <label className="rem-field">
               <span>Tipo de abono</span>
-              <select value={form.tipoAbono} onChange={(e) => set("tipoAbono", e.target.value)}>
+              <select value={form.tipoAbono} onChange={(e) => {
+                const tipoAbono = e.target.value;
+                setForm((current) => ({
+                  ...current,
+                  tipoAbono,
+                  cuentaId: "",
+                  medioPago: tipoAbono === "plata_gramos"
+                    ? "plata_fisica"
+                    : (esUSD ? "transferencia_usd" : "efectivo_mxn"),
+                  monedaRecibida: tipoAbono === "plata_gramos" ? null : (esUSD ? "USD" : "MXN"),
+                }));
+              }}>
                 {esUSD
                   ? <option value="total_usd">Pago total (USD)</option>
                   : <>
@@ -113,8 +136,8 @@ export default function CobrarModal({ remision, cuentas = [], onSave, onClose, s
                 <label className="rem-field">
                   <span>Medio de pago</span>
                   <select value={form.medioPago} onChange={(e) => set("medioPago", e.target.value)}>
-                    {Object.entries(MEDIO_PAGO_LABELS).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
+                    {mediosDinero(form.monedaRecibida).map((key) => (
+                      <option key={key} value={key}>{MEDIO_PAGO_LABELS[key]}</option>
                     ))}
                   </select>
                 </label>
@@ -126,17 +149,16 @@ export default function CobrarModal({ remision, cuentas = [], onSave, onClose, s
                   </label>
                 )}
 
-                {cuentas.filter((c) => c.tipo !== "plata").length > 0 && (
-                  <label className="rem-field">
-                    <span>Cuenta destino</span>
-                    <select value={form.cuentaId || ""} onChange={(e) => set("cuentaId", e.target.value)}>
-                      <option value="">— Sin cuenta —</option>
-                      {cuentas.filter((c) => c.tipo !== "plata").map((c) => (
-                        <option key={c.id} value={c.id}>{c.nombre}</option>
-                      ))}
-                    </select>
-                  </label>
-                )}
+                <label className="rem-field">
+                  <span>Cuenta destino</span>
+                  <select value={form.cuentaId || ""} onChange={(e) => set("cuentaId", e.target.value)} required>
+                    <option value="">Selecciona una cuenta...</option>
+                    {cuentasCompatibles.map((c) => (
+                      <option key={c.id} value={c.id}>{c.nombre}</option>
+                    ))}
+                  </select>
+                  {cuentasCompatibles.length === 0 && <small>Crea primero una cuenta activa en {monedaCuenta}.</small>}
+                </label>
               </>
             ) : (
               <>
@@ -154,6 +176,16 @@ export default function CobrarModal({ remision, cuentas = [], onSave, onClose, s
                   <span>Tipo de cambio</span>
                   <input type="number" step="0.01" min="0" value={form.tipoCambio} onChange={(e) => set("tipoCambio", e.target.value)} />
                 </label>
+                <label className="rem-field">
+                  <span>Caja de plata destino</span>
+                  <select value={form.cuentaId || ""} onChange={(e) => set("cuentaId", e.target.value)} required>
+                    <option value="">Selecciona una caja de plata...</option>
+                    {cuentasCompatibles.map((c) => (
+                      <option key={c.id} value={c.id}>{c.nombre}</option>
+                    ))}
+                  </select>
+                  {cuentasCompatibles.length === 0 && <small>Crea primero una caja activa en gramos.</small>}
+                </label>
               </>
             )}
 
@@ -170,7 +202,7 @@ export default function CobrarModal({ remision, cuentas = [], onSave, onClose, s
         </form>
         <footer>
           <button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancelar</button>
-          <button type="submit" form="cobro-form" className="primary-button" disabled={saving}>
+          <button type="submit" form="cobro-form" className="primary-button" disabled={saving || !cuentaValida}>
             {saving ? "Guardando…" : "Registrar cobro"}
           </button>
         </footer>
