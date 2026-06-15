@@ -1430,14 +1430,14 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       }
       if (sel.broche) {
         list.push({
-          label: sel.broche.metadata?.es_placa_militar ? "Placa militar" : "Broche",
+          label: sel.broche.metadata?.es_placa_militar ? "Placa" : "Broche",
           nombre: sel.broche.nombre || "",
           fotoUrl: sel.broche.fotoUrl || sel.broche.foto_url || "",
         });
       }
       if (sel["diseño_placa"]) {
         list.push({
-          label: "Diseño de placa",
+          label: "Diseño",
           nombre: sel["diseño_placa"].nombre || "",
           fotoUrl: sel["diseño_placa"].fotoUrl || sel["diseño_placa"].foto_url || "",
         });
