@@ -1418,11 +1418,16 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       premiumPct: po.premio_pct,
       status: po.status,
     };
-    // Imágenes de componentes de un producto configurable (broche, diseño de
-    // placa). El tejido se muestra como imagen principal del renglón.
+    // Galería de imágenes de un producto configurable, en orden premium:
+    // 1) tejido (imagen principal)  2) broche / placa militar  3) diseño de placa.
     const componentesPdf = (item) => {
       const sel = item._configurable_selections || {};
+      const isConfig = Boolean(item._configurable_group || Object.keys(sel).length);
+      if (!isConfig) return [];
       const list = [];
+      if (item.producto_foto_url) {
+        list.push({ label: "Tejido", nombre: sel.tipo_pieza?.nombre || item._configurable_title || "", fotoUrl: item.producto_foto_url });
+      }
       if (sel.broche) {
         list.push({
           label: sel.broche.metadata?.es_placa_militar ? "Placa militar" : "Broche",

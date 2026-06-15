@@ -247,7 +247,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     grandPiezas += qty;
 
     const comps = Array.isArray(item.componentes) ? item.componentes.filter((c) => c?.fotoUrl) : [];
-    const rowH = comps.length ? 50 : 28;
+    const rowH = comps.length ? 60 : 28;
     if (y + rowH > page.h - footerReserve) {
       doc.addPage();
       y = drawTableHeader(page.margin);
@@ -255,25 +255,34 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     doc.setDrawColor(225,230,242); doc.setLineWidth(0.2);
     doc.line(page.margin, y - 1, page.w - page.margin, y - 1);
 
-    const imageSource = imageUrlForSize(item.product?.fotoUrl || item.producto_foto_url, 360);
-    const imgData = await loadImageAsDataUrl(imageSource, { boxWmm: 24, boxHmm: 24, dpi: 170, quality: 0.58 });
-    if (imgData) {
-      addContainedImage(doc, imgData, C.img, y + 2, 24, 24, imageAlias(imageSource));
-    } else {
-      doc.setDrawColor(225,230,242);
-      doc.setFillColor(248,250,252);
-      doc.roundedRect(C.img, y + 2, 24, 24, 1.5, 1.5, "FD");
-      doc.setFontSize(5.2);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(120,130,150);
-      txt(doc, t("Sin imagen", "No image"), C.img + 12, y + 15, { align: "center" });
+    // Imagen principal solo para productos NO configurables. Los configurables
+    // muestran su galería (tejido + componentes) abajo, en una línea premium.
+    if (!comps.length) {
+      const imageSource = imageUrlForSize(item.product?.fotoUrl || item.producto_foto_url, 360);
+      const imgData = await loadImageAsDataUrl(imageSource, { boxWmm: 24, boxHmm: 24, dpi: 170, quality: 0.58 });
+      if (imgData) {
+        addContainedImage(doc, imgData, C.img, y + 2, 24, 24, imageAlias(imageSource));
+      } else {
+        doc.setDrawColor(225,230,242);
+        doc.setFillColor(248,250,252);
+        doc.roundedRect(C.img, y + 2, 24, 24, 1.5, 1.5, "FD");
+        doc.setFontSize(5.2);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(120,130,150);
+        txt(doc, t("Sin imagen", "No image"), C.img + 12, y + 15, { align: "center" });
+      }
     }
 
+    // Código — ajustado a su columna (se parte en 2 líneas si es largo, sin encimar).
     doc.setFontSize(7); doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
-    txt(doc, item.product?.codigo || item.producto_codigo, C.cod, y+6);
+    const codStr = String(item.product?.codigo || item.producto_codigo || "");
+    txt(doc, doc.splitTextToSize(codStr, 17).slice(0, 2), C.cod, y+6);
 
+    // Descripción — limpia (sin comas ni espacios duplicados).
     doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40); doc.setFontSize(7);
-    const descLines = doc.splitTextToSize(item.product?.descripcion || item.producto_descripcion || "", 38);
+    const descRaw = String(item.product?.descripcion || item.producto_descripcion || "")
+      .replace(/\s*,(?:\s*,)+/g, ", ").replace(/\s{2,}/g, " ").replace(/\s+,/g, ",").replace(/,\s*$/, "").trim();
+    const descLines = doc.splitTextToSize(descRaw, 38);
     txt(doc, descLines.slice(0,3), C.desc, y+6);
     if (item.comentarios) {
       doc.setFontSize(5.6);
@@ -303,24 +312,28 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
     txt(doc, subtotal ? money(displayMoney(subtotal)) : "—", C.sub, rowMidY, { align: "right" });
 
-    // Tira de imágenes de componentes (broche, placa militar, diseño de placa)
+    // ── Galería premium de la pieza configurable: Tejido · Broche · Placa ──
     if (comps.length) {
-      doc.setFontSize(5.4); doc.setFont("helvetica","bold"); doc.setTextColor(110,110,110);
-      txt(doc, t("Componentes","Components"), C.img, y + 29);
+      const galY = y + 29;
+      doc.setFontSize(5.6); doc.setFont("helvetica","bold"); doc.setTextColor(150,160,175);
+      txt(doc, t("DETALLE DE LA PIEZA","PIECE DETAIL"), C.img, galY);
+      const cell = 18;     // lado de la miniatura (mm)
+      const pitch = 40;    // separación entre miniaturas (mm)
+      const imgY = galY + 3;
       let tx = C.img;
-      const ty = y + 31;
       for (const comp of comps) {
-        const cSrc = imageUrlForSize(comp.fotoUrl, 200);
-        const cImg = await loadImageAsDataUrl(cSrc, { boxWmm: 14, boxHmm: 14, dpi: 160, quality: 0.55 });
-        if (cImg) {
-          addContainedImage(doc, cImg, tx, ty, 14, 14, imageAlias(cSrc));
-        } else {
-          doc.setDrawColor(225,230,242); doc.setFillColor(248,250,252);
-          doc.roundedRect(tx, ty, 14, 14, 1, 1, "FD");
+        const cSrc = imageUrlForSize(comp.fotoUrl, 220);
+        const cImg = await loadImageAsDataUrl(cSrc, { boxWmm: cell, boxHmm: cell, dpi: 170, quality: 0.6 });
+        doc.setDrawColor(220,226,238); doc.setLineWidth(0.2); doc.setFillColor(252,253,255);
+        doc.roundedRect(tx, imgY, cell, cell, 1.5, 1.5, cImg ? "S" : "FD");
+        if (cImg) addContainedImage(doc, cImg, tx, imgY, cell, cell, imageAlias(cSrc));
+        doc.setFontSize(5.8); doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
+        txt(doc, doc.splitTextToSize(comp.label, pitch - 4).slice(0, 1), tx, imgY + cell + 4);
+        if (comp.nombre) {
+          doc.setFontSize(5.4); doc.setFont("helvetica","normal"); doc.setTextColor(120,125,140);
+          txt(doc, doc.splitTextToSize(comp.nombre, pitch - 4).slice(0, 1), tx, imgY + cell + 7);
         }
-        doc.setFontSize(5); doc.setFont("helvetica","bold"); doc.setTextColor(80,90,110);
-        txt(doc, doc.splitTextToSize(`${comp.label}: ${comp.nombre}`.trim(), 30).slice(0, 1), tx, ty + 17);
-        tx += 34;
+        tx += pitch;
       }
     }
     y += rowH;
