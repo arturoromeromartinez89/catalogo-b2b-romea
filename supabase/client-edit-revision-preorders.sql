@@ -49,4 +49,15 @@ create policy "clients update own preorders" on public.preorders
     client_id in (select client_id from public.profiles where id = auth.uid())
   );
 
+-- 4) El cliente puede BORRAR solo las preórdenes que ÉL creó, mientras no
+--    estén confirmadas/canceladas. Las creadas por el admin no las puede borrar.
+drop policy if exists "clients delete own preorders" on public.preorders;
+create policy "clients delete own preorders" on public.preorders
+  for delete
+  using (
+    created_by = auth.uid()
+      and client_id in (select client_id from public.profiles where id = auth.uid())
+      and status in ('pendiente', 'revision')
+  );
+
 notify pgrst, 'reload schema';

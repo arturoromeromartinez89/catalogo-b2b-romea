@@ -10100,3 +10100,23 @@ tr.client-row--expanded td {
   color: var(--neutral-800);
 }
 .client-mini-hint { font-size: 11px; color: var(--neutral-500); margin: 4px 0 8px; }
+
+/* Portal del cliente — selección y envío a preorden */
+.client-send-block {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-top: 10px; padding: 10px;
+  background: var(--brand-50); border: 1px solid var(--brand-200); border-radius: var(--radius-md);
+}
+.client-send-label { font-size: 12px; font-weight: 600; color: var(--accent); }
+.client-bulk-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 12px; padding: 8px 10px;
+  background: var(--neutral-50); border: 1px solid var(--neutral-200); border-radius: var(--radius-md);
+}
+.client-bulk-count { font-size: 13px; font-weight: 600; color: var(--neutral-700); margin-right: auto; }
+.client-orders-view { padding: 16px 20px; overflow-y: auto; height: 100%; }
+.client-origen-tag {
+  font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 9999px;
+  background: var(--neutral-100); color: var(--neutral-600); white-space: nowrap;
+}
+.client-origen-tag.is-own { background: #dbe7fb; color: var(--accent); }

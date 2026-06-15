@@ -10,7 +10,7 @@ import { fetchCompanySettings } from "../services/companySettings";
 import { supabase } from "../lib/supabaseClient";
 import { fastSignOut } from "../services/authService";
 import { fetchClientData } from "../services/supabaseCatalog";
-import { fetchClientPreorders } from "../services/preorderService";
+import { fetchClientPreorders, deletePreorder } from "../services/preorderService";
 import { calculateProductQuotePrice, fetchLines, fetchMetalPrices, fetchLaborListLines } from "../services/pricingService";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
@@ -86,6 +86,22 @@ export default function ClientCatalogApp({ profile }) {
   };
   useEffect(() => { loadOrders(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [profile?.client_id]);
   const confirmadasCount = useMemo(() => orders.filter((o) => o.status === "confirmada").length, [orders]);
+  // Preórdenes a las que el cliente puede AÑADIR su selección (editables).
+  const editableOrders = useMemo(
+    () => orders.filter((o) => o.status === "revision" || o.status === "pendiente"),
+    [orders]
+  );
+
+  const handleDeleteOrder = async (order) => {
+    if (!window.confirm(`¿Borrar la preorden ${order.folio || ""}? Esta acción no se puede deshacer.`)) return;
+    try {
+      await deletePreorder(order.id);
+      setStatus("Preorden borrada.");
+      loadOrders();
+    } catch (e) {
+      setStatus(`No se pudo borrar: ${e.message}`);
+    }
+  };
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
 
   // ── Carga inicial ──────────────────────────────────────────────────────────
@@ -255,8 +271,45 @@ export default function ClientCatalogApp({ profile }) {
       return [...current, { product, quantity: amount }];
     });
     setAddedCodes((current) => current.includes(product.codigo) ? current : [...current, product.codigo]);
-    setStatus(`${product.codigo} agregado a tu preorden.`);
+    setStatus(`${product.codigo} agregado a tu selección.`);
   };
+
+  const removeFromCart = (codigo) => {
+    setCartItems((c) => c.filter((it) => it.product.codigo !== codigo));
+    setAddedCodes((c) => c.filter((x) => x !== codigo));
+  };
+  const toggleCart = (product) => {
+    if (addedCodes.includes(product.codigo)) removeFromCart(product.codigo);
+    else addToCart(product);
+  };
+  const selectAllProducts = (list) => {
+    if (!list.length) return;
+    setCartItems((current) => {
+      const byCode = new Map(current.map((it) => [it.product.codigo, it]));
+      list.forEach((p) => { if (!byCode.has(p.codigo)) byCode.set(p.codigo, { product: p, quantity: 1 }); });
+      return [...byCode.values()];
+    });
+    setAddedCodes((current) => {
+      const s = new Set(current);
+      list.forEach((p) => s.add(p.codigo));
+      return [...s];
+    });
+    setStatus(`${list.length} producto(s) agregados a tu selección.`);
+  };
+  const clearSelection = () => { setCartItems([]); setAddedCodes([]); setStatus("Selección vacía."); };
+
+  // Manda la selección actual a una preorden existente (la abre con los nuevos
+  // productos ya añadidos) o a una nueva.
+  const sendSelectionToNew = () => setIsCartOpen(true);
+  const sendSelectionToOrder = (order) => {
+    const sel = cartToPreorder().preorder_items || [];
+    const existing = order.preorder_items || [];
+    const merged = [...existing, ...sel].map((it, idx) => ({ ...it, sort_order: idx }));
+    setEditingOrder({ ...order, preorder_items: merged });
+    clearSelection();
+  };
+  const origenLabel = (o) => ((o.created_by || o.createdBy) === profile.id ? "Tú" : "Administrador");
+  const isOwnOrder = (o) => (o.created_by || o.createdBy) === profile.id;
 
   const handleSignOut = async () => {
     if (signingOut) return;
@@ -333,13 +386,32 @@ export default function ClientCatalogApp({ profile }) {
               <div><span>{t("models")}</span><strong>{cartItems.length}</strong></div>
             </div>
             {status ? <p className="status info">{status}</p> : null}
-            <button
-              className="primary-button full compact-action"
-              type="button"
-              onClick={() => setIsCartOpen(true)}
-            >
-              {t("openPreorder")}
-            </button>
+
+            {/* Enviar la selección a una preorden — el usuario elige a CUÁL va */}
+            {cartItems.length > 0 ? (
+              <div className="client-send-block">
+                <label className="client-send-label">Enviar {cartItems.length} seleccionado(s) a:</label>
+                <select
+                  className="client-labor-select"
+                  value=""
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "__new__") sendSelectionToNew();
+                    else { const o = editableOrders.find((x) => x.id === v); if (o) sendSelectionToOrder(o); }
+                  }}
+                >
+                  <option value="">Elige destino…</option>
+                  <option value="__new__">➕ Nueva preorden</option>
+                  {editableOrders.map((o) => (
+                    <option key={o.id} value={o.id}>{o.folio || "Preorden"} · {origenLabel(o)}</option>
+                  ))}
+                </select>
+                <button className="secondary-button full compact-action" type="button" onClick={clearSelection}>
+                  Borrar selección
+                </button>
+              </div>
+            ) : null}
+
             <button
               className="secondary-button full compact-action client-orders-btn"
               type="button"
@@ -419,6 +491,18 @@ export default function ClientCatalogApp({ profile }) {
             />
           ) : filteredProducts.length ? (
             <>
+              <div className="client-bulk-bar">
+                <span className="client-bulk-count">{cartItems.length} en selección</span>
+                <button type="button" className="secondary-button compact-action" onClick={() => selectAllProducts(renderedProducts)}>
+                  Seleccionar pantalla ({renderedProducts.length})
+                </button>
+                <button type="button" className="secondary-button compact-action" onClick={() => selectAllProducts(filteredProducts)}>
+                  Seleccionar todo lo filtrado ({filteredProducts.length})
+                </button>
+                <button type="button" className="secondary-button compact-action" onClick={clearSelection} disabled={!cartItems.length}>
+                  Borrar selección
+                </button>
+              </div>
               <div className="admin-product-grid">
                 {renderedProducts.map((product) => (
                   <article
@@ -464,11 +548,11 @@ export default function ClientCatalogApp({ profile }) {
                         {t("viewDetail")}
                       </button>
                       <button
-                        className="primary-button compact-action"
+                        className={`compact-action ${addedCodes.includes(product.codigo) ? "secondary-button" : "primary-button"}`}
                         type="button"
-                        onClick={() => addToCart(product)}
+                        onClick={() => toggleCart(product)}
                       >
-                        {t("addToPreorder")}
+                        {addedCodes.includes(product.codigo) ? "Quitar" : t("addToPreorder")}
                       </button>
                     </div>
                   </article>
@@ -565,48 +649,59 @@ export default function ClientCatalogApp({ profile }) {
         </div>
       ) : null}
 
-      {/* ── Mis preórdenes — el cliente consulta sus órdenes y su estatus ── */}
+      {/* ── Mis preórdenes — vista completa (formato admin), no flotante ── */}
       {showOrders ? (
-        <div className="client-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowOrders(false)}>
-          <div className="client-modal client-orders-modal">
-            <header>
-              <h2>Mis preórdenes</h2>
-              <button type="button" className="icon-button" onClick={() => setShowOrders(false)} aria-label="Cerrar">×</button>
-            </header>
-            <div className="client-orders-body">
-              {ordersLoading ? (
-                <p className="status info">Cargando tus preórdenes…</p>
-              ) : orders.length === 0 ? (
-                <p className="status info">Aún no tienes preórdenes. Arma una desde el catálogo.</p>
-              ) : (
-                <ul className="client-orders-list">
-                  {orders.map((o) => {
-                    const st = ORDER_STATUS[o.status] || { label: o.status || "—", cls: "is-gray" };
-                    const piezas = (o.preorder_items || []).reduce((s, it) => s + Number(it.piezas || 0), 0);
-                    return (
-                      <li
-                        key={o.id}
-                        className={`client-order-row client-order-row--clickable${o.status === "confirmada" ? " is-confirmed" : ""}`}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => { setEditingOrder(o); setShowOrders(false); }}
-                        onKeyDown={(e) => { if (e.key === "Enter") { setEditingOrder(o); setShowOrders(false); } }}
-                        title="Abrir para ver o editar"
-                      >
-                        <div className="client-order-main">
-                          <strong>{o.folio || "Preorden"}</strong>
-                          <small>{o.created_at ? new Date(o.created_at).toLocaleDateString("es-MX") : ""} · {piezas} pza{piezas !== 1 ? "s" : ""}</small>
-                        </div>
-                        <span className={`client-order-status ${st.cls}`}>{st.label}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              {confirmadasCount > 0 ? (
-                <p className="client-orders-note">✓ Tienes {confirmadasCount} preorden(es) confirmada(s) por el taller.</p>
-              ) : null}
-            </div>
+        <div className="client-editor-overlay">
+          <div className="client-editor-topbar">
+            <button type="button" className="client-editor-back" onClick={() => setShowOrders(false)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              Volver al catálogo
+            </button>
+            <span className="client-editor-cart-info">Mis preórdenes</span>
+          </div>
+          <div className="client-orders-view">
+            {ordersLoading ? (
+              <p className="status info">Cargando tus preórdenes…</p>
+            ) : orders.length === 0 ? (
+              <p className="status info">Aún no tienes preórdenes. Arma una desde el catálogo.</p>
+            ) : (
+              <div className="rem-table-wrap">
+                <table className="rem-table">
+                  <thead>
+                    <tr>
+                      <th>Folio</th><th>Fecha</th><th className="right">Piezas</th>
+                      <th>Estado</th><th>Origen</th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((o) => {
+                      const st = ORDER_STATUS[o.status] || { label: o.status || "—", cls: "is-gray" };
+                      const piezas = (o.preorder_items || []).reduce((s, it) => s + Number(it.piezas || 0), 0);
+                      return (
+                        <tr key={o.id} className={o.status === "confirmada" ? "is-confirmed" : ""}>
+                          <td><strong>{o.folio || "Preorden"}</strong></td>
+                          <td>{o.created_at ? new Date(o.created_at).toLocaleDateString("es-MX") : "—"}</td>
+                          <td className="right">{piezas}</td>
+                          <td><span className={`client-order-status ${st.cls}`}>{st.label}</span></td>
+                          <td><span className={`client-origen-tag${isOwnOrder(o) ? " is-own" : ""}`}>{origenLabel(o)}</span></td>
+                          <td className="rem-row-actions">
+                            <button type="button" className="link-button" onClick={() => { setEditingOrder(o); setShowOrders(false); }}>Abrir</button>
+                            {isOwnOrder(o) ? (
+                              <button type="button" className="link-button link-button--danger" onClick={() => handleDeleteOrder(o)}>Borrar</button>
+                            ) : null}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {confirmadasCount > 0 ? (
+              <p className="client-orders-note">✓ Tienes {confirmadasCount} preorden(es) confirmada(s) por el taller.</p>
+            ) : null}
           </div>
         </div>
       ) : null}
