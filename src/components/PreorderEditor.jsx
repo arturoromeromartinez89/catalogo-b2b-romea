@@ -1418,6 +1418,28 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       premiumPct: po.premio_pct,
       status: po.status,
     };
+    // Imágenes de componentes de un producto configurable (broche, diseño de
+    // placa). El tejido se muestra como imagen principal del renglón.
+    const componentesPdf = (item) => {
+      const sel = item._configurable_selections || {};
+      const list = [];
+      if (sel.broche) {
+        list.push({
+          label: sel.broche.metadata?.es_placa_militar ? "Placa militar" : "Broche",
+          nombre: sel.broche.nombre || "",
+          fotoUrl: sel.broche.fotoUrl || sel.broche.foto_url || "",
+        });
+      }
+      if (sel["diseño_placa"]) {
+        list.push({
+          label: "Diseño de placa",
+          nombre: sel["diseño_placa"].nombre || "",
+          fotoUrl: sel["diseño_placa"].fotoUrl || sel["diseño_placa"].foto_url || "",
+        });
+      }
+      return list.filter((c) => c.fotoUrl);
+    };
+
     const pdfItems = items.map((item) => ({
       product: {
         codigo: item.producto_codigo,
@@ -1429,6 +1451,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
         precioMinimo: item.precio_gramo_mxn,
         quoteLaborPerGram: item.labor_mxn,
       },
+      componentes: componentesPdf(item),
       quantity: item.piezas,
       gramos_total: item.gramos_total,
       comentarios: item.comentarios,

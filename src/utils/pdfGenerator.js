@@ -246,7 +246,8 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     grandGramos += gTotal;
     grandPiezas += qty;
 
-    const rowH = 28;
+    const comps = Array.isArray(item.componentes) ? item.componentes.filter((c) => c?.fotoUrl) : [];
+    const rowH = comps.length ? 50 : 28;
     if (y + rowH > page.h - footerReserve) {
       doc.addPage();
       y = drawTableHeader(page.margin);
@@ -301,6 +302,27 @@ export async function generatePdf(cartItems, customer, language = "es", company 
 
     doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
     txt(doc, subtotal ? money(displayMoney(subtotal)) : "—", C.sub, rowMidY, { align: "right" });
+
+    // Tira de imágenes de componentes (broche, placa militar, diseño de placa)
+    if (comps.length) {
+      doc.setFontSize(5.4); doc.setFont("helvetica","bold"); doc.setTextColor(110,110,110);
+      txt(doc, t("Componentes","Components"), C.img, y + 29);
+      let tx = C.img;
+      const ty = y + 31;
+      for (const comp of comps) {
+        const cSrc = imageUrlForSize(comp.fotoUrl, 200);
+        const cImg = await loadImageAsDataUrl(cSrc, { boxWmm: 14, boxHmm: 14, dpi: 160, quality: 0.55 });
+        if (cImg) {
+          addContainedImage(doc, cImg, tx, ty, 14, 14, imageAlias(cSrc));
+        } else {
+          doc.setDrawColor(225,230,242); doc.setFillColor(248,250,252);
+          doc.roundedRect(tx, ty, 14, 14, 1, 1, "FD");
+        }
+        doc.setFontSize(5); doc.setFont("helvetica","bold"); doc.setTextColor(80,90,110);
+        txt(doc, doc.splitTextToSize(`${comp.label}: ${comp.nombre}`.trim(), 30).slice(0, 1), tx, ty + 17);
+        tx += 34;
+      }
+    }
     y += rowH;
   }
 
