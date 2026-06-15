@@ -10,7 +10,8 @@ import { fetchCompanySettings } from "../services/companySettings";
 import { supabase } from "../lib/supabaseClient";
 import { fastSignOut } from "../services/authService";
 import { fetchClientData } from "../services/supabaseCatalog";
-import { calculateProductQuotePrice, fetchLines, fetchMetalPrices } from "../services/pricingService";
+import { fetchClientPreorders } from "../services/preorderService";
+import { calculateProductQuotePrice, fetchLines, fetchMetalPrices, fetchLaborListLines } from "../services/pricingService";
 import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
@@ -20,6 +21,14 @@ const orderDefaults = {
   en: { concept: "Wholesale preorder", status: "Pending" },
 };
 const PRODUCT_RENDER_BATCH = 60;
+
+// Estatus de preorden visibles para el cliente (etiqueta + color).
+const ORDER_STATUS = {
+  pendiente:  { label: "Recibida",     cls: "is-amber" },
+  revision:   { label: "En revisión",  cls: "is-blue" },
+  confirmada: { label: "Confirmada ✓", cls: "is-green" },
+  cancelada:  { label: "Cancelada",    cls: "is-red" },
+};
 
 const makeDefaultCustomer = (language = "es") => ({
   serie: "PRE",
@@ -61,18 +70,54 @@ export default function ClientCatalogApp({ profile }) {
   const [addedCodes, setAddedCodes] = useState([]);
   const [visibleProductLimit, setVisibleProductLimit] = useState(PRODUCT_RENDER_BATCH);
   const [signingOut, setSigningOut] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [showOrders, setShowOrders] = useState(false);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const tenantId = profile?.tenant_id || profile?.tenantId || "";
+
+  const loadOrders = () => {
+    if (!profile?.client_id) return;
+    setOrdersLoading(true);
+    fetchClientPreorders(profile.client_id)
+      .then((rows) => setOrders(rows || []))
+      .catch(() => setOrders([]))
+      .finally(() => setOrdersLoading(false));
+  };
+  useEffect(() => { loadOrders(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [profile?.client_id]);
+  const confirmadasCount = useMemo(() => orders.filter((o) => o.status === "confirmada").length, [orders]);
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
 
   // ── Carga inicial ──────────────────────────────────────────────────────────
   useEffect(() => {
-    setStatus(t("loadingCatalog"));
-    Promise.all([
-      fetchClientData(profile),
-      fetchLines(tenantId).catch(() => []),
-      fetchMetalPrices(tenantId).catch(() => ({})),
-    ])
-      .then(([result, lines, metalPrices]) => {
+    let cancelled = false;
+    (async () => {
+      setStatus(t("loadingCatalog"));
+      try {
+        const [result, baseLines, metalPrices] = await Promise.all([
+          fetchClientData(profile),
+          fetchLines(tenantId).catch(() => []),
+          fetchMetalPrices(tenantId).catch(() => ({})),
+        ]);
+
+        // Mano de obra según la lista asignada al cliente por el admin.
+        // Si tiene lista, sus precios por línea sobreescriben los base, así
+        // el cliente ve exactamente la mano de obra que el admin le configuró.
+        let lines = baseLines;
+        const laborListId = result.client?.labor_list_id;
+        if (laborListId) {
+          try {
+            const listLines = await fetchLaborListLines(laborListId);
+            const overrides = new Map(
+              (listLines || []).map((l) => [normalizeText(String(l.line_codigo || "")), l])
+            );
+            lines = (baseLines || []).map((line) => {
+              const ov = overrides.get(normalizeText(String(line.codigo || "")));
+              return ov && ov.mo_base != null ? { ...line, mo_base: Number(ov.mo_base) } : line;
+            });
+          } catch { /* si falla, se usan las líneas base */ }
+        }
+        if (cancelled) return;
+
         setProducts(
           result.products.map((product) => {
             const quote = calculateProductQuotePrice(product, { lines, metalPrices });
@@ -98,8 +143,11 @@ export default function ClientCatalogApp({ profile }) {
           }));
         }
         setStatus("");
-      })
-      .catch((error) => setStatus(error.message));
+      } catch (error) {
+        if (!cancelled) setStatus(error.message);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [profile, tenantId]);
 
   useEffect(() => {
@@ -216,7 +264,7 @@ export default function ClientCatalogApp({ profile }) {
   };
 
   const cartToPreorder = () => ({
-    status: "pendiente",
+    status: "revision",   // las preórdenes del cliente entran "en revisión" para que el taller agregue plata fina
     tenant_id: tenantId,
     created_by: profile.id,
     client_id: profile.client_id,
@@ -281,6 +329,16 @@ export default function ClientCatalogApp({ profile }) {
               onClick={() => setIsCartOpen(true)}
             >
               {t("openPreorder")}
+            </button>
+            <button
+              className="secondary-button full compact-action client-orders-btn"
+              type="button"
+              onClick={() => { setShowOrders(true); loadOrders(); }}
+            >
+              Mis preórdenes
+              {confirmadasCount > 0 ? (
+                <span className="client-orders-dot" title={`${confirmadasCount} confirmada(s)`} />
+              ) : null}
             </button>
           </section>
           {/* Filtros y búsqueda movidos a CatalogFilterBar en el contenido principal */}
@@ -480,9 +538,48 @@ export default function ClientCatalogApp({ profile }) {
               setCartItems([]);
               setAddedCodes([]);
               setIsCartOpen(false);
-              setStatus("Preorden guardada. El administrador ya puede verla en el menú Preórdenes.");
+              setStatus("Preorden enviada. Quedó en revisión; el taller la revisará y confirmará.");
+              loadOrders();
             }}
           />
+        </div>
+      ) : null}
+
+      {/* ── Mis preórdenes — el cliente consulta sus órdenes y su estatus ── */}
+      {showOrders ? (
+        <div className="client-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowOrders(false)}>
+          <div className="client-modal client-orders-modal">
+            <header>
+              <h2>Mis preórdenes</h2>
+              <button type="button" className="icon-button" onClick={() => setShowOrders(false)} aria-label="Cerrar">×</button>
+            </header>
+            <div className="client-orders-body">
+              {ordersLoading ? (
+                <p className="status info">Cargando tus preórdenes…</p>
+              ) : orders.length === 0 ? (
+                <p className="status info">Aún no tienes preórdenes. Arma una desde el catálogo.</p>
+              ) : (
+                <ul className="client-orders-list">
+                  {orders.map((o) => {
+                    const st = ORDER_STATUS[o.status] || { label: o.status || "—", cls: "is-gray" };
+                    const piezas = (o.preorder_items || []).reduce((s, it) => s + Number(it.piezas || 0), 0);
+                    return (
+                      <li key={o.id} className={`client-order-row${o.status === "confirmada" ? " is-confirmed" : ""}`}>
+                        <div className="client-order-main">
+                          <strong>{o.folio || "Preorden"}</strong>
+                          <small>{o.created_at ? new Date(o.created_at).toLocaleDateString("es-MX") : ""} · {piezas} pza{piezas !== 1 ? "s" : ""}</small>
+                        </div>
+                        <span className={`client-order-status ${st.cls}`}>{st.label}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {confirmadasCount > 0 ? (
+                <p className="client-orders-note">✓ Tienes {confirmadasCount} preorden(es) confirmada(s) por el taller.</p>
+              ) : null}
+            </div>
+          </div>
         </div>
       ) : null}
 

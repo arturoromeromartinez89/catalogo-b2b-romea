@@ -303,7 +303,7 @@ export const submitClientPreorder = async (profile, cartItems, customer) => {
 
   const preorder = {
     folio: buildFolio(),
-    status: "pendiente",
+    status: "revision",
     client_id: profile.client_id,
     created_by: profile.id,
     cliente_nombre: customer.name,

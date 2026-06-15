@@ -10050,3 +10050,38 @@ tr.client-row--expanded td {
 .link-button:hover { text-decoration: underline; }
 .link-button--danger { color: var(--color-error); }
 .link-button:disabled { cursor: default; opacity: 0.6; }
+
+/* ── Cliente: "Mis preórdenes" ── */
+.client-orders-btn { position: relative; margin-top: 8px; }
+.client-orders-dot {
+  position: absolute;
+  top: 6px; right: 10px;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 0 2px #fff;
+}
+.client-orders-modal { max-width: 460px; width: 100%; }
+.client-orders-body { padding: 4px 4px 8px; }
+.client-orders-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.client-order-row {
+  align-items: center;
+  background: var(--neutral-50);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+}
+.client-order-row.is-confirmed { background: #f0faf4; border-color: #c3e6d1; }
+.client-order-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.client-order-main strong { font-size: 13px; color: var(--neutral-800); }
+.client-order-main small { font-size: 11px; color: var(--neutral-500); }
+.client-order-status { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 9999px; white-space: nowrap; }
+.client-order-status.is-amber { background: #fbeecb; color: #92560a; }
+.client-order-status.is-blue  { background: #dbe7fb; color: #1f335f; }
+.client-order-status.is-green { background: #d6efe0; color: #15803d; }
+.client-order-status.is-red   { background: #fbd8d8; color: #c0392b; }
+.client-order-status.is-gray  { background: #f1f3f7; color: #5a6480; }
+.client-orders-note { margin: 12px 2px 0; font-size: 12px; font-weight: 600; color: #15803d; }
