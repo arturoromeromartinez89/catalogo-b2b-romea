@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { normalizeText } from "../../utils/textNormalizer";
-import { fetchClientAccessStatuses, fetchClientPreorderStats, fetchClientProfileStatus, setClientProfileActive } from "../../services/supabaseCatalog";
+import { fetchClientAccessStatuses, fetchClientPreorderStats, fetchClientProfileStatus, setClientProfileActive, updateClientAccessPassword, setClientPassword } from "../../services/supabaseCatalog";
 import { supabase } from "../../lib/supabaseClient";
 import { lockAuth, unlockAuth } from "../../lib/authLock";
 
@@ -239,6 +239,7 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
   const rawEmail = client.email && !String(client.email).endsWith("@prospect.local") ? client.email : "";
   const [laborSel, setLaborSel] = useState(client.labor_list_id || "");
   const [savingLabor, setSavingLabor] = useState(false);
+  const [currentPwd, setCurrentPwd] = useState(client.access_password || "");  // contraseña vigente (copia visible)
   const [credEmail,    setCredEmail]    = useState(rawEmail);
   const [credPwd,      setCredPwd]      = useState("");
   const [showPwd,      setShowPwd]      = useState(false);
@@ -330,6 +331,8 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
       showMsg("✅ Cuenta creada. Copia la invitación y mándala al cliente por WhatsApp.", true);
       setAccessStatus("active");
       setProfileActive(true);
+      setCurrentPwd(credPwd);
+      updateClientAccessPassword(client.id, credPwd).catch(() => {});  // guarda la copia visible
       onAccessGranted?.();
     } catch (e) {
       unlockAuth();
@@ -339,19 +342,15 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
     }
   };
 
-  // Cambiar contraseña de una cuenta YA existente: se envía un enlace de
-  // recuperación al correo del cliente (es la vía segura desde el navegador;
-  // fijar una contraseña directa requeriría permisos de servidor).
-  const handleResetPassword = async () => {
-    const emailTrimmed = credEmail.trim().toLowerCase();
-    if (!emailTrimmed) { showMsg("Ingresa el correo del cliente primero.", false); return; }
+  // Cambiar la contraseña de una cuenta YA existente, ahí mismo (vía la Edge
+  // Function set-client-password, que la cambia en login y guarda la copia).
+  const handleChangePassword = async () => {
+    if (!credPwd || credPwd.length < 6) { showMsg("Escribe una nueva contraseña (mínimo 6 caracteres).", false); return; }
     setCreating(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(emailTrimmed, {
-        redirectTo: window.location.origin,
-      });
-      if (error) throw error;
-      showMsg("✅ Enlace para cambiar contraseña enviado al correo del cliente.", true);
+      await setClientPassword(client.id, credPwd);
+      setCurrentPwd(credPwd);
+      showMsg("✅ Contraseña cambiada. Esta es la contraseña vigente del cliente.", true);
     } catch (e) {
       showMsg(`❌ ${e.message}`, false);
     } finally {
@@ -481,6 +480,23 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
           </p>
         ) : (
           <>
+            {accessStatus === "active" ? (
+              <div className="client-current-pwd">
+                <span className="client-current-pwd__label">Contraseña vigente</span>
+                <code className="client-current-pwd__value">
+                  {currentPwd || "— (no guardada; escribe una nueva abajo y cámbiala)"}
+                </code>
+                {currentPwd ? (
+                  <button
+                    type="button"
+                    className="secondary-button compact-action"
+                    onClick={() => { try { navigator.clipboard.writeText(currentPwd); showMsg("Contraseña copiada.", true); } catch { /* noop */ } }}
+                  >
+                    Copiar
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
             <div className="client-credentials-row">
               {/* Correo */}
               <label className="client-cred-label">
@@ -526,15 +542,15 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
             <div className="client-access-actions-grid">
               <div className="client-access-action-card">
                 <button type="button" className="primary-button" style={{ width: "100%" }}
-                  onClick={accessStatus === "active" ? handleResetPassword : handleCreateAccess}
-                  disabled={creating || !credEmail.trim() || (accessStatus !== "active" && !credPwd)}>
+                  onClick={accessStatus === "active" ? handleChangePassword : handleCreateAccess}
+                  disabled={creating || !credEmail.trim() || !credPwd}>
                   {creating
                     ? "Procesando..."
-                    : accessStatus === "active" ? "Enviar enlace para cambiar contraseña" : "Crear cuenta"}
+                    : accessStatus === "active" ? "Cambiar contraseña" : "Crear cuenta"}
                 </button>
                 <p className="client-access-action-desc">
                   {accessStatus === "active"
-                    ? "Este cliente ya tiene cuenta activa. Le enviamos un correo para que defina una nueva contraseña."
+                    ? "Este cliente YA tiene cuenta activa. Escribe una nueva contraseña arriba y se cambia al instante."
                     : "Registra al cliente en el sistema con el correo y contraseña que definiste arriba."}
                 </p>
               </div>
