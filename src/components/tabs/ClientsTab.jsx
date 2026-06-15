@@ -235,8 +235,10 @@ const genPassword = () => {
 
 // ─── Mini-center de actividad y credenciales por cliente ──────────────────────
 
-function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, onAccessGranted }) {
+function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, onAccessGranted, laborLists = [], onSaveLaborList }) {
   const rawEmail = client.email && !String(client.email).endsWith("@prospect.local") ? client.email : "";
+  const [laborSel, setLaborSel] = useState(client.labor_list_id || "");
+  const [savingLabor, setSavingLabor] = useState(false);
   const [credEmail,    setCredEmail]    = useState(rawEmail);
   const [credPwd,      setCredPwd]      = useState("");
   const [showPwd,      setShowPwd]      = useState(false);
@@ -263,6 +265,19 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
   const showMsg = (text, ok = true) => {
     setMsg({ text, ok });
     if (ok) window.setTimeout(() => setMsg({ text: "", ok: true }), 4000);
+  };
+
+  const handleSaveLabor = async (val) => {
+    setLaborSel(val);
+    setSavingLabor(true);
+    try {
+      await onSaveLaborList?.(client.id, val || null);
+      showMsg("Lista de precios actualizada. El cliente verá esa mano de obra.");
+    } catch (e) {
+      showMsg(`No se pudo guardar la lista: ${e.message}`, false);
+    } finally {
+      setSavingLabor(false);
+    }
   };
 
   const handleCreateAccess = async () => {
@@ -410,6 +425,30 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
           <div className="client-stat-value" style={{ fontSize: lastDate ? 13 : 20 }}>{lastDate || "—"}</div>
           <div className="client-stat-label">Última preorden</div>
         </div>
+      </div>
+
+      {/* Lista de precios (mano de obra) que verá el cliente */}
+      <div className="client-credentials-section">
+        <div className="client-credentials-title">Lista de precios del cliente</div>
+        <p className="client-mini-hint">
+          El cliente verá la <strong>mano de obra</strong> de esta lista al ver los productos y al armar su preorden.
+        </p>
+        <select
+          className="client-labor-select"
+          value={laborSel}
+          onChange={(e) => handleSaveLabor(e.target.value)}
+          disabled={savingLabor}
+        >
+          <option value="">Sin lista (mano de obra base)</option>
+          {laborLists
+            .filter((list) => (list.status || "activa") === "activa")
+            .map((list) => (
+              <option key={list.id} value={list.id}>{list.name} ({list.currency || "MXN"})</option>
+            ))}
+        </select>
+        {laborLists.length === 0 ? (
+          <p className="client-mini-hint">Aún no hay listas de labores. Créalas en “Menú de precios”.</p>
+        ) : null}
       </div>
 
       {/* Sección de credenciales */}
@@ -709,6 +748,8 @@ export default function ClientsTab({
                             client={client}
                             hasAccess={hasAccess}
                             stats={statsMap.get(client.id)}
+                            laborLists={laborLists}
+                            onSaveLaborList={onSaveClientLaborList}
                             onViewPreorders={onViewClientPreorders || (() => {})}
                             onClose={() => setExpandedClientId(null)}
                             onAccessGranted={() => {
@@ -789,27 +830,7 @@ export default function ClientsTab({
                   <option value="inactive">Inactivo</option>
                 </select>
               </label>
-              {laborLists.length > 0 && (
-                <label className="wide-field">
-                  Lista de labores
-                  <select
-                    value={clientForm.labor_list_id || ""}
-                    onChange={(e) => setClientForm({ ...clientForm, labor_list_id: e.target.value || null })}
-                  >
-                    <option value="">Sin lista (precios base)</option>
-                    {laborLists
-                      .filter((list) => list.status === "activa")
-                      .map((list) => (
-                        <option key={list.id} value={list.id}>
-                          {list.name} ({list.currency || "MXN"})
-                        </option>
-                      ))}
-                  </select>
-                  <small style={{ color: "var(--romea-muted)", fontSize: 11, marginTop: 3, display: "block" }}>
-                    Se auto-aplica cuando el cliente crea su preorden
-                  </small>
-                </label>
-              )}
+              {/* La lista de precios del cliente se asigna desde su menú "Actividad". */}
             </div>
             <footer>
               <button className="secondary-button" type="button" onClick={() => setIsClientFormOpen(false)}>

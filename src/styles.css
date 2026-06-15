@@ -10085,3 +10085,18 @@ tr.client-row--expanded td {
 .client-order-status.is-red   { background: #fbd8d8; color: #c0392b; }
 .client-order-status.is-gray  { background: #f1f3f7; color: #5a6480; }
 .client-orders-note { margin: 12px 2px 0; font-size: 12px; font-weight: 600; color: #15803d; }
+.client-order-row--clickable { cursor: pointer; transition: background var(--transition), border-color var(--transition); }
+.client-order-row--clickable:hover { background: var(--brand-50); border-color: var(--brand-200); }
+
+/* Lista de precios en el menú Actividad del cliente */
+.client-labor-select {
+  width: 100%;
+  min-height: 36px;
+  font-size: 13px;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
+  background: #fff;
+  color: var(--neutral-800);
+}
+.client-mini-hint { font-size: 11px; color: var(--neutral-500); margin: 4px 0 8px; }

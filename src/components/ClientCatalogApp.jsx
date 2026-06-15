@@ -66,6 +66,7 @@ export default function ClientCatalogApp({ profile }) {
   const deferredQuickFilters = useDeferredValue(quickFilters);
   const [selectedCode, setSelectedCode] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);   // preorden existente abierta para ver/editar
   const [status, setStatus] = useState("");
   const [addedCodes, setAddedCodes] = useState([]);
   const [visibleProductLimit, setVisibleProductLimit] = useState(PRODUCT_RENDER_BATCH);
@@ -100,8 +101,7 @@ export default function ClientCatalogApp({ profile }) {
         ]);
 
         // Mano de obra según la lista asignada al cliente por el admin.
-        // Si tiene lista, sus precios por línea sobreescriben los base, así
-        // el cliente ve exactamente la mano de obra que el admin le configuró.
+        // Si tiene lista, sus valores por línea sobreescriben los base.
         let lines = baseLines;
         const laborListId = result.client?.labor_list_id;
         if (laborListId) {
@@ -112,21 +112,31 @@ export default function ClientCatalogApp({ profile }) {
             );
             lines = (baseLines || []).map((line) => {
               const ov = overrides.get(normalizeText(String(line.codigo || "")));
-              return ov && ov.mo_base != null ? { ...line, mo_base: Number(ov.mo_base) } : line;
+              if (!ov) return line;
+              return {
+                ...line,
+                mo_base:   Number(ov.mo_base ?? ov.labor_mxn ?? line.mo_base ?? 0),
+                labor_mxn: Number(ov.labor_mxn ?? ov.mo_base ?? line.labor_mxn ?? 0),
+              };
             });
           } catch { /* si falla, se usan las líneas base */ }
         }
         if (cancelled) return;
 
+        // El cliente ve SOLO la mano de obra (la plata fina la agrega el taller),
+        // así que no dependemos del precio de la plata para mostrar precios.
+        const laborByLine = new Map(
+          (lines || []).map((l) => [normalizeText(String(l.codigo || "")), Number(l.labor_mxn ?? l.mo_base ?? 0)])
+        );
         setProducts(
           result.products.map((product) => {
-            const quote = calculateProductQuotePrice(product, { lines, metalPrices });
+            const labor = laborByLine.get(normalizeText(String(product.linea || ""))) || 0;
             return {
               ...product,
-              precioMinimo: quote.pricePerGram,
-              quotePricePerGram: quote.pricePerGram,
-              quoteLaborPerGram: quote.laborPerGram,
-              quotePricingStatus: quote.status,
+              precioMinimo: labor,
+              quotePricePerGram: labor,
+              quoteLaborPerGram: labor,
+              quotePricingStatus: labor > 0 ? "configured" : "missing-line",
             };
           })
         );
@@ -488,7 +498,7 @@ export default function ClientCatalogApp({ profile }) {
       {/* ── PreorderEditor: overlay fixed que arranca en left:270px ──
           El sidebar (270px) queda siempre visible para que el usuario nunca
           pierda el contexto. La barra superior ofrece regreso explícito. */}
-      {isCartOpen ? (
+      {isCartOpen || editingOrder ? (
         <div className="client-editor-overlay">
 
           {/* Barra de navegación — siempre visible, siempre accesible */}
@@ -496,7 +506,7 @@ export default function ClientCatalogApp({ profile }) {
             <button
               type="button"
               className="client-editor-back"
-              onClick={() => setIsCartOpen(false)}
+              onClick={() => { setIsCartOpen(false); setEditingOrder(null); }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <polyline points="15 18 9 12 15 6"/>
@@ -504,17 +514,21 @@ export default function ClientCatalogApp({ profile }) {
               Volver al catálogo
             </button>
             <span className="client-editor-cart-info">
-              {cartItems.length} modelo{cartItems.length !== 1 ? "s" : ""} · {preorderPieces} pieza{preorderPieces !== 1 ? "s" : ""}
+              {editingOrder
+                ? (editingOrder.folio || "Preorden")
+                : `${cartItems.length} modelo${cartItems.length !== 1 ? "s" : ""} · ${preorderPieces} pieza${preorderPieces !== 1 ? "s" : ""}`}
             </span>
           </div>
 
           <PreorderEditor
-            preorder={cartToPreorder()}
+            key={editingOrder?.id || "cart"}
+            preorder={editingOrder || cartToPreorder()}
             clients={clientData ? [clientData] : []}
             tenantId={tenantId}
             profile={profile}
             pricingLocked
             onClose={(updatedDraft) => {
+              if (editingOrder) { setEditingOrder(null); return; }
               if (updatedDraft?.preorder_items) {
                 setCartItems(updatedDraft.preorder_items.map((item) => ({
                   quantity: Number(item.piezas || 1),
@@ -535,6 +549,12 @@ export default function ClientCatalogApp({ profile }) {
               setIsCartOpen(false);
             }}
             onSaved={() => {
+              if (editingOrder) {
+                setEditingOrder(null);
+                setStatus("Cambios guardados en tu preorden.");
+                loadOrders();
+                return;
+              }
               setCartItems([]);
               setAddedCodes([]);
               setIsCartOpen(false);
@@ -564,7 +584,15 @@ export default function ClientCatalogApp({ profile }) {
                     const st = ORDER_STATUS[o.status] || { label: o.status || "—", cls: "is-gray" };
                     const piezas = (o.preorder_items || []).reduce((s, it) => s + Number(it.piezas || 0), 0);
                     return (
-                      <li key={o.id} className={`client-order-row${o.status === "confirmada" ? " is-confirmed" : ""}`}>
+                      <li
+                        key={o.id}
+                        className={`client-order-row client-order-row--clickable${o.status === "confirmada" ? " is-confirmed" : ""}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => { setEditingOrder(o); setShowOrders(false); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") { setEditingOrder(o); setShowOrders(false); } }}
+                        title="Abrir para ver o editar"
+                      >
                         <div className="client-order-main">
                           <strong>{o.folio || "Preorden"}</strong>
                           <small>{o.created_at ? new Date(o.created_at).toLocaleDateString("es-MX") : ""} · {piezas} pza{piezas !== 1 ? "s" : ""}</small>
