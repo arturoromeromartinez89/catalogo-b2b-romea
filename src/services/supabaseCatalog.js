@@ -382,6 +382,15 @@ export const saveClient = async (client, tenantId = "") => {
   return result.data;
 };
 
+export const deleteClient = async (clientId) => {
+  // Desvincula el perfil asociado (si lo hay) y borra el cliente/prospecto.
+  // Si el cliente tiene ventas/preórdenes, la BD bloqueará el borrado por FK
+  // y el mensaje se mostrará al usuario.
+  await supabase.from("profiles").update({ client_id: null }).eq("client_id", clientId);
+  const result = await supabase.from("clients").delete().eq("id", clientId);
+  throwIfError(result);
+};
+
 export const saveCatalog = async (catalog, tenantId = "") => {
   const row = { ...catalog };
   if (tenantId) row.tenant_id = tenantId;

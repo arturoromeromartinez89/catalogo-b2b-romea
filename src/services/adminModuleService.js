@@ -398,16 +398,10 @@ const normalizeCobro = (row) => ({
   createdAt:             row.created_at,
 });
 
-export const registrarCobro = async (cobro, tenantId) => {
-  if (!cobro.cuentaId) {
-    throw new Error("Selecciona una caja o cuenta real antes de registrar el cobro.");
-  }
-
+// Construye el payload de la fila `cobros` desde el objeto del formulario.
+const buildCobroPayload = (cobro, tenantId) => {
   const esPlataFisica = cobro.medioPago === "plata_fisica";
-
-  // 1. Insertar cobro. remision_id null = anticipo (cliente adelanta dinero sin
-  //    venta asociada → genera saldo a favor de ese cliente).
-  const payload = {
+  return {
     tenant_id:              tenantId,
     remision_id:            cobro.remisionId || null,
     client_id:              cobro.clienteId || null,
@@ -430,35 +424,63 @@ export const registrarCobro = async (cobro, tenantId) => {
     cuenta_plata_id:        esPlataFisica ? cobro.cuentaId : null,
     notas:                  cobro.notas || null,
   };
+};
 
+// Recalcula los saldos de una remisión sumando TODOS sus cobros (idempotente).
+// Se usa tras crear, editar o borrar un cobro para que los saldos cuadren.
+const recomputeRemisionSaldos = async (remisionId) => {
+  if (!remisionId) return;
+  const rem = await fetchRemisionById(remisionId);
+  const cobros = rem.cobros || [];
+  const montoCobrado   = cobros.reduce((s, c) => s + Number(c.abonoUsd || c.abonoLaborMxn || 0), 0);
+  const plataEntregada = cobros.reduce((s, c) => s + Number(c.abonoPlataGramos || 0), 0);
+  await supabase
+    .from("remisiones")
+    .update({
+      monto_cobrado:          montoCobrado,
+      saldo_dinero:           Math.max(0, rem.total - montoCobrado),
+      plata_entregada_gramos: plataEntregada,
+      saldo_plata_gramos:     Math.max(0, rem.cargoPlatGramos - plataEntregada),
+      updated_at:             new Date().toISOString(),
+    })
+    .eq("id", remisionId);
+};
+
+export const registrarCobro = async (cobro, tenantId) => {
+  if (!cobro.cuentaId) {
+    throw new Error("Selecciona una caja o cuenta real antes de registrar el cobro.");
+  }
+  // remision_id null = anticipo (saldo a favor del cliente, sin venta asociada).
   const { data: newCobro, error: cobroErr } = await supabase
     .from("cobros")
-    .insert(payload)
+    .insert(buildCobroPayload(cobro, tenantId))
     .select()
     .single();
   if (cobroErr) handleError(cobroErr, "registrarCobro.insert");
-
-  // 2. Si está asociado a una remisión, actualizar sus saldos (SIN cambiar
-  //    estado — es delivery-based). Un anticipo no toca ninguna remisión.
-  if (cobro.remisionId) {
-    const remision = await fetchRemisionById(cobro.remisionId);
-    const nuevoMontoCobrado = remision.montoCobrado + Number(cobro.abonoUsd || cobro.abonoLaborMxn || 0);
-    const nuevoSaldo = Math.max(0, remision.total - nuevoMontoCobrado);
-    const nuevoSaldoPlata = Math.max(0, remision.saldoPlataGramos - Number(cobro.abonoPlataGramos || 0));
-
-    await supabase
-      .from("remisiones")
-      .update({
-        monto_cobrado:          nuevoMontoCobrado,
-        saldo_dinero:           nuevoSaldo,
-        plata_entregada_gramos: remision.plataEntregadaGramos + Number(cobro.abonoPlataGramos || 0),
-        saldo_plata_gramos:     nuevoSaldoPlata,
-        updated_at:             new Date().toISOString(),
-      })
-      .eq("id", cobro.remisionId);
-  }
-
+  if (cobro.remisionId) await recomputeRemisionSaldos(cobro.remisionId);
   return newCobro;
+};
+
+export const updateCobro = async (cobroId, cobro, tenantId) => {
+  if (!cobro.cuentaId) {
+    throw new Error("Selecciona una caja o cuenta real antes de guardar el cobro.");
+  }
+  const { data: prev } = await supabase.from("cobros").select("remision_id").eq("id", cobroId).single();
+  const { error } = await supabase
+    .from("cobros")
+    .update(buildCobroPayload(cobro, tenantId))
+    .eq("id", cobroId);
+  if (error) handleError(error, "updateCobro");
+  // Recalcular la remisión vieja y la nueva (por si cambió la asociación).
+  const afectadas = [...new Set([prev?.remision_id, cobro.remisionId].filter(Boolean))];
+  for (const rid of afectadas) await recomputeRemisionSaldos(rid);
+};
+
+export const deleteCobro = async (cobroId) => {
+  const { data: prev } = await supabase.from("cobros").select("remision_id").eq("id", cobroId).single();
+  const { error } = await supabase.from("cobros").delete().eq("id", cobroId);
+  if (error) handleError(error, "deleteCobro");
+  if (prev?.remision_id) await recomputeRemisionSaldos(prev.remision_id);
 };
 
 

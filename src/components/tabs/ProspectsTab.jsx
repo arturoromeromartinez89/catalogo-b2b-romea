@@ -28,6 +28,7 @@ export default function ProspectsTab({
   setProspectForm,
   blankProspect,
   handleSaveProspect,
+  handleDeleteProspect,
   handleConvertProspectToClient,
   prospectForForm,
 }) {
@@ -182,6 +183,16 @@ export default function ProspectsTab({
                         >
                           Convertir
                         </button>
+                        {handleDeleteProspect ? (
+                          <button
+                            className="secondary-button compact-action danger-action"
+                            type="button"
+                            onClick={() => handleDeleteProspect(prospect.id)}
+                            title="Eliminar prospecto"
+                          >
+                            Borrar
+                          </button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

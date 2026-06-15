@@ -530,6 +530,7 @@ export default function ClientsTab({
   blankClient,
   savingClient,
   handleSaveClient,
+  handleDeleteClient,
   // SKU management
   products = [],
   onSaveClientSkus,
@@ -692,6 +693,12 @@ export default function ClientsTab({
                           >
                             {isExpanded ? "▴ Cerrar" : "▾ Actividad"}
                           </button>
+                          {handleDeleteClient ? (
+                            <button className="secondary-button compact-action danger-action" type="button"
+                              onClick={() => handleDeleteClient(client.id)} title="Eliminar cliente">
+                              Borrar
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>

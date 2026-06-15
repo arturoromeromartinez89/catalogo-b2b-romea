@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  fetchCobros, registrarCobro, fetchRemisiones, fetchCuentas,
+  fetchCobros, registrarCobro, updateCobro, deleteCobro, fetchRemisiones, fetchCuentas,
 } from "../../services/adminModuleService";
 
 const today = () => new Date().toISOString().split("T")[0];
@@ -25,18 +25,27 @@ const cuentaCompatible = (cuenta, forma) => {
   return cuenta.tipo !== "plata" && cuenta.moneda === forma;
 };
 
-// ─── Modal: nuevo cobro ───────────────────────────────────────────────────────
+// ─── Modal: nuevo / editar cobro ──────────────────────────────────────────────
 // Flujo: ¿de quién? → ¿a qué venta se aplica (o anticipo)? → ¿cómo pagó?
-function NuevoCobroModal({ clients, remisiones, cuentas, onSave, onClose, saving }) {
-  const [clienteId, setClienteId] = useState("");
-  const [destino, setDestino] = useState("");        // remisionId | "anticipo"
-  const [forma, setForma] = useState("MXN");          // MXN | USD | PLATA
-  const [monto, setMonto] = useState("");
-  const [tipoCambio, setTipoCambio] = useState("");
-  const [fecha, setFecha] = useState(today());
-  const [medio, setMedio] = useState("efectivo_mxn");
-  const [cuentaId, setCuentaId] = useState("");
-  const [referencia, setReferencia] = useState("");
+const formaDeAbono = (t) => (t === "plata_gramos" ? "PLATA" : t === "total_usd" ? "USD" : "MXN");
+const montoDeCobro = (c) => {
+  if (!c) return "";
+  if (c.tipoAbono === "plata_gramos") return String(c.abonoPlataGramos || "");
+  if (c.tipoAbono === "total_usd") return String(c.abonoUsd || "");
+  return String(c.abonoLaborMxn || "");
+};
+
+function NuevoCobroModal({ initial, clients, remisiones, cuentas, onSave, onClose, saving }) {
+  const isEdit = Boolean(initial?.id);
+  const [clienteId, setClienteId] = useState(initial?.clienteId || "");
+  const [destino, setDestino] = useState(initial ? (initial.remisionId || "anticipo") : "");
+  const [forma, setForma] = useState(initial ? formaDeAbono(initial.tipoAbono) : "MXN");
+  const [monto, setMonto] = useState(montoDeCobro(initial));
+  const [tipoCambio, setTipoCambio] = useState(initial?.tipoCambio ? String(initial.tipoCambio) : "");
+  const [fecha, setFecha] = useState(initial?.fechaCobro || today());
+  const [medio, setMedio] = useState(initial?.medioPago || "efectivo_mxn");
+  const [cuentaId, setCuentaId] = useState(initial?.cajaBancoId || initial?.cuentaPlataId || "");
+  const [referencia, setReferencia] = useState(initial?.referenciaBancaria || "");
 
   // Remisiones con saldo del cliente elegido
   const saldos = useMemo(
@@ -77,7 +86,7 @@ function NuevoCobroModal({ clients, remisiones, cuentas, onSave, onClose, saving
     <div className="client-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="client-modal gf-modal">
         <header>
-          <h2>Registrar cobro</h2>
+          <h2>{isEdit ? "Editar cobro" : "Registrar cobro"}</h2>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar">×</button>
         </header>
         <div className="gf-body">
@@ -162,7 +171,7 @@ function NuevoCobroModal({ clients, remisiones, cuentas, onSave, onClose, saving
         <footer className="gf-footer">
           <button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancelar</button>
           <button type="button" className="primary-button" disabled={!valido || saving} onClick={submit}>
-            {saving ? "Guardando…" : destino === "anticipo" ? "Registrar anticipo" : "Registrar cobro"}
+            {saving ? "Guardando…" : isEdit ? "Guardar cambios" : destino === "anticipo" ? "Registrar anticipo" : "Registrar cobro"}
           </button>
         </footer>
       </div>
@@ -178,7 +187,9 @@ export default function CobrosTab({ tenantId, clients = [], notifyAction, setSta
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showNuevo, setShowNuevo] = useState(false);
+  const [editing, setEditing] = useState(null);   // cobro en edición
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const notify = (t, type = "success") => { if (notifyAction) notifyAction(type, "", t); else if (setStatus) setStatus(t); };
 
@@ -200,12 +211,31 @@ export default function CobrosTab({ tenantId, clients = [], notifyAction, setSta
   const handleSave = async (cobro) => {
     setSaving(true);
     try {
-      await registrarCobro(cobro, tenantId);
-      notify(cobro.remisionId ? "Cobro registrado." : "Anticipo registrado.");
+      if (editing) {
+        await updateCobro(editing.id, cobro, tenantId);
+        notify("Cobro actualizado.");
+      } else {
+        await registrarCobro(cobro, tenantId);
+        notify(cobro.remisionId ? "Cobro registrado." : "Anticipo registrado.");
+      }
       setShowNuevo(false);
+      setEditing(null);
       load();
-    } catch (e) { notify(`No se pudo registrar: ${e.message}`, "error"); }
+    } catch (e) { notify(`No se pudo guardar: ${e.message}`, "error"); }
     finally { setSaving(false); }
+  };
+
+  const closeModal = () => { setShowNuevo(false); setEditing(null); };
+
+  const handleDelete = async (cobro) => {
+    if (!window.confirm("¿Borrar este cobro? Si está asociado a una venta, se recalculará su saldo.")) return;
+    setDeletingId(cobro.id);
+    try {
+      await deleteCobro(cobro.id);
+      notify("Cobro borrado.");
+      load();
+    } catch (e) { notify(`No se pudo borrar: ${e.message}`, "error"); }
+    finally { setDeletingId(null); }
   };
 
   // Enriquecer cobros con cliente/folio desde lo ya cargado (sin joins de
@@ -274,6 +304,7 @@ export default function CobrosTab({ tenantId, clients = [], notifyAction, setSta
                 <th>Se aplicó a</th>
                 <th>Medio</th>
                 <th className="right">Monto</th>
+                <th aria-label="Acciones"></th>
               </tr>
             </thead>
             <tbody>
@@ -288,6 +319,12 @@ export default function CobrosTab({ tenantId, clients = [], notifyAction, setSta
                   </td>
                   <td>{MEDIO_LABELS[c.medioPago] || c.medioPago || "—"}</td>
                   <td className="right"><strong>{montoCobro(c)}</strong></td>
+                  <td className="rem-row-actions">
+                    <button type="button" className="link-button" onClick={() => { setShowNuevo(false); setEditing(c); }}>Editar</button>
+                    <button type="button" className="link-button link-button--danger" onClick={() => handleDelete(c)} disabled={deletingId === c.id}>
+                      {deletingId === c.id ? "Borrando…" : "Borrar"}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -295,13 +332,15 @@ export default function CobrosTab({ tenantId, clients = [], notifyAction, setSta
         </div>
       )}
 
-      {showNuevo && (
+      {(showNuevo || editing) && (
         <NuevoCobroModal
+          key={editing?.id || "new"}
+          initial={editing}
           clients={clients}
           remisiones={remisiones}
           cuentas={cuentas}
           onSave={handleSave}
-          onClose={() => setShowNuevo(false)}
+          onClose={closeModal}
           saving={saving}
         />
       )}

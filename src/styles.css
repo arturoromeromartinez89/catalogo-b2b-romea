@@ -10034,3 +10034,19 @@ tr.client-row--expanded td {
 .po-editor--readonly .preorder-row-move-cell,
 .po-editor--readonly .preorder-row-move-head,
 .po-editor--readonly .po-pricing-field--action { display: none; }
+
+/* Acciones de borrar / editar en tablas y listas */
+.danger-action { border-color: var(--color-error-border, #f0cccc) !important; color: var(--color-error) !important; }
+.danger-action:hover { background: var(--color-error-light) !important; }
+.link-button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 6px;
+}
+.link-button:hover { text-decoration: underline; }
+.link-button--danger { color: var(--color-error); }
+.link-button:disabled { cursor: default; opacity: 0.6; }

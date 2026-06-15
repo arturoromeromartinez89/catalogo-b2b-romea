@@ -38,6 +38,7 @@ import {
   deleteTenantProducts,
   fetchAdminData,
   saveClient,
+  deleteClient,
   savePriceItem,
   savePriceList,
   setClientPriceList,
@@ -833,6 +834,25 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     }
   };
 
+  const handleDeleteClientOrProspect = async (id, kind = "cliente") => {
+    const target = data?.clients?.find((c) => c.id === id);
+    const nombre = target?.company || target?.name || (kind === "prospecto" ? "este prospecto" : "este cliente");
+    if (!window.confirm(`¿Eliminar a ${nombre}? Esta acción no se puede deshacer.`)) return;
+    setStatus("Eliminando...");
+    try {
+      await deleteClient(id);
+      setData((current) => current ? { ...current, clients: current.clients.filter((c) => c.id !== id) } : current);
+      if (selectedClientId === id) setSelectedClientId("");
+      setStatus(`${kind === "prospecto" ? "Prospecto" : "Cliente"} eliminado.`);
+      notifyAction("success", "Eliminado", `${nombre} se eliminó correctamente.`);
+    } catch (error) {
+      setStatus(`No se pudo eliminar: ${error.message}`);
+      notifyAction("error", "No se pudo eliminar", `${nombre} podría tener ventas o movimientos asociados. ${error.message}`);
+    }
+  };
+  const handleDeleteClient = (id) => handleDeleteClientOrProspect(id, "cliente");
+  const handleDeleteProspect = (id) => handleDeleteClientOrProspect(id, "prospecto");
+
   const handleConvertProspectToClient = async (prospect) => {
     if (!window.confirm(`Convertir ${prospect.company || prospect.name || "este prospecto"} a cliente?`)) return;
     setStatus("Convirtiendo prospecto a cliente...");
@@ -1353,6 +1373,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             blankClient={blankClient}
             savingClient={savingClient}
             handleSaveClient={handleSaveClient}
+            handleDeleteClient={handleDeleteClient}
             products={products}
             laborLists={data.laborLists || []}
             onSaveClientSkus={handleSaveClientSkus}
@@ -1390,6 +1411,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             setProspectForm={setProspectForm}
             blankProspect={blankProspect}
             handleSaveProspect={handleSaveProspect}
+            handleDeleteProspect={handleDeleteProspect}
             handleConvertProspectToClient={handleConvertProspectToClient}
             prospectForForm={prospectForForm}
           />
