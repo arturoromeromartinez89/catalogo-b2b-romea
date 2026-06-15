@@ -339,6 +339,26 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
     }
   };
 
+  // Cambiar contraseña de una cuenta YA existente: se envía un enlace de
+  // recuperación al correo del cliente (es la vía segura desde el navegador;
+  // fijar una contraseña directa requeriría permisos de servidor).
+  const handleResetPassword = async () => {
+    const emailTrimmed = credEmail.trim().toLowerCase();
+    if (!emailTrimmed) { showMsg("Ingresa el correo del cliente primero.", false); return; }
+    setCreating(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(emailTrimmed, {
+        redirectTo: window.location.origin,
+      });
+      if (error) throw error;
+      showMsg("✅ Enlace para cambiar contraseña enviado al correo del cliente.", true);
+    } catch (e) {
+      showMsg(`❌ ${e.message}`, false);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const handleToggleActive = async () => {
     if (profileActive === null) return;
     const next = !profileActive;
@@ -506,13 +526,15 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
             <div className="client-access-actions-grid">
               <div className="client-access-action-card">
                 <button type="button" className="primary-button" style={{ width: "100%" }}
-                  onClick={handleCreateAccess}
-                  disabled={creating || !credEmail.trim() || !credPwd}>
-                  {creating ? "Creando cuenta..." : accessStatus === "active" ? "Actualizar contraseña" : "Crear cuenta"}
+                  onClick={accessStatus === "active" ? handleResetPassword : handleCreateAccess}
+                  disabled={creating || !credEmail.trim() || (accessStatus !== "active" && !credPwd)}>
+                  {creating
+                    ? "Procesando..."
+                    : accessStatus === "active" ? "Enviar enlace para cambiar contraseña" : "Crear cuenta"}
                 </button>
                 <p className="client-access-action-desc">
                   {accessStatus === "active"
-                    ? "Actualiza la contraseña del cliente en el sistema."
+                    ? "Este cliente ya tiene cuenta activa. Le enviamos un correo para que defina una nueva contraseña."
                     : "Registra al cliente en el sistema con el correo y contraseña que definiste arriba."}
                 </p>
               </div>

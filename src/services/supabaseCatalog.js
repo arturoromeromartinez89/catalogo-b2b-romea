@@ -464,7 +464,12 @@ export const updateClientLaborList = async (clientId, laborListId) => {
  */
 export const fetchClientAccessStatuses = async (emails = []) => {
   const result = new Map();
-  const clean = (emails || []).filter((e) => e && !String(e).endsWith("@prospect.local"));
+  // Normalizar a minúsculas: los perfiles de auth se guardan en minúsculas,
+  // pero el correo del cliente puede tener mayúsculas (David-londo...). Sin
+  // esto, el IN no hace match y la cuenta existente no se detecta.
+  const clean = (emails || [])
+    .map((e) => String(e || "").trim().toLowerCase())
+    .filter((e) => e && !e.endsWith("@prospect.local"));
   if (!clean.length) return result;
   const BATCH = 200;
   for (let i = 0; i < clean.length; i += BATCH) {
