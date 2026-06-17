@@ -52,6 +52,7 @@ import { normalizeProduct, parseExcelFile } from "../utils/excelParser";
 import { buildConfigurableCatalogProducts, isConfigurableProductGroup } from "../utils/configurableCatalog";
 import { applyFilters, buildFilterOptions, emptyFilters, DEFAULT_QUICK_FILTER_DEFINITIONS } from "../utils/filters";
 import { fetchCatalogQuickFilters } from "../services/catalogQuickFiltersService";
+import QuickFiltersManager from "./QuickFiltersManager";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 
@@ -264,6 +265,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [filters, setFilters] = useState(emptyFilters);
   const [quickFilters, setQuickFilters] = useState([]);
   const [quickFilterDefs, setQuickFilterDefs] = useState(DEFAULT_QUICK_FILTER_DEFINITIONS);
+  const [showQuickMgr, setShowQuickMgr] = useState(false);
+  const reloadQuickFilterDefs = () => fetchCatalogQuickFilters(tenantId).then(setQuickFilterDefs).catch(() => {});
   const deferredProductQuery = useDeferredValue(productQuery);
   const deferredSearchChips = useDeferredValue(searchChips);
   const deferredFilters = useDeferredValue(filters);
@@ -1336,6 +1339,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             removeFromCatalogSelection={removeFromCatalogSelection}
             setProductModal={setProductModal}
             filterBar={!selectedProductCode ? (
+              <>
               <CatalogFilterBar
                 totalCount={products.length}
                 filteredCount={productQuery !== deferredProductQuery ? filteredProducts.length : filteredProducts.length}
@@ -1356,6 +1360,12 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                 collapsed={filtersCollapsed}
                 onToggleCollapse={() => setFiltersCollapsed((c) => !c)}
               />
+              <div className="qf-launch-row">
+                <button type="button" className="secondary-button compact-action" onClick={() => setShowQuickMgr(true)}>
+                  ⚙ Botones rápidos
+                </button>
+              </div>
+              </>
             ) : null}
           />
         ) : null}
@@ -1659,6 +1669,14 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             <p>Cerrando la sesión de forma segura.</p>
           </div>
         </div>
+      ) : null}
+
+      {showQuickMgr ? (
+        <QuickFiltersManager
+          tenantId={tenantId}
+          onClose={() => setShowQuickMgr(false)}
+          onSaved={reloadQuickFilterDefs}
+        />
       ) : null}
     </div>
   );

@@ -10132,3 +10132,27 @@ tr.client-row--expanded td {
   font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--accent);
   background: #fff; padding: 3px 8px; border-radius: 4px; border: 1px solid var(--neutral-200);
 }
+
+/* Gestor de botones rápidos (Fase 2) */
+.qf-launch-row { margin-top: 8px; }
+.qf-manager { max-width: 720px; width: 100%; }
+.qf-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; max-height: 72vh; overflow-y: auto; }
+.qf-hint { font-size: 12px; color: var(--neutral-500); margin: 0; }
+.qf-msg { font-size: 13px; color: var(--color-error); margin: 0; }
+.qf-new { align-self: flex-start; }
+.qf-form { background: var(--neutral-50); border: 1px solid var(--neutral-200); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.qf-form-row { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+.qf-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--neutral-600); }
+.qf-field input, .qf-field select { font-size: 13px; padding: 7px 9px; border: 1px solid var(--neutral-200); border-radius: var(--radius-sm); background: #fff; }
+.qf-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--neutral-700); }
+.qf-form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.qf-table { width: 100%; }
+.qf-table th { font-size: 11px; color: var(--neutral-500); font-weight: 600; }
+.qf-move { display: flex; flex-direction: column; gap: 2px; }
+.qf-move button { font-size: 9px; line-height: 1; padding: 2px 5px; border: 1px solid var(--neutral-200); background: #fff; border-radius: 3px; cursor: pointer; }
+.qf-move button:disabled { opacity: .3; cursor: default; }
+.qf-badge { font-size: 10px; margin-left: 6px; padding: 1px 6px; border-radius: 9999px; background: var(--brand-50); color: var(--accent); }
+.qf-terms { font-size: 12px; color: var(--neutral-600); max-width: 240px; }
+.qf-toggle { font-size: 12px; font-weight: 600; padding: 2px 12px; border-radius: 9999px; border: 1px solid var(--neutral-200); background: var(--neutral-100); color: var(--neutral-600); cursor: pointer; }
+.qf-toggle.on { background: #d6efe0; color: #15803d; border-color: #bfe6cd; }
+.qf-inactive { opacity: .55; }
