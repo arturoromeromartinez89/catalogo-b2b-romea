@@ -14,7 +14,10 @@ export const emptyFilters = {
   maxPrice: "",
 };
 
-export const quickFilterDefinitions = [
+// Lista joyera por defecto. Ya NO es la única fuente: si el tenant tiene
+// filtros configurados en Supabase, esos mandan; esto queda como FALLBACK
+// seguro para no romper nada si la tabla no existe o no hay datos.
+export const DEFAULT_QUICK_FILTER_DEFINITIONS = [
   { id: "anillos", labels: { es: "Anillos", en: "Rings" }, terms: [["anillo"], ["anillos"], ["ring"], ["rings"]] },
   { id: "aretes", labels: { es: "Aretes", en: "Earrings" }, terms: [["arete"], ["aretes"], ["arracada"], ["arracadas"], ["earring"], ["earrings"]] },
   { id: "dijes", labels: { es: "Dijes", en: "Pendants" }, terms: [["dije"], ["dijes"], ["pendant"], ["pendants"]] },
@@ -32,6 +35,9 @@ export const quickFilterDefinitions = [
   { id: "oro", labels: { es: "Oro", en: "Gold" }, terms: [["oro"], ["gold"], ["10k"], ["14k"], ["18k"]] },
 ];
 
+// Compatibilidad: algunos componentes aún importan este nombre como fallback.
+export const quickFilterDefinitions = DEFAULT_QUICK_FILTER_DEFINITIONS;
+
 export const buildFilterOptions = (products) =>
   textFilters.reduce((options, key) => {
     options[key] = [...new Set(products.map((product) => product[key]).filter(Boolean))].sort((a, b) =>
@@ -46,8 +52,8 @@ const matchesTerms = (searchText, query) => {
   return terms.every((term) => searchText.includes(term));
 };
 
-const matchesQuickFilter = (product, filterId) => {
-  const definition = quickFilterDefinitions.find((filter) => filter.id === filterId);
+const matchesQuickFilter = (product, filterId, definitions = DEFAULT_QUICK_FILTER_DEFINITIONS) => {
+  const definition = definitions.find((filter) => filter.id === filterId);
   if (!definition) return true;
 
   if (definition.custom === "withoutStone") {
@@ -77,12 +83,12 @@ const matchesQuickFilter = (product, filterId) => {
 export const productMatchesSearch = (product, query, searchChips = []) =>
   matchesTerms(product.searchText, query) && searchChips.every((chip) => matchesTerms(product.searchText, chip));
 
-export const applyFilters = (products, query, filters, quickFilters = [], searchChips = []) =>
+export const applyFilters = (products, query, filters, quickFilters = [], searchChips = [], definitions = DEFAULT_QUICK_FILTER_DEFINITIONS) =>
   products.filter((product) => {
     if (!product.visibleWeb) return false;
     if (normalizeText(product.estatus) === "baja" || normalizeText(product.estatus) === "discontinued") return false;
     if (!productMatchesSearch(product, query, searchChips)) return false;
-    if (quickFilters.length && !quickFilters.every((filterId) => matchesQuickFilter(product, filterId))) return false;
+    if (quickFilters.length && !quickFilters.every((filterId) => matchesQuickFilter(product, filterId, definitions))) return false;
 
     for (const key of textFilters) {
       if (filters[key] && product[key] !== filters[key]) return false;

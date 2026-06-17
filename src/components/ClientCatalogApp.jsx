@@ -12,7 +12,8 @@ import { fastSignOut } from "../services/authService";
 import { fetchClientData } from "../services/supabaseCatalog";
 import { fetchClientPreorders, deletePreorder } from "../services/preorderService";
 import { calculateProductQuotePrice, fetchLines, fetchMetalPrices, fetchLaborListLines } from "../services/pricingService";
-import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
+import { applyFilters, buildFilterOptions, emptyFilters, DEFAULT_QUICK_FILTER_DEFINITIONS } from "../utils/filters";
+import { fetchCatalogQuickFilters } from "../services/catalogQuickFiltersService";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 
@@ -59,6 +60,7 @@ export default function ClientCatalogApp({ profile }) {
   const [searchChips, setSearchChips] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
   const [quickFilters, setQuickFilters] = useState([]);
+  const [quickFilterDefs, setQuickFilterDefs] = useState(DEFAULT_QUICK_FILTER_DEFINITIONS);
   const [filtersCollapsed, setFiltersCollapsed] = useState(false);
   const deferredQuery = useDeferredValue(query);
   const deferredSearchChips = useDeferredValue(searchChips);
@@ -181,6 +183,13 @@ export default function ClientCatalogApp({ profile }) {
     fetchCompanySettings(tenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
   }, [tenantId]);
 
+  // Botones rápidos configurados por el tenant (con fallback joyero)
+  useEffect(() => {
+    let alive = true;
+    fetchCatalogQuickFilters(tenantId).then((defs) => { if (alive) setQuickFilterDefs(defs); });
+    return () => { alive = false; };
+  }, [tenantId]);
+
   useEffect(() => {
     setCustomer((current) => {
       const allDefaults = Object.values(orderDefaults);
@@ -206,8 +215,8 @@ export default function ClientCatalogApp({ profile }) {
   // ── Filtros y búsqueda ────────────────────────────────────────────────────
   const filterOptions   = useMemo(() => buildFilterOptions(baseProducts), [baseProducts]);
   const filteredProducts = useMemo(
-    () => applyFilters(baseProducts, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips),
-    [baseProducts, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips]
+    () => applyFilters(baseProducts, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs),
+    [baseProducts, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs]
   );
   const renderedProducts = useMemo(
     () => filteredProducts.slice(0, visibleProductLimit),
@@ -474,6 +483,7 @@ export default function ClientCatalogApp({ profile }) {
           filterOptions={filterOptions}
           onFiltersChange={setFilters}
           quickFilters={quickFilters}
+          quickFilterDefinitions={quickFilterDefs}
           onQuickFilterToggle={(id) =>
             setQuickFilters((c) => c.includes(id) ? c.filter((item) => item !== id) : [...c, id])
           }

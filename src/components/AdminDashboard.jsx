@@ -50,7 +50,8 @@ import { fetchTenants, makeTenantSlug, saveTenant } from "../services/tenantServ
 import { isSuperAdmin } from "../services/tenantUtils";
 import { normalizeProduct, parseExcelFile } from "../utils/excelParser";
 import { buildConfigurableCatalogProducts, isConfigurableProductGroup } from "../utils/configurableCatalog";
-import { applyFilters, buildFilterOptions, emptyFilters } from "../utils/filters";
+import { applyFilters, buildFilterOptions, emptyFilters, DEFAULT_QUICK_FILTER_DEFINITIONS } from "../utils/filters";
+import { fetchCatalogQuickFilters } from "../services/catalogQuickFiltersService";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
 
@@ -262,11 +263,18 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [searchChips, setSearchChips] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
   const [quickFilters, setQuickFilters] = useState([]);
+  const [quickFilterDefs, setQuickFilterDefs] = useState(DEFAULT_QUICK_FILTER_DEFINITIONS);
   const deferredProductQuery = useDeferredValue(productQuery);
   const deferredSearchChips = useDeferredValue(searchChips);
   const deferredFilters = useDeferredValue(filters);
   const deferredQuickFilters = useDeferredValue(quickFilters);
   const [selectedProductCode, setSelectedProductCode] = useState("");
+  // Botones rápidos configurados por el tenant seleccionado (fallback joyero)
+  useEffect(() => {
+    let alive = true;
+    fetchCatalogQuickFilters(tenantId).then((defs) => { if (alive) setQuickFilterDefs(defs); });
+    return () => { alive = false; };
+  }, [tenantId]);
   const [draftPreorder, setDraftPreorder] = useState(null);
   const [draftStorageReadyKey, setDraftStorageReadyKey] = useState(null);
   const [isDraftOpen, setIsDraftOpen] = useState(false);
@@ -421,8 +429,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const selectedProduct = useMemo(() => catalogProducts.find((product) => product.codigo === selectedProductCode), [catalogProducts, selectedProductCode]);
   const filterOptions = useMemo(() => buildFilterOptions(products), [products]);
   const filteredProducts = useMemo(
-    () => applyFilters(catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips),
-    [catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips]
+    () => applyFilters(catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs),
+    [catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs]
   );
   const renderedProducts = useMemo(
     () => filteredProducts.slice(0, visibleProductLimit),
@@ -1342,6 +1350,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                 filterOptions={filterOptions}
                 onFiltersChange={setFilters}
                 quickFilters={quickFilters}
+                quickFilterDefinitions={quickFilterDefs}
                 onQuickFilterToggle={(id) => setQuickFilters((c) => c.includes(id) ? c.filter((item) => item !== id) : [...c, id])}
                 onClear={clearCatalogFilters}
                 collapsed={filtersCollapsed}

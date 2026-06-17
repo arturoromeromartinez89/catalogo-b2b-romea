@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import AdvancedSearch from "./AdvancedSearch";
 import FilterPanel from "./FilterPanel";
 import { useLanguage } from "../i18n/LanguageContext";
-import { quickFilterDefinitions } from "../utils/filters";
+import { DEFAULT_QUICK_FILTER_DEFINITIONS } from "../utils/filters";
 
 // ─── Icono filtro ──────────────────────────────────────────────────────────────
 const IconFilter = () => (
@@ -50,9 +50,10 @@ export default function CatalogFilterBar({
   filters          = {},
   filterOptions    = {},
   onFiltersChange,
-  // QuickFilters (pills)
+  // QuickFilters (pills) — definiciones por tenant (fallback joyero)
   quickFilters     = [],
   onQuickFilterToggle,
+  quickFilterDefinitions = DEFAULT_QUICK_FILTER_DEFINITIONS,
   // Acciones
   onClear,
   // Colapsar / expandir

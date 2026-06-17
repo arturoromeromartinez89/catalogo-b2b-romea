@@ -1,8 +1,9 @@
 import { useLanguage } from "../i18n/LanguageContext";
-import { quickFilterDefinitions } from "../utils/filters";
+import { DEFAULT_QUICK_FILTER_DEFINITIONS } from "../utils/filters";
 
-export default function QuickFilters({ activeFilters, onToggle, onRemove }) {
+export default function QuickFilters({ activeFilters, onToggle, onRemove, definitions = DEFAULT_QUICK_FILTER_DEFINITIONS }) {
   const { t, language } = useLanguage();
+  const quickFilterDefinitions = definitions;
   const activeDefinitions = quickFilterDefinitions.filter((filter) => activeFilters.includes(filter.id));
   const label = (filter) => filter.labels?.[language] || filter.label || filter.id;
 
