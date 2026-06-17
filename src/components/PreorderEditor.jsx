@@ -413,6 +413,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const activeScannerRef = useRef("top");      // "top" | "bottom" — cuál barra usó el usuario por última vez
   const [pendingDuplicate, setPendingDuplicate] = useState(null); // { product, nextItem } esperando confirmación
   const [showImportPreorder, setShowImportPreorder] = useState(false); // modal "Importar preorden" (modo remisión)
+  const [showCreateRem, setShowCreateRem] = useState(false);           // confirmación "Crear remisión"
   // ── Modo consulta vs edición ──────────────────────────────────────────────
   // Al abrir una nota guardada se ve en SOLO LECTURA; hay que pulsar "Editar"
   // para activarla. Una nota nueva arranca ya en edición (hay que capturarla).
@@ -1669,7 +1670,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               className="secondary-button compact-action"
               type="button"
               title="Crear una remisión a partir de esta preorden"
-              onClick={() => onCreateRemision({ ...po, preorder_items: items })}
+              onClick={() => setShowCreateRem(true)}
             >
               ↓ Crear remisión
             </button>
@@ -1990,7 +1991,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           <section className="quote-block">
             <h3>Productos cotizados</h3>
             {msg ? <p className="status info">{msg}</p> : null}
-            {!inputsLocked && products.length ? (
+            {!adminViewOnly && products.length ? (
               <div className="quote-product-picker">
                 <label>
                   Agregar producto a esta preorden
@@ -2414,7 +2415,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           {/* ── Barra inferior de búsqueda ───────────────────────────────────────
               Solo visible cuando hay productos en la tabla y no está en modo cliente.
               Evita tener que scrollear hasta arriba para agregar más artículos. */}
-          {!inputsLocked && items.length >= 3 && products.length ? (
+          {!adminViewOnly && items.length >= 3 && products.length ? (
             <div className="quote-product-picker quote-product-picker--bottom">
               <label>
                 Agregar otro producto
@@ -2497,6 +2498,27 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           onSelect={handleImportPreorder}
           onClose={() => setShowImportPreorder(false)}
         />
+      ) : null}
+
+      {showCreateRem ? (
+        <div className="client-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowCreateRem(false)}>
+          <div className="client-modal gf-modal" style={{ maxWidth: 460 }}>
+            <header>
+              <h2>Generar remisión</h2>
+              <button type="button" className="icon-button" onClick={() => setShowCreateRem(false)} aria-label="Cerrar">×</button>
+            </header>
+            <div className="gf-body">
+              <p>Se generará una <strong>remisión</strong> a partir de esta preorden{po.folio ? ` ${po.folio}` : ""}, con los mismos artículos.</p>
+              <p className="cap-hint">Quedará guardada como <strong>borrador</strong> para que agregues la plata fina y la completes. La preorden no se modifica.</p>
+            </div>
+            <footer className="gf-footer">
+              <button type="button" className="secondary-button" onClick={() => setShowCreateRem(false)}>Cancelar</button>
+              <button type="button" className="primary-button" onClick={() => { setShowCreateRem(false); onCreateRemision({ ...po, preorder_items: items }); }}>
+                Sí, generar e ir a la remisión
+              </button>
+            </footer>
+          </div>
+        </div>
       ) : null}
     </div>
   );

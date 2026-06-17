@@ -618,6 +618,7 @@ export default function ClientCatalogApp({ profile }) {
             key={editingOrder?.id || "cart"}
             preorder={editingOrder || cartToPreorder()}
             clients={clientData ? [clientData] : []}
+            products={baseProducts}
             tenantId={tenantId}
             profile={profile}
             pricingLocked
