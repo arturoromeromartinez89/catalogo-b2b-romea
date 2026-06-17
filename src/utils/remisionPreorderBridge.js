@@ -33,6 +33,49 @@ export const REMISION_LABELS = {
 
 const today = () => new Date().toISOString().split("T")[0];
 
+// ── Configurables: preservar componentes (tejido/broche/placa) entre preorden
+//    y remisión, igual que preorderService (itemConfiguration / hydrate). Sin
+//    esto, la remisión guardada perdía las imágenes de componentes en el PDF.
+const publicComp = (s) => (s ? {
+  codigo: s.codigo || "", nombre: s.nombre || "", peso: Number(s.peso || 0),
+  unidad: s.unidad || "", fotoUrl: s.fotoUrl || s.foto_url || "", metadata: s.metadata || {},
+} : null);
+
+const buildConfiguracion = (item) => {
+  if (!item?._configurable_group) return item?.configuracion || null;
+  const selections = Object.fromEntries(
+    Object.entries(item._configurable_selections || {})
+      .map(([k, s]) => [k, publicComp(s)])
+      .filter(([, s]) => s)
+  );
+  return {
+    version: 1, group: true,
+    base_code: item._configurable_base_code || "",
+    title: item._configurable_title || "",
+    base_description: item._configurable_base_description || "",
+    base_photo_url: item._configurable_base_foto_url || "",
+    base_weight: Number(item._configurable_base_weight || 0),
+    selections,
+    variants: (item._configurable_variants || []).map((v) => ({ code: v.code || "", label: v.label || "" })),
+    variant_code: item._configurable_variant_code || "",
+  };
+};
+
+const hydrateConfigurable = (config) => {
+  if (!config?.group) return {};
+  return {
+    _configurable_group: true,
+    _configurable_base_code: config.base_code || "",
+    _configurable_title: config.title || "",
+    _configurable_base_description: config.base_description || "",
+    _configurable_base_foto_url: config.base_photo_url || "",
+    _configurable_base_weight: Number(config.base_weight || 0),
+    _configurable_selections: config.selections || {},
+    _configurable_variants: config.variants || [],
+    _configurable_variant_code: config.variant_code || "",
+  };
+};
+
 // item de remisión (camelCase normalizado) → item del editor (formato preorden)
 // `tc` (tipo de cambio) permite reconstruir el precio en MXN de remisiones
 // antiguas en USD que solo guardaron precio_usd_por_gramo.
@@ -62,6 +105,9 @@ const remisionItemToEditorItem = (it, idx, tc = 0) => {
     configuracion:        it.configuracion || {},
     pricing_mode:         "gram",
     sort_order:           it.sortOrder ?? idx,
+    // Reconstruye _configurable_selections (con fotoUrl de cada componente) para
+    // que el editor y el PDF muestren tejido/broche/placa igual que la preorden.
+    ...hydrateConfigurable(it.configuracion),
   };
 };
 
@@ -141,7 +187,7 @@ export const preorderStateToRemisionArgs = (po, items) => {
       productoCodigo:     item.producto_codigo || "",
       productoFotoUrl:    item.producto_foto_url || "",
       descripcion:        item.producto_descripcion || item.descripcion || "",
-      configuracion:      item.configuracion || {},
+      configuracion:      buildConfiguracion(item) || {},
       cantidad:           Number(item.piezas || 1),
       gramosPorPieza:     Number(item.gramos_por_pieza || 0),
       gramosTotal:        Number(item.gramos_total || 0),
