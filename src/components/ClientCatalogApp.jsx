@@ -95,13 +95,13 @@ export default function ClientCatalogApp({ profile }) {
   );
 
   const handleDeleteOrder = async (order) => {
-    if (!window.confirm(`¿Borrar la preorden ${order.folio || ""}? Esta acción no se puede deshacer.`)) return;
+    if (!window.confirm(t("cpConfirmDeleteOrder", order.folio || ""))) return;
     try {
       await deletePreorder(order.id);
-      setStatus("Preorden borrada.");
+      setStatus(t("cpPreorderDeleted"));
       loadOrders();
     } catch (e) {
-      setStatus(`No se pudo borrar: ${e.message}`);
+      setStatus(t("cpCouldNotDelete", e.message));
     }
   };
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
@@ -280,7 +280,7 @@ export default function ClientCatalogApp({ profile }) {
       return [...current, { product, quantity: amount }];
     });
     setAddedCodes((current) => current.includes(product.codigo) ? current : [...current, product.codigo]);
-    setStatus(`${product.codigo} agregado a tu selección.`);
+    setStatus(t("cpAdded", product.codigo));
   };
 
   const removeFromCart = (codigo) => {
@@ -303,9 +303,9 @@ export default function ClientCatalogApp({ profile }) {
       list.forEach((p) => s.add(p.codigo));
       return [...s];
     });
-    setStatus(`${list.length} producto(s) agregados a tu selección.`);
+    setStatus(t("cpAddedN", list.length));
   };
-  const clearSelection = () => { setCartItems([]); setAddedCodes([]); setStatus("Selección vacía."); };
+  const clearSelection = () => { setCartItems([]); setAddedCodes([]); setStatus(t("cpSelectionEmpty")); };
 
   // Manda la selección actual a una preorden existente (la abre con los nuevos
   // productos ya añadidos) o a una nueva.
@@ -317,8 +317,14 @@ export default function ClientCatalogApp({ profile }) {
     setEditingOrder({ ...order, preorder_items: merged });
     clearSelection();
   };
-  const origenLabel = (o) => ((o.created_by || o.createdBy) === profile.id ? "Tú" : "Administrador");
+  const origenLabel = (o) => ((o.created_by || o.createdBy) === profile.id ? t("cpOwnerYou") : t("cpOwnerAdmin"));
   const isOwnOrder = (o) => (o.created_by || o.createdBy) === profile.id;
+  const orderStatusMeta = {
+    pendiente:  { label: t("cpStatusReceived"),  cls: "is-amber" },
+    revision:   { label: t("cpStatusReview"),     cls: "is-blue" },
+    confirmada: { label: t("cpStatusConfirmed"),  cls: "is-green" },
+    cancelada:  { label: t("cpStatusCancelled"),  cls: "is-red" },
+  };
 
   const handleSignOut = async () => {
     if (signingOut) return;
@@ -390,7 +396,7 @@ export default function ClientCatalogApp({ profile }) {
             <h3>{t("productBase")}</h3>
             <div className="mini-summary">
               <div><span>{t("totalLabel")}</span><strong>{baseProducts.length}</strong></div>
-              <div><span>Filtrados</span><strong>{filteredProducts.length}</strong></div>
+              <div><span>{t("cpFiltered")}</span><strong>{filteredProducts.length}</strong></div>
               <div><span>{t("preorder")}</span><strong>{preorderPieces}</strong></div>
               <div><span>{t("models")}</span><strong>{cartItems.length}</strong></div>
             </div>
@@ -399,7 +405,7 @@ export default function ClientCatalogApp({ profile }) {
             {/* Enviar la selección a una preorden — el usuario elige a CUÁL va */}
             {cartItems.length > 0 ? (
               <div className="client-send-block">
-                <label className="client-send-label">Enviar {cartItems.length} seleccionado(s) a:</label>
+                <label className="client-send-label">{t("cpSendSelectionTo", cartItems.length)}</label>
                 <select
                   className="client-labor-select"
                   value=""
@@ -409,14 +415,14 @@ export default function ClientCatalogApp({ profile }) {
                     else { const o = editableOrders.find((x) => x.id === v); if (o) sendSelectionToOrder(o); }
                   }}
                 >
-                  <option value="">Elige destino…</option>
-                  <option value="__new__">➕ Nueva preorden</option>
+                  <option value="">{t("cpChooseDestination")}</option>
+                  <option value="__new__">{t("cpNewPreorder")}</option>
                   {editableOrders.map((o) => (
-                    <option key={o.id} value={o.id}>{o.folio || "Preorden"} · {origenLabel(o)}</option>
+                    <option key={o.id} value={o.id}>{o.folio || t("preorder")} · {origenLabel(o)}</option>
                   ))}
                 </select>
                 <button className="secondary-button full compact-action" type="button" onClick={clearSelection}>
-                  Borrar selección
+                  {t("cpClearSelection")}
                 </button>
               </div>
             ) : null}
@@ -426,9 +432,9 @@ export default function ClientCatalogApp({ profile }) {
               type="button"
               onClick={() => { setShowOrders(true); loadOrders(); }}
             >
-              Mis preórdenes
+              {t("cpMyPreorders")}
               {confirmadasCount > 0 ? (
-                <span className="client-orders-dot" title={`${confirmadasCount} confirmada(s)`} />
+                <span className="client-orders-dot" title={t("cpConfirmedNote", confirmadasCount)} />
               ) : null}
             </button>
           </section>
@@ -442,7 +448,7 @@ export default function ClientCatalogApp({ profile }) {
             onClick={handleSignOut}
             disabled={signingOut}
           >
-            {signingOut ? "Saliendo..." : t("logout")}
+            {signingOut ? t("cpSigningOut") : t("logout")}
           </button>
         </div>
       </aside>
@@ -452,7 +458,7 @@ export default function ClientCatalogApp({ profile }) {
         <header className="admin-catalog-header">
           <div>
             <p className="eyebrow">{t("b2bCatalog")}</p>
-            <h1>Catálogo mayorista</h1>
+            <h1>{t("wholesaleCatalog")}</h1>
             <span>{profile?.email}</span>
           </div>
           <div className="admin-header-actions">
@@ -463,7 +469,7 @@ export default function ClientCatalogApp({ profile }) {
               onClick={handleSignOut}
               disabled={signingOut}
             >
-              {signingOut ? "Saliendo..." : t("logout")}
+              {signingOut ? t("cpSigningOut") : t("logout")}
             </button>
           </div>
         </header>
@@ -502,15 +508,15 @@ export default function ClientCatalogApp({ profile }) {
           ) : filteredProducts.length ? (
             <>
               <div className="client-bulk-bar">
-                <span className="client-bulk-count">{cartItems.length} en selección</span>
+                <span className="client-bulk-count">{t("cpInSelection", cartItems.length)}</span>
                 <button type="button" className="secondary-button compact-action" onClick={() => selectAllProducts(renderedProducts)}>
-                  Seleccionar pantalla ({renderedProducts.length})
+                  {t("cpSelectScreen", renderedProducts.length)}
                 </button>
                 <button type="button" className="secondary-button compact-action" onClick={() => selectAllProducts(filteredProducts)}>
-                  Seleccionar todo lo filtrado ({filteredProducts.length})
+                  {t("cpSelectAllFiltered", filteredProducts.length)}
                 </button>
                 <button type="button" className="secondary-button compact-action" onClick={clearSelection} disabled={!cartItems.length}>
-                  Borrar selección
+                  {t("cpClearSelection")}
                 </button>
               </div>
               <div className="admin-product-grid">
@@ -562,7 +568,7 @@ export default function ClientCatalogApp({ profile }) {
                         type="button"
                         onClick={() => toggleCart(product)}
                       >
-                        {addedCodes.includes(product.codigo) ? "Quitar" : t("addToPreorder")}
+                        {addedCodes.includes(product.codigo) ? t("cpRemove") : t("addToPreorder")}
                       </button>
                     </div>
                   </article>
@@ -605,7 +611,7 @@ export default function ClientCatalogApp({ profile }) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <polyline points="15 18 9 12 15 6"/>
               </svg>
-              Volver al catálogo
+              {t("cpBackToCatalog")}
             </button>
             <span className="client-editor-cart-info">
               {editingOrder
@@ -646,14 +652,14 @@ export default function ClientCatalogApp({ profile }) {
             onSaved={() => {
               if (editingOrder) {
                 setEditingOrder(null);
-                setStatus("Cambios guardados en tu preorden.");
+                setStatus(t("cpChangesSaved"));
                 loadOrders();
                 return;
               }
               setCartItems([]);
               setAddedCodes([]);
               setIsCartOpen(false);
-              setStatus("Preorden enviada. Quedó en revisión; el taller la revisará y confirmará.");
+              setStatus(t("cpPreorderSent"));
               loadOrders();
             }}
           />
@@ -668,27 +674,27 @@ export default function ClientCatalogApp({ profile }) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <polyline points="15 18 9 12 15 6"/>
               </svg>
-              Volver al catálogo
+              {t("cpBackToCatalog")}
             </button>
-            <span className="client-editor-cart-info">Mis preórdenes</span>
+            <span className="client-editor-cart-info">{t("cpMyPreorders")}</span>
           </div>
           <div className="client-orders-view">
             {ordersLoading ? (
-              <p className="status info">Cargando tus preórdenes…</p>
+              <p className="status info">{t("cpLoadingMyPreorders")}</p>
             ) : orders.length === 0 ? (
-              <p className="status info">Aún no tienes preórdenes. Arma una desde el catálogo.</p>
+              <p className="status info">{t("cpNoPreorders")}</p>
             ) : (
               <div className="rem-table-wrap">
                 <table className="rem-table">
                   <thead>
                     <tr>
-                      <th>Folio</th><th>Fecha</th><th className="right">Piezas</th>
-                      <th>Estado</th><th>Origen</th><th></th>
+                      <th>{t("cpColFolio")}</th><th>{t("cpColDate")}</th><th className="right">{t("cpColPieces")}</th>
+                      <th>{t("cpColStatus")}</th><th>{t("cpColOrigin")}</th><th></th>
                     </tr>
                   </thead>
                   <tbody>
                     {orders.map((o) => {
-                      const st = ORDER_STATUS[o.status] || { label: o.status || "—", cls: "is-gray" };
+                      const st = orderStatusMeta[o.status] || { label: o.status || "—", cls: "is-gray" };
                       const piezas = (o.preorder_items || []).reduce((s, it) => s + Number(it.piezas || 0), 0);
                       return (
                         <tr key={o.id} className={o.status === "confirmada" ? "is-confirmed" : ""}>
@@ -698,9 +704,9 @@ export default function ClientCatalogApp({ profile }) {
                           <td><span className={`client-order-status ${st.cls}`}>{st.label}</span></td>
                           <td><span className={`client-origen-tag${isOwnOrder(o) ? " is-own" : ""}`}>{origenLabel(o)}</span></td>
                           <td className="rem-row-actions">
-                            <button type="button" className="link-button" onClick={() => { setEditingOrder(o); setShowOrders(false); }}>Abrir</button>
+                            <button type="button" className="link-button" onClick={() => { setEditingOrder(o); setShowOrders(false); }}>{t("cpOpen")}</button>
                             {isOwnOrder(o) ? (
-                              <button type="button" className="link-button link-button--danger" onClick={() => handleDeleteOrder(o)}>Borrar</button>
+                              <button type="button" className="link-button link-button--danger" onClick={() => handleDeleteOrder(o)}>{t("cpDelete")}</button>
                             ) : null}
                           </td>
                         </tr>
@@ -711,7 +717,7 @@ export default function ClientCatalogApp({ profile }) {
               </div>
             )}
             {confirmadasCount > 0 ? (
-              <p className="client-orders-note">✓ Tienes {confirmadasCount} preorden(es) confirmada(s) por el taller.</p>
+              <p className="client-orders-note">{t("cpConfirmedNote", confirmadasCount)}</p>
             ) : null}
           </div>
         </div>
@@ -722,8 +728,8 @@ export default function ClientCatalogApp({ profile }) {
         <div className="signout-overlay" role="status" aria-live="assertive">
           <div className="signout-card">
             <span className="loading-spinner" aria-hidden="true" />
-            <strong>Saliendo...</strong>
-            <p>Cerrando la sesión de forma segura.</p>
+            <strong>{t("cpSigningOut")}</strong>
+            <p>{t("cpSigningOutDetail")}</p>
           </div>
         </div>
       ) : null}
