@@ -248,7 +248,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
 
     const comps = Array.isArray(item.componentes) ? item.componentes.filter((c) => c?.fotoUrl) : [];
     const isConfig = comps.length > 0;
-    const rowH = isConfig ? 29 : 28;
+    const rowH = isConfig ? 30 : 28;
     if (y + rowH > page.h - footerReserve) {
       doc.addPage();
       y = drawTableHeader(page.margin);
@@ -263,7 +263,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
 
     if (isConfig) {
       // ── Configurable: galería compacta (Tejido · Broche · Placa) en FOTO+CÓD ──
-      const cell = 13, pitch = 16, imgY = y + 2;
+      const cell = 13, pitch = 16, imgY = y + 4;
       let tx = C.img;
       for (const comp of comps) {
         const cSrc = imageUrlForSize(comp.fotoUrl, 200);
@@ -275,12 +275,12 @@ export async function generatePdf(cartItems, customer, language = "es", company 
         txt(doc, doc.splitTextToSize(comp.label, pitch - 1).slice(0, 1), tx + cell / 2, imgY + cell + 3, { align: "center" });
         tx += pitch;
       }
-      // Código (pequeño) + descripción en la columna DESCRIPCIÓN (sin encimar)
+      // Código arriba; descripción ALINEADA con la parte inferior de las fotos.
       doc.setFontSize(6.2); doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
-      txt(doc, doc.splitTextToSize(codStr, 38).slice(0, 1), C.desc, y + 5);
+      txt(doc, doc.splitTextToSize(codStr, 38).slice(0, 1), C.desc, y + 7);
       doc.setFontSize(6.4); doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40);
-      txt(doc, doc.splitTextToSize(descRaw, 38).slice(0, 3), C.desc, y + 10);
-      if (metalLine) { doc.setFontSize(5.6); doc.setTextColor(110,110,110); txt(doc, metalLine, C.desc, y + 24); }
+      txt(doc, doc.splitTextToSize(descRaw, 38).slice(0, 2), C.desc, y + 14);
+      if (metalLine) { doc.setFontSize(5.6); doc.setTextColor(110,110,110); txt(doc, metalLine, C.desc, y + 22); }
     } else {
       // ── Producto normal: imagen única + código en su columna ──
       const imageSource = imageUrlForSize(item.product?.fotoUrl || item.producto_foto_url, 360);
@@ -305,7 +305,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     }
 
     doc.setFontSize(6.4); doc.setTextColor(50,50,50);
-    const rowMidY = isConfig ? y + 12 : y + 14;
+    const rowMidY = isConfig ? y + 15 : y + 14;
     txt(doc, String(qty),                    C.pzs,   rowMidY);
     if (isPiecePricing) {
       txt(doc, pPieza ? money(displayMoney(pPieza)) : "—", C.gtot, rowMidY);
