@@ -248,7 +248,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
 
     const comps = Array.isArray(item.componentes) ? item.componentes.filter((c) => c?.fotoUrl) : [];
     const isConfig = comps.length > 0;
-    const rowH = isConfig ? 30 : 28;
+    const rowH = isConfig ? 32 : 28;
     if (y + rowH > page.h - footerReserve) {
       doc.addPage();
       y = drawTableHeader(page.margin);
@@ -275,12 +275,14 @@ export async function generatePdf(cartItems, customer, language = "es", company 
         txt(doc, doc.splitTextToSize(comp.label, pitch - 1).slice(0, 1), tx + cell / 2, imgY + cell + 3, { align: "center" });
         tx += pitch;
       }
-      // Código arriba; descripción ALINEADA con la parte inferior de las fotos.
+      // Código arriba; descripción ANCHA en su propia línea (los números van
+      // en su propia fila abajo, alineados con la base de las fotos).
+      const descW = (page.w - page.margin) - C.desc - 2;
       doc.setFontSize(6.2); doc.setFont("helvetica","bold"); doc.setTextColor(31,51,95);
-      txt(doc, doc.splitTextToSize(codStr, 38).slice(0, 1), C.desc, y + 7);
+      txt(doc, codStr, C.desc, y + 7);
       doc.setFontSize(6.4); doc.setFont("helvetica","normal"); doc.setTextColor(40,40,40);
-      txt(doc, doc.splitTextToSize(descRaw, 38).slice(0, 2), C.desc, y + 14);
-      if (metalLine) { doc.setFontSize(5.6); doc.setTextColor(110,110,110); txt(doc, metalLine, C.desc, y + 22); }
+      txt(doc, doc.splitTextToSize(descRaw, descW).slice(0, 2), C.desc, y + 13);
+      if (metalLine) { doc.setFontSize(5.6); doc.setTextColor(110,110,110); txt(doc, metalLine, C.desc, y + 26); }
     } else {
       // ── Producto normal: imagen única + código en su columna ──
       const imageSource = imageUrlForSize(item.product?.fotoUrl || item.producto_foto_url, 360);
@@ -305,7 +307,7 @@ export async function generatePdf(cartItems, customer, language = "es", company 
     }
 
     doc.setFontSize(6.4); doc.setTextColor(50,50,50);
-    const rowMidY = isConfig ? y + 15 : y + 14;
+    const rowMidY = isConfig ? y + 20 : y + 14;
     txt(doc, String(qty),                    C.pzs,   rowMidY);
     if (isPiecePricing) {
       txt(doc, pPieza ? money(displayMoney(pPieza)) : "—", C.gtot, rowMidY);
