@@ -62,11 +62,17 @@ begin
   if not v_blocked then raise exception 'FAIL: tenant A pudo insertar filtro en tenant B'; end if;
   raise notice 'PASS: tenant A no puede insertar filtros en tenant B';
 
-  -- 4) A NO puede BORRAR/MODIFICAR filtros de B (RLS los oculta → 0 filas)
+  -- 4a) A NO puede BORRAR filtros de B (RLS los oculta → 0 filas)
   delete from public.catalog_quick_filters where tenant_id = v_tenant_b;
   get diagnostics v_count = row_count;
   if v_count <> 0 then raise exception 'FAIL: tenant A borró % filtros de tenant B', v_count; end if;
-  raise notice 'PASS: tenant A no puede borrar/modificar filtros de tenant B';
+  raise notice 'PASS: tenant A no puede borrar filtros de tenant B';
+
+  -- 4b) A NO puede ACTUALIZAR filtros de B (RLS los oculta → 0 filas afectadas)
+  update public.catalog_quick_filters set label = 'hackeado' where tenant_id = v_tenant_b;
+  get diagnostics v_count = row_count;
+  if v_count <> 0 then raise exception 'FAIL: tenant A actualizó % filtros de tenant B', v_count; end if;
+  raise notice 'PASS: tenant A no puede actualizar filtros de tenant B';
 
   -- 5) A SÍ puede insertar en su propio tenant
   insert into public.catalog_quick_filters (tenant_id, slug, label) values (v_tenant_a, 'pulseras', 'Pulseras');

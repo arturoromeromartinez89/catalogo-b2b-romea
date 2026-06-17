@@ -60,7 +60,7 @@ export default function QuickFiltersManager({ tenantId, onClose, onSaved }) {
     [next[idx], next[j]] = [next[j], next[idx]];
     setFilters(next);
     try { await reorderQuickFilters(next.map((f) => f.id)); onSaved?.(); }
-    catch (e) { setMsg(e.message); }
+    catch (e) { setMsg(`No se pudo reordenar: ${e.message}`); await load(); }  // resync con la BD
   };
 
   return (

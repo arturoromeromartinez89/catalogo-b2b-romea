@@ -33,7 +33,10 @@ export const fetchCatalogQuickFilters = async (tenantId) => {
     if (error) throw error;
     if (!data || data.length === 0) return DEFAULT_QUICK_FILTER_DEFINITIONS;
     return data.map(dbRowToDefinition);
-  } catch {
+  } catch (e) {
+    // Importante para observabilidad SaaS: el fallback no debe ocultar fallos
+    // reales de Supabase/RLS. Un tenant sin filtros (0 filas) NO entra aquí.
+    console.warn(`[quick-filters] usando fallback joyero por error al leer (tenant ${tenantId}):`, e?.message || e);
     return DEFAULT_QUICK_FILTER_DEFINITIONS;
   }
 };
@@ -83,7 +86,9 @@ export const deleteQuickFilter = async (id) => {
 
 /** Reordena: guarda el sort_order de cada fila según su posición en la lista. */
 export const reorderQuickFilters = async (orderedIds = []) => {
-  await Promise.all(orderedIds.map((id, idx) =>
+  const results = await Promise.all(orderedIds.map((id, idx) =>
     supabase.from("catalog_quick_filters").update({ sort_order: idx, updated_at: new Date().toISOString() }).eq("id", id)
   ));
+  const failed = results.find((r) => r.error);
+  if (failed) throw new Error(failed.error.message);
 };
