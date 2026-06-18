@@ -283,13 +283,13 @@ function ImportarPreordenModal({ tenantId, profile, onSelect, onClose }) {
       <div className="client-modal">
         <header>
           <h2>Importar desde preorden</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar">×</button>
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t("pedAriaCerrar")}>×</button>
         </header>
         <div className="rem-modal__body">
           <input
             className="rem-search"
             style={{ marginBottom: 12 }}
-            placeholder="Buscar folio, cliente..."
+            placeholder={t("pedPhBuscarFolio")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             autoFocus
@@ -315,7 +315,7 @@ function ImportarPreordenModal({ tenantId, profile, onSelect, onClose }) {
                     <tr key={po.id}>
                       <td><strong>{po.folio || "—"}</strong></td>
                       <td>{po.cliente_empresa || po.cliente_nombre || "—"}</td>
-                      <td>{new Date(po.created_at).toLocaleDateString("es-MX")}</td>
+                      <td>{new Date(po.created_at).toLocaleDateString(language === "en" ? "en-US" : "es-MX")}</td>
                       <td className="right">{Number(po.total_gramos || 0).toFixed(2)} g</td>
                       <td>
                         <button className="primary-button compact-action" type="button" onClick={() => onSelect(po)}>
@@ -348,7 +348,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   labels = null,                // { eyebrowNew, sheetTitle, notesPlaceholder }
   defaultStatusKey = null,      // estatus por defecto al crear (si no, el 1er key)
 }) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const company = useCompany();
   const hasSavedInitialId = UUID_RE.test(String(initial?.id || ""));
   const isNew = !hasSavedInitialId;
@@ -358,6 +358,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const statusConfig = statusMap || STATUS;
   const docLabels = labels || {};
   const defaultStatus = defaultStatusKey || Object.keys(statusConfig)[0] || "pendiente";
+  // Traduce las etiquetas de estatus (preorden y remisión) por su clave.
+  const STATUS_LABEL_KEYS = {
+    pendiente: "pedStatusPendiente", revision: "pedStatusRevision", confirmada: "pedStatusConfirmada",
+    cancelada: "pedStatusCancelada", activa: "pedStatusActiva", borrador: "pedStatusBorrador",
+  };
+  const statusLabel = (key, fallback) => (STATUS_LABEL_KEYS[key] ? t(STATUS_LABEL_KEYS[key]) : fallback);
 
   const blank = {
     folio: "",
@@ -404,7 +410,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [saveConflict, setSaveConflict] = useState(null);  // { dbUpdatedAt } cuando otra sesión guardó primero
   const [msg, setMsg] = useState("");
   const [productSearch, setProductSearch] = useState("");
-  const [productStatus, setProductStatus] = useState({ type: "info", text: "Escanea o busca un producto para agregarlo." });
+  const [productStatus, setProductStatus] = useState({ type: "info", text: t("pedStInicial") });
   const [importingPreorderExcel, setImportingPreorderExcel] = useState(false);
   const [prospectForm, setProspectForm] = useState({ name: "", company: "", email: "", phone: "", rfc: "", active: true });
   const [tenantCompany, setTenantCompany] = useState(null);
@@ -504,14 +510,14 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   useEffect(() => {
     if (resolvedTenantId) fetchCompanySettings(resolvedTenantId).then(setTenantCompany).catch(() => setTenantCompany(null));
     else setTenantCompany(null);
-    fetchLines(resolvedTenantId).then(setLines).catch((error) => setMsg(`Error: ${error.message}`));
+    fetchLines(resolvedTenantId).then(setLines).catch((error) => setMsg(t("pedMsgError", error.message)));
     fetchLaborLists(resolvedTenantId).then(setLaborLists).catch(() => setLaborLists([]));
     fetchProductComponents(resolvedTenantId).then(setProductComponents).catch(() => setProductComponents([]));
     fetchPiecePriceLists(resolvedTenantId)
       .then(setPiecePriceLists)
       .catch((error) => {
         if (/piece_price_lists|schema cache|does not exist/i.test(error.message || "")) setPiecePriceLists([]);
-        else setMsg(`Error: ${error.message}`);
+        else setMsg(t("pedMsgError", error.message));
       });
     fetchMetalPrices(resolvedTenantId)
       .then((prices) => {
@@ -524,7 +530,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           premio_pct: current.premio_pct ?? prices.premio_pct ?? 0,
         }));
       })
-      .catch((error) => setMsg(`Error: ${error.message}`));
+      .catch((error) => setMsg(t("pedMsgError", error.message)));
   }, [resolvedTenantId]);
 
   useEffect(() => {
@@ -561,7 +567,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           setItems((current) => current.map((item) => priceItemFromLines(item, baseLines, null, plataFinaMxn)));
         })
         .catch(() => {});
-      setMsg(`La lista se removio porque la preorden cambio a ${po.moneda}.`);
+      setMsg(t("pedMsgListaRemovedMoneda", po.moneda));
     }
     const currentPieceList = piecePriceLists.find((list) => list.id === selectedPiecePriceListId);
     if (isPieceMode && currentPieceList && (currentPieceList.currency || "MXN") !== po.moneda) {
@@ -569,7 +575,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       setPiecePriceItems([]);
       setPo((current) => ({ ...current, piece_price_list_id: "" }));
       setItems((current) => current.map((item) => calcItem({ ...item, precio_pieza_mxn: 0 })));
-      setMsg(`La lista por pieza se removio porque la preorden cambio a ${po.moneda}.`);
+      setMsg(t("pedMsgListaPiezaRemovedMoneda", po.moneda));
     }
   }, [po.moneda, laborLists, selectedLaborListId, piecePriceLists, selectedPiecePriceListId, isPieceMode]);
 
@@ -713,12 +719,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       premio_pct: po.premio_pct || 0,
     });
     if (!nextSilver) {
-      setMsg("Captura KITCO USD/oz y tipo de cambio para calcular la plata fina.");
+      setMsg(t("pedMsgKitcoRequerido"));
       return;
     }
     setPlataFinaMxn(nextSilver);
     setItems((current) => current.map((item) => recalcWithPrice(item, item.labor_mxn, nextSilver)));
-    setMsg("Plata fina actualizada.");
+    setMsg(t("pedMsgPlataActualizada"));
     markCustomPricing();
   };
 
@@ -732,7 +738,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       setPricingDirty(false);
       setPo((current) => ({ ...current, labor_list_id: "" }));
       setItems((current) => current.map((item) => priceItemFromLines(item, baseLines, null, plataFinaMxn)));
-      setMsg("Lista de labor removida. Usando mano de obra base de líneas.");
+      setMsg(t("pedMsgLaborRemovida"));
       return;
     }
     try {
@@ -768,9 +774,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       }
       setItems((current) => current.map((item) => priceItemFromLines(item, merged, selectedList, nextSilverMxn)));
       const listName = selectedList?.name || listId;
-      setMsg(`Lista "${listName}" aplicada.`);
+      setMsg(t("pedMsgListaAplicada", listName));
     } catch (err) {
-      setMsg(`Error al cargar lista: ${err.message}`);
+      setMsg(t("pedMsgListaError", err.message));
     }
   };
 
@@ -782,7 +788,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       setPricingDirty(false);
       setPo((current) => ({ ...current, piece_price_list_id: "" }));
       setItems((current) => current.map((item) => calcItem({ ...item, pricing_mode: "piece", precio_pieza_mxn: Number(item.precio_pieza_mxn || 0) })));
-      setMsg("Lista por pieza removida. Usando precios por pieza personalizados.");
+      setMsg(t("pedMsgListaPiezaRemovida"));
       return;
     }
     try {
@@ -798,9 +804,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
         tipo_cambio: selectedList?.tipo_cambio || current.tipo_cambio,
       }));
       setItems((current) => current.map((item) => pricePieceItemFromList({ ...item, pricing_mode: "piece" }, listItems, selectedList)));
-      setMsg(`Lista por pieza "${selectedList?.name || listId}" aplicada.`);
+      setMsg(t("pedMsgListaPiezaAplicada", selectedList?.name || listId));
     } catch (error) {
-      setMsg(`Error al cargar lista por pieza: ${error.message}`);
+      setMsg(t("pedMsgListaPiezaError", error.message));
     }
   };
 
@@ -840,24 +846,24 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const precargarPrecios = () => {
     if (inputsLocked) return;
-    if (!po.client_id) { setMsg("Debes seleccionar un cliente existente."); return; }
+    if (!po.client_id) { setMsg(t("pedMsgSelClienteExistente")); return; }
     if (isPieceMode) {
       const selectedList = piecePriceLists.find((entry) => entry.id === selectedPiecePriceListId);
-      if (!selectedList) { setMsg("Selecciona una lista por pieza activa."); return; }
-      if (!piecePriceItems.length) { setMsg("La lista por pieza no tiene SKUs cargados."); return; }
+      if (!selectedList) { setMsg(t("pedMsgSelListaPiezaActiva")); return; }
+      if (!piecePriceItems.length) { setMsg(t("pedMsgListaPiezaSinSku")); return; }
       setItems((current) => current.map((item) => pricePieceItemFromList(item, piecePriceItems, selectedList)));
       setPricingDirty(false);
-      setMsg(`Precios por pieza recalculados con "${selectedList.name}".`);
+      setMsg(t("pedMsgPreciosPiezaRecalc", selectedList.name));
       return;
     }
-    if (!lines.length) { setMsg("No hay lineas configuradas en el menu de precios."); return; }
-    if (!plataFinaMxn) { setMsg("Captura primero el precio de plata fina."); return; }
+    if (!lines.length) { setMsg(t("pedMsgSinLineas")); return; }
+    if (!plataFinaMxn) { setMsg(t("pedMsgPlataPrimero")); return; }
 
     const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
     const listSilverMxn = getListSilverMxn(selectedList);
     setItems((current) => current.map((item) => priceItemFromLines(item, lines, selectedList, listSilverMxn)));
     setPricingDirty(false);
-    setMsg(selectedList ? `Precios recalculados con "${selectedList.name}".` : "Precios recalculados.");
+    setMsg(selectedList ? t("pedMsgPreciosRecalcLista", selectedList.name) : t("pedMsgPreciosRecalc"));
   };
 
   const totals = {
@@ -909,7 +915,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       setPendingDuplicate({ product, nextItem });
       setProductStatus({
         type: "error",
-        text: `${product.codigo} ya está en la preorden (${existing.piezas} pz). ¿Agregar línea duplicada?`,
+        text: t("pedStDuplicado", product.codigo, existing.piezas),
       });
       return; // no agrega aún — espera confirmación
     }
@@ -920,14 +926,14 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     setPendingDuplicate(null);
     setMsg(
       isConfigurableProductGroup(product)
-        ? `${product.configurableTitle || product.descripcion} agregado. Configura el tipo de pieza en la tabla.`
-        : `${product.codigo} agregado a la preorden.`
+        ? t("pedMsgProductoAgregadoConfig", product.configurableTitle || product.descripcion)
+        : t("pedMsgProductoAgregado", product.codigo)
     );
     setProductStatus({
       type: "success",
       text: isConfigurableProductGroup(product)
-        ? "Base agregada. Ahora elige tipo de pieza en la fila de la preorden."
-        : `${product.codigo} agregado. Listo para el siguiente.`,
+        ? t("pedStConfigBase")
+        : t("pedStAgregadoListo", product.codigo),
     });
     // Foco vuelve a la barra que usó el usuario (no siempre la de arriba)
     window.setTimeout(() => getActiveScannerRef().current?.focus(), 80);
@@ -941,7 +947,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     markEdited();
     setProductSearch("");
     setPendingDuplicate(null);
-    setProductStatus({ type: "success", text: `${product.codigo} agregado como línea separada.` });
+    setProductStatus({ type: "success", text: t("pedStAgregadoDuplicado", product.codigo) });
     window.setTimeout(() => getActiveScannerRef().current?.focus(), 80);
   };
 
@@ -949,7 +955,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const cancelDuplicate = () => {
     setPendingDuplicate(null);
     setProductSearch("");
-    setProductStatus({ type: "info", text: "Escanea o busca un producto para agregarlo." });
+    setProductStatus({ type: "info", text: t("pedStInicial") });
     window.setTimeout(() => getActiveScannerRef().current?.focus(), 80);
   };
 
@@ -1004,7 +1010,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     event.target.value = "";
     if (!file) return;
     if (!isPieceMode) {
-      setProductStatus({ type: "error", text: "Cambia la preorden a Por pieza antes de cargar Excel." });
+      setProductStatus({ type: "error", text: t("pedStCambiaPorPieza") });
       return;
     }
     setImportingPreorderExcel(true);
@@ -1033,7 +1039,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       });
 
       if (!found.length) {
-        setProductStatus({ type: "error", text: `No encontre ningun SKU del Excel en el catalogo. Revisa codigos.` });
+        setProductStatus({ type: "error", text: t("pedStSinSkuExcel") });
         return;
       }
 
@@ -1046,14 +1052,14 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       markEdited();
       setProductStatus({
         type: missing.length ? "info" : "success",
-        text: `${found.length} SKUs cargados desde Excel.${rowsWithExcelPrice ? " Precio tomado del Excel." : hasValidSelectedList ? " Precio tomado de la lista seleccionada." : ""}${rowsWithoutPrice && !hasValidSelectedList ? ` ${rowsWithoutPrice} sin precio quedaron en 0 para editar.` : ""}${missing.length ? ` No encontrados: ${missing.slice(0, 8).join(", ")}${missing.length > 8 ? "..." : ""}` : ""}`,
+        text: `${t("pedStSkusBase", found.length)}${rowsWithExcelPrice ? t("pedStPrecioExcel") : hasValidSelectedList ? t("pedStPrecioLista") : ""}${rowsWithoutPrice && !hasValidSelectedList ? t("pedStSinPrecio", rowsWithoutPrice) : ""}${missing.length ? t("pedStNoEncontrados", `${missing.slice(0, 8).join(", ")}${missing.length > 8 ? "..." : ""}`) : ""}`,
       });
       setMsg(rowsWithExcelPrice
-        ? `${found.length} productos importados. La preorden queda con precios personalizados del Excel.`
-        : `${found.length} productos importados a la preorden por pieza.`
+        ? t("pedMsgProductosImportadosExcelPrecios", found.length)
+        : t("pedMsgProductosImportadosPorPieza", found.length)
       );
     } catch (error) {
-      setProductStatus({ type: "error", text: `No se pudo leer el Excel: ${error.message}` });
+      setProductStatus({ type: "error", text: t("pedStExcelError", error.message) });
     } finally {
       setImportingPreorderExcel(false);
       window.setTimeout(() => scannerInputRef.current?.focus(), 80);
@@ -1148,7 +1154,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       });
     }));
     markEdited();
-    setProductStatus({ type: "success", text: "Configuracion actualizada en la preorden." });
+    setProductStatus({ type: "success", text: t("pedStConfigActualizada") });
   };
 
   const findProductByScan = (code) => {
@@ -1169,13 +1175,13 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const handleProductEntrySubmit = () => {
     const code = productSearch.trim();
     if (!code) {
-      setProductStatus({ type: "error", text: "Escanea, escribe un SKU o busca un producto primero." });
+      setProductStatus({ type: "error", text: t("pedStEscaneaPrimero") });
       getActiveScannerRef().current?.focus();
       return;
     }
     const product = findProductByScan(code);
     if (!product) {
-      setProductStatus({ type: "error", text: `No encontre producto con codigo exacto: ${code}` });
+      setProductStatus({ type: "error", text: t("pedStSinCodigoExacto", code) });
       window.setTimeout(() => getActiveScannerRef().current?.focus(), 80);
       return;
     }
@@ -1325,14 +1331,14 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       cliente_telefono: savedClient.phone || "",
       cliente_rfc: savedClient.rfc || "",
     }));
-    setMsg("Prospecto creado como cliente y listo para guardar preorden.");
+    setMsg(t("pedMsgProspectoCreado"));
     return savedClient.id;
   };
 
   const doSave = async ({ forceOverwrite = false } = {}) => {
-    if (!items.length) { setMsg("Agrega al menos un producto para guardar la preorden."); return; }
+    if (!items.length) { setMsg(t("pedMsgAgregaProductoGuardar")); return; }
     if (hasUnconfiguredItems(items)) {
-      setMsg("Configura el tipo de pieza en todos los productos pendientes antes de guardar.");
+      setMsg(t("pedMsgConfiguraTipoGuardar"));
       return;
     }
     setSaving(true);
@@ -1340,7 +1346,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     setSaveConflict(null);
     try {
       const resolvedClientId = await resolveClientForSave();
-      if (!resolvedClientId) { setMsg("Debes seleccionar un cliente o registrar un prospecto para guardar la preorden."); return; }
+      if (!resolvedClientId) { setMsg(t("pedMsgSelClienteProspectoGuardar")); return; }
       const payload = {
         ...po,
         pricing_mode: pricingMode,
@@ -1363,19 +1369,19 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       setSaved(true);
       editSnapshotRef.current = null;
       setEditMode(false); // tras guardar, vuelve a solo lectura
-      const hora = new Date(newUpdatedAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
-      setMsg(`Guardada a las ${hora}`);
+      const hora = new Date(newUpdatedAt).toLocaleTimeString(language === "en" ? "en-US" : "es-MX", { hour: "2-digit", minute: "2-digit" });
+      setMsg(t("pedMsgGuardadaHora", hora));
       window.setTimeout(() => onSaved?.({ id: savedId, folio: savedFolio || po.folio }), 900);
     } catch (error) {
       if (error.isConflict) {
         // Otra sesión guardó esta preorden antes — avisar al usuario
         setSaveConflict({ dbUpdatedAt: error.dbUpdatedAt });
         const hora = error.dbUpdatedAt
-          ? new Date(error.dbUpdatedAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })
+          ? new Date(error.dbUpdatedAt).toLocaleTimeString(language === "en" ? "en-US" : "es-MX", { hour: "2-digit", minute: "2-digit" })
           : "hora desconocida";
-        setMsg(`⚠️ Conflicto: esta preorden fue guardada en otra sesión a las ${hora}. Elige cómo proceder abajo.`);
+        setMsg(t("pedMsgConflicto", hora));
       } else {
-        setMsg(`Error: ${error.message}`);
+        setMsg(t("pedMsgError", error.message));
       }
     } finally {
       setSaving(false);
@@ -1387,16 +1393,16 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const handlePdf = async () => {
     if (hasUnconfiguredItems(items)) {
-      setMsg("Configura el tipo de pieza en todos los productos pendientes antes de generar PDF.");
+      setMsg(t("pedMsgConfiguraTipoPdf"));
       return;
     }
     if (!UUID_RE.test(String(po.id || ""))) {
-      setMsg("Primero guarda la preorden antes de generar PDF.");
+      setMsg(t("pedMsgGuardaAntesPdf"));
       return;
     }
-    if (!po.client_id) { setMsg("Debes seleccionar un cliente o registrar un prospecto para generar el PDF."); return; }
+    if (!po.client_id) { setMsg(t("pedMsgSelClienteProspectoPdf")); return; }
     if (isProspectMode && !prospectForm.name.trim() && !prospectForm.company.trim()) {
-      setMsg("Captura nombre o empresa del prospecto antes de generar PDF.");
+      setMsg(t("pedMsgProspectoNombrePdf"));
       return;
     }
     const customer = {
@@ -1483,7 +1489,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
   const handleExcelDownload = async () => {
     if (!items.length) {
-      setMsg("Agrega al menos un producto para descargar la preorden en Excel.");
+      setMsg(t("pedMsgAgregaProductoExcel"));
       return;
     }
     try {
@@ -1558,14 +1564,14 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       XLSX.utils.book_append_sheet(workbook, summarySheet, "Resumen");
       const fileName = `preorden-${safeFilePart(po.folio || po.cliente_empresa || po.cliente_nombre)}.xlsx`;
       downloadWorkbook(XLSX, workbook, fileName);
-      setMsg("Excel de preorden descargado correctamente.");
+      setMsg(t("pedMsgExcelDescargado"));
     } catch (error) {
-      setMsg(`Error al descargar Excel: ${error.message}`);
+      setMsg(t("pedMsgExcelDescargaError", error.message));
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Eliminar esta preorden?")) return;
+    if (!window.confirm(t("pedConfirmEliminar"))) return;
     await deletePreorder(po.id);
     onSaved?.();
   };
@@ -1590,7 +1596,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     setItems(imported.length ? imported : []);
     setShowImportPreorder(false);
     markEdited();
-    setMsg(`Artículos importados de la preorden ${preorderRow.folio || ""}. Puedes editar precios y PF.`);
+    setMsg(t("pedMsgArticulosImportados", preorderRow.folio || ""));
   };
 
   const handleClose = () => {
@@ -1606,19 +1612,19 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           {!pricingLocked && editMode ? (
             <span className="po-mode-pill po-mode-pill--editing">
               <span className="po-mode-dot" aria-hidden="true" />
-              Editando
+              {t("pedEditando")}
             </span>
           ) : null}
         </div>
         <div className="po-editor-toolbar-right">
           {/* Timestamp de la versión guardada — garantía de que tienes la más reciente */}
           {savedAt && !saveConflict ? (
-            <span className="po-saved-at" title={`Guardado el ${new Date(savedAt).toLocaleString("es-MX")}`}>
-              ✓ {new Date(savedAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+            <span className="po-saved-at" title={t("pedTipGuardadoEl", new Date(savedAt).toLocaleString(language === "en" ? "en-US" : "es-MX"))}>
+              ✓ {new Date(savedAt).toLocaleTimeString(language === "en" ? "en-US" : "es-MX", { hour: "2-digit", minute: "2-digit" })}
             </span>
           ) : loadedAt && !isNew && !saveConflict ? (
-            <span className="po-saved-at po-saved-at--loaded" title={`Versión cargada: ${new Date(loadedAt).toLocaleString("es-MX")}`}>
-              v {new Date(loadedAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+            <span className="po-saved-at po-saved-at--loaded" title={t("pedTipVersionCargada", new Date(loadedAt).toLocaleString(language === "en" ? "en-US" : "es-MX"))}>
+              v {new Date(loadedAt).toLocaleTimeString(language === "en" ? "en-US" : "es-MX", { hour: "2-digit", minute: "2-digit" })}
             </span>
           ) : null}
 
@@ -1629,7 +1635,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             <button
               className="secondary-button compact-action warning-action"
               type="button"
-              title="Sobrescribir la versión más reciente con tus cambios actuales"
+              title={t("pedTipSobrescribir")}
               onClick={handleForceSave}
             >
               ⚠ Sobrescribir
@@ -1640,7 +1646,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           {adminViewOnly ? (
             <button className="primary-button compact-action po-edit-btn" type="button" onClick={enterEditMode}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-              Editar
+              {t("pedEditar")}
             </button>
           ) : null}
 
@@ -1649,14 +1655,14 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               className="secondary-button compact-action"
               type="button"
               onClick={() => setShowImportPreorder(true)}
-              title="Importar artículos y cliente desde una preorden"
+              title={t("pedTipImportar")}
             >
-              ↑ Importar preorden
+              {t("pedImportarPreorden")}
             </button>
           ) : null}
           {(editMode || pricingLocked) && !isNew ? (
             <button className="danger-button compact-action" type="button" onClick={handleDelete}>
-              Eliminar
+              {t("pedEliminar")}
             </button>
           ) : null}
           <button className="secondary-button compact-action" type="button" onClick={handlePdf}>
@@ -1669,17 +1675,17 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             <button
               className="secondary-button compact-action"
               type="button"
-              title="Crear una remisión a partir de esta preorden"
+              title={t("pedTipCrearRemision")}
               onClick={() => setShowCreateRem(true)}
             >
-              ↓ Crear remisión
+              {t("pedCrearRemision")}
             </button>
           ) : null}
           {editMode || pricingLocked ? (
             <>
               {editMode && !isNew ? (
                 <button className="secondary-button compact-action" type="button" onClick={cancelEditMode}>
-                  Cancelar
+                  {t("pedCancelar")}
                 </button>
               ) : null}
               <button
@@ -1688,7 +1694,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 onClick={handleSave}
                 disabled={saving || saved}
               >
-                {saving ? "Guardando..." : saved ? "Guardado ✓" : "Guardar"}
+                {saving ? t("pedGuardando") : saved ? t("pedGuardadoOk") : t("pedGuardar")}
               </button>
             </>
           ) : null}
@@ -1697,10 +1703,10 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           <section className="po-remission-group po-remission-group--client">
             <div className="po-remission-title">Cliente</div>
             <div className="po-remission-fields po-remission-fields--client">
-              <Field label="Fecha">
-                <input value={new Date(initial?.created_at || Date.now()).toLocaleDateString("es-MX")} readOnly style={inp} />
+              <Field label={t("pedFecha")}>
+                <input value={new Date(initial?.created_at || Date.now()).toLocaleDateString(language === "en" ? "en-US" : "es-MX")} readOnly style={inp} />
               </Field>
-              <Field label="Cliente">
+              <Field label={t("pedClienteTitulo")}>
                 {pricingLocked ? (
                   /* En vista de cliente el selector está bloqueado — solo muestra quién es */
                   <input
@@ -1710,18 +1716,18 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   />
                 ) : (
                   <select value={po.client_id} onChange={handleClientSelect} style={inp}>
-                    <option value="">Selecciona cliente existente</option>
-                    <option value={PROSPECT_CLIENT_VALUE}>+ Prospecto nuevo</option>
+                    <option value="">{t("pedSelClienteExistente")}</option>
+                    <option value={PROSPECT_CLIENT_VALUE}>{t("pedProspectoNuevo")}</option>
                     {(clients || []).map((client) => (
                       <option key={client.id} value={client.id}>{client.company || client.name}</option>
                     ))}
                   </select>
                 )}
               </Field>
-              <Field label="Nombre"><input value={po.cliente_nombre || ""} readOnly style={inp} /></Field>
-              <Field label="Empresa"><input value={po.cliente_empresa || ""} readOnly style={inp} /></Field>
-              <Field label="Telefono"><input value={po.cliente_telefono || ""} readOnly style={inp} /></Field>
-              <Field label="RFC"><input value={po.cliente_rfc || ""} readOnly style={inp} /></Field>
+              <Field label={t("pedNombre")}><input value={po.cliente_nombre || ""} readOnly style={inp} /></Field>
+              <Field label={t("pedEmpresa")}><input value={po.cliente_empresa || ""} readOnly style={inp} /></Field>
+              <Field label={t("pedTelefono")}><input value={po.cliente_telefono || ""} readOnly style={inp} /></Field>
+              <Field label={t("pedRfc")}><input value={po.cliente_rfc || ""} readOnly style={inp} /></Field>
             </div>
             {/* Estatus de la nota — segmentado justificado bajo el cliente.
                 Solo el activo se colorea (tono); los demás en gris casi invisible. */}
@@ -1738,7 +1744,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     setPo((current) => ({ ...current, status: key }));
                   }}
                 >
-                  {value.label}
+                  {statusLabel(key, value.label)}
                 </button>
               ))}
             </div>
@@ -1747,19 +1753,19 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           <section className="po-remission-group">
             <div className="po-remission-title">Moneda y lista</div>
             <div className="po-remission-fields">
-              <Field label="Moneda">
+              <Field label={t("pedMoneda")}>
                 <select value={po.moneda} onChange={set("moneda", { pricing: true })} style={inp}>
                   <option value="MXN">MXN</option>
                   <option value="USD">USD</option>
                 </select>
               </Field>
-              <Field label="Tipo">
+              <Field label={t("pedTipo")}>
                 <select value={pricingMode} onChange={(e) => changePricingMode(e.target.value)} disabled={pricingLocked} style={inp}>
-                  <option value="gram">Por gramo</option>
-                  <option value="piece">Por pieza</option>
+                  <option value="gram">{t("pedPorGramo")}</option>
+                  <option value="piece">{t("pedPorPieza")}</option>
                 </select>
               </Field>
-              <Field label={isPieceMode ? `Lista por pieza ${po.moneda}` : `Lista por gramo ${po.moneda}`}>
+              <Field label={isPieceMode ? t("pedListaPieza", po.moneda) : t("pedListaGramo", po.moneda)}>
                 {isPieceMode ? (
                   <select
                     value={selectedPiecePriceListId || ""}
@@ -1767,8 +1773,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     disabled={pricingLocked}
                     style={inp}
                   >
-                    <option value="">Selecciona una lista activa</option>
-                    <option value={CUSTOM_PRICE_LIST_VALUE}>Personalizada</option>
+                    <option value="">{t("pedSelListaActiva")}</option>
+                    <option value={CUSTOM_PRICE_LIST_VALUE}>{t("pedPersonalizada")}</option>
                     {compatiblePiecePriceLists.map((list) => (
                       <option key={list.id} value={list.id}>{list.name}</option>
                     ))}
@@ -1780,20 +1786,20 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     disabled={pricingLocked}
                     style={inp}
                   >
-                    <option value="">Selecciona una lista activa</option>
-                    <option value={CUSTOM_PRICE_LIST_VALUE}>Personalizada</option>
+                    <option value="">{t("pedSelListaActiva")}</option>
+                    <option value={CUSTOM_PRICE_LIST_VALUE}>{t("pedPersonalizada")}</option>
                     {compatibleLaborLists.map((list) => (
                       <option key={list.id} value={list.id}>{list.name}</option>
                     ))}
                   </select>
                 )}
               </Field>
-              <Field label="Tipo de cambio">
-                <input type="number" step="0.01" placeholder="Ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
+              <Field label={t("pedTipoCambio")}>
+                <input type="number" step="0.01" placeholder={t("pedPhTipoCambio")} value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
               </Field>
               <div style={{ gridColumn: "1 / -1" }}>
-                <Field label="Comentarios">
-                  <textarea value={po.notas || ""} onChange={set("notas")} placeholder={docLabels.notesPlaceholder || "Observaciones generales de la preorden"} />
+                <Field label={t("pedComentariosTitulo")}>
+                  <textarea value={po.notas || ""} onChange={set("notas")} placeholder={docLabels.notesPlaceholder || t("pedComentariosPlaceholder")} />
                 </Field>
               </div>
             </div>
@@ -1801,11 +1807,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
           <section className="po-remission-group po-remission-group--totals">
             <div className="po-remission-title">Totales</div>
-            <div className="po-remission-total-row"><span>Piezas</span><strong>{totals.piezas}</strong></div>
+            <div className="po-remission-total-row"><span>{t("pedPiezas")}</span><strong>{totals.piezas}</strong></div>
             {!isPieceMode ? (
-              <div className="po-remission-total-row"><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
+              <div className="po-remission-total-row"><span>{t("pedGramos")}</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
             ) : null}
-            <div className="po-remission-total-row po-remission-total-row--money"><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
+            <div className="po-remission-total-row po-remission-total-row--money"><span>{t("pedTotalCur", moneyLabel)}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
           </section>
         </div>
       </header>
@@ -1815,9 +1821,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
             <div className="po-header-section po-header-section--client">
               <div className="po-header-line">
                 <strong>{docLabels.sheetTitle || "Preorden"}</strong>
-                <span>{new Date(initial?.created_at || Date.now()).toLocaleDateString("es-MX")}</span>
+                <span>{new Date(initial?.created_at || Date.now()).toLocaleDateString(language === "en" ? "en-US" : "es-MX")}</span>
               </div>
-              <Field label="Cliente">
+              <Field label={t("pedClienteTitulo")}>
                 {pricingLocked ? (
                   <input
                     value={po.cliente_empresa || po.cliente_nombre || "—"}
@@ -1826,18 +1832,18 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   />
                 ) : (
                   <select value={po.client_id} onChange={handleClientSelect} style={inp}>
-                    <option value="">Selecciona cliente existente</option>
-                    <option value={PROSPECT_CLIENT_VALUE}>+ Prospecto nuevo</option>
+                    <option value="">{t("pedSelClienteExistente")}</option>
+                    <option value={PROSPECT_CLIENT_VALUE}>{t("pedProspectoNuevo")}</option>
                     {(clients || []).map((client) => (
                       <option key={client.id} value={client.id}>{client.company || client.name}</option>
                     ))}
                   </select>
                 )}
               </Field>
-              <Field label="Nombre"><input value={po.cliente_nombre || ""} readOnly style={inp} /></Field>
-              <Field label="Empresa"><input value={po.cliente_empresa || ""} readOnly style={inp} /></Field>
-              <Field label="Telefono"><input value={po.cliente_telefono || ""} readOnly style={inp} /></Field>
-              <Field label="RFC"><input value={po.cliente_rfc || ""} readOnly style={inp} /></Field>
+              <Field label={t("pedNombre")}><input value={po.cliente_nombre || ""} readOnly style={inp} /></Field>
+              <Field label={t("pedEmpresa")}><input value={po.cliente_empresa || ""} readOnly style={inp} /></Field>
+              <Field label={t("pedTelefono")}><input value={po.cliente_telefono || ""} readOnly style={inp} /></Field>
+              <Field label={t("pedRfc")}><input value={po.cliente_rfc || ""} readOnly style={inp} /></Field>
             </div>
 
             <div className="po-header-section po-header-section--pricing">
@@ -1845,19 +1851,19 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 <strong>Costeo</strong>
                 <span>{isPieceMode ? "Por pieza" : selectedLaborListId === CUSTOM_PRICE_LIST_VALUE ? "Personalizada" : "Por gramo"}</span>
               </div>
-              <Field label="Moneda">
+              <Field label={t("pedMoneda")}>
                 <select value={po.moneda} onChange={set("moneda", { pricing: true })} style={inp}>
                   <option value="MXN">MXN</option>
                   <option value="USD">USD</option>
                 </select>
               </Field>
-              <Field label="Tipo de cotizacion">
+              <Field label={t("pedFieldTipoCotizacion")}>
                 <select value={pricingMode} onChange={(e) => changePricingMode(e.target.value)} disabled={pricingLocked} style={inp}>
-                  <option value="gram">Por gramo</option>
-                  <option value="piece">Por pieza</option>
+                  <option value="gram">{t("pedPorGramo")}</option>
+                  <option value="piece">{t("pedPorPieza")}</option>
                 </select>
               </Field>
-              <Field label={isPieceMode ? `Lista por pieza ${po.moneda}` : `Lista por gramo ${po.moneda}`}>
+              <Field label={isPieceMode ? t("pedListaPieza", po.moneda) : t("pedListaGramo", po.moneda)}>
                 {isPieceMode ? (
                   <select
                     value={selectedPiecePriceListId || ""}
@@ -1865,8 +1871,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     disabled={pricingLocked}
                     style={inp}
                   >
-                    <option value="">Selecciona una lista activa</option>
-                    <option value={CUSTOM_PRICE_LIST_VALUE}>Personalizada</option>
+                    <option value="">{t("pedSelListaActiva")}</option>
+                    <option value={CUSTOM_PRICE_LIST_VALUE}>{t("pedPersonalizada")}</option>
                     {compatiblePiecePriceLists.map((list) => (
                       <option key={list.id} value={list.id}>{list.name}</option>
                     ))}
@@ -1878,20 +1884,20 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     disabled={pricingLocked}
                     style={inp}
                   >
-                    <option value="">Selecciona una lista activa</option>
-                    <option value={CUSTOM_PRICE_LIST_VALUE}>Personalizada</option>
+                    <option value="">{t("pedSelListaActiva")}</option>
+                    <option value={CUSTOM_PRICE_LIST_VALUE}>{t("pedPersonalizada")}</option>
                     {compatibleLaborLists.map((list) => (
                       <option key={list.id} value={list.id}>{list.name}</option>
                     ))}
                   </select>
                 )}
               </Field>
-              <Field label="Tipo de cambio USD">
-                <input type="number" step="0.01" placeholder="Ej. 17.25" value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
+              <Field label={t("pedFieldTipoCambioUsd")}>
+                <input type="number" step="0.01" placeholder={t("pedPhTipoCambio")} value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
               </Field>
-              <Field label="Estatus">
+              <Field label={t("pedFieldEstatus")}>
                 <select value={po.status || defaultStatus} onChange={set("status")} style={inp}>
-                  {Object.entries(statusConfig).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
+                  {Object.entries(statusConfig).map(([key, value]) => <option key={key} value={key}>{statusLabel(key, value.label)}</option>)}
                 </select>
               </Field>
             </div>
@@ -1900,18 +1906,18 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               <div className="po-header-line">
                 <strong>Comentarios</strong>
               </div>
-              <textarea value={po.notas || ""} onChange={set("notas")} placeholder={docLabels.notesPlaceholder || "Observaciones generales de la preorden"} />
+              <textarea value={po.notas || ""} onChange={set("notas")} placeholder={docLabels.notesPlaceholder || t("pedComentariosPlaceholder")} />
             </div>
 
             <div className="po-header-section po-header-section--totals">
               <div className="po-header-line">
                 <strong>Totales</strong>
               </div>
-              <div><span>Piezas</span><strong>{totals.piezas}</strong></div>
+              <div><span>{t("pedPiezas")}</span><strong>{totals.piezas}</strong></div>
               {!isPieceMode ? (
-                <div><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
+                <div><span>{t("pedGramos")}</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
               ) : null}
-              <div><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
+              <div><span>{t("pedTotalCur", moneyLabel)}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
             </div>
           </section>
             {isProspectMode ? (
@@ -1921,18 +1927,18 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   <p>Captura sus datos aqui mismo. Al guardar la preorden, se crea el cliente/prospecto.</p>
                 </div>
                 <div className="form-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
-                  <Field label="Nombre"><input value={prospectForm.name} onChange={(event) => updateProspect("name", event.target.value)} style={inp} placeholder="Nombre del contacto" /></Field>
-                  <Field label="Empresa"><input value={prospectForm.company} onChange={(event) => updateProspect("company", event.target.value)} style={inp} placeholder="Empresa / tienda" /></Field>
-                  <Field label="Correo"><input value={prospectForm.email} onChange={(event) => updateProspect("email", event.target.value)} style={inp} placeholder="correo@empresa.com" /></Field>
-                  <Field label="Telefono"><input value={prospectForm.phone} onChange={(event) => updateProspect("phone", event.target.value)} style={inp} placeholder="+1..." /></Field>
-                  <Field label="RFC / Tax ID"><input value={prospectForm.rfc} onChange={(event) => updateProspect("rfc", event.target.value)} style={inp} placeholder="Opcional" /></Field>
+                  <Field label={t("pedNombre")}><input value={prospectForm.name} onChange={(event) => updateProspect("name", event.target.value)} style={inp} placeholder={t("pedPhNombreContacto")} /></Field>
+                  <Field label={t("pedEmpresa")}><input value={prospectForm.company} onChange={(event) => updateProspect("company", event.target.value)} style={inp} placeholder={t("pedPhEmpresaTienda")} /></Field>
+                  <Field label={t("pedFieldCorreo")}><input value={prospectForm.email} onChange={(event) => updateProspect("email", event.target.value)} style={inp} placeholder={t("pedPhCorreo")} /></Field>
+                  <Field label={t("pedTelefono")}><input value={prospectForm.phone} onChange={(event) => updateProspect("phone", event.target.value)} style={inp} placeholder="+1..." /></Field>
+                  <Field label={t("pedFieldRfcTaxId")}><input value={prospectForm.rfc} onChange={(event) => updateProspect("rfc", event.target.value)} style={inp} placeholder={t("pedPhOpcional")} /></Field>
                 </div>
               </div>
             ) : null}
 
           {!isPieceMode ? (
           <section className="quote-block quote-block--pricing">
-            <h3>Costeo de plata fina</h3>
+            <h3>{t("pedCosteoPlata")}</h3>
 
             <div className="po-pricing-panel">
               <div className="po-pricing-row">
@@ -1948,11 +1954,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   <>
                     <label className="po-pricing-field">
                       KITCO USD/oz
-                      <input type="number" step="0.01" placeholder="Ej. 31.50" value={po.kitco_usd_oz || ""} onChange={set("kitco_usd_oz", { pricing: true })} readOnly={pricingLocked} />
+                      <input type="number" step="0.01" placeholder={t("pedPhKitco")} value={po.kitco_usd_oz || ""} onChange={set("kitco_usd_oz", { pricing: true })} readOnly={pricingLocked} />
                     </label>
                     <label className="po-pricing-field">
                       Premio Kitco (%)
-                      <input type="number" step="0.1" min="0" placeholder="Ej. 4" value={po.premio_pct ?? 0} onChange={set("premio_pct", { pricing: true })} readOnly={pricingLocked} />
+                      <input type="number" step="0.1" min="0" placeholder={t("pedPhPremio")} value={po.premio_pct ?? 0} onChange={set("premio_pct", { pricing: true })} readOnly={pricingLocked} />
                     </label>
                     {!pricingLocked ? (
                       <div className="po-pricing-field po-pricing-field--action">
@@ -1989,13 +1995,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           ) : null}
 
           <section className="quote-block">
-            <h3>Productos cotizados</h3>
+            <h3>{t("pedProductosCotizados")}</h3>
             {msg ? <p className="status info">{msg}</p> : null}
             {!adminViewOnly && products.length ? (
               <div className="quote-product-picker">
-                <label>
-                  Agregar producto a esta preorden
-                  <input
+                <label>{t("pedAgregarProductoTitulo")}<input
                     ref={scannerInputRef}
                     value={productSearch}
                     onFocus={() => { activeScannerRef.current = "top"; }}
@@ -2004,7 +2008,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                       setProductSearch(event.target.value);
                       setPendingDuplicate(null);
                       if (productStatus.type !== "info") {
-                        setProductStatus({ type: "info", text: "Presiona Enter para agregar un codigo exacto o elige una sugerencia." });
+                        setProductStatus({ type: "info", text: t("pedStEnterParaAgregar") });
                       }
                     }}
                     onKeyDown={(event) => {
@@ -2013,13 +2017,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                         handleProductEntrySubmit();
                       }
                     }}
-                    placeholder="Escanear codigo o buscar por SKU, descripcion, linea o familia"
+                    placeholder={t("pedScanPlaceholder")}
                   />
                 </label>
                 <div className="quote-picker-actions">
-                  <button className="primary-button compact-action" type="button" onClick={handleProductEntrySubmit}>
-                    Agregar por codigo
-                  </button>
+                  <button className="primary-button compact-action" type="button" onClick={handleProductEntrySubmit}>{t("pedAgregarPorCodigo")}</button>
                   {isPieceMode ? (
                     <label className={`secondary-button compact-action file-action preorder-excel-action ${importingPreorderExcel ? "disabled" : ""}`}>
                       {importingPreorderExcel ? "Leyendo Excel..." : "Cargar Excel de preorden"}
@@ -2072,32 +2074,32 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 <thead>
                   {isPieceMode ? (
                     <tr>
-                      <th className="preorder-row-move-head">Orden</th>
-                      <th>Foto</th>
+                      <th className="preorder-row-move-head">{t("pedColOrden")}</th>
+                      <th>{t("pedColFoto")}</th>
                       <th>SKU</th>
-                      <th className="right">Cantidad</th>
-                      <th>Descripcion</th>
-                      <th>Linea</th>
-                      <th className="right">Precio pieza {moneyLabel}</th>
-                      <th>Comentarios</th>
-                      <th className="right">Subtotal</th>
+                      <th className="right">{t("pedColCantidad")}</th>
+                      <th>{t("pedColDescripcion")}</th>
+                      <th>{t("pedColLinea")}</th>
+                      <th className="right">{t("pedColPrecioPieza", moneyLabel)}</th>
+                      <th>{t("pedColComentariosShort")}</th>
+                      <th className="right">{t("pedColSubtotal")}</th>
                       <th></th>
                     </tr>
                   ) : (
                     <tr>
-                      <th className="preorder-row-move-head">Orden</th>
-                      <th>Foto</th>
+                      <th className="preorder-row-move-head">{t("pedColOrden")}</th>
+                      <th>{t("pedColFoto")}</th>
                       <th>SKU</th>
-                      <th className="right">Cantidad</th>
-                      <th>Descripcion</th>
-                      <th>Linea</th>
-                      <th className="right">Peso unit.</th>
-                      <th className="right">Gramos totales</th>
-                      <th className="right">Labor/g {moneyLabel}</th>
-                      <th className="right">PF/g {moneyLabel}</th>
-                      <th className="right">Labor+PF {moneyLabel}</th>
-                      <th>Comentarios</th>
-                      <th className="right">Subtotal</th>
+                      <th className="right">{t("pedColCantidad")}</th>
+                      <th>{t("pedColDescripcion")}</th>
+                      <th>{t("pedColLinea")}</th>
+                      <th className="right">{t("pedColPesoUnit")}</th>
+                      <th className="right">{t("pedColGramosTot")}</th>
+                      <th className="right">{t("pedColLaborG", moneyLabel)}</th>
+                      <th className="right">{t("pedColPfG")} {moneyLabel}</th>
+                      <th className="right">{t("pedColLaborPf")} {moneyLabel}</th>
+                      <th>{t("pedColComentariosShort")}</th>
+                      <th className="right">{t("pedColSubtotal")}</th>
                       <th></th>
                     </tr>
                   )}
@@ -2150,7 +2152,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                                     draggable={canDragPreorderItems}
                                     onDragStart={(event) => startPreorderItemDrag(event, idx)}
                                     onDragEnd={endPreorderItemDrag}
-                                    title="Arrastrar para mover esta pieza"
+                                    title={t("pedTipArrastrar")}
                                   >
                                     Mover
                                   </span>
@@ -2276,7 +2278,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
                                   {/* Piezas */}
                                   <div className="cfg-pricing__field">
-                                    <span className="cfg-pricing__label">Piezas</span>
+                                    <span className="cfg-pricing__label">{t("pedPiezas")}</span>
                                     <div className="qty-stepper">
                                       <button type="button" onClick={() => adjustQuantity(idx, -1)}>-</button>
                                       <input type="number" min="1" value={item.piezas} onChange={(e) => setItem(idx, "piezas", Number(e.target.value))} />
@@ -2286,41 +2288,41 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
                                   {isPieceMode ? (
                                     <div className="cfg-pricing__field">
-                                      <span className="cfg-pricing__label">Precio/pza {moneyLabel}</span>
+                                      <span className="cfg-pricing__label">{t("pedCfgPrecioPza")} {moneyLabel}</span>
                                       <input type="number" step="0.01" value={toDisplayMoney(item.precio_pieza_mxn) || ""} onChange={(e) => setItem(idx, "precio_pieza_mxn", fromDisplayMoney(e.target.value))} readOnly={pricingLocked} />
                                     </div>
                                   ) : (
                                     <>
                                       <div className="cfg-pricing__field">
-                                        <span className="cfg-pricing__label">Gr / pieza</span>
+                                        <span className="cfg-pricing__label">{t("pedCfgGrPieza")}</span>
                                         <input type="number" step="0.01" value={item.gramos_por_pieza} onChange={(e) => setItem(idx, "gramos_por_pieza", Number(e.target.value))} />
                                       </div>
                                       <div className="cfg-pricing__field">
-                                        <span className="cfg-pricing__label">Gr total</span>
+                                        <span className="cfg-pricing__label">{t("pedCfgGrTotal")}</span>
                                         <input type="number" step="0.01" value={item._gt_manual ?? item.gramos_total} onChange={(e) => setGTotal(idx, e.target.value)} readOnly={pricingLocked} />
                                       </div>
                                       <div className="cfg-pricing__field">
-                                        <span className="cfg-pricing__label">Labor/g {moneyLabel}</span>
+                                        <span className="cfg-pricing__label">{t("pedColLaborG", moneyLabel)}</span>
                                         <input type="number" step="0.01" value={toDisplayMoney(item.labor_mxn) || ""} onChange={(e) => setLabor(idx, e.target.value)} readOnly={pricingLocked} />
                                       </div>
                                       <div className="cfg-pricing__field cfg-pricing__field--readonly">
-                                        <span className="cfg-pricing__label">PF/g</span>
+                                        <span className="cfg-pricing__label">{t("pedColPfG")}</span>
                                         <span className="cfg-pricing__value">{fmt(toDisplayMoney(fineSilver))}</span>
                                       </div>
                                       <div className="cfg-pricing__field cfg-pricing__field--readonly">
-                                        <span className="cfg-pricing__label">Labor+PF</span>
+                                        <span className="cfg-pricing__label">{t("pedColLaborPf")}</span>
                                         <span className="cfg-pricing__value">{fmt(toDisplayMoney(item.precio_gramo_mxn))}</span>
                                       </div>
                                     </>
                                   )}
 
                                   <div className="cfg-pricing__field cfg-pricing__field--comments">
-                                    <span className="cfg-pricing__label">Comentarios</span>
-                                    <input value={item.comentarios || ""} onChange={(e) => setItem(idx, "comentarios", e.target.value)} placeholder="Notas adicionales..." />
+                                    <span className="cfg-pricing__label">{t("pedColComentariosShort")}</span>
+                                    <input value={item.comentarios || ""} onChange={(e) => setItem(idx, "comentarios", e.target.value)} placeholder={t("pedCfgNotasPlaceholder")} />
                                   </div>
 
                                   <div className="cfg-pricing__field cfg-pricing__field--subtotal">
-                                    <span className="cfg-pricing__label">Subtotal</span>
+                                    <span className="cfg-pricing__label">{t("pedColSubtotal")}</span>
                                     <strong className="cfg-pricing__subtotal">{fmt(toDisplayMoney(item.subtotal_mxn))}</strong>
                                   </div>
 
@@ -2348,7 +2350,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                             draggable={canDragPreorderItems}
                             onDragStart={(event) => startPreorderItemDrag(event, idx)}
                             onDragEnd={endPreorderItemDrag}
-                            title="Arrastrar para mover esta pieza"
+                            title={t("pedTipArrastrar")}
                           >
                             Mover
                           </span>
@@ -2399,13 +2401,13 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                             <td className="right">{fmt(toDisplayMoney(item.precio_gramo_mxn))}</td>
                           </>
                         )}
-                        <td className="quote-item-comments-cell"><input value={item.comentarios || ""} onChange={(event) => setItem(idx, "comentarios", event.target.value)} placeholder="Color, piedra, medida..." /></td>
+                        <td className="quote-item-comments-cell"><input value={item.comentarios || ""} onChange={(event) => setItem(idx, "comentarios", event.target.value)} placeholder={t("pedPhComentariosItem")} /></td>
                         <td className="right"><strong>{fmt(toDisplayMoney(item.subtotal_mxn))}</strong></td>
                         <td><button className="table-delete" type="button" onClick={() => removePreorderItem(idx)}>x</button></td>
                       </tr>
                     );
                   }) : (
-                    <tr><td colSpan={isPieceMode ? "10" : "14"} className="empty-row">Sin productos. Agrega productos desde el catalogo.</td></tr>
+                    <tr><td colSpan={isPieceMode ? "10" : "14"} className="empty-row">{t("pedSinProductos")}</td></tr>
                   )}
                 </tbody>
               </table>
@@ -2417,9 +2419,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               Evita tener que scrollear hasta arriba para agregar más artículos. */}
           {!adminViewOnly && items.length >= 3 && products.length ? (
             <div className="quote-product-picker quote-product-picker--bottom">
-              <label>
-                Agregar otro producto
-                <input
+              <label>{t("pedAgregarOtro")}<input
                   ref={bottomScannerRef}
                   value={productSearch}
                   onFocus={() => { activeScannerRef.current = "bottom"; }}
@@ -2428,7 +2428,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     setProductSearch(event.target.value);
                     setPendingDuplicate(null);
                     if (productStatus.type !== "info") {
-                      setProductStatus({ type: "info", text: "Presiona Enter para agregar un codigo exacto o elige una sugerencia." });
+                      setProductStatus({ type: "info", text: t("pedStEnterParaAgregar") });
                     }
                   }}
                   onKeyDown={(event) => {
@@ -2437,13 +2437,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                       handleProductEntrySubmit();
                     }
                   }}
-                  placeholder="Escanear codigo o buscar por SKU, descripcion, linea o familia"
+                  placeholder={t("pedScanPlaceholder")}
                 />
               </label>
               <div className="quote-picker-actions">
-                <button className="primary-button compact-action" type="button" onClick={() => { activeScannerRef.current = "bottom"; handleProductEntrySubmit(); }}>
-                  Agregar por codigo
-                </button>
+                <button className="primary-button compact-action" type="button" onClick={() => { activeScannerRef.current = "bottom"; handleProductEntrySubmit(); }}>{t("pedAgregarPorCodigo")}</button>
                 <p className={`scanner-status ${productStatus.type}`}>{productStatus.text}</p>
               </div>
               {/* Confirmación de duplicado en barra inferior */}
@@ -2482,12 +2480,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           ) : null}
 
           <section className="po-totals-bar">
-            <div><span>Piezas</span><strong>{totals.piezas}</strong></div>
+            <div><span>{t("pedPiezas")}</span><strong>{totals.piezas}</strong></div>
             {!isPieceMode ? (
-              <div><span>Gramos</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
+              <div><span>{t("pedGramos")}</span><strong>{totals.gramos.toFixed(2)} g</strong></div>
             ) : null}
-            <div><span>Subtotal {moneyLabel}</span><strong>{fmt(toDisplayMoney(totals.mxn))}</strong></div>
-            <div className="po-total-highlight"><span>Total {moneyLabel}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
+            <div><span>{t("pedSubtotalCur", moneyLabel)}</span><strong>{fmt(toDisplayMoney(totals.mxn))}</strong></div>
+            <div className="po-total-highlight"><span>{t("pedTotalCur", moneyLabel)}</span><strong>{fmt(toDisplayMoney(totalFinalMxn))}</strong></div>
           </section>
       </main>
 
@@ -2505,7 +2503,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           <div className="client-modal gf-modal" style={{ maxWidth: 460 }}>
             <header>
               <h2>Generar remisión</h2>
-              <button type="button" className="icon-button" onClick={() => setShowCreateRem(false)} aria-label="Cerrar">×</button>
+              <button type="button" className="icon-button" onClick={() => setShowCreateRem(false)} aria-label={t("pedAriaCerrar")}>×</button>
             </header>
             <div className="gf-body">
               <p>Se generará una <strong>remisión</strong> a partir de esta preorden{po.folio ? ` ${po.folio}` : ""}, con los mismos artículos.</p>
