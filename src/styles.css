@@ -1099,7 +1099,9 @@ dd {
 .admin-header h1,
 .admin-panel h2 {
   color: var(--romea-blue);
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0;
   margin: 0;
 }
 
@@ -11324,6 +11326,12 @@ tr.client-row--expanded td {
 .login-shell input {
   font-family: var(--font-sans);
   letter-spacing: 0;
+}
+
+.setup-card,
+.loading-card {
+  border-radius: var(--radius-lg);
+  font-family: var(--font-sans);
 }
 
 .login-brand-orb {
