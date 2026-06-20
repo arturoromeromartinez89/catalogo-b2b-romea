@@ -6,6 +6,11 @@
       "permanent": false
     },
     {
+      "source": "/pruebas/",
+      "destination": "https://catalogo-b2b-staging-security.vercel.app/catalogo/",
+      "permanent": false
+    },
+    {
       "source": "/pruebas/:path*",
       "destination": "https://catalogo-b2b-staging-security.vercel.app/catalogo/:path*",
       "permanent": false
