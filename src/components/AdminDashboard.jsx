@@ -429,6 +429,12 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const accountInitial = (accountName || "?").charAt(0).toUpperCase();
   const accountRoleLabel = profile?.role === "client" ? t("hdrRoleClient") : t("hdrRoleAdmin");
   const headerBrandName = activeCompany?.brand_name || activeCompany?.legal_name || t("b2bCatalog");
+  const headerLegalName = activeCompany?.legal_name || activeTenant?.name || headerBrandName;
+  const headerToday = new Date().toLocaleDateString(language === "en" ? "en-US" : "es-MX", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  });
   const selectedClient = useMemo(() => data?.clients.find((client) => client.id === selectedClientId), [data?.clients, selectedClientId]);
   const configurableCatalogEnabled = tenantFeatures?.modulo_configurable === true;
   const adminModuleEnabled = tenantFeatures?.modulo_admin === true;
@@ -1305,11 +1311,31 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             <span className="topbar-brand__divider" aria-hidden="true" />
             <span className="topbar-brand__role">{t("hdrPortalAdmin")}</span>
           </div>
-          <div className="admin-header-context">
-            {superadmin && activeTenant ? <span>Empresa activa: {activeTenant.name}</span> : null}
+          <div className="admin-header-context topbar-snapshot">
+            <span className="topbar-context-pill">
+              <span>{t("hdrClient")}</span>
+              <strong>{headerLegalName}</strong>
+            </span>
+            <span className="topbar-context-pill">
+              <span>{t("hdrWorkspace")}</span>
+              <strong>{headerBrandName}</strong>
+            </span>
+            <span className="topbar-context-pill topbar-context-pill--date">
+              <span>{t("hdrToday")}</span>
+              <strong>{headerToday}</strong>
+            </span>
+            {superadmin && activeTenant ? <span className="header-status-text">{t("hdrActiveCompany", activeTenant.name)}</span> : null}
             {status && tab !== "catalog" ? <span className="header-status-text">{status}</span> : null}
           </div>
           <div className="admin-header-actions">
+            <div className="topbar-doc-actions" aria-label={t("hdrDocuments")}>
+              <button className="topbar-doc-button" type="button" title={t("hdrProximamente")} disabled>
+                {t("hdrContract")}
+              </button>
+              <button className="topbar-doc-button" type="button" title={t("hdrProximamente")} disabled>
+                {t("hdrNda")}
+              </button>
+            </div>
             <LanguageToggle />
             <div className="account-cluster">
               <button

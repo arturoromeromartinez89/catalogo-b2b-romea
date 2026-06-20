@@ -129,6 +129,7 @@ export default function InicioTab({
   const totalCodigos = products.length;
   const sinFoto = useMemo(() => products.filter((p) => !p.fotoUrl).length, [products]);
   const totalClientes = clients.length;
+  const accesoPendiente = accessCount === null ? null : Math.max(totalClientes - accessCount, 0);
 
   return (
     <div className="inicio-page">
@@ -140,7 +141,7 @@ export default function InicioTab({
         <p className="inicio-hero__sub">{t("iniWelcomeSub")}</p>
         <div className="inicio-hero__actions">
           <button className="primary-button" type="button" onClick={onGoToPreorders}>
-            {t("iniVerPreordenes")}
+            {t("iniPrimaryAction")}
           </button>
           <button className="secondary-button" type="button" onClick={onGoToCatalog}>
             {t("iniVerCatalogo")}
@@ -159,10 +160,18 @@ export default function InicioTab({
         />
         <MetricCard
           tone="warning"
+          label={t("iniCardPendientes")}
+          value={loading ? "—" : counts.nuevas + counts.revision}
+          hint={t("iniCardPendientesHint")}
+          icon="!"
+          onClick={onGoToPreorders}
+        />
+        <MetricCard
+          tone="neutral"
           label={t("iniCardRevision")}
           value={loading ? "—" : counts.revision}
           hint={t("iniCardRevisionHint")}
-          icon="◔"
+          icon="?"
           onClick={onGoToPreorders}
         />
         <MetricCard
@@ -170,7 +179,7 @@ export default function InicioTab({
           label={t("iniCardConfirmadas")}
           value={loading ? "—" : counts.confirmadas}
           hint={t("iniCardConfirmadasHint")}
-          icon="✓"
+          icon="OK"
           onClick={onGoToPreorders}
         />
         <MetricCard
@@ -178,7 +187,7 @@ export default function InicioTab({
           label={t("iniCardCodigos")}
           value={totalCodigos}
           hint={t("iniCardCodigosHint")}
-          icon="▤"
+          icon="#"
           onClick={onGoToCatalog}
         />
         <MetricCard
@@ -186,8 +195,16 @@ export default function InicioTab({
           label={t("iniCardSinFoto")}
           value={sinFoto}
           hint={t("iniCardSinFotoHint", totalCodigos)}
-          icon="◫"
+          icon="IMG"
           onClick={onGoToCatalog}
+        />
+        <MetricCard
+          tone={accesoPendiente ? "warning" : "neutral"}
+          label={t("iniCardAccesoPendiente")}
+          value={accesoPendiente === null ? "—" : accesoPendiente}
+          hint={t("iniCardAccesoPendienteHint")}
+          icon="ID"
+          onClick={onGoToClients}
         />
       </section>
 
@@ -237,7 +254,7 @@ export default function InicioTab({
           <header className="inicio-panel__head">
             <div>
               <h2>{t("iniAccesoTitle")}</h2>
-              <p>{t("iniAccesoSub")}</p>
+              <p>{t("iniAccesoSub", accesoPendiente === null ? "—" : accesoPendiente)}</p>
             </div>
           </header>
           <div className="inicio-acceso">
