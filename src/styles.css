@@ -11071,11 +11071,14 @@ tr.client-row--expanded td {
 .admin-catalog-shell .pricing-list-filter {
   align-items: center;
   gap: var(--sp-3);
+  grid-template-columns: auto auto max-content;
+  justify-content: space-between;
 }
 
 .admin-catalog-shell .pricing-list-filter .secondary-button.compact-action {
   flex: 0 0 auto;
-  width: auto;
+  justify-self: end;
+  width: max-content;
 }
 
 @media (max-width: 980px) {
