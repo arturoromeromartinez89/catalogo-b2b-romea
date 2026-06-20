@@ -10875,6 +10875,22 @@ tr.client-row--expanded td {
   margin-bottom: var(--sp-3);
 }
 
+.admin-catalog-shell .inicio-hero,
+.admin-catalog-shell .inicio-hero h1,
+.admin-catalog-shell .inicio-hero h2,
+.admin-catalog-shell .inicio-hero h3,
+.admin-catalog-shell .inicio-hero__title {
+  color: var(--color-text-inverse);
+}
+
+.admin-catalog-shell .inicio-hero__eyebrow {
+  color: var(--brand-200);
+}
+
+.admin-catalog-shell .inicio-hero__sub {
+  color: var(--brand-150);
+}
+
 .admin-catalog-shell .muted,
 .admin-catalog-shell .admin-soft-panel p,
 .admin-catalog-shell .database-admin-card p {
