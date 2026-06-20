@@ -11434,6 +11434,31 @@ tr.client-row--expanded td {
   line-height: var(--leading-tight);
 }
 
+.app-shell h1,
+.app-shell h2,
+.app-shell h3,
+.client-shell h1,
+.client-shell h2,
+.client-shell h3,
+.quote-public-screen h1,
+.quote-public-screen h2,
+.quote-public-screen h3,
+.fin-dashboard h1,
+.fin-dashboard h2,
+.fin-dashboard h3,
+.gf-modal h1,
+.gf-modal h2,
+.gf-modal h3 {
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+}
+
+.brand-fallback strong {
+  font-family: var(--font-sans);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+}
+
 .fin-title {
   font-size: var(--text-2xl);
 }
