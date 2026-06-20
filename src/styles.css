@@ -11175,3 +11175,75 @@ tr.client-row--expanded td {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 900px) {
+  .admin-catalog-shell {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .admin-catalog-shell .admin-catalog-main,
+  .admin-catalog-shell .admin-workspace,
+  .admin-catalog-shell .catalog-admin-view,
+  .admin-catalog-shell .pricing-workspace {
+    min-width: 0;
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  .admin-catalog-shell .admin-workspace,
+  .admin-catalog-shell .pricing-workspace {
+    padding-left: var(--sp-4);
+    padding-right: var(--sp-4);
+  }
+
+  .admin-catalog-shell .clients-page-header,
+  .admin-catalog-shell .price-editor-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-catalog-shell .clients-page-header .new-client-button,
+  .admin-catalog-shell .price-editor-actions,
+  .admin-catalog-shell .price-editor-actions .primary-button,
+  .admin-catalog-shell .price-editor-actions .secondary-button,
+  .admin-catalog-shell .price-editor-actions .danger-button {
+    justify-content: center;
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .admin-catalog-shell .clients-filter-card,
+  .admin-catalog-shell .pricing-list-filter,
+  .admin-catalog-shell .prospect-scan-head,
+  .admin-catalog-shell .prospect-scan-bottom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-catalog-shell .client-search-box,
+  .admin-catalog-shell .clients-filter-card select,
+  .admin-catalog-shell .prospect-scan-card input,
+  .admin-catalog-shell .prospect-scan-card select,
+  .admin-catalog-shell .prospect-scan-card textarea,
+  .admin-catalog-shell .prospect-scan-card button,
+  .admin-catalog-shell .prospect-save-button {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .admin-catalog-shell .price-status-tabs,
+  .admin-catalog-shell .workspace-tabs {
+    flex-wrap: wrap;
+  }
+
+  .admin-catalog-shell .pricing-list-filter .secondary-button.compact-action {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .admin-catalog-shell .cfb-main {
+    min-width: 0;
+    overflow-x: auto;
+  }
+}
