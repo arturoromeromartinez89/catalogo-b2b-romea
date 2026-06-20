@@ -63,7 +63,7 @@ export default function ImportPanel({ onImported, tenantId = "" }) {
     <div className="admin-soft-panel compact-panel" style={{ marginBottom: 16 }}>
       <h3 style={{ marginBottom: 4 }}>Importar desde fuente</h3>
       <p className="muted" style={{ marginBottom: 12 }}>
-        Sube el archivo XLS/XLSX exportado de Commercia Gold. Se importan productos con Estatus = Alta, Activo o Vigente.
+        Sube un XLS/XLSX de ComerciaGold o de otra matriz. El sistema detecta columnas equivalentes como SKU, nombre, categoria, tipo, material, marca y precio.
       </p>
 
       {error ? (
@@ -87,6 +87,7 @@ export default function ImportPanel({ onImported, tenantId = "" }) {
               ["Productos a importar", preview.productos.length, "#059669"],
               ["Omitidos", preview.omitidos.length, "#d97706"],
               ["Total en archivo", preview.total, "#2563eb"],
+              ["Formato detectado", preview.profile === "comerciagold" ? "ComerciaGold" : "Generico", "#4f46e5"],
             ].map(([label, val, color]) => (
               <div key={label} style={{ padding: "12px 16px", borderRadius: 8, border: `1px solid ${color}30`, background: `${color}10`, minWidth: 160 }}>
                 <div style={{ fontSize: 24, fontWeight: 700, color }}>{val.toLocaleString()}</div>

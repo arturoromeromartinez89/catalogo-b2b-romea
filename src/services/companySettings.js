@@ -1,5 +1,8 @@
 import { supabase } from "../lib/supabaseClient";
 
+const ASSET_BUCKET = "company-assets";
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 365;
+
 export const defaultSettings = {
   brand_name: "",
   legal_name: "",
@@ -13,6 +16,20 @@ export const defaultSettings = {
   bank_accounts: [],
   order_instructions: [],
   commercial_terms: "",
+};
+
+const imageExtension = (fileName = "") => {
+  const ext = String(fileName).split(".").pop()?.toLowerCase();
+  if (["jpg", "jpeg", "png", "webp"].includes(ext)) return ext;
+  return "png";
+};
+
+const signedAssetUrl = async (path) => {
+  const { data, error } = await supabase.storage
+    .from(ASSET_BUCKET)
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+  if (error) throw error;
+  return data.signedUrl;
 };
 
 export const fetchCompanySettings = async (tenantId = "") => {
@@ -44,11 +61,14 @@ export const saveCompanySettings = async (settings, tenantId = "") => {
 };
 
 export const uploadLogo = async (file, tenantId = "") => {
-  const ext = file.name.split(".").pop();
-  const owner = tenantId || "global";
-  const path = `logos/${owner}/logo.${ext}`;
-  const { error } = await supabase.storage.from("company-assets").upload(path, file, { upsert: true });
+  if (!tenantId) throw new Error("No hay empresa activa para subir el logo.");
+  const ext = imageExtension(file.name);
+  const path = `${tenantId}/logos/logo.${ext}`;
+  const { error } = await supabase.storage.from(ASSET_BUCKET).upload(path, file, {
+    cacheControl: "31536000",
+    contentType: file.type || `image/${ext}`,
+    upsert: true,
+  });
   if (error) throw error;
-  const { data } = supabase.storage.from("company-assets").getPublicUrl(path);
-  return data.publicUrl;
+  return signedAssetUrl(path);
 };

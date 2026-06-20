@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabaseClient";
 
 const IMAGE_BUCKET = "company-assets";
 const CONCURRENCY = 5;
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 365;
 
 const normalizeCode = (value) =>
   String(value || "")
@@ -27,10 +28,10 @@ const buildProductMap = (products = []) => {
 };
 
 const uploadAndUpdateImage = async ({ file, product, tenantId }) => {
+  if (!tenantId) throw new Error("No hay empresa activa para subir imagenes.");
   const ext = imageExtension(file.name);
   const code = safeStorageName(product.codigo);
-  const owner = tenantId || "global";
-  const path = `products/${owner}/${code}.${ext}`;
+  const path = `${tenantId}/products/${code}.${ext}`;
 
   const upload = await supabase.storage
     .from(IMAGE_BUCKET)
@@ -42,8 +43,11 @@ const uploadAndUpdateImage = async ({ file, product, tenantId }) => {
 
   if (upload.error) throw upload.error;
 
-  const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
-  const publicUrl = data.publicUrl;
+  const { data, error: signedError } = await supabase.storage
+    .from(IMAGE_BUCKET)
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+  if (signedError) throw signedError;
+  const publicUrl = data.signedUrl;
 
   let query = supabase
     .from("products")

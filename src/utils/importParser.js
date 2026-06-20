@@ -1,27 +1,29 @@
-import { normalizeText } from "./textNormalizer";
-import { getNombreProveedor } from "../data/proveedores";
+import { normalizeText } from "./textNormalizer.js";
+import { getNombreProveedor } from "../data/proveedores.js";
 
 const COLUMN_ALIASES = {
-  codigo: ["codigo", "código", "code", "sku", "clave"],
-  modelo: ["modelo", "model"],
-  descripcion: ["descripcion", "descripción", "description", "producto", "nombre"],
-  metal: ["metal"],
-  kilataje: ["kilataje", "karat", "k"],
-  linea: ["linea", "línea", "line"],
-  familia: ["familia", "family"],
-  grupo: ["grupo", "group"],
-  proveedor: ["proveedor", "provider", "supplier", "vendor", "fabricante", "marca", "razon social", "razón social", "nombre proveedor", "proveedor nombre"],
+  codigo: ["codigo", "code", "sku", "clave", "clave producto", "id producto", "item", "referencia", "modelo proveedor"],
+  modelo: ["modelo", "model", "estilo", "style"],
+  descripcion: ["descripcion", "description", "producto", "nombre", "nombre producto", "articulo", "item description"],
+  metal: ["metal", "material", "composicion"],
+  kilataje: ["kilataje", "karat", "k", "calibre"],
+  linea: ["linea", "line", "departamento", "division", "coleccion", "temporada"],
+  familia: ["familia", "family", "categoria", "category", "tipo", "tipo producto", "product type", "rubro"],
+  grupo: ["grupo", "group", "subcategoria", "subcategory", "sub tipo", "subtipo", "clase"],
+  proveedor: ["proveedor", "provider", "supplier", "vendor", "fabricante", "marca", "brand", "razon social", "nombre proveedor", "proveedor nombre"],
   estatus: ["estatus", "status", "estado"],
   pesoPromedio: ["peso prom", "peso prom.", "peso promedio", "peso_promedio", "average weight", "average_weight", "peso"],
-  unidadVenta: ["unidad venta", "unidad_venta", "sales unit", "sales_unit"],
+  unidadVenta: ["unidad venta", "unidad_venta", "sales unit", "sales_unit", "unidad", "unit", "uom"],
   claveVenta: ["clave de venta", "clave venta", "clave_venta", "sales key", "sales_key"],
-  precioMinimo: ["precio minimo", "precio mínimo", "precio_minimo", "minimum price", "minimum_price"],
+  precioMinimo: ["precio minimo", "precio_minimo", "minimum price", "minimum_price", "precio", "price", "precio venta", "precio publico"],
   monedaPrecioMin: ["mon precio min", "moneda precio min", "moneda_precio_min", "currency", "moneda"],
   manoObra: ["m de obra 1", "mano de obra", "mano_obra", "labor price", "labor_price", "labor cost"],
-  numProveed: ["num proveed", "núm proveed", "num prov", "número proveedor"],
+  numProveed: ["num proveed", "num prov", "numero proveedor"],
+  fotoUrl: ["foto_url", "photo_url", "imagen", "image", "url imagen", "url foto", "foto"],
+  tagsBusqueda: ["tags", "tags_busqueda", "search tags", "palabras clave", "keywords"],
 };
 
-const LINEAS_OMITIR = [
+const LINEAS_OMITIR_COMERCIAGOLD = [
   "GPO VARIOS",
   "GPO COLOR",
   "GPO CADENA",
@@ -48,7 +50,8 @@ const LINEAS_OMITIR = [
   "PIEZAS 14K",
 ].map(normalizeText);
 
-const ACTIVE_STATUSES = new Set(["alta", "activo", "active", "vigente", "si", "sí", "yes", "true", "1"]);
+const ACTIVE_STATUSES = new Set(["alta", "activo", "active", "vigente", "si", "yes", "true", "1"]);
+const INACTIVE_STATUSES = new Set(["baja", "inactivo", "inactive", "discontinued", "no", "false", "0"]);
 
 const normalizeHeader = (value) => normalizeText(String(value || "").replace(/[_-]+/g, " "));
 
@@ -72,18 +75,19 @@ const buildSearchText = (product) =>
       product.linea,
       product.familia,
       product.grupo,
+      product.proveedor,
       product.tagsBusqueda,
     ].join(" ")
   );
+
+const includesAlias = (headers, field) =>
+  COLUMN_ALIASES[field].some((alias) => headers.includes(normalizeHeader(alias)));
 
 const findHeaderRowIndex = (rows) => {
   const maxRowsToCheck = Math.min(rows.length, 10);
   for (let index = 0; index < maxRowsToCheck; index += 1) {
     const normalized = rows[index].map(normalizeHeader);
-    const hasCode = COLUMN_ALIASES.codigo.some((alias) => normalized.includes(normalizeHeader(alias)));
-    const hasDescription = COLUMN_ALIASES.descripcion.some((alias) => normalized.includes(normalizeHeader(alias)));
-    const hasStatus = COLUMN_ALIASES.estatus.some((alias) => normalized.includes(normalizeHeader(alias)));
-    if (hasCode && hasDescription && hasStatus) return index;
+    if (includesAlias(normalized, "codigo") && includesAlias(normalized, "descripcion")) return index;
   }
   return -1;
 };
@@ -100,6 +104,19 @@ const buildColumnIndex = (headerRow) => {
   }, {});
 };
 
+const detectImportProfile = (colIdx) =>
+  colIdx.numProveed >= 0 || colIdx.manoObra >= 0 || colIdx.claveVenta >= 0
+    ? "comerciagold"
+    : "generic";
+
+const shouldImportStatus = (estatus, hasStatus) => {
+  if (!hasStatus) return true;
+  const normalized = normalizeText(estatus);
+  if (!normalized) return true;
+  if (INACTIVE_STATUSES.has(normalized)) return false;
+  return ACTIVE_STATUSES.has(normalized) || !INACTIVE_STATUSES.has(normalized);
+};
+
 export const parseImportFile = async (file) => {
   const { read, utils } = await import("xlsx");
   const buffer = await file.arrayBuffer();
@@ -109,14 +126,16 @@ export const parseImportFile = async (file) => {
 
   const headerRowIndex = findHeaderRowIndex(rows);
   if (headerRowIndex < 0) {
-    throw new Error("No encontré encabezados válidos. Debe existir Código, Descripción y Estatus.");
+    throw new Error("No encontre encabezados validos. Debe existir codigo/SKU y descripcion/nombre.");
   }
 
   const colIdx = buildColumnIndex(rows[headerRowIndex]);
-  const missing = ["codigo", "descripcion", "estatus"].filter((field) => colIdx[field] < 0);
+  const missing = ["codigo", "descripcion"].filter((field) => colIdx[field] < 0);
   if (missing.length) throw new Error(`Columnas faltantes: ${missing.join(", ")}`);
 
   const get = (row, field) => (colIdx[field] >= 0 ? row[colIdx[field]] : null);
+  const profile = detectImportProfile(colIdx);
+  const hasStatus = colIdx.estatus >= 0;
   const productos = [];
   const omitidos = [];
   const duplicados = new Set();
@@ -130,12 +149,12 @@ export const parseImportFile = async (file) => {
     const linea = parseString(get(row, "linea"));
 
     if (!codigo) continue;
-    if (!ACTIVE_STATUSES.has(normalizeText(estatus))) {
-      omitidos.push({ codigo, razon: `Estatus no activo: ${estatus || "vacío"}` });
+    if (!shouldImportStatus(estatus, hasStatus)) {
+      omitidos.push({ codigo, razon: `Estatus no activo: ${estatus || "vacio"}` });
       continue;
     }
-    if (LINEAS_OMITIR.includes(normalizeText(linea))) {
-      omitidos.push({ codigo, razon: `Línea omitida: ${linea}` });
+    if (profile === "comerciagold" && LINEAS_OMITIR_COMERCIAGOLD.includes(normalizeText(linea))) {
+      omitidos.push({ codigo, razon: `Linea omitida: ${linea}` });
       continue;
     }
     if (duplicados.has(codigo)) {
@@ -153,34 +172,34 @@ export const parseImportFile = async (file) => {
       linea,
       familia: parseString(get(row, "familia")),
       grupo: parseString(get(row, "grupo")),
-      proveedor: parseString(get(row, "proveedor")),
+      proveedor: parseString(get(row, "proveedor")) || getNombreProveedor(get(row, "numProveed")),
       genero: "",
       acabado: "",
       piedra: "",
       medida: "",
       estatus: "Activo",
       pesoPromedio: parseNumber(get(row, "pesoPromedio")),
-      unidadVenta: parseString(get(row, "unidadVenta")),
+      unidadVenta: parseString(get(row, "unidadVenta")) || "pieza",
       claveVenta: parseString(get(row, "claveVenta")),
       precioMinimo: parseNumber(get(row, "precioMinimo")),
       monedaPrecioMin: parseString(get(row, "monedaPrecioMin")) || "MXN",
       manoObra: parseNumber(get(row, "manoObra")),
-      proveedor: parseString(get(row, "proveedor")) || getNombreProveedor(get(row, "numProveed")),
-      fotoUrl: "",
+      fotoUrl: parseString(get(row, "fotoUrl")),
       fotoUrl2: "",
       fotoUrl3: "",
       visibleWeb: true,
       ordenWeb: index,
-      tagsBusqueda: "",
+      tagsBusqueda: parseString(get(row, "tagsBusqueda")),
     };
 
-    producto.tagsBusqueda = [
+    producto.tagsBusqueda = producto.tagsBusqueda || [
       producto.descripcion,
       producto.metal,
       producto.kilataje,
       producto.familia,
       producto.grupo,
       producto.linea,
+      producto.proveedor,
     ]
       .filter(Boolean)
       .join(" ")
@@ -194,5 +213,6 @@ export const parseImportFile = async (file) => {
     productos,
     omitidos,
     total: Math.max(0, rows.length - headerRowIndex - 1),
+    profile,
   };
 };
