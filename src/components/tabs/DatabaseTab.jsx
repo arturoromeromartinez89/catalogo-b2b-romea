@@ -26,15 +26,14 @@ export default function DatabaseTab({
           <h2>{language === "en" ? "Database administration" : "Administracion de base de datos"}</h2>
           <p className="muted">{t("databaseOperationsHelp")}</p>
 
-          <ImportPanel
-            onImported={load}
-            tenantId={tenantId}
-            embedded
-            triggerLabel="Cargar desde Excel"
-            triggerClassName="primary-button compact-action database-upload-action"
-          />
-
           <div className="database-action-grid">
+            <ImportPanel
+              onImported={load}
+              tenantId={tenantId}
+              buttonOnly
+              triggerLabel="Cargar desde Excel"
+              triggerClassName="primary-button compact-action database-upload-action"
+            />
             <ExcelTemplateButton />
             <CatalogExportButton products={products} />
             <button
