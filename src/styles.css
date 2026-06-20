@@ -11187,6 +11187,7 @@ tr.client-row--expanded td {
   .admin-catalog-shell .admin-workspace,
   .admin-catalog-shell .catalog-admin-view,
   .admin-catalog-shell .pricing-workspace {
+    grid-template-columns: minmax(0, 1fr);
     min-width: 0;
     overflow-x: hidden;
     width: 100%;
@@ -11196,6 +11197,17 @@ tr.client-row--expanded td {
   .admin-catalog-shell .pricing-workspace {
     padding-left: var(--sp-4);
     padding-right: var(--sp-4);
+  }
+
+  .admin-catalog-shell .clients-page-header,
+  .admin-catalog-shell .clients-filter-card,
+  .admin-catalog-shell .clients-table-card,
+  .admin-catalog-shell .prospect-scan-card,
+  .admin-catalog-shell .price-editor-page,
+  .admin-catalog-shell .price-editor-toolbar {
+    box-sizing: border-box;
+    max-width: 100%;
+    width: 100%;
   }
 
   .admin-catalog-shell .clients-page-header,
