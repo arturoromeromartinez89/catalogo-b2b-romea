@@ -15,6 +15,7 @@ import { fetchCompanySettings } from "../services/companySettings";
 import { fetchTenantFeatures } from "../services/adminModuleService";
 // Tabs extraídos — step 1 del refactor progresivo
 import TenantsTab from "./tabs/TenantsTab";
+import InicioTab from "./tabs/InicioTab";
 import CatalogTab from "./tabs/CatalogTab";
 import ClientsTab from "./tabs/ClientsTab";
 import ProspectsTab from "./tabs/ProspectsTab";
@@ -61,7 +62,7 @@ const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ci
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
 const PRODUCT_RENDER_BATCH = 60;
-const baseTabs = ["catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
+const baseTabs = ["inicio", "catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
 const configurableOnlyTabs = ["components"];
 const adminModuleTabs = ["administracion"];
 // Navegación organizada por las preguntas del negocio, no por tablas.
@@ -80,6 +81,7 @@ const ADMIN_SUB_TABS = [
 ];
 const tabKeys = {
   tenants:       "tenants",
+  inicio:        "inicio",
   catalog:       "catalog",
   preorders:     "preorders",
   clients:       "clients",
@@ -92,6 +94,7 @@ const tabKeys = {
 };
 const titleKeys = {
   tenants:       "tenants",
+  inicio:        "inicio",
   catalog:       "adminCatalog",
   preorders:     "preorders",
   clients:       "clients",
@@ -232,8 +235,9 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const activeTenant = useMemo(() => tenants.find((tenant) => tenant.id === tenantId), [tenants, tenantId]);
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
   const tabs = superadmin ? ["tenants", ...baseTabs] : [...baseTabs]; // se extiende abajo con extraTabs
-  const [tab, setTab] = useState("catalog");
+  const [tab, setTab] = useState("inicio");
   const [adminSubTab, setAdminSubTab] = useState("inicio");
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("");
   const [actionNotice, setActionNotice] = useState(null);
@@ -417,6 +421,14 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   }, [tenantId]);
 
   const products = data ? data.products : sampleProducts;
+  // Datos de cuenta para el header (profiles no guarda nombre → fallback al correo).
+  const accountName = (
+    (profile?.full_name || profile?.name || (profile?.email ? profile.email.split("@")[0] : ""))
+      .replace(/[._-]+/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase())
+  ) || t("hdrRoleAdmin");
+  const accountInitial = (accountName || "?").charAt(0).toUpperCase();
+  const accountRoleLabel = profile?.role === "client" ? t("hdrRoleClient") : t("hdrRoleAdmin");
+  const headerBrandName = activeCompany?.brand_name || activeCompany?.legal_name || t("b2bCatalog");
   const selectedClient = useMemo(() => data?.clients.find((client) => client.id === selectedClientId), [data?.clients, selectedClientId]);
   const configurableCatalogEnabled = tenantFeatures?.modulo_configurable === true;
   const adminModuleEnabled = tenantFeatures?.modulo_admin === true;
@@ -1287,18 +1299,75 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       ) : null}
 
       <main className="admin-catalog-main">
-        <header className="admin-catalog-header minimal">
+        <header className="admin-catalog-header app-topbar">
+          <div className="topbar-brand">
+            <BrandLogo company={activeCompany} size="sm" />
+            <span className="topbar-brand__divider" aria-hidden="true" />
+            <span className="topbar-brand__role">{t("hdrPortalAdmin")}</span>
+          </div>
           <div className="admin-header-context">
             {superadmin && activeTenant ? <span>Empresa activa: {activeTenant.name}</span> : null}
             {status && tab !== "catalog" ? <span className="header-status-text">{status}</span> : null}
           </div>
           <div className="admin-header-actions">
             <LanguageToggle />
-            <button className="header-logout-button" type="button" onClick={handleSignOut} disabled={signingOut}>
-              {signingOut ? "Saliendo..." : t("logout")}
-            </button>
+            <div className="account-cluster">
+              <button
+                className="account-trigger"
+                type="button"
+                onClick={() => setAccountMenuOpen((open) => !open)}
+                aria-haspopup="menu"
+                aria-expanded={accountMenuOpen}
+              >
+                <span className="account-avatar" aria-hidden="true">{accountInitial}</span>
+                <span className="account-trigger__text">
+                  <span className="account-trigger__name">{accountName}</span>
+                  <span className="account-trigger__role">{accountRoleLabel}</span>
+                </span>
+                <svg className="account-trigger__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              {accountMenuOpen ? (
+                <>
+                  <button className="account-backdrop" type="button" aria-label="Cerrar menú" onClick={() => setAccountMenuOpen(false)} />
+                  <div className="account-menu" role="menu">
+                    <div className="account-menu__head">
+                      <span className="account-menu__name">{accountName}</span>
+                      <span className="account-menu__email">{profile?.email}</span>
+                    </div>
+                    <button className="account-menu__item" type="button" role="menuitem" title={t("hdrProximamente")} onClick={() => setAccountMenuOpen(false)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" /></svg>
+                      {t("hdrMiCuenta")}
+                    </button>
+                    <button className="account-menu__item" type="button" role="menuitem" title={t("hdrProximamente")} onClick={() => setAccountMenuOpen(false)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
+                      {t("hdrNotificaciones")}
+                    </button>
+                    <button className="account-menu__item account-menu__item--danger" type="button" role="menuitem" onClick={handleSignOut} disabled={signingOut}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                      {signingOut ? "Saliendo..." : t("logout")}
+                    </button>
+                  </div>
+                </>
+              ) : null}
+            </div>
           </div>
         </header>
+
+        {tab === "inicio" ? (
+          <InicioTab
+            profile={profile}
+            tenantId={tenantId}
+            products={products}
+            clients={data?.clients || []}
+            brandName={headerBrandName}
+            onGoToPreorders={() => changeTab("preorders")}
+            onGoToCatalog={() => changeTab("catalog")}
+            onGoToClients={() => changeTab("clients")}
+            onReviewClient={handleViewClientPreorders}
+          />
+        ) : null}
 
         {tab === "tenants" && superadmin ? (
           <TenantsTab
@@ -1574,7 +1643,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       ) : null}
       {/* El cajón de selección es del flujo de catálogo/preórdenes — no estorba
           en el módulo financiero ni en empresa/base de datos */}
-      {tab !== "administracion" && tab !== "company" && tab !== "database" ? (
+      {tab !== "administracion" && tab !== "company" && tab !== "database" && tab !== "inicio" ? (
         <SelectedProductsDrawer
           preorderProducts={preorderProducts}
           catalogProducts={catalogSelectionProducts}
