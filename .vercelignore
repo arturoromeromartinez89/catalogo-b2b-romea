@@ -1,0 +1,12 @@
+.claude/
+.env*
+.vercel/
+dist/
+node_modules/
+supabase/.temp/
+
+CLAUDE.md
+demo-exhibidores/
+docs/HANDOFF-CLAUDE-*.md
+scripts/gen-*.mjs
+scripts/gen-*.py
