@@ -5,6 +5,28 @@ import { getTerminologyByProfile } from "../utils/catalogTerminology";
 
 const BATCH_SIZE = 200;
 
+const topItems = (items = [], max = 8) => items.slice(0, max);
+
+function AnalysisList({ title, items = [], emptyText = "Sin datos detectados." }) {
+  return (
+    <div style={{ border: "1px solid var(--color-border-tertiary)", borderRadius: 8, padding: 12, background: "var(--color-background-primary)" }}>
+      <h4 style={{ margin: "0 0 8px", fontSize: 13 }}>{title}</h4>
+      {items.length ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {topItems(items).map((item) => (
+            <div key={`${title}-${item.name || item.reason}`} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 12 }}>
+              <span style={{ color: "var(--color-text-primary)" }}>{item.name || item.reason}</span>
+              <strong>{Number(item.count || 0).toLocaleString()}</strong>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="muted" style={{ margin: 0, fontSize: 12 }}>{emptyText}</p>
+      )}
+    </div>
+  );
+}
+
 export default function ImportPanel({ onImported, tenantId = "" }) {
   const fileRef = useRef();
   const [step, setStep] = useState("idle");
@@ -61,6 +83,7 @@ export default function ImportPanel({ onImported, tenantId = "" }) {
   };
 
   const terminology = preview ? getTerminologyByProfile(preview.profile, "es") : {};
+  const analysis = preview?.analysis || {};
   const previewHeadings = [
     "Codigo",
     "Descripcion",
@@ -93,6 +116,62 @@ export default function ImportPanel({ onImported, tenantId = "" }) {
 
       {step === "preview" && preview ? (
         <div>
+          <div style={{ padding: 14, border: "1px solid var(--color-border-tertiary)", borderRadius: 8, background: "var(--color-background-secondary)", marginBottom: 16 }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: 16 }}>Resumen antes de importar</h3>
+            <p className="muted" style={{ margin: "0 0 12px", fontSize: 13 }}>
+              El sistema ya leyo tu Excel. Si confirmas, estos productos se guardaran en la base de datos de esta empresa.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginBottom: 12 }}>
+              {[
+                ["Codigos leidos", analysis.totalRows ?? preview.total, "#2563eb"],
+                ["Listos para importar", analysis.importableCount ?? preview.productos.length, "#059669"],
+                ["Codigos repetidos", analysis.duplicateCount ?? 0, "#d97706"],
+                ["Omitidos", analysis.omittedCount ?? preview.omitidos.length, "#dc2626"],
+              ].map(([label, value, color]) => (
+                <div key={label} style={{ padding: "10px 12px", borderRadius: 8, background: `${color}10`, border: `1px solid ${color}30` }}>
+                  <strong style={{ display: "block", fontSize: 22, color }}>{Number(value || 0).toLocaleString()}</strong>
+                  <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{label}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginBottom: 12 }}>
+              <AnalysisList title={terminology.familia || "Categorias"} items={analysis.columns?.categories || []} />
+              <AnalysisList title={terminology.grupo || "Subcategorias"} items={analysis.columns?.subcategories || []} />
+              <AnalysisList title={terminology.metal || "Materiales"} items={analysis.columns?.materials || []} />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+              <AnalysisList title="Omitidos por razon" items={analysis.omittedByReason || []} emptyText="No se omitira ningun producto." />
+              <div style={{ border: "1px solid var(--color-border-tertiary)", borderRadius: 8, padding: 12, background: "var(--color-background-primary)" }}>
+                <h4 style={{ margin: "0 0 8px", fontSize: 13 }}>Botones rapidos sugeridos</h4>
+                {(analysis.quickFilterSuggestions || []).length ? (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {analysis.quickFilterSuggestions.map((item) => (
+                      <span key={item.label} style={{ padding: "5px 9px", borderRadius: 999, background: "#eef2ff", color: "#3730a3", fontSize: 12, fontWeight: 600 }}>
+                        {item.label} ({Number(item.count || 0).toLocaleString()})
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="muted" style={{ margin: 0, fontSize: 12 }}>No hay categorias suficientes para sugerir botones.</p>
+                )}
+              </div>
+            </div>
+
+            {analysis.duplicateCodes?.length ? (
+              <p className="muted" style={{ margin: "10px 0 0", fontSize: 12 }}>
+                Repetidos detectados: {analysis.duplicateCodes.join(", ")}
+                {analysis.duplicateCount > analysis.duplicateCodes.length ? "..." : ""}
+              </p>
+            ) : null}
+            {(analysis.notes || []).length ? (
+              <ul style={{ margin: "10px 0 0", paddingLeft: 18, fontSize: 12, color: "var(--color-text-secondary)" }}>
+                {analysis.notes.map((note) => <li key={note}>{note}</li>)}
+              </ul>
+            ) : null}
+          </div>
+
           <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
             {[
               ["Productos a importar", preview.productos.length, "#059669"],

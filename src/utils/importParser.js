@@ -117,6 +117,68 @@ const shouldImportStatus = (estatus, hasStatus) => {
   return ACTIVE_STATUSES.has(normalized) || !INACTIVE_STATUSES.has(normalized);
 };
 
+const countBy = (items, field) => {
+  const counts = new Map();
+  items.forEach((item) => {
+    const value = parseString(item[field]) || "Sin dato";
+    counts.set(value, (counts.get(value) || 0) + 1);
+  });
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "es"));
+};
+
+const countOmittedByReason = (omitidos) => {
+  const counts = new Map();
+  omitidos.forEach((item) => {
+    const reason = String(item.razon || "Omitido");
+    const key = reason.startsWith("Estatus no activo")
+      ? "Estatus no activo"
+      : reason.startsWith("Linea omitida")
+        ? "Linea omitida"
+        : reason;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  return [...counts.entries()]
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason, "es"));
+};
+
+const buildQuickFilterSuggestions = (productos, profile) => {
+  const categories = countBy(productos, "familia").filter((item) => item.name !== "Sin dato");
+  const fallbackField = profile === "comerciagold" ? "familia" : "grupo";
+  const fallback = countBy(productos, fallbackField).filter((item) => item.name !== "Sin dato");
+  const source = categories.length ? categories : fallback;
+
+  return source.slice(0, 8).map((item) => ({
+    label: item.name,
+    count: item.count,
+    matchField: categories.length ? "familia" : fallbackField,
+  }));
+};
+
+const buildAnalysis = ({ productos, omitidos, total, profile, duplicateCodes }) => ({
+  totalRows: total,
+  importableCount: productos.length,
+  omittedCount: omitidos.length,
+  duplicateCount: duplicateCodes.length,
+  duplicateCodes: duplicateCodes.slice(0, 25),
+  omittedByReason: countOmittedByReason(omitidos),
+  columns: {
+    categories: countBy(productos, "familia").slice(0, 20),
+    subcategories: countBy(productos, "grupo").slice(0, 20),
+    materials: countBy(productos, "metal").slice(0, 20),
+    lines: countBy(productos, "linea").slice(0, 20),
+    providers: countBy(productos, "proveedor").slice(0, 20),
+  },
+  quickFilterSuggestions: buildQuickFilterSuggestions(productos, profile),
+  notes: [
+    "Los codigos nuevos se agregan al catalogo.",
+    "Si un codigo ya existe en la base, se actualiza con la informacion del Excel.",
+    "Los codigos repetidos dentro del mismo archivo se omiten despues de la primera aparicion.",
+  ],
+});
+
 export const parseImportFile = async (file) => {
   const { read, utils } = await import("xlsx");
   const buffer = await file.arrayBuffer();
@@ -139,6 +201,7 @@ export const parseImportFile = async (file) => {
   const productos = [];
   const omitidos = [];
   const duplicados = new Set();
+  const duplicateCodes = [];
 
   for (let index = headerRowIndex + 1; index < rows.length; index += 1) {
     const row = rows[index];
@@ -159,6 +222,7 @@ export const parseImportFile = async (file) => {
     }
     if (duplicados.has(codigo)) {
       omitidos.push({ codigo, razon: "Duplicado en archivo" });
+      duplicateCodes.push(codigo);
       continue;
     }
     duplicados.add(codigo);
@@ -214,5 +278,12 @@ export const parseImportFile = async (file) => {
     omitidos,
     total: Math.max(0, rows.length - headerRowIndex - 1),
     profile,
+    analysis: buildAnalysis({
+      productos,
+      omitidos,
+      total: Math.max(0, rows.length - headerRowIndex - 1),
+      profile,
+      duplicateCodes,
+    }),
   };
 };
