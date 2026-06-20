@@ -11300,6 +11300,66 @@ tr.client-row--expanded td {
   min-height: 30px;
 }
 
+.login-shell,
+.login-shell button,
+.login-shell input {
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+}
+
+.login-brand-orb {
+  display: none;
+}
+
+.login-icon-box,
+.login-client-logo,
+.login-input-wrap,
+.login-submit {
+  border-radius: var(--radius-md);
+}
+
+.login-brand-content h1,
+.login-form-card h2,
+.empty-state h2,
+.admin-empty-panel h2 {
+  font-family: var(--font-sans);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0;
+  line-height: var(--leading-tight);
+}
+
+.login-brand-content h1 {
+  font-size: var(--text-3xl);
+}
+
+.login-form-card h2,
+.empty-state h2,
+.admin-empty-panel h2 {
+  color: var(--color-text-primary);
+  font-size: var(--text-xl);
+}
+
+.login-brand-content p,
+.login-form-card p,
+.login-brand-content li {
+  font-size: var(--text-sm);
+}
+
+.login-input-wrap input {
+  font-size: var(--text-base);
+}
+
+.login-submit {
+  font-size: var(--text-sm);
+  min-height: 42px;
+}
+
+.product-card,
+.empty-state,
+.product-detail {
+  border-radius: var(--radius-lg);
+}
+
 @media (max-width: 980px) {
   .admin-catalog-shell .database-admin-card .database-action-grid,
   .admin-catalog-shell .import-kpi-grid,
