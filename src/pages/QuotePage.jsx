@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import BrandLogo from "../components/BrandLogo";
 import LanguageToggle from "../components/LanguageToggle";
 import { useCompany } from "../contexts/CompanyContext";
+import { getAppPathname } from "../utils/basePath";
 import { useLanguage } from "../i18n/LanguageContext";
 import { fetchCompanySettings } from "../services/companySettings";
 import { fetchQuoteLinkByToken, submitQuoteLinkSelection } from "../services/quoteLinkService";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 
 const readToken = () => {
-  const match = window.location.pathname.match(/\/cotizacion\/([^/]+)/);
+  const match = getAppPathname().match(/\/cotizacion\/([^/]+)/);
   return match ? decodeURIComponent(match[1]) : "";
 };
 

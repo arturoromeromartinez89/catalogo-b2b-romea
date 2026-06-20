@@ -1,8 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { normalizeText } from "../../utils/textNormalizer";
-import { fetchClientAccessStatuses, fetchClientPreorderStats, fetchClientProfileStatus, setClientProfileActive, updateClientAccessPassword, setClientPassword } from "../../services/supabaseCatalog";
-import { supabase } from "../../lib/supabaseClient";
-import { lockAuth, unlockAuth } from "../../lib/authLock";
+import { fetchClientAccessStatuses, fetchClientPreorderStats, fetchClientProfileStatus, sendClientAccessEmail, setClientProfileActive } from "../../services/supabaseCatalog";
+import { getAppUrl } from "../../utils/basePath";
 
 const displayContactEmail = (email) =>
   String(email || "").endsWith("@prospect.local") ? "-" : email || "-";
@@ -225,24 +224,12 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
   );
 }
 
-// Genera contraseña segura de 12 caracteres
-const genPassword = () => {
-  const pool = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
-  let p = "";
-  for (let i = 0; i < 12; i++) p += pool[Math.floor(Math.random() * pool.length)];
-  return p;
-};
-
 // ─── Mini-center de actividad y credenciales por cliente ──────────────────────
 
 function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, onAccessGranted, laborLists = [], onSaveLaborList }) {
   const rawEmail = client.email && !String(client.email).endsWith("@prospect.local") ? client.email : "";
   const [laborSel, setLaborSel] = useState(client.labor_list_id || "");
   const [savingLabor, setSavingLabor] = useState(false);
-  const [currentPwd, setCurrentPwd] = useState(client.access_password || "");  // contraseña vigente (copia visible)
-  const [credEmail,    setCredEmail]    = useState(rawEmail);
-  const [credPwd,      setCredPwd]      = useState("");
-  const [showPwd,      setShowPwd]      = useState(false);
   const [creating,     setCreating]     = useState(false);
   const [accessStatus, setAccessStatus] = useState(hasAccess ? "active" : "none");
   const [profileActive, setProfileActive] = useState(null);  // null=cargando, true/false
@@ -281,78 +268,22 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
     }
   };
 
-  const handleCreateAccess = async () => {
-    const emailTrimmed = credEmail.trim().toLowerCase();
-    if (!emailTrimmed) { showMsg("Ingresa el correo del cliente primero.", false); return; }
-    if (!credPwd)       { showMsg("Genera o escribe una contraseña primero.", false); return; }
-    if (credPwd.length < 6) { showMsg("La contraseña debe tener mínimo 6 caracteres.", false); return; }
-
-    setCreating(true);
-    setMsg({ text: "", ok: true });
-
-    // Guardar sesión del admin y bloquear AuthGate para evitar que la UI cambie
-    const { data: { session: adminSession } } = await supabase.auth.getSession();
-    lockAuth();
-
-    try {
-      const { data: signUpData, error } = await supabase.auth.signUp({
-        email: emailTrimmed,
-        password: credPwd,
-      });
-
-      if (error) {
-        if (error.message?.toLowerCase().includes("already registered") ||
-            error.message?.toLowerCase().includes("user already")) {
-          unlockAuth();
-          showMsg("✅ Este correo ya tiene cuenta. Copia la invitación con la contraseña nueva.", true);
-          setAccessStatus("active");
-          onAccessGranted?.();
-          setCreating(false);
-          return;
-        }
-        unlockAuth();
-        throw error;
-      }
-
-      // Si Supabase creó una sesión para el cliente (email confirm desactivado),
-      // cerrarla y restaurar la del admin ANTES de desbloquear AuthGate.
-      const { data: { session: afterSession } } = await supabase.auth.getSession();
-      if (afterSession && adminSession && afterSession.user?.id !== adminSession.user?.id) {
-        await supabase.auth.signOut({ scope: "local" });
-        unlockAuth();  // Desbloquear ANTES de setSession para que AuthGate lo capture
-        await supabase.auth.setSession({
-          access_token:  adminSession.access_token,
-          refresh_token: adminSession.refresh_token,
-        });
-      } else {
-        unlockAuth();
-      }
-
-      showMsg("✅ Cuenta creada. Copia la invitación y mándala al cliente por WhatsApp.", true);
-      setAccessStatus("active");
-      setProfileActive(true);
-      setCurrentPwd(credPwd);
-      updateClientAccessPassword(client.id, credPwd).catch(() => {});  // guarda la copia visible
-      onAccessGranted?.();
-    } catch (e) {
-      unlockAuth();
-      showMsg(`❌ ${e.message}`, false);
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  // Cambiar la contraseña de una cuenta YA existente, ahí mismo (vía la Edge
-  // Function set-client-password, que la cambia en login y guarda la copia).
-  const handleChangePassword = async () => {
-    if (!credPwd || credPwd.length < 6) { showMsg("Escribe una nueva contraseña (mínimo 6 caracteres).", false); return; }
+  const handleSendAccess = async () => {
+    if (!rawEmail) { showMsg("Guarda primero un correo válido para este cliente.", false); return; }
     setCreating(true);
     try {
-      await setClientPassword(client.id, credPwd);
-      setCurrentPwd(credPwd);
-      showMsg("✅ Contraseña cambiada. Esta es la contraseña vigente del cliente.", true);
+      const action = accessStatus === "active" ? "reset" : "invite";
+      await sendClientAccessEmail(client.id, action);
+      if (action === "invite") {
+        setAccessStatus("active");
+        setProfileActive(true);
+        onAccessGranted?.();
+      }
+      showMsg(action === "invite"
+        ? "Invitación enviada. El cliente creará su propia contraseña desde el correo."
+        : "Correo de recuperación enviado.", true);
     } catch (e) {
-      showMsg(`❌ ${e.message}`, false);
+      showMsg(e.message, false);
     } finally {
       setCreating(false);
     }
@@ -374,20 +305,15 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
   };
 
   const handleCopyInvite = async () => {
-    const emailForMsg = credEmail.trim() || rawEmail;
-    if (!emailForMsg) { showMsg("Ingresa el correo antes de copiar.", false); return; }
-    const appUrl = window.location.origin;
+    if (!rawEmail) { showMsg("Guarda primero un correo válido para este cliente.", false); return; }
+    const appUrl = getAppUrl();
     const clientName = client.company || client.name || "cliente";
-    const pwdLine = credPwd
-      ? `🔑 Contraseña: ${credPwd}`
-      : "🔑 Contraseña: (la que te compartí)";
     const text =
       `Hola ${clientName},\n\n` +
-      `Ya tienes acceso al Catálogo B2B Vanguardia Joyera.\n\n` +
+      `Te enviamos por correo el acceso al catálogo B2B.\n\n` +
       `🔗 Enlace: ${appUrl}\n` +
-      `📧 Correo: ${emailForMsg}\n` +
-      `${pwdLine}\n\n` +
-      `Entra con esos datos y podrás explorar el catálogo y generar preórdenes.\n` +
+      `📧 Correo: ${rawEmail}\n\n` +
+      `Abre el correo de invitación para crear tu contraseña. Nadie más podrá verla.\n` +
       `Si tienes dudas, contáctanos.`;
     try {
       await navigator.clipboard.writeText(text);
@@ -480,58 +406,14 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
           </p>
         ) : (
           <>
-            {accessStatus === "active" ? (
-              <div className="client-current-pwd">
-                <span className="client-current-pwd__label">Contraseña vigente</span>
-                <code className="client-current-pwd__value">
-                  {currentPwd || "— (no guardada; escribe una nueva abajo y cámbiala)"}
-                </code>
-                {currentPwd ? (
-                  <button
-                    type="button"
-                    className="secondary-button compact-action"
-                    onClick={() => { try { navigator.clipboard.writeText(currentPwd); showMsg("Contraseña copiada.", true); } catch { /* noop */ } }}
-                  >
-                    Copiar
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
             <div className="client-credentials-row">
-              {/* Correo */}
-              <label className="client-cred-label">
-                Correo
-                <input
-                  className="client-cred-input"
-                  type="email"
-                  value={credEmail}
-                  onChange={(e) => setCredEmail(e.target.value)}
-                  placeholder="correo@empresa.com"
-                  disabled={creating}
-                />
-              </label>
-              {/* Contraseña */}
-              <label className="client-cred-label">
-                Contraseña
-                <div className="client-cred-pwd-row">
-                  <input
-                    className="client-cred-input"
-                    type={showPwd ? "text" : "password"}
-                    value={credPwd}
-                    onChange={(e) => setCredPwd(e.target.value)}
-                    placeholder="Escribe o genera una contraseña"
-                    disabled={creating}
-                  />
-                  <button type="button" className="secondary-button compact-action" style={{ flexShrink: 0 }}
-                    onClick={() => setShowPwd((v) => !v)}>
-                    {showPwd ? "Ocultar" : "Ver"}
-                  </button>
-                  <button type="button" className="secondary-button compact-action" style={{ flexShrink: 0 }}
-                    onClick={() => { setCredPwd(genPassword()); setShowPwd(true); }} disabled={creating}>
-                    Generar
-                  </button>
-                </div>
-              </label>
+              <div className="client-cred-label">
+                Correo de acceso
+                <strong className="client-access-email">{rawEmail}</strong>
+              </div>
+              <p className="client-credentials-hint">
+                La contraseña la crea el cliente desde su correo y nunca se muestra aquí.
+              </p>
             </div>
 
             {msg.text && (
@@ -542,26 +424,26 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
             <div className="client-access-actions-grid">
               <div className="client-access-action-card">
                 <button type="button" className="primary-button" style={{ width: "100%" }}
-                  onClick={accessStatus === "active" ? handleChangePassword : handleCreateAccess}
-                  disabled={creating || !credEmail.trim() || !credPwd}>
+                  onClick={handleSendAccess}
+                  disabled={creating || !rawEmail}>
                   {creating
-                    ? "Procesando..."
-                    : accessStatus === "active" ? "Cambiar contraseña" : "Crear cuenta"}
+                    ? "Enviando..."
+                    : accessStatus === "active" ? "Enviar recuperación" : "Enviar acceso"}
                 </button>
                 <p className="client-access-action-desc">
                   {accessStatus === "active"
-                    ? "Este cliente YA tiene cuenta activa. Escribe una nueva contraseña arriba y se cambia al instante."
-                    : "Registra al cliente en el sistema con el correo y contraseña que definiste arriba."}
+                    ? "El cliente recibirá un enlace para elegir una contraseña nueva."
+                    : "El cliente recibirá una invitación para crear su propia contraseña."}
                 </p>
               </div>
 
               <div className="client-access-action-card">
                 <button type="button" className="secondary-button" style={{ width: "100%" }}
-                  onClick={handleCopyInvite} disabled={!credEmail.trim()}>
+                  onClick={handleCopyInvite} disabled={!rawEmail}>
                   Copiar invitación
                 </button>
                 <p className="client-access-action-desc">
-                  Copia el mensaje con el enlace, correo y contraseña. Pégalo en WhatsApp o donde prefieras.
+                  Copia un mensaje con el enlace y el correo, sin compartir contraseñas.
                 </p>
               </div>
 

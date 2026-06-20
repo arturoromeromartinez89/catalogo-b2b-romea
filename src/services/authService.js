@@ -1,3 +1,5 @@
+import { withBasePath } from "../utils/basePath";
+
 const clearSupabaseAuthStorage = () => {
   if (typeof window === "undefined") return;
   [window.localStorage, window.sessionStorage].forEach((storage) => {
@@ -25,6 +27,6 @@ export const fastSignOut = async (supabase) => {
   if (result?.timedOut) clearSupabaseAuthStorage();
 
   window.setTimeout(() => {
-    window.location.replace("/");
+    window.location.replace(withBasePath());
   }, 120);
 };

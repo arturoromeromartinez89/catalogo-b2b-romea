@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabaseClient";
 import { resolveImageUrl } from "../utils/formatters";
 import { getTenantId, withTenant } from "./tenantUtils";
 import { normalizeText } from "../utils/textNormalizer";
+import { getAppUrl } from "../utils/basePath";
 
 const PAGE_SIZE = 500;
 const UPSERT_BATCH_SIZE = 500;
@@ -448,26 +449,13 @@ export const updateClientAllowedSkus = async (clientId, skus) => {
  * laborListId = "" o null → sin lista asignada (precios base).
  * laborListId = UUID → esa lista se auto-aplica en la preorden del cliente.
  */
-/** Guarda (copia visible) la contraseña que el admin definió para el cliente. */
-export const updateClientAccessPassword = async (clientId, password) => {
-  const { error } = await supabase
-    .from("clients")
-    .update({ access_password: password })
-    .eq("id", clientId);
-  if (error) throw new Error(error.message);
-};
-
-/**
- * Cambia la contraseña de login del cliente (vía Edge Function con service_role)
- * y guarda la copia visible. Requiere desplegar la función set-client-password.
- */
-export const setClientPassword = async (clientId, newPassword) => {
+/** Envía una invitación inicial o un correo de recuperación sin manejar contraseñas. */
+export const sendClientAccessEmail = async (clientId, action) => {
   const { data, error } = await supabase.functions.invoke("set-client-password", {
-    body: { clientId, newPassword },
+    body: { clientId, action, redirectTo: getAppUrl() },
   });
   if (error) {
-    // El cuerpo de error de la función trae el detalle
-    let detail = error.message || "No se pudo cambiar la contraseña.";
+    let detail = error.message || "No se pudo enviar el correo de acceso.";
     try { const ctx = await error.context?.json?.(); if (ctx?.error) detail = ctx.error; } catch { /* noop */ }
     throw new Error(detail);
   }

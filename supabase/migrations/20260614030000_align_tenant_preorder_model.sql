@@ -3,12 +3,10 @@
 alter table public.preorder_items
   add column if not exists comentarios text not null default '',
   add column if not exists configuracion jsonb not null default '{}'::jsonb;
-
 comment on column public.preorder_items.comentarios is
   'Notas visibles de la linea de preorden.';
 comment on column public.preorder_items.configuracion is
   'Snapshot de selecciones del configurador para poder reabrir la preorden.';
-
 insert into public.tenant_features (tenant_id, modulo_admin, modulo_configurable)
 select configured.tenant_id, configured.modulo_admin, configured.modulo_configurable
 from (values
@@ -20,19 +18,16 @@ on conflict (tenant_id) do update
 set modulo_admin = excluded.modulo_admin,
     modulo_configurable = excluded.modulo_configurable,
     updated_at = now();
-
 -- Los superadmins no pertenecen a una empresa y los administradores no son clientes.
 update public.profiles
 set tenant_id = null,
     client_id = null
 where role = 'superadmin'
   and (tenant_id is not null or client_id is not null);
-
 update public.profiles
 set client_id = null
 where role in ('admin', 'tenant_admin')
   and client_id is not null;
-
 create or replace function public.save_preorder_transaction(
   p_preorder jsonb,
   p_items jsonb,
@@ -258,8 +253,6 @@ begin
   );
 end;
 $$;
-
 revoke all on function public.save_preorder_transaction(jsonb, jsonb, text, boolean) from public;
 grant execute on function public.save_preorder_transaction(jsonb, jsonb, text, boolean) to authenticated;
-
 notify pgrst, 'reload schema';

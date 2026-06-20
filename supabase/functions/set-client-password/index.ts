@@ -1,78 +1,163 @@
-// supabase/functions/set-client-password/index.ts
-// ---------------------------------------------------------------------------
-// Cambia la contraseña de LOGIN de un cliente y guarda una copia en
-// clients.access_password (para poder mostrarla en el panel del admin).
-//
-// Seguridad: solo un admin / tenant_admin / superadmin puede llamarla, y solo
-// sobre clientes de SU MISMA empresa (superadmin puede cualquiera). Usa la
-// service_role key (que SOLO vive en el servidor, nunca en el navegador).
-//
-// Desplegar:  supabase functions deploy set-client-password
-// (Las variables SUPABASE_URL, SUPABASE_ANON_KEY y SUPABASE_SERVICE_ROLE_KEY
-//  las inyecta Supabase automáticamente.)
-// ---------------------------------------------------------------------------
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+const defaultPlatformOrigins = [
+  "https://catalogo-b2b-romea.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:4173",
+];
+
+const configuredPlatformOrigins = (Deno.env.get("ALLOWED_ORIGINS") || "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+const platformOrigins = new Set(
+  configuredPlatformOrigins.length ? configuredPlatformOrigins : defaultPlatformOrigins,
+);
+
+const corsHeaders = (origin: string | null, allowed: boolean) => ({
+  ...(origin && allowed ? { "Access-Control-Allow-Origin": origin } : {}),
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Vary": "Origin",
+});
+
+type AdminClient = ReturnType<typeof createClient>;
+
+const getOriginPolicy = async (origin: string | null, admin: AdminClient) => {
+  if (!origin) return { allowed: true, pathPrefixes: [] as string[] };
+  try {
+    const url = new URL(origin);
+    if (url.origin !== origin) return { allowed: false, pathPrefixes: [] as string[] };
+    if (platformOrigins.has(origin)) return { allowed: true, pathPrefixes: [""] };
+    if (url.protocol !== "https:" || url.port) {
+      return { allowed: false, pathPrefixes: [] as string[] };
+    }
+
+    const { data, error } = await admin
+      .from("tenant_domains")
+      .select("path_prefix")
+      .eq("hostname", url.hostname.toLowerCase())
+      .eq("status", "active")
+      .not("verified_at", "is", null);
+    if (error) throw error;
+    const pathPrefixes = (data || []).map((row) => String(row.path_prefix));
+    return { allowed: pathPrefixes.length > 0, pathPrefixes };
+  } catch {
+    return { allowed: false, pathPrefixes: [] as string[] };
+  }
+};
+
+const isAllowedRedirect = async (
+  value: string,
+  requestOrigin: string | null,
+  admin: AdminClient,
+) => {
+  try {
+    const url = new URL(value);
+    if (requestOrigin && url.origin !== requestOrigin) return false;
+    const policy = await getOriginPolicy(url.origin, admin);
+    if (!policy.allowed) return false;
+    return policy.pathPrefixes.some((prefix) => url.pathname === `${prefix}/`);
+  } catch {
+    return false;
+  }
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const origin = req.headers.get("Origin");
+  const url = Deno.env.get("SUPABASE_URL")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const admin = createClient(url, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const originPolicy = await getOriginPolicy(origin, admin);
+  const headers = corsHeaders(origin, originPolicy.allowed);
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+    status,
+    headers: { ...headers, "Content-Type": "application/json" },
+  });
 
-  const json = (body: unknown, status = 200) =>
-    new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  if (req.method === "OPTIONS") {
+    return origin && !originPolicy.allowed
+      ? json({ error: "Origen no autorizado." }, 403)
+      : new Response(null, { status: 204, headers });
+  }
+  if (req.method !== "POST") return json({ error: "Método no permitido." }, 405);
+  if (origin && !originPolicy.allowed) return json({ error: "Origen no autorizado." }, 403);
 
   try {
-    const { clientId, newPassword } = await req.json();
-    if (!clientId || !newPassword || String(newPassword).length < 6) {
-      return json({ error: "Faltan datos o la contraseña es muy corta (mínimo 6 caracteres)." }, 400);
+    const { clientId, action, redirectTo } = await req.json();
+    if (!clientId || !["invite", "reset"].includes(action)) {
+      return json({ error: "Solicitud de acceso inválida." }, 400);
+    }
+    if (!(await isAllowedRedirect(String(redirectTo || ""), origin, admin))) {
+      return json({ error: "Dirección de retorno no autorizada." }, 400);
     }
 
-    const url = Deno.env.get("SUPABASE_URL")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const authHeader = req.headers.get("Authorization") || "";
 
-    // Identidad del que llama (con su propia sesión)
     const caller = createClient(url, anonKey, { global: { headers: { Authorization: authHeader } } });
-    const { data: { user }, error: userErr } = await caller.auth.getUser();
-    if (userErr || !user) return json({ error: "No autenticado." }, 401);
-
-    // Cliente con permisos de administrador (service_role)
-    const admin = createClient(url, serviceKey);
+    const { data: { user }, error: userError } = await caller.auth.getUser();
+    if (userError || !user) return json({ error: "No autenticado." }, 401);
 
     const { data: callerProfile } = await admin
-      .from("profiles").select("role, tenant_id").eq("id", user.id).maybeSingle();
+      .from("profiles")
+      .select("role, tenant_id, active")
+      .eq("id", user.id)
+      .maybeSingle();
     const role = callerProfile?.role;
-    if (!["admin", "tenant_admin", "superadmin"].includes(role)) {
-      return json({ error: "Solo un administrador puede cambiar contraseñas." }, 403);
+    if (callerProfile?.active === false || !["admin", "tenant_admin", "superadmin"].includes(role)) {
+      return json({ error: "No tienes permiso para administrar accesos." }, 403);
     }
 
     const { data: client } = await admin
-      .from("clients").select("id, email, tenant_id").eq("id", clientId).maybeSingle();
+      .from("clients")
+      .select("id, email, tenant_id")
+      .eq("id", clientId)
+      .maybeSingle();
     if (!client) return json({ error: "Cliente no encontrado." }, 404);
     if (role !== "superadmin" && client.tenant_id !== callerProfile.tenant_id) {
-      return json({ error: "Ese cliente no pertenece a tu empresa." }, 403);
+      return json({ error: "Ese cliente pertenece a otra empresa." }, 403);
     }
-    if (!client.email) return json({ error: "El cliente no tiene correo registrado." }, 400);
+    if (!client.email || String(client.email).endsWith("@prospect.local")) {
+      return json({ error: "El cliente no tiene un correo válido." }, 400);
+    }
 
-    const email = String(client.email).toLowerCase();
-    const { data: clientProfile } = await admin
-      .from("profiles").select("id").eq("email", email).eq("role", "client").maybeSingle();
-    if (!clientProfile?.id) return json({ error: "El cliente aún no tiene cuenta de acceso." }, 404);
+    const email = String(client.email).trim().toLowerCase();
+    const { data: existingProfile } = await admin
+      .from("profiles")
+      .select("id, tenant_id, client_id")
+      .eq("email", email)
+      .maybeSingle();
 
-    // Cambiar la contraseña real de login
-    const { error: updErr } = await admin.auth.admin.updateUserById(clientProfile.id, { password: newPassword });
-    if (updErr) return json({ error: updErr.message }, 400);
+    if (action === "invite") {
+      if (existingProfile) return json({ error: "Este correo ya tiene cuenta. Envía una recuperación." }, 409);
+      const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(email, {
+        redirectTo,
+      });
+      if (error) return json({ error: error.message }, 400);
+      if (!invited.user?.id) return json({ error: "No se pudo crear la cuenta invitada." }, 500);
+      const { error: profileError } = await admin
+        .from("profiles")
+        .update({ role: "client", client_id: client.id, tenant_id: client.tenant_id, active: true })
+        .eq("id", invited.user.id);
+      if (profileError) {
+        await admin.auth.admin.deleteUser(invited.user.id);
+        return json({ error: "No se pudo vincular la cuenta con el cliente." }, 500);
+      }
+      return json({ ok: true, action: "invite" });
+    }
 
-    // Guardar la copia visible para el admin
-    await admin.from("clients").update({ access_password: newPassword }).eq("id", clientId);
-
-    return json({ ok: true });
-  } catch (e) {
-    return json({ error: String((e as Error)?.message || e) }, 500);
+    if (!existingProfile || existingProfile.client_id !== client.id || existingProfile.tenant_id !== client.tenant_id) {
+      return json({ error: "No existe una cuenta válida para este cliente." }, 404);
+    }
+    const { error } = await admin.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) return json({ error: error.message }, 400);
+    return json({ ok: true, action: "reset" });
+  } catch (error) {
+    return json({ error: String((error as Error)?.message || error) }, 500);
   }
 });

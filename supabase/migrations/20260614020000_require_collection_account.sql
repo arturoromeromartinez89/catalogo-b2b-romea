@@ -67,17 +67,13 @@ begin
   return new;
 end;
 $$;
-
 drop trigger if exists validate_cobro_destination_account on public.cobros;
 create trigger validate_cobro_destination_account
 before insert or update of tenant_id, medio_pago, monto_recibido,
   moneda_recibida, caja_banco_id, gramos_recibidos, cuenta_plata_id
 on public.cobros
 for each row execute function public.validate_cobro_destination_account();
-
 comment on function public.validate_cobro_destination_account() is
   'Rejects collections without an active destination account from the same tenant and currency.';
-
 revoke all on function public.validate_cobro_destination_account() from public;
-
 notify pgrst, 'reload schema';

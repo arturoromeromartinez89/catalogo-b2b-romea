@@ -4,22 +4,22 @@ import { useLanguage } from "../i18n/LanguageContext";
 
 function ProductCard({ product, onAdd, onOpenDetail }) {
   const { t } = useLanguage();
-  const imageUrl = imageUrlForSize(product.fotoUrl, 360) || buildPlaceholderUrl(t("noPhoto"));
+  const imageUrl = imageUrlForSize(product.fotoUrl, 360);
 
   return (
-    <article className="product-card">
-      <button className="product-image-button" type="button" onClick={() => onOpenDetail(product.codigo)}>
-        <img
-          src={imageUrl}
-          alt={product.descripcion || product.codigo}
-          loading="lazy"
-          decoding="async"
-          fetchPriority="low"
-          onError={(event) => {
-                event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
-          }}
-        />
-      </button>
+    <article className={`product-card${imageUrl ? "" : " no-photo"}`}>
+      {imageUrl ? (
+        <button className="product-image-button" type="button" onClick={() => onOpenDetail(product.codigo)}>
+          <img
+            src={imageUrl}
+            alt={product.descripcion || product.codigo}
+            loading="lazy"
+            decoding="async"
+            fetchPriority="low"
+            onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(t("noPhoto")); }}
+          />
+        </button>
+      ) : null}
       <div className="product-info">
         <div className="product-code">{product.codigo}</div>
         <h3>{shortText(product.descripcion, 82)}</h3>

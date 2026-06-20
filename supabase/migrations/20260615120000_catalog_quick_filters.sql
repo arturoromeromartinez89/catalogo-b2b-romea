@@ -22,19 +22,15 @@ create table if not exists public.catalog_quick_filters (
   unique (tenant_id, slug),
   check (match_type in ('terms', 'without_stone'))
 );
-
 create index if not exists idx_catalog_quick_filters_tenant
   on public.catalog_quick_filters (tenant_id, active, sort_order);
-
 alter table public.catalog_quick_filters enable row level security;
-
 -- Lectura: cualquier usuario autenticado SOLO ve los filtros de SU tenant.
 drop policy if exists "tenant reads quick filters" on public.catalog_quick_filters;
 create policy "tenant reads quick filters" on public.catalog_quick_filters
 for select using (
   tenant_id = public.current_tenant_id()
 );
-
 -- Escritura (insert/update/delete): solo admin del tenant (o superadmin).
 drop policy if exists "admins manage quick filters" on public.catalog_quick_filters;
 create policy "admins manage quick filters" on public.catalog_quick_filters
@@ -45,7 +41,6 @@ for all using (
   public.is_superadmin()
   or (public.is_tenant_admin() and tenant_id = public.current_tenant_id())
 );
-
 -- ── Datos iniciales: filtros joyeros actuales para TODOS los tenants ─────────
 -- Idempotente: ON CONFLICT (tenant_id, slug) DO NOTHING. No pisa cambios.
 insert into public.catalog_quick_filters (tenant_id, slug, label, terms, match_type, sort_order)
@@ -69,5 +64,4 @@ cross join (values
   ('oro',          'Oro',          array['oro','gold','10k','14k','18k'],                                       'terms',        14)
 ) as f(slug, label, terms, match_type, sort_order)
 on conflict (tenant_id, slug) do nothing;
-
 notify pgrst, 'reload schema';

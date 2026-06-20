@@ -522,26 +522,28 @@ export default function ClientCatalogApp({ profile }) {
               <div className="admin-product-grid">
                 {renderedProducts.map((product) => (
                   <article
-                    className={`admin-product-card enabled${addedCodes.includes(product.codigo) ? " in-preorder" : ""}`}
+                    className={`admin-product-card enabled${addedCodes.includes(product.codigo) ? " in-preorder" : ""}${product.fotoUrl ? "" : " no-photo"}`}
                     key={product.id || product.codigo}
                   >
                     {addedCodes.includes(product.codigo)
                       ? <span className="preorder-added-badge">✓ En preorden</span>
                       : null}
-                    <button
-                      className="admin-product-image"
-                      type="button"
-                      onClick={() => setSelectedCode(product.codigo)}
-                    >
-                      <img
-                        src={imageUrlForSize(product.fotoUrl, 360) || buildPlaceholderUrl(t("noPhoto"))}
-                        alt={product.descripcion}
-                        loading="lazy"
-                        decoding="async"
-                        fetchPriority="low"
-                        onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(t("noPhoto")); }}
-                      />
-                    </button>
+                    {product.fotoUrl ? (
+                      <button
+                        className="admin-product-image"
+                        type="button"
+                        onClick={() => setSelectedCode(product.codigo)}
+                      >
+                        <img
+                          src={imageUrlForSize(product.fotoUrl, 360)}
+                          alt={product.descripcion}
+                          loading="lazy"
+                          decoding="async"
+                          fetchPriority="low"
+                          onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(t("noPhoto")); }}
+                        />
+                      </button>
+                    ) : null}
                     <div className="admin-product-info">
                       <strong>{product.codigo}</strong>
                       <h3>{shortText(product.descripcion, 72)}</h3>
