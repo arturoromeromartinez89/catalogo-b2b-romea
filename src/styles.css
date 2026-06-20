@@ -11387,6 +11387,137 @@ tr.client-row--expanded td {
   border-radius: var(--radius-lg);
 }
 
+/* Cross-surface design policy: client, finance, public quote and legacy panels. */
+.app-shell,
+.client-shell,
+.quote-public-screen,
+.fin-dashboard,
+.gf-modal,
+.rem-table,
+.cart-panel,
+.cart-panel button,
+.cart-panel input,
+.cart-panel select,
+.cart-panel textarea,
+.quote-public-screen button,
+.quote-public-screen input,
+.quote-public-screen select,
+.quote-public-screen textarea,
+.fin-dashboard button,
+.fin-dashboard input,
+.fin-dashboard select,
+.fin-dashboard textarea,
+.gf-modal button,
+.gf-modal input,
+.gf-modal select,
+.gf-modal textarea {
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+}
+
+.topbar h1,
+.product-detail h2,
+.cart-header h2,
+.cart-section h3,
+.quote-public-title h1,
+.quote-public-form h2,
+.fin-title,
+.fin-panel__title,
+.bal-section__title,
+.client-form-sections h3,
+.client-command-panel h2,
+.client-mini-center-eyebrow {
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0;
+  line-height: var(--leading-tight);
+}
+
+.fin-title {
+  font-size: var(--text-2xl);
+}
+
+.topbar h1,
+.product-detail h2,
+.cart-header h2,
+.quote-public-title h1 {
+  font-size: var(--text-xl);
+}
+
+.cart-section h3,
+.quote-public-form h2,
+.fin-panel__title,
+.bal-section__title,
+.client-form-sections h3 {
+  font-size: var(--text-lg);
+}
+
+.product-card,
+.product-detail,
+.empty-state,
+.cart-panel,
+.cart-section,
+.cart-item,
+.quote-public-title,
+.quote-public-card,
+.quote-public-form,
+.fin-card,
+.fin-panel,
+.fin-account,
+.gf-step,
+.gf-amount,
+.gf-chip,
+.gf-segmented,
+.rem-table-wrap,
+.bal-kpi,
+.bal-result-table,
+.client-command-panel,
+.client-form-sections section,
+.client-mini-center,
+.client-access-action-card {
+  border-radius: var(--radius-lg);
+}
+
+.product-image-button img,
+.quote-public-card img,
+.cart-item img,
+.gf-input,
+.gf-amount input,
+.client-labor-select,
+.client-cred-input,
+.rem-search,
+.fin-period input,
+.bal-period-picker input,
+.quote-public-form input,
+.quote-public-card input {
+  border-radius: var(--radius-md);
+}
+
+.gf-segmented button,
+.gf-chip,
+.fin-card,
+.fin-account,
+.cart-actions button,
+.quote-public-form button,
+.client-form-actions button,
+.client-access-action-card button {
+  font-size: var(--text-sm);
+}
+
+.gf-input,
+.gf-amount input,
+.client-labor-select,
+.client-cred-input,
+.rem-search,
+.fin-period input,
+.bal-period-picker input,
+.quote-public-form input,
+.quote-public-card input {
+  font-size: var(--text-base);
+  min-height: 38px;
+}
+
 @media (max-width: 980px) {
   .admin-catalog-shell .database-admin-card .database-action-grid,
   .admin-catalog-shell .import-kpi-grid,
