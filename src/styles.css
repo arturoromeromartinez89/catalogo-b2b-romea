@@ -10910,6 +10910,36 @@ tr.client-row--expanded td {
   text-transform: uppercase;
 }
 
+.admin-catalog-shell .account-trigger {
+  align-items: center;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  gap: var(--sp-2);
+  min-height: 38px;
+  padding: 4px var(--sp-2) 4px 4px;
+}
+
+.admin-catalog-shell .account-avatar {
+  font-size: var(--text-xs);
+  height: 28px;
+  width: 28px;
+}
+
+.admin-catalog-shell .account-trigger__name {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+}
+
+.admin-catalog-shell .account-trigger__role {
+  font-size: 10px;
+}
+
+.admin-catalog-shell .sidebar-logout {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  min-height: 34px;
+}
+
 .admin-catalog-shell .primary-button,
 .admin-catalog-shell .secondary-button,
 .admin-catalog-shell .danger-button,
@@ -10931,6 +10961,39 @@ tr.client-row--expanded td {
   background: var(--color-error-light);
   border: 1px solid #f2c6c6;
   color: var(--color-error-text);
+}
+
+.admin-catalog-shell .prospect-scan-bottom {
+  align-items: end;
+}
+
+.admin-catalog-shell .prospect-save-button {
+  align-self: end;
+  font-size: var(--text-sm);
+  height: 42px;
+  min-height: 42px;
+}
+
+.admin-catalog-shell .inicio-metrics {
+  gap: var(--sp-3);
+}
+
+.admin-catalog-shell .inicio-metric {
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  gap: var(--sp-2);
+  min-height: 104px;
+  padding: var(--sp-4);
+}
+
+.admin-catalog-shell .inicio-metric__label,
+.admin-catalog-shell .inicio-metric__hint {
+  font-size: var(--text-xs);
+}
+
+.admin-catalog-shell .inicio-metric__value {
+  font-size: var(--text-2xl);
 }
 
 .admin-catalog-shell input,
