@@ -1,14 +1,12 @@
--- ============================================================================
--- Guardar la contraseña que el admin define para el cliente (para mostrarla
--- y poder cambiarla desde el panel de Actividad).
--- Archivo: supabase/client-access-password.sql  → correr una vez en producción.
+-- DEPRECATED: no ejecutar.
 --
--- NOTA DE SEGURIDAD: esto guarda la contraseña en texto en la base, para que
--- el admin pueda verla/cambiarla. Es cómodo para tu flujo (compartes accesos
--- por WhatsApp) pero menos seguro que el hash de auth. La columna solo es
--- legible por admins (y por el propio cliente, que es su propia contraseña).
--- ============================================================================
+-- Este archivo existia para crear clients.access_password y guardar
+-- contrasenas visibles. Ese flujo fue retirado por seguridad.
+--
+-- El acceso de clientes ahora debe manejarse con invitaciones y correos de
+-- recuperacion desde Supabase Auth. La migracion vigente que limpia el campo
+-- legado es:
+--
+--   supabase/migrations/20260620160000_secure_client_access.sql
 
-alter table public.clients add column if not exists access_password text;
-
-notify pgrst, 'reload schema';
+select 'deprecated: use Supabase Auth invitations/reset emails instead' as notice;

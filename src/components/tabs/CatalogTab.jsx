@@ -100,7 +100,7 @@ export default function CatalogTab({
 
               return (
                 <article
-                  className={`admin-product-card enabled ${inPreorder ? "in-preorder" : ""} ${isConfigurable ? "configurable-card" : ""}`}
+                  className={`admin-product-card enabled ${inPreorder ? "in-preorder" : ""} ${isConfigurable ? "configurable-card" : ""} ${product.fotoUrl ? "" : "no-photo"}`}
                   key={product.id || product.codigo}
                 >
                   <label className="product-select-check" onClick={(event) => event.stopPropagation()}>
@@ -112,18 +112,18 @@ export default function CatalogTab({
                   </label>
                   {inPreorder ? <span className="preorder-added-badge">En preorden</span> : null}
                   {inCatalogSelection ? <span className="catalog-added-badge">Catalogo</span> : null}
-                  <button className="admin-product-image" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
-                    <img
-                      src={imageUrlForSize(product.fotoUrl, 360) || buildPlaceholderUrl(t("noPhoto"))}
-                      alt={product.descripcion}
-                      loading="lazy"
-                      decoding="async"
-                      fetchPriority="low"
-                      onError={(event) => {
-                        event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
-                      }}
-                    />
-                  </button>
+                  {product.fotoUrl ? (
+                    <button className="admin-product-image" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
+                      <img
+                        src={imageUrlForSize(product.fotoUrl, 360)}
+                        alt={product.descripcion}
+                        loading="lazy"
+                        decoding="async"
+                        fetchPriority="low"
+                        onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(t("noPhoto")); }}
+                      />
+                    </button>
+                  ) : null}
                   <div className="admin-product-info">
                     <strong>{isConfigurable ? product.configurableTitle || product.descripcion : product.codigo}</strong>
                     <h3>

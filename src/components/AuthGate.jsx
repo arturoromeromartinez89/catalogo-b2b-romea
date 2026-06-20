@@ -3,6 +3,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient";
 import { isAuthLocked } from "../lib/authLock";
 import { getSessionAndProfile } from "../services/supabaseCatalog";
+import { getAppUrl } from "../utils/basePath";
 
 const copy = {
   es: {
@@ -126,7 +127,10 @@ const withTimeout = (promise, ms = 9000, message = copy.es.timeout) =>
 export default function AuthGate({ children }) {
   const { language, t } = useLanguage();
   const text = copy[language] || copy.es;
-  // modos: "signin" | "signup" | "reset" | "new-password"
+  const portalBrand = import.meta.env.VITE_PORTAL_BRAND_NAME || text.loginProductName;
+  const portalTagline = import.meta.env.VITE_PORTAL_TAGLINE || text.loginProductHelp;
+  const portalLogo = import.meta.env.VITE_PORTAL_LOGO_URL || "";
+  // modos: "signin" | "reset" | "new-password"
   const [mode, setMode] = useState("signin");
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -138,6 +142,10 @@ export default function AuthGate({ children }) {
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+
+  useEffect(() => {
+    document.title = `${portalBrand} | Catálogo B2B`;
+  }, [portalBrand]);
 
   useEffect(() => {
     if (!loading) { setShowSlowHint(false); return undefined; }
@@ -198,13 +206,9 @@ export default function AuthGate({ children }) {
     setMessage("");
     setLoading(true);
     try {
-      const action =
-        mode === "signup"
-          ? supabase.auth.signUp({ email: form.email, password: form.password })
-          : supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+      const action = supabase.auth.signInWithPassword({ email: form.email, password: form.password });
       const { error } = await withTimeout(action, 9000, text.timeout);
       if (error) throw error;
-      if (mode === "signup") setMessage(text.accountCreated);
       const next = await withTimeout(getSessionAndProfile(), 9000, text.timeout);
       setSession(next.session);
       setProfile(next.profile);
@@ -232,7 +236,7 @@ export default function AuthGate({ children }) {
     setMessage("");
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(form.email.trim(), {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: getAppUrl(),
       });
       if (error) throw error;
       setResetSent(true);
@@ -317,12 +321,10 @@ export default function AuthGate({ children }) {
     return (
       <section className="login-shell">
         <aside className="login-brand-panel">
-          <div className="login-brand-orb one" />
-          <div className="login-brand-orb two" />
           <div className="login-brand-content">
-            <div className="login-icon-box" aria-hidden="true">▥</div>
-            <h1>{text.loginProductName}</h1>
-            <p>{text.loginProductHelp}</p>
+            {portalLogo ? <img className="login-client-logo" src={portalLogo} alt={portalBrand} /> : null}
+            <h1>{portalBrand}</h1>
+            <p>{portalTagline}</p>
           </div>
         </aside>
         <main className="login-form-panel">
@@ -372,12 +374,10 @@ export default function AuthGate({ children }) {
     return (
       <section className="login-shell">
         <aside className="login-brand-panel">
-          <div className="login-brand-orb one" />
-          <div className="login-brand-orb two" />
           <div className="login-brand-content">
-            <div className="login-icon-box" aria-hidden="true">▥</div>
-            <h1>{text.loginProductName}</h1>
-            <p>{text.loginProductHelp}</p>
+            {portalLogo ? <img className="login-client-logo" src={portalLogo} alt={portalBrand} /> : null}
+            <h1>{portalBrand}</h1>
+            <p>{portalTagline}</p>
             <ul>
               <li>{text.loginFeature1}</li>
               <li>{text.loginFeature2}</li>
@@ -421,7 +421,7 @@ export default function AuthGate({ children }) {
           ) : (
             <form className="login-form-card" onSubmit={submit}>
               <div>
-                <h2>{mode === "signup" ? text.createAccess : text.welcome}</h2>
+                <h2>{text.welcome}</h2>
                 <p>{text.loginHelp}</p>
               </div>
               <label>
@@ -440,16 +440,11 @@ export default function AuthGate({ children }) {
               </label>
               {message ? <p className="status info">{message}</p> : null}
               <button className="primary-button full login-submit" type="submit">
-                {mode === "signup" ? text.createAccount : text.signIn}
+                {text.signIn}
               </button>
-              <button className="link-button" type="button" onClick={() => goToMode(mode === "signup" ? "signin" : "signup")}>
-                {mode === "signup" ? text.haveAccount : text.createClientAccount}
+              <button className="link-button" type="button" onClick={() => goToMode("reset")}>
+                {text.forgotPassword}
               </button>
-              {mode === "signin" ? (
-                <button className="link-button" type="button" onClick={() => goToMode("reset")}>
-                  {text.forgotPassword}
-                </button>
-              ) : null}
               <small>{text.appCopyright} © 2026</small>
             </form>
           )}

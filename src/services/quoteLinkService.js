@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { getAppUrl } from "../utils/basePath";
 
 const cleanNumber = (value) => {
   const number = Number(value || 0);
@@ -21,7 +22,7 @@ export const productToQuoteSnapshot = (product) => ({
   tagsBusqueda: product.tagsBusqueda || "",
 });
 
-export const buildQuoteUrl = (token) => `${window.location.origin}/cotizacion/${encodeURIComponent(token)}`;
+export const buildQuoteUrl = (token) => getAppUrl(`cotizacion/${encodeURIComponent(token)}`);
 
 export const createQuoteLink = async ({
   products,

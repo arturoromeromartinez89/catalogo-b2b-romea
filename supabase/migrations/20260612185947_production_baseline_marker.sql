@@ -1,0 +1,4 @@
+-- History marker only.
+-- Production recorded the 2026-06-12 security batch under this consolidated
+-- version, while the staging branch retained the individual migration versions.
+-- The schema changes live in the earlier 20260612*.sql files.

@@ -7,8 +7,11 @@ import QuotePage from "./pages/QuotePage";
 import { ImpersonationProvider, useImpersonation } from "./contexts/ImpersonationContext";
 import { LanguageProvider } from "./i18n/LanguageContext";
 import { isAdminRole, isSuperAdmin } from "./services/tenantUtils";
+import { getAppPathname } from "./utils/basePath";
 
 const languageKey = "catalogo-b2b-language";
+const isStaging = import.meta.env.VITE_DEPLOY_ENV === "staging";
+const appVersion = import.meta.env.VITE_APP_VERSION || "development";
 
 const readLanguage = () => {
   try {
@@ -56,7 +59,7 @@ function AuthenticatedApp() {
 
 export default function App() {
   const [language, setLanguageState] = useState(readLanguage);
-  const isPublicQuoteRoute = window.location.pathname.startsWith("/cotizacion/");
+  const isPublicQuoteRoute = getAppPathname().startsWith("/cotizacion/");
 
   const setLanguage = (nextLanguage) => {
     setLanguageState(nextLanguage);
@@ -65,6 +68,11 @@ export default function App() {
 
   return (
     <LanguageProvider language={language} setLanguage={setLanguage}>
+      {isStaging ? (
+        <div className="environment-banner" role="status">
+          VERSIÓN DE PRUEBAS · {appVersion}
+        </div>
+      ) : null}
       <ImpersonationProvider>
         {isPublicQuoteRoute ? <QuotePage /> : <AuthenticatedApp />}
       </ImpersonationProvider>

@@ -1128,6 +1128,17 @@ dd {
   position: relative;
 }
 
+.login-client-logo {
+  background: #ffffff;
+  border-radius: 6px;
+  display: block;
+  justify-self: center;
+  max-height: 88px;
+  max-width: min(260px, 80%);
+  object-fit: contain;
+  padding: 10px 16px;
+}
+
 .login-brand-orb {
   background: rgba(255, 255, 255, 0.045);
   border-radius: 50%;
@@ -2389,6 +2400,11 @@ dd {
   position: relative;
 }
 
+.admin-product-card.no-photo .admin-product-info {
+  min-height: 170px;
+  padding-top: 44px;
+}
+
 /* Price lists by piece */
 .file-action {
   cursor: pointer;
@@ -2422,6 +2438,24 @@ dd {
   .piece-import-tools {
     grid-template-columns: 1fr;
   }
+}
+
+.environment-banner {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10000;
+  max-width: calc(100vw - 24px);
+  padding: 7px 10px;
+  border: 1px solid #111827;
+  border-radius: 4px;
+  background: #facc15;
+  color: #111827;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 }
 
 .admin-product-card.enabled {

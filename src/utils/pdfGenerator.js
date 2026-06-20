@@ -1,4 +1,4 @@
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import { imageUrlForSize } from "./formatters";
 import { compressImageForPdf, imageAlias } from "./pdfImageCompression";
 import { savePdfWithSize } from "./pdfSave";
