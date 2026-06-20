@@ -9,11 +9,12 @@
  * QuickFilters son pills en scroll horizontal — nunca hacen flex-wrap.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AdvancedSearch from "./AdvancedSearch";
 import FilterPanel from "./FilterPanel";
 import { useLanguage } from "../i18n/LanguageContext";
 import { DEFAULT_QUICK_FILTER_DEFINITIONS } from "../utils/filters";
+import { getCatalogTerminology } from "../utils/catalogTerminology";
 
 // ─── Icono filtro ──────────────────────────────────────────────────────────────
 const IconFilter = () => (
@@ -63,6 +64,7 @@ export default function CatalogFilterBar({
   const { language } = useLanguage();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const popoverRef = useRef(null);
+  const terminology = useMemo(() => getCatalogTerminology(products, language), [products, language]);
 
   // Cierra el popover al hacer click fuera
   useEffect(() => {
@@ -136,6 +138,7 @@ export default function CatalogFilterBar({
                   filters={filters}
                   options={filterOptions}
                   onChange={onFiltersChange}
+                  terminology={terminology}
                 />
               </div>
             )}

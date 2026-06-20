@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { parseImportFile } from "../utils/importParser";
 import { upsertProducts } from "../services/supabaseCatalog";
+import { getTerminologyByProfile } from "../utils/catalogTerminology";
 
 const BATCH_SIZE = 200;
 
@@ -59,6 +60,16 @@ export default function ImportPanel({ onImported, tenantId = "" }) {
     setError("");
   };
 
+  const terminology = preview ? getTerminologyByProfile(preview.profile, "es") : {};
+  const previewHeadings = [
+    "Codigo",
+    "Descripcion",
+    terminology.metal || "Material",
+    terminology.linea || "Linea / coleccion",
+    terminology.avgWeight || "Peso/cantidad",
+    terminology.familia || "Categoria",
+  ];
+
   return (
     <div className="admin-soft-panel compact-panel" style={{ marginBottom: 16 }}>
       <h3 style={{ marginBottom: 4 }}>Importar desde fuente</h3>
@@ -103,7 +114,7 @@ export default function ImportPanel({ onImported, tenantId = "" }) {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
                 <tr style={{ background: "var(--color-background-secondary)" }}>
-                  {["Código", "Descripción", "Metal", "Línea", "Peso g", "Familia"].map((heading) => (
+                  {previewHeadings.map((heading) => (
                     <th key={heading} style={{ padding: "6px 10px", textAlign: "left", fontWeight: 500 }}>{heading}</th>
                   ))}
                 </tr>

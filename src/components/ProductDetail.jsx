@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize } from "../utils/formatters";
 import { useLanguage } from "../i18n/LanguageContext";
+import { getCatalogTerminology } from "../utils/catalogTerminology";
 
 export default function ProductDetail({
   product,
@@ -14,9 +15,10 @@ export default function ProductDetail({
   onEdit,
   onDuplicate,
 }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [selectedImage, setSelectedImage] = useState(product?.fotoUrl || "");
   const [quantity, setQuantity] = useState(1);
+  const terminology = useMemo(() => getCatalogTerminology(product ? [product] : [], language), [product, language]);
 
   const images = useMemo(
     () => [product?.fotoUrl, product?.fotoUrl2, product?.fotoUrl3].filter(Boolean),
@@ -99,16 +101,16 @@ export default function ProductDetail({
           </div>
 
           <dl className="detail-specs">
-            <div><dt>{t("metal")}</dt><dd>{product.metal || "-"}</dd></div>
-            <div><dt>{t("karat")}</dt><dd>{product.kilataje || "-"}</dd></div>
-            <div><dt>{t("line")}</dt><dd>{product.linea || "-"}</dd></div>
-            <div><dt>{t("family")}</dt><dd>{product.familia || "-"}</dd></div>
-            <div><dt>{t("group")}</dt><dd>{product.grupo || "-"}</dd></div>
+            <div><dt>{terminology.metal || t("metal")}</dt><dd>{product.metal || "-"}</dd></div>
+            <div><dt>{terminology.kilataje || t("karat")}</dt><dd>{product.kilataje || "-"}</dd></div>
+            <div><dt>{terminology.linea || t("line")}</dt><dd>{product.linea || "-"}</dd></div>
+            <div><dt>{terminology.familia || t("family")}</dt><dd>{product.familia || "-"}</dd></div>
+            <div><dt>{terminology.grupo || t("group")}</dt><dd>{product.grupo || "-"}</dd></div>
             <div><dt>{t("gender")}</dt><dd>{product.genero || "-"}</dd></div>
             <div><dt>{t("finish")}</dt><dd>{product.acabado || "-"}</dd></div>
             <div><dt>{t("stone")}</dt><dd>{product.piedra || "-"}</dd></div>
             <div><dt>{t("size")}</dt><dd>{product.medida || "-"}</dd></div>
-            <div><dt>{t("avgWeight")}</dt><dd>{formatWeight(product.pesoPromedio)}</dd></div>
+            <div><dt>{terminology.avgWeight || t("avgWeight")}</dt><dd>{formatWeight(product.pesoPromedio)}</dd></div>
           </dl>
 
           {product.tagsBusqueda ? (

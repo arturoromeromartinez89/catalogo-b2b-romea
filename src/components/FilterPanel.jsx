@@ -8,7 +8,7 @@ const labelKeys = {
   grupo: "group",
 };
 
-export default function FilterPanel({ filters, options, onChange }) {
+export default function FilterPanel({ filters, options, onChange, terminology = {} }) {
   const { t } = useLanguage();
   const update = (key, value) => onChange({ ...filters, [key]: value });
 
@@ -18,7 +18,7 @@ export default function FilterPanel({ filters, options, onChange }) {
       <div className="side-filter-list">
         {Object.keys(labelKeys).map((key) => (
           <label key={key}>
-            {t(labelKeys[key])}
+            {terminology[key] || t(labelKeys[key])}
             <select value={filters[key]} onChange={(event) => update(key, event.target.value)}>
               <option value="">{t("all")}</option>
               {(options[key] || []).map((option) => (
@@ -32,11 +32,11 @@ export default function FilterPanel({ filters, options, onChange }) {
 
         <div className="range-grid">
           <label>
-            {t("minWeight")}
+            {terminology.minWeight || t("minWeight")}
             <input type="number" min="0" step="0.01" value={filters.minWeight} onChange={(event) => update("minWeight", event.target.value)} />
           </label>
           <label>
-            {t("maxWeight")}
+            {terminology.maxWeight || t("maxWeight")}
             <input type="number" min="0" step="0.01" value={filters.maxWeight} onChange={(event) => update("maxWeight", event.target.value)} />
           </label>
           <label>
