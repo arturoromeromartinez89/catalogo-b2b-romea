@@ -3,7 +3,6 @@ import DatabaseHealthDashboard from "../DatabaseHealthDashboard";
 import ExcelTemplateButton from "../ExcelTemplateButton";
 import ImportPanel from "../ImportPanel";
 import ProductImageImportPanel from "../ProductImageImportPanel";
-import UploadExcel from "../UploadExcel";
 
 export default function DatabaseTab({
   t,
@@ -13,7 +12,6 @@ export default function DatabaseTab({
   tenantId,
   status,
   loadingProducts,
-  handleExcel,
   handleDeleteCatalog,
   setProductModal,
   load,
@@ -25,10 +23,18 @@ export default function DatabaseTab({
       <div className="database-admin-row">
         <div className="admin-soft-panel compact-panel database-admin-card">
           <span className="tool-eyebrow">{t("database")}</span>
-          <h2>{language === "en" ? "Database administration" : "Administración de base de datos"}</h2>
+          <h2>{language === "en" ? "Database administration" : "Administracion de base de datos"}</h2>
           <p className="muted">{t("databaseOperationsHelp")}</p>
+
+          <ImportPanel
+            onImported={load}
+            tenantId={tenantId}
+            embedded
+            triggerLabel="Cargar desde Excel"
+            triggerClassName="primary-button compact-action database-upload-action"
+          />
+
           <div className="database-action-grid">
-            <UploadExcel onFileSelected={handleExcel} icon="↑" className="database-upload-action" />
             <ExcelTemplateButton />
             <CatalogExportButton products={products} />
             <button
@@ -47,6 +53,7 @@ export default function DatabaseTab({
               {t("clearCatalog")}
             </button>
           </div>
+
           {status ? <p className="status info">{status}</p> : null}
         </div>
 
@@ -60,8 +67,6 @@ export default function DatabaseTab({
       </div>
 
       <DatabaseHealthDashboard products={rawProducts} language={language} loading={loadingProducts} />
-
-      <ImportPanel onImported={load} tenantId={tenantId} />
     </section>
   );
 }

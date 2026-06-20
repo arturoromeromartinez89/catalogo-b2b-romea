@@ -49,7 +49,7 @@ import {
 } from "../services/supabaseCatalog";
 import { fetchTenants, makeTenantSlug, saveTenant } from "../services/tenantService";
 import { isSuperAdmin } from "../services/tenantUtils";
-import { normalizeProduct, parseExcelFile } from "../utils/excelParser";
+import { normalizeProduct } from "../utils/excelParser";
 import { buildConfigurableCatalogProducts, isConfigurableProductGroup } from "../utils/configurableCatalog";
 import { applyFilters, buildFilterOptions, emptyFilters, DEFAULT_QUICK_FILTER_DEFINITIONS } from "../utils/filters";
 import { fetchCatalogQuickFilters } from "../services/catalogQuickFiltersService";
@@ -586,6 +586,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     );
   };
 
+  /*
   const handleExcel = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -607,6 +608,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     }
   };
 
+  */
   const handleDeleteCatalog = async () => {
     if (!tenantId) {
       setStatus("Primero selecciona una empresa para borrar su catálogo.");
@@ -1572,7 +1574,6 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             tenantId={tenantId}
             status={status}
             loadingProducts={loadingProducts}
-            handleExcel={handleExcel}
             handleDeleteCatalog={handleDeleteCatalog}
             setProductModal={setProductModal}
             load={load}

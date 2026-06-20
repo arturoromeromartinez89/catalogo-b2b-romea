@@ -27,7 +27,13 @@ function AnalysisList({ title, items = [], emptyText = "Sin datos detectados." }
   );
 }
 
-export default function ImportPanel({ onImported, tenantId = "" }) {
+export default function ImportPanel({
+  onImported,
+  tenantId = "",
+  embedded = false,
+  triggerLabel = "Seleccionar archivo XLS/XLSX",
+  triggerClassName = "primary-button compact-action",
+}) {
   const fileRef = useRef();
   const [step, setStep] = useState("idle");
   const [preview, setPreview] = useState(null);
@@ -94,11 +100,15 @@ export default function ImportPanel({ onImported, tenantId = "" }) {
   ];
 
   return (
-    <div className="admin-soft-panel compact-panel" style={{ marginBottom: 16 }}>
-      <h3 style={{ marginBottom: 4 }}>Importar desde fuente</h3>
-      <p className="muted" style={{ marginBottom: 12 }}>
-        Sube un XLS/XLSX de ComerciaGold o de otra matriz. El sistema detecta columnas equivalentes como SKU, nombre, categoria, tipo, material, marca y precio.
-      </p>
+    <div className={embedded ? "database-import-flow" : "admin-soft-panel compact-panel"} style={embedded ? { marginTop: 14 } : { marginBottom: 16 }}>
+      {!embedded ? (
+        <>
+          <h3 style={{ marginBottom: 4 }}>Importar desde fuente</h3>
+          <p className="muted" style={{ marginBottom: 12 }}>
+            Sube un XLS/XLSX de ComerciaGold o de otra matriz. El sistema detecta columnas equivalentes como SKU, nombre, categoria, tipo, material, marca y precio.
+          </p>
+        </>
+      ) : null}
 
       {error ? (
         <div style={{ padding: "10px 14px", background: "var(--color-background-danger)", borderRadius: 8, marginBottom: 12, fontSize: 13, color: "var(--color-text-danger)" }}>
@@ -107,8 +117,8 @@ export default function ImportPanel({ onImported, tenantId = "" }) {
       ) : null}
 
       {step === "idle" ? (
-        <button className="primary-button compact-action" onClick={() => fileRef.current?.click()}>
-          Seleccionar archivo XLS/XLSX
+        <button className={triggerClassName} onClick={() => fileRef.current?.click()}>
+          {triggerLabel}
         </button>
       ) : null}
 
