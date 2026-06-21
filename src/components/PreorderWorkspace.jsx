@@ -234,6 +234,7 @@ export default function PreorderWorkspace({
   isDraftOpen = false,
   onDraftClose,
   onDraftSaved,
+  onOrderConfirmed,
   onCreateRemision,
   clientFilter = null,
   onClearClientFilter,
@@ -391,6 +392,11 @@ export default function PreorderWorkspace({
             profile={profile}
             onClose={(updatedDraft) => closeTab(activeTab.id, updatedDraft)}
             onSaved={(savedData) => handleSaved(activeTab.id, savedData)}
+            onOrderConfirmed={(order) => {
+              loadPreorders();
+              setListMsg(`Orden ${order?.folio || ""} confirmada.`);
+              onOrderConfirmed?.(order);
+            }}
             onDirty={() => markDirty(activeTab.id)}
             onCreateRemision={onCreateRemision}
             configurableCatalogEnabled={configurableCatalogEnabled}

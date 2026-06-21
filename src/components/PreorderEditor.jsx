@@ -5,6 +5,7 @@ import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice, fetc
 import { fetchProductComponents, groupProductComponents } from "../services/productComponentsService";
 import { saveClient } from "../services/supabaseCatalog";
 import { savePreorder, deletePreorder, fetchAllPreorders } from "../services/preorderService";
+import { confirmPreorderAsOrder } from "../services/salesOrderService";
 import { generatePdf } from "../utils/pdfGenerator";
 import { useLanguage } from "../i18n/LanguageContext";
 import { buildPlaceholderUrl, imageUrlForSize, shortText } from "../utils/formatters";
@@ -337,7 +338,7 @@ function ImportarPreordenModal({ tenantId, profile, onSelect, onClose }) {
   );
 }
 
-function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, onCreateRemision, pricingLocked = false, tenantId = "", profile, configurableCatalogEnabled = false,
+function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, onCreateRemision, onOrderConfirmed, pricingLocked = false, tenantId = "", profile, configurableCatalogEnabled = false,
   // ── Modo documento ────────────────────────────────────────────────────────
   // documentType="preorden" (default) deja la Preorden 100% idéntica.
   // documentType="remision" reutiliza el mismo editor como Remisión.
@@ -420,6 +421,18 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [pendingDuplicate, setPendingDuplicate] = useState(null); // { product, nextItem } esperando confirmación
   const [showImportPreorder, setShowImportPreorder] = useState(false); // modal "Importar preorden" (modo remisión)
   const [showCreateRem, setShowCreateRem] = useState(false);           // confirmación "Crear remisión"
+  const [showConfirmOrder, setShowConfirmOrder] = useState(false);
+  const [confirmingOrder, setConfirmingOrder] = useState(false);
+  const [confirmedOrder, setConfirmedOrder] = useState(null);
+  const [orderConfirmForm, setOrderConfirmForm] = useState({
+    anticipo_mxn: "",
+    comprobante_url: "",
+    terms_text: "El cliente confirma que reviso productos, cantidades, precios y condiciones de compra. La orden queda sujeta a disponibilidad, tiempos de produccion y validacion de pago.",
+    terms_accepted: false,
+    accepted_by_name: "",
+    accepted_by_email: "",
+    notas: "",
+  });
   // ── Modo consulta vs edición ──────────────────────────────────────────────
   // Al abrir una nota guardada se ve en SOLO LECTURA; hay que pulsar "Editar"
   // para activarla. Una nota nueva arranca ya en edición (hay que capturarla).
@@ -1603,6 +1616,36 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     onClose?.({ ...po, preorder_items: items });
   };
 
+  const canConfirmOrder = adminViewOnly && !isRemision && !isNew && !po.confirmed_order_id && items.length > 0;
+  const handleConfirmOrder = async () => {
+    if (!canConfirmOrder || confirmingOrder) return;
+    setConfirmingOrder(true);
+    setMsg("");
+    try {
+      const order = await confirmPreorderAsOrder(po.id || initial?.id, {
+        anticipo_mxn: Number(orderConfirmForm.anticipo_mxn || 0),
+        comprobante_url: orderConfirmForm.comprobante_url.trim(),
+        terms_text: orderConfirmForm.terms_text.trim(),
+        terms_accepted: Boolean(orderConfirmForm.terms_accepted),
+        accepted_by_name: orderConfirmForm.accepted_by_name.trim(),
+        accepted_by_email: orderConfirmForm.accepted_by_email.trim(),
+        notas: orderConfirmForm.notas.trim(),
+      });
+      setPo((current) => ({ ...current, status: "confirmada", confirmed_order_id: order?.id || current.confirmed_order_id }));
+      setShowConfirmOrder(false);
+      setConfirmedOrder(order);
+      setSaved(true);
+      setMsg(`Orden ${order?.folio || ""} confirmada.`);
+      onOrderConfirmed?.(order);
+      window.setTimeout(() => setConfirmedOrder(null), 4200);
+    } catch (error) {
+      console.error("Error confirming preorder as order", error);
+      setMsg(error?.message || "No se pudo confirmar la orden.");
+    } finally {
+      setConfirmingOrder(false);
+    }
+  };
+
   return (
     <div className={`po-editor${editMode ? " po-editor--editing" : ""}${adminViewOnly ? " po-editor--readonly" : ""}`}>
       <header className="po-editor-toolbar po-editor-toolbar--remission">
@@ -1679,6 +1722,16 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               onClick={() => setShowCreateRem(true)}
             >
               {t("pedCrearRemision")}
+            </button>
+          ) : null}
+          {canConfirmOrder ? (
+            <button
+              className="primary-button compact-action order-confirm-button"
+              type="button"
+              title="Confirmar como orden de compra"
+              onClick={() => setShowConfirmOrder(true)}
+            >
+              Confirmar orden
             </button>
           ) : null}
           {editMode || pricingLocked ? (
@@ -2515,6 +2568,102 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 Sí, generar e ir a la remisión
               </button>
             </footer>
+          </div>
+        </div>
+      ) : null}
+
+      {showConfirmOrder ? (
+        <div className="client-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowConfirmOrder(false)}>
+          <div className="client-modal gf-modal order-confirm-modal" style={{ maxWidth: 560 }}>
+            <header>
+              <h2>Confirmar orden de compra</h2>
+              <button type="button" className="icon-button" onClick={() => setShowConfirmOrder(false)} aria-label={t("pedAriaCerrar")}>×</button>
+            </header>
+            <div className="gf-body order-confirm-body">
+              <p>
+                Esta preorden se convertira en una <strong>orden confirmada</strong> con folio propio.
+                Despues podras verla en la pestaña <strong>Ordenes de compra</strong>.
+              </p>
+              <div className="order-confirm-grid">
+                <label>
+                  <span>Anticipo recibido</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={orderConfirmForm.anticipo_mxn}
+                    onChange={(e) => setOrderConfirmForm((current) => ({ ...current, anticipo_mxn: e.target.value }))}
+                    placeholder="0.00"
+                  />
+                </label>
+                <label>
+                  <span>URL del comprobante</span>
+                  <input
+                    value={orderConfirmForm.comprobante_url}
+                    onChange={(e) => setOrderConfirmForm((current) => ({ ...current, comprobante_url: e.target.value }))}
+                    placeholder="https://..."
+                  />
+                </label>
+                <label>
+                  <span>Nombre de quien acepta</span>
+                  <input
+                    value={orderConfirmForm.accepted_by_name}
+                    onChange={(e) => setOrderConfirmForm((current) => ({ ...current, accepted_by_name: e.target.value }))}
+                    placeholder={po.cliente_nombre || po.cliente_empresa || "Cliente"}
+                  />
+                </label>
+                <label>
+                  <span>Correo de aceptacion</span>
+                  <input
+                    type="email"
+                    value={orderConfirmForm.accepted_by_email}
+                    onChange={(e) => setOrderConfirmForm((current) => ({ ...current, accepted_by_email: e.target.value }))}
+                    placeholder={po.cliente_email || "correo@empresa.com"}
+                  />
+                </label>
+              </div>
+              <label className="order-confirm-wide">
+                <span>Terminos y condiciones</span>
+                <textarea
+                  rows={4}
+                  value={orderConfirmForm.terms_text}
+                  onChange={(e) => setOrderConfirmForm((current) => ({ ...current, terms_text: e.target.value }))}
+                />
+              </label>
+              <label className="order-confirm-wide">
+                <span>Notas internas</span>
+                <textarea
+                  rows={3}
+                  value={orderConfirmForm.notas}
+                  onChange={(e) => setOrderConfirmForm((current) => ({ ...current, notas: e.target.value }))}
+                  placeholder="Ej. anticipo pendiente de validar, fecha acordada, condiciones especiales..."
+                />
+              </label>
+              <label className="order-confirm-check">
+                <input
+                  type="checkbox"
+                  checked={orderConfirmForm.terms_accepted}
+                  onChange={(e) => setOrderConfirmForm((current) => ({ ...current, terms_accepted: e.target.checked }))}
+                />
+                <span>El cliente ya acepto los terminos de esta orden.</span>
+              </label>
+            </div>
+            <footer className="gf-footer">
+              <button type="button" className="secondary-button" onClick={() => setShowConfirmOrder(false)}>Cancelar</button>
+              <button type="button" className="primary-button order-confirm-submit" onClick={handleConfirmOrder} disabled={confirmingOrder}>
+                {confirmingOrder ? "Confirmando..." : "Si, confirmar orden"}
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
+
+      {confirmedOrder ? (
+        <div className="order-confirm-success" role="status" aria-live="polite">
+          <div className="order-confirm-success__mark">✓</div>
+          <div>
+            <strong>Orden confirmada</strong>
+            <span>{confirmedOrder?.folio ? `${confirmedOrder.folio} · ` : ""}Podras verla en Ordenes de compra.</span>
           </div>
         </div>
       ) : null}

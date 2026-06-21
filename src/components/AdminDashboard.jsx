@@ -6,6 +6,7 @@ import CatalogPdfPanel from "./CatalogPdfPanel";
 import CatalogFilterBar from "./CatalogFilterBar";
 import PricingPanel from "./PricingPanel";
 import PreorderWorkspace from "./PreorderWorkspace";
+import SalesOrdersWorkspace from "./SalesOrdersWorkspace";
 import QuoteLinkPanel from "./QuoteLinkPanel";
 import SelectedProductsDrawer from "./SelectedProductsDrawer";
 import ProductFormModal from "./ProductFormModal";
@@ -63,7 +64,7 @@ const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ci
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
 const PRODUCT_RENDER_BATCH = 60;
-const baseTabs = ["inicio", "catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
+const baseTabs = ["inicio", "catalog", "preorders", "orders", "clients", "prospects", "prices", "company", "database"];
 const configurableOnlyTabs = ["components"];
 const adminModuleTabs = ["administracion"];
 // Navegación organizada por las preguntas del negocio, no por tablas.
@@ -85,6 +86,7 @@ const tabKeys = {
   inicio:        "inicio",
   catalog:       "catalog",
   preorders:     "preorders",
+  orders:        "orders",
   clients:       "clients",
   prospects:     "prospects",
   prices:        "priceMenu",
@@ -98,6 +100,7 @@ const titleKeys = {
   inicio:        "inicio",
   catalog:       "adminCatalog",
   preorders:     "preorders",
+  orders:        "orders",
   clients:       "clients",
   prospects:     "prospects",
   prices:        "priceMenu",
@@ -289,6 +292,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [isDraftOpen, setIsDraftOpen] = useState(false);
   const [remisionDraft, setRemisionDraft] = useState(null);
   const [remisionDraftOpen, setRemisionDraftOpen] = useState(false);
+  const [openOrderId, setOpenOrderId] = useState("");
   const [tabChangeModal, setTabChangeModal] = useState({ open: false, nextTab: null });
   const [addedCodes, setAddedCodes] = useState([]);
   const [visibleProductLimit, setVisibleProductLimit] = useState(PRODUCT_RENDER_BATCH);
@@ -320,6 +324,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       return nextTab;
     });
     if (nextTab !== "preorders") setPreorderClientFilter(null);
+    if (nextTab !== "orders") setOpenOrderId("");
     setSelectedProductCode("");
   }, [draftPreorder]);
 
@@ -1541,10 +1546,23 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               setIsDraftOpen(false);
               setStatus("Preorden guardada correctamente. Puedes verla en el menu Preordenes.");
             }}
+            onOrderConfirmed={(order) => {
+              setOpenOrderId(order?.id || "");
+              changeTab("orders");
+              setStatus(`Orden ${order?.folio || ""} confirmada. Puedes verla en Ordenes de compra.`);
+            }}
             onCreateRemision={handleCreateRemisionFromPreorder}
             configurableCatalogEnabled={configurableCatalogEnabled}
             clientFilter={preorderClientFilter}
             onClearClientFilter={() => setPreorderClientFilter(null)}
+          />
+        ) : null}
+
+        {tab === "orders" ? (
+          <SalesOrdersWorkspace
+            tenantId={tenantId}
+            initialOrderId={openOrderId}
+            onInitialOrderViewed={() => setOpenOrderId("")}
           />
         ) : null}
 
