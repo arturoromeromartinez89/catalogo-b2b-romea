@@ -1,6 +1,7 @@
 import ProductDetail from "../ProductDetail";
 import { isConfigurableProductGroup } from "../../utils/configurableCatalog";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../../utils/formatters";
+import { PRODUCT_CARD_FIELDS } from "../../services/interfaceSettingsService";
 
 const PRODUCT_RENDER_BATCH = 60; // debe coincidir con AdminDashboard
 
@@ -28,6 +29,7 @@ export default function CatalogTab({
   removeFromCatalogSelection,
   setProductModal,
   toggleProductCheck,
+  interfaceSettings,
   filterBar,   // Barra de filtros inline — pasada desde AdminDashboard
 }) {
   const isSelectedConfigurable = isConfigurableProductGroup(selectedProduct);
@@ -97,6 +99,32 @@ export default function CatalogTab({
               const priceText = product.precioMinimo
                 ? formatCurrency(product.precioMinimo, product.monedaPrecioMin)
                 : t("priceToConfirm");
+              const customCardEnabled = interfaceSettings?.hasCustomSettings && !isConfigurable;
+              const cardConfig = interfaceSettings?.admin_product_card_config || {};
+              const visibleButtons = new Set(cardConfig.buttons || []);
+              const productFieldValue = (fieldKey) => {
+                if (fieldKey === "codigo") return product.codigo;
+                if (fieldKey === "descripcion") return shortText(product.descripcion, 72);
+                if (fieldKey === "metal") return product.metal;
+                if (fieldKey === "kilataje") return product.kilataje;
+                if (fieldKey === "peso") return formatWeight(product.pesoPromedio);
+                if (fieldKey === "precio") return priceText;
+                if (fieldKey === "mano_obra") return `MO ${formatCurrency(product.manoObra || 0, product.monedaPrecioMin)}`;
+                if (fieldKey === "linea") return product.linea;
+                if (fieldKey === "familia") return product.familia;
+                if (fieldKey === "grupo") return product.grupo;
+                return "";
+              };
+              const renderedFields = (cardConfig.fields || [])
+                .map((fieldKey) => ({
+                  key: fieldKey,
+                  label: PRODUCT_CARD_FIELDS.find((field) => field.key === fieldKey)?.label || fieldKey,
+                  value: productFieldValue(fieldKey),
+                }))
+                .filter((field) => field.value);
+              const safeRenderedFields = renderedFields.length
+                ? renderedFields
+                : [{ key: "codigo", label: "Codigo", value: product.codigo }];
 
               return (
                 <article
@@ -125,55 +153,76 @@ export default function CatalogTab({
                     </button>
                   ) : null}
                   <div className="admin-product-info">
-                    <strong>{isConfigurable ? product.configurableTitle || product.descripcion : product.codigo}</strong>
-                    <h3>
-                      {isConfigurable
-                        ? `${(product.variants || []).length} tipos disponibles`
-                        : shortText(product.descripcion, 72)}
-                    </h3>
-                    <p>
-                      {isConfigurable
-                        ? "Configura tipo de pieza al agregar"
-                        : [product.metal, product.kilataje, formatWeight(product.pesoPromedio)].filter(Boolean).join(" / ")}
-                    </p>
-                    <span>
-                      {isConfigurable ? "Producto configurable" : `${priceText} - MO ${formatCurrency(product.manoObra || 0, product.monedaPrecioMin)}`}
-                    </span>
+                    {customCardEnabled ? (
+                      safeRenderedFields.map((field, index) => {
+                        if (index === 0) return <strong key={field.key}>{field.value}</strong>;
+                        if (index === 1) return <h3 key={field.key}>{field.value}</h3>;
+                        return (
+                          <p className="custom-product-field" key={field.key}>
+                            <span>{field.label}</span>
+                            <strong>{field.value}</strong>
+                          </p>
+                        );
+                      })
+                    ) : (
+                      <>
+                        <strong>{isConfigurable ? product.configurableTitle || product.descripcion : product.codigo}</strong>
+                        <h3>
+                          {isConfigurable
+                            ? `${(product.variants || []).length} tipos disponibles`
+                            : shortText(product.descripcion, 72)}
+                        </h3>
+                        <p>
+                          {isConfigurable
+                            ? "Configura tipo de pieza al agregar"
+                            : [product.metal, product.kilataje, formatWeight(product.pesoPromedio)].filter(Boolean).join(" / ")}
+                        </p>
+                        <span>
+                          {isConfigurable ? "Producto configurable" : `${priceText} - MO ${formatCurrency(product.manoObra || 0, product.monedaPrecioMin)}`}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <div className="admin-product-actions product-action-layout">
                     <div className="product-action-admin">
-                      <button className="secondary-button compact-action" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
-                        {t("viewDetail")}
-                      </button>
-                      {!isConfigurable ? (
+                      {(!customCardEnabled || visibleButtons.has("ver_detalle")) ? (
+                        <button className="secondary-button compact-action" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
+                          {t("viewDetail")}
+                        </button>
+                      ) : null}
+                      {!isConfigurable && (!customCardEnabled || visibleButtons.has("editar_producto")) ? (
                         <button className="secondary-button compact-action" type="button" onClick={() => setProductModal({ open: true, product, mode: "edit" })}>
                           {t("editProduct")}
                         </button>
                       ) : null}
                     </div>
                     <div className="product-action-client">
-                      <button
-                        className={`action-button preorder ${inPreorder ? "done" : ""}`}
-                        type="button"
-                        onClick={() => addToCart(product)}
-                        disabled={inPreorder}
-                      >
-                        {t("addPreorderShort")}
-                      </button>
-                      {inPreorder ? (
+                      {(!customCardEnabled || visibleButtons.has("preorden")) ? (
+                        <button
+                          className={`action-button preorder ${inPreorder ? "done" : ""}`}
+                          type="button"
+                          onClick={() => addToCart(product)}
+                          disabled={inPreorder}
+                        >
+                          {t("addPreorderShort")}
+                        </button>
+                      ) : null}
+                      {inPreorder && (!customCardEnabled || visibleButtons.has("preorden")) ? (
                         <button className="action-button undo" type="button" onClick={() => removeFromPreorder(product.codigo)}>
                           {t("undo")}
                         </button>
                       ) : null}
-                      <button
-                        className={`action-button catalog ${inCatalogSelection ? "done" : ""}`}
-                        type="button"
-                        onClick={() => addToCatalogSelection(product)}
-                        disabled={inCatalogSelection}
-                      >
-                        {t("addCatalogShort")}
-                      </button>
-                      {!isConfigurable && inCatalogSelection ? (
+                      {(!customCardEnabled || visibleButtons.has("catalogo")) ? (
+                        <button
+                          className={`action-button catalog ${inCatalogSelection ? "done" : ""}`}
+                          type="button"
+                          onClick={() => addToCatalogSelection(product)}
+                          disabled={inCatalogSelection}
+                        >
+                          {t("addCatalogShort")}
+                        </button>
+                      ) : null}
+                      {!isConfigurable && inCatalogSelection && (!customCardEnabled || visibleButtons.has("catalogo")) ? (
                         <button className="action-button undo" type="button" onClick={() => removeFromCatalogSelection(product.codigo)}>
                           {t("undo")}
                         </button>

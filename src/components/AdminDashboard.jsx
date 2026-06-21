@@ -53,6 +53,7 @@ import { normalizeProduct } from "../utils/excelParser";
 import { buildConfigurableCatalogProducts, isConfigurableProductGroup } from "../utils/configurableCatalog";
 import { applyFilters, buildFilterOptions, emptyFilters, DEFAULT_QUICK_FILTER_DEFINITIONS } from "../utils/filters";
 import { fetchCatalogQuickFilters } from "../services/catalogQuickFiltersService";
+import { DEFAULT_INTERFACE_SETTINGS, fetchInterfaceSettings } from "../services/interfaceSettingsService";
 import QuickFiltersManager from "./QuickFiltersManager";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
@@ -228,6 +229,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const company = useCompany();
   const [tenantCompany, setTenantCompany] = useState(null);
   const [tenantFeatures, setTenantFeatures] = useState(null);
+  const [interfaceSettings, setInterfaceSettings] = useState(DEFAULT_INTERFACE_SETTINGS);
   const superadmin = isSuperAdmin(profile) && !supportMode;
   const [tenants, setTenants] = useState([]);
   const [selectedTenantId, setSelectedTenantId] = useState(() => localStorage.getItem("catalogo-b2b-selected-tenant") || profile?.tenant_id || profile?.tenantId || "");
@@ -405,6 +407,18 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       return;
     }
     fetchTenantFeatures(tenantId).then(setTenantFeatures).catch(() => setTenantFeatures(null));
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId) {
+      setInterfaceSettings(DEFAULT_INTERFACE_SETTINGS);
+      return;
+    }
+    let alive = true;
+    fetchInterfaceSettings(tenantId)
+      .then((settings) => { if (alive) setInterfaceSettings(settings); })
+      .catch(() => { if (alive) setInterfaceSettings(DEFAULT_INTERFACE_SETTINGS); });
+    return () => { alive = false; };
   }, [tenantId]);
 
   useEffect(() => {
@@ -1188,7 +1202,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   }
 
   return (
-    <div className={`admin-catalog-shell${tab === "administracion" && adminModuleEnabled ? " has-secondary-sidebar" : ""}`}>
+    <div className={`admin-catalog-shell admin-theme-${interfaceSettings.theme_key}${tab === "administracion" && adminModuleEnabled ? " has-secondary-sidebar" : ""}`}>
       <aside className="admin-romea-sidebar">
         <div className="brand-block">
           <BrandLogo company={activeCompany} />
@@ -1407,6 +1421,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             addToCatalogSelection={addToCatalogSelection}
             removeFromCatalogSelection={removeFromCatalogSelection}
             setProductModal={setProductModal}
+            interfaceSettings={interfaceSettings}
             filterBar={!selectedProductCode ? (
               <>
               <CatalogFilterBar
@@ -1534,7 +1549,11 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
         ) : null}
 
         {tab === "company" ? (
-          <CompanySettingsPanel tenantId={tenantId} />
+          <CompanySettingsPanel
+            tenantId={tenantId}
+            interfaceSettings={interfaceSettings}
+            onInterfaceSettingsChange={setInterfaceSettings}
+          />
         ) : null}
 
         {tab === "database" ? (

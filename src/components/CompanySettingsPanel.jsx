@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings, saveCompanySettings, uploadLogo } from "../services/companySettings";
+import InterfaceCustomizationPanel from "./InterfaceCustomizationPanel";
 
-export default function CompanySettingsPanel({ tenantId = "" }) {
+export default function CompanySettingsPanel({ tenantId = "", interfaceSettings, onInterfaceSettingsChange }) {
   const company = useCompany();
   const [form, setForm] = useState({
     brand_name: company.brand_name || "",
@@ -179,6 +180,12 @@ export default function CompanySettingsPanel({ tenantId = "" }) {
         </section>
 
         {status ? <p className="status info">{status}</p> : null}
+
+        <InterfaceCustomizationPanel
+          tenantId={tenantId}
+          settings={interfaceSettings}
+          onSaved={onInterfaceSettingsChange}
+        />
 
         <div className="company-save-row">
           <button className="primary-button compact-action" type="button" onClick={handleSave} disabled={saving}>
