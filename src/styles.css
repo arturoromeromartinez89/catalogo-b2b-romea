@@ -10526,11 +10526,6 @@ tr.client-row--expanded td {
   gap: var(--sp-3);
   min-width: 0;
 }
-.topbar-brand__divider {
-  width: 1px;
-  height: 22px;
-  background: var(--color-border);
-}
 .topbar-brand__role {
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
@@ -10551,59 +10546,11 @@ tr.client-row--expanded td {
 .topbar-snapshot {
   flex-wrap: wrap;
 }
-.topbar-context-pill {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
-  padding: 4px 8px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-app);
-}
-.topbar-context-pill span {
-  color: var(--color-text-secondary);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  text-transform: uppercase;
-}
-.topbar-context-pill strong {
-  color: var(--color-text-primary);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.topbar-context-pill--date strong {
-  max-width: none;
-  text-transform: capitalize;
-}
 .admin-catalog-header.app-topbar .admin-header-actions {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
   margin-left: auto;
-}
-.topbar-doc-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.topbar-doc-button {
-  min-height: 30px;
-  padding: 5px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-app);
-  color: var(--color-text-secondary);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-}
-.topbar-doc-button:disabled {
-  cursor: default;
-  opacity: 0.72;
 }
 
 .account-cluster { position: relative; }
@@ -10825,9 +10772,6 @@ tr.client-row--expanded td {
 
 @media (max-width: 900px) {
   .inicio-columns { grid-template-columns: 1fr; }
-  .topbar-brand__role { display: none; }
-  .topbar-context-pill--date { display: none; }
-  .topbar-doc-actions { display: none; }
   .account-trigger__text { display: none; }
   .inicio-hero { padding: var(--sp-6) var(--sp-5) var(--sp-5); }
   .inicio-hero__title { font-size: var(--text-2xl); }
