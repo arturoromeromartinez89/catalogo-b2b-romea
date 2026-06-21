@@ -10771,7 +10771,7 @@ tr.client-row--expanded td {
 .inicio-acceso__text p { margin: 0; font-size: var(--text-md); color: var(--color-text-secondary); }
 
 /* Tenant interface personalization */
-.admin-catalog-shell.admin-theme-verde,
+.admin-product-card.admin-theme-verde,
 .interface-preview.admin-theme-verde {
   --brand-950: #052e1a;
   --brand-900: #064e3b;
@@ -10785,7 +10785,7 @@ tr.client-row--expanded td {
   --brand-50: #f0fdf4;
 }
 
-.admin-catalog-shell.admin-theme-azul,
+.admin-product-card.admin-theme-azul,
 .interface-preview.admin-theme-azul {
   --brand-950: #082f49;
   --brand-900: #0c4a6e;
@@ -10799,7 +10799,7 @@ tr.client-row--expanded td {
   --brand-50: #f0f9ff;
 }
 
-.admin-catalog-shell.admin-theme-neutro,
+.admin-product-card.admin-theme-neutro,
 .interface-preview.admin-theme-neutro {
   --brand-950: #111827;
   --brand-900: #1f2937;
@@ -10988,6 +10988,27 @@ tr.client-row--expanded td {
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   text-align: right;
+}
+
+.admin-product-card .product-action-client {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-product-card .product-action-client .action-button.preorder,
+.admin-product-card .product-action-client .action-button.catalog,
+.interface-preview .product-action-client .action-button.preorder,
+.interface-preview .product-action-client .action-button.catalog {
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  white-space: normal;
 }
 
 @media (max-width: 900px) {

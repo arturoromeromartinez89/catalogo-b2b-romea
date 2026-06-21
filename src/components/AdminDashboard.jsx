@@ -1202,7 +1202,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   }
 
   return (
-    <div className={`admin-catalog-shell admin-theme-${interfaceSettings.theme_key}${tab === "administracion" && adminModuleEnabled ? " has-secondary-sidebar" : ""}`}>
+    <div className={`admin-catalog-shell${tab === "administracion" && adminModuleEnabled ? " has-secondary-sidebar" : ""}`}>
       <aside className="admin-romea-sidebar">
         <div className="brand-block">
           <BrandLogo company={activeCompany} />

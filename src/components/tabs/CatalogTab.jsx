@@ -128,7 +128,7 @@ export default function CatalogTab({
 
               return (
                 <article
-                  className={`admin-product-card enabled ${inPreorder ? "in-preorder" : ""} ${isConfigurable ? "configurable-card" : ""} ${product.fotoUrl ? "" : "no-photo"}`}
+                  className={`admin-product-card enabled ${customCardEnabled ? `admin-theme-${interfaceSettings.theme_key}` : ""} ${inPreorder ? "in-preorder" : ""} ${isConfigurable ? "configurable-card" : ""} ${product.fotoUrl ? "" : "no-photo"}`}
                   key={product.id || product.codigo}
                 >
                   <label className="product-select-check" onClick={(event) => event.stopPropagation()}>
