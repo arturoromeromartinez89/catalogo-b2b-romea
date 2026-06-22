@@ -1381,6 +1381,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             products={products}
             clients={data?.clients || []}
             brandName={headerBrandName}
+            company={activeCompany}
             onGoToPreorders={() => changeTab("preorders")}
             onGoToCatalog={() => changeTab("catalog")}
             onGoToClients={() => changeTab("clients")}

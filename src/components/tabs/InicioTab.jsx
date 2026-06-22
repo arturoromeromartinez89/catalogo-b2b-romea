@@ -64,6 +64,7 @@ export default function InicioTab({
   products = [],
   clients = [],
   brandName = "",
+  company = {},
   onGoToPreorders,
   onGoToCatalog,
   onGoToClients,
@@ -130,15 +131,45 @@ export default function InicioTab({
   const sinFoto = useMemo(() => products.filter((p) => !p.fotoUrl).length, [products]);
   const totalClientes = clients.length;
   const accesoPendiente = accessCount === null ? null : Math.max(totalClientes - accessCount, 0);
+  const companyName = company?.brand_name || company?.legal_name || brandName || t("b2bCatalog");
+  const companyLocation = [company?.city, company?.state, company?.country].filter(Boolean).join(", ");
+  const commercialItems = [
+    company?.legal_name ? { label: "Razon social", value: company.legal_name } : null,
+    company?.rfc ? { label: "RFC", value: company.rfc } : null,
+    company?.phone ? { label: "Telefono", value: company.phone } : null,
+    company?.email ? { label: "Correo", value: company.email } : null,
+    companyLocation ? { label: "Ubicacion", value: companyLocation } : null,
+  ].filter(Boolean);
 
   return (
     <div className="inicio-page">
       <section className="inicio-hero">
-        <p className="inicio-hero__eyebrow">{brandName || t("b2bCatalog")}</p>
-        <h1 className="inicio-hero__title">
-          {displayName ? t("iniHello", displayName) : t("iniHelloNoName")}
-        </h1>
-        <p className="inicio-hero__sub">{t("iniWelcomeSub")}</p>
+        <div className="inicio-hero__identity">
+          <div className="inicio-hero__logo" aria-label={`Logo de ${companyName}`}>
+            {company?.logo_url ? (
+              <img src={company.logo_url} alt={`Logo de ${companyName}`} />
+            ) : (
+              <span>{companyName.slice(0, 1).toUpperCase()}</span>
+            )}
+          </div>
+          <div className="inicio-hero__copy">
+            <p className="inicio-hero__eyebrow">{companyName}</p>
+            <h1 className="inicio-hero__title">
+              {displayName ? t("iniHello", displayName) : t("iniHelloNoName")}
+            </h1>
+            <p className="inicio-hero__sub">Bienvenido al portal de {companyName}. Revisa operacion, catalogo, clientes y pendientes desde un solo lugar.</p>
+            {commercialItems.length ? (
+              <dl className="inicio-company-facts" aria-label="Informacion comercial de la empresa">
+                {commercialItems.map((item) => (
+                  <div key={item.label}>
+                    <dt>{item.label}</dt>
+                    <dd>{item.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null}
+          </div>
+        </div>
         <div className="inicio-hero__actions">
           <button className="primary-button" type="button" onClick={onGoToPreorders}>
             {t("iniPrimaryAction")}
