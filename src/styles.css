@@ -1494,7 +1494,7 @@ dd {
 
 .login-brand-panel {
   align-items: center;
-  background: #202b35;
+  background: #1c3159;
   color: #ffffff;
   display: flex;
   justify-content: center;
@@ -1505,13 +1505,15 @@ dd {
 
 .login-client-logo {
   background: #ffffff;
-  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 8px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18);
   display: block;
   justify-self: center;
-  max-height: 88px;
-  max-width: min(260px, 80%);
+  max-height: 108px;
+  max-width: min(320px, 88%);
   object-fit: contain;
-  padding: 10px 16px;
+  padding: 14px 20px;
 }
 
 .login-brand-orb {
@@ -1536,8 +1538,8 @@ dd {
 
 .login-brand-content {
   display: grid;
-  gap: 18px;
-  max-width: 390px;
+  gap: 20px;
+  max-width: 430px;
   position: relative;
   text-align: center;
   z-index: 1;
@@ -1559,13 +1561,13 @@ dd {
 
 .login-brand-content h1 {
   font-family: var(--font-serif);
-  font-size: 30px;
+  font-size: 34px;
   line-height: 1;
   margin: 0;
 }
 
 .login-brand-content p {
-  color: #c9d7f3;
+  color: #dbe6fb;
   font-size: 14px;
   line-height: 1.5;
   margin: 0;
@@ -1582,7 +1584,7 @@ dd {
 
 .login-brand-content li {
   align-items: center;
-  color: #d7e2f8;
+  color: #edf4ff;
   display: grid;
   font-size: 13px;
   gap: 12px;
@@ -1591,7 +1593,7 @@ dd {
 
 .login-brand-content li::before {
   align-items: center;
-  background: rgba(83, 133, 217, 0.44);
+  background: rgba(255, 255, 255, 0.18);
   border-radius: 50%;
   color: #ffffff;
   content: "✓";

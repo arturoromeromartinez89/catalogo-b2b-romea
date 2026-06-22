@@ -4,6 +4,7 @@ import { isSupabaseConfigured, supabase } from "../lib/supabaseClient";
 import { isAuthLocked } from "../lib/authLock";
 import { getSessionAndProfile } from "../services/supabaseCatalog";
 import { getAppUrl } from "../utils/basePath";
+import { resolvePublicPortalBrand } from "../config/publicPortalBranding";
 
 const copy = {
   es: {
@@ -127,9 +128,15 @@ const withTimeout = (promise, ms = 9000, message = copy.es.timeout) =>
 export default function AuthGate({ children }) {
   const { language, t } = useLanguage();
   const text = copy[language] || copy.es;
-  const portalBrand = import.meta.env.VITE_PORTAL_BRAND_NAME || text.loginProductName;
-  const portalTagline = import.meta.env.VITE_PORTAL_TAGLINE || text.loginProductHelp;
-  const portalLogo = import.meta.env.VITE_PORTAL_LOGO_URL || "";
+  const publicBrand = resolvePublicPortalBrand({
+    hostname: window.location.hostname,
+    pathname: window.location.pathname,
+  });
+  const portalBrand = publicBrand?.title || import.meta.env.VITE_PORTAL_BRAND_NAME || text.loginProductName;
+  const portalTagline = publicBrand?.tagline || import.meta.env.VITE_PORTAL_TAGLINE || text.loginProductHelp;
+  const portalLogo = publicBrand?.logoUrl || import.meta.env.VITE_PORTAL_LOGO_URL || "";
+  const portalFeatures = publicBrand?.features || [text.loginFeature1, text.loginFeature2, text.loginFeature3, text.loginFeature4];
+  const portalCopyright = publicBrand?.copyright || text.appCopyright;
   // modos: "signin" | "reset" | "new-password"
   const [mode, setMode] = useState("signin");
   const [session, setSession] = useState(null);
@@ -363,7 +370,7 @@ export default function AuthGate({ children }) {
             <button className="primary-button full login-submit" type="submit" disabled={savingPassword}>
               {savingPassword ? text.saving : text.savePassword}
             </button>
-            <small>{text.appCopyright} © 2026</small>
+            <small>{portalCopyright} © 2026</small>
           </form>
         </main>
       </section>
@@ -379,10 +386,7 @@ export default function AuthGate({ children }) {
             <h1>{portalBrand}</h1>
             <p>{portalTagline}</p>
             <ul>
-              <li>{text.loginFeature1}</li>
-              <li>{text.loginFeature2}</li>
-              <li>{text.loginFeature3}</li>
-              <li>{text.loginFeature4}</li>
+              {portalFeatures.map((feature) => <li key={feature}>{feature}</li>)}
             </ul>
           </div>
         </aside>
@@ -416,7 +420,7 @@ export default function AuthGate({ children }) {
               <button className="link-button" type="button" onClick={() => goToMode("signin")}>
                 {text.backToLogin}
               </button>
-              <small>{text.appCopyright} © 2026</small>
+              <small>{portalCopyright} © 2026</small>
             </form>
           ) : (
             <form className="login-form-card" onSubmit={submit}>
@@ -445,7 +449,7 @@ export default function AuthGate({ children }) {
               <button className="link-button" type="button" onClick={() => goToMode("reset")}>
                 {text.forgotPassword}
               </button>
-              <small>{text.appCopyright} © 2026</small>
+              <small>{portalCopyright} © 2026</small>
             </form>
           )}
         </main>
