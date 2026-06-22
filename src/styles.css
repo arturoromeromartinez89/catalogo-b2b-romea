@@ -11075,6 +11075,10 @@ tr.client-row--expanded td {
   display: flex;
   flex-direction: column;
   gap: var(--sp-5);
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: var(--sp-5);
   max-width: 1180px;
   margin: 0 auto;
@@ -11087,8 +11091,8 @@ tr.client-row--expanded td {
   color: var(--color-text-primary);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-5);
-  padding: var(--sp-6);
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-6);
   position: relative;
 }
 .inicio-hero::before {
@@ -11138,6 +11142,7 @@ tr.client-row--expanded td {
 }
 .inicio-hero__copy {
   min-width: 0;
+  padding-left: var(--sp-5);
 }
 .inicio-hero__eyebrow {
   margin: 0 0 var(--sp-2);
@@ -11266,6 +11271,47 @@ tr.client-row--expanded td {
 }
 .inicio-status--pendiente { background: var(--color-info-light); color: var(--color-info-text); }
 .inicio-status--revision { background: var(--color-warning-light); color: var(--color-warning-text); }
+.inicio-status--nueva { background: var(--color-info-light); color: var(--color-info-text); }
+.inicio-status--modificada { background: var(--color-warning-light); color: var(--color-warning-text); }
+
+.inicio-notification-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.inicio-notification-item {
+  align-items: center;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 68px;
+  padding: var(--sp-3);
+}
+
+.inicio-notification-dot {
+  background: var(--color-info);
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 0 4px var(--color-info-light);
+  height: 9px;
+  width: 9px;
+}
+
+.inicio-notification-dot--modificada {
+  background: var(--color-warning);
+  box-shadow: 0 0 0 4px var(--color-warning-light);
+}
+
+.inicio-notification-item .inicio-pend-item__action {
+  min-height: 34px;
+  min-width: 110px;
+}
 
 .inicio-acceso { display: flex; align-items: center; gap: var(--sp-4); }
 .inicio-acceso__ring {
@@ -11549,6 +11595,13 @@ tr.client-row--expanded td {
     width: 100%;
   }
   .inicio-hero__title { font-size: var(--text-2xl); }
+  .inicio-notification-item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .inicio-notification-item .inicio-pend-item__action {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
 }
 
 /* Design policy enforcement layer

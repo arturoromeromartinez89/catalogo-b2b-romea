@@ -61,6 +61,12 @@ function MetricCard({ icon, label, value, hint, tone = "neutral", onClick }) {
   );
 }
 
+const notificationType = (preorder = {}) => {
+  const created = new Date(preorder.created_at || 0).getTime() || 0;
+  const saved = new Date(preorderSavedAt(preorder) || 0).getTime() || 0;
+  return saved - created > 60000 ? "modificada" : "nueva";
+};
+
 export default function InicioTab({
   profile,
   tenantId,
@@ -123,63 +129,27 @@ export default function InicioTab({
     return c;
   }, [preorders]);
 
-  const pendientes = useMemo(
+  const clientNotifications = useMemo(
     () => sortPreordersByLastSaved(preorders.filter(
       (p) => p?.creator?.role === "client" && (p.status === "pendiente" || p.status === "revision")
     )),
     [preorders]
   );
-
   const totalCodigos = products.length;
   const sinFoto = useMemo(() => products.filter((p) => !p.fotoUrl).length, [products]);
   const totalClientes = clients.length;
   const accesoPendiente = accessCount === null ? null : Math.max(totalClientes - accessCount, 0);
   const companyName = company?.brand_name || company?.legal_name || brandName || t("b2bCatalog");
-  const companyLocation = [company?.city, company?.state, company?.country].filter(Boolean).join(", ");
-  const commercialItems = [
-    company?.legal_name ? { label: "Razon social", value: company.legal_name } : null,
-    company?.rfc ? { label: "RFC", value: company.rfc } : null,
-    company?.phone ? { label: "Telefono", value: company.phone } : null,
-    company?.email ? { label: "Correo", value: company.email } : null,
-    companyLocation ? { label: "Ubicacion", value: companyLocation } : null,
-  ].filter(Boolean);
 
   return (
     <div className="inicio-page">
       <section className="inicio-hero">
-        <div className="inicio-hero__identity">
-          <div className="inicio-hero__logo" aria-label={`Logo de ${companyName}`}>
-            {company?.logo_url ? (
-              <img src={company.logo_url} alt={`Logo de ${companyName}`} />
-            ) : (
-              <span>{companyName.slice(0, 1).toUpperCase()}</span>
-            )}
-          </div>
-          <div className="inicio-hero__copy">
-            <p className="inicio-hero__eyebrow">{companyName}</p>
-            <h1 className="inicio-hero__title">
-              {displayName ? t("iniHello", displayName) : t("iniHelloNoName")}
-            </h1>
-            <p className="inicio-hero__sub">Bienvenido al portal de {companyName}. Revisa operacion, catalogo, clientes y pendientes desde un solo lugar.</p>
-            {commercialItems.length ? (
-              <dl className="inicio-company-facts" aria-label="Informacion comercial de la empresa">
-                {commercialItems.map((item) => (
-                  <div key={item.label}>
-                    <dt>{item.label}</dt>
-                    <dd>{item.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            ) : null}
-          </div>
-        </div>
-        <div className="inicio-hero__actions">
-          <button className="primary-button" type="button" onClick={onGoToPreorders}>
-            {t("iniPrimaryAction")}
-          </button>
-          <button className="secondary-button" type="button" onClick={onGoToCatalog}>
-            {t("iniVerCatalogo")}
-          </button>
+        <div className="inicio-hero__copy">
+          <p className="inicio-hero__eyebrow">{companyName}</p>
+          <h1 className="inicio-hero__title">
+            {displayName ? t("iniHello", displayName) : t("iniHelloNoName")}
+          </h1>
+          <p className="inicio-hero__sub">Bienvenido a tu sistema.</p>
         </div>
       </section>
 
@@ -246,40 +216,44 @@ export default function InicioTab({
         <article className="inicio-panel">
           <header className="inicio-panel__head">
             <div>
-              <h2>{t("iniPendientesTitle")}</h2>
-              <p>{t("iniPendientesSub")}</p>
+              <h2>Notificaciones</h2>
+              <p>Actividad reciente de clientes en preordenes.</p>
             </div>
-            {pendientes.length ? <span className="inicio-badge">{pendientes.length}</span> : null}
+            {clientNotifications.length ? <span className="inicio-badge">{clientNotifications.length}</span> : null}
           </header>
           {loading ? (
             <p className="inicio-empty">{t("iniCargando")}</p>
-          ) : pendientes.length === 0 ? (
+          ) : clientNotifications.length === 0 ? (
             <div className="inicio-empty-state">
-              <strong>{t("iniPendientesEmptyTitle")}</strong>
-              <span>{t("iniPendientesEmpty")}</span>
+              <strong>Sin notificaciones nuevas</strong>
+              <span>Cuando un cliente cree o modifique una preorden, aparecera aqui.</span>
             </div>
           ) : (
-            <ul className="inicio-pend-list">
-              {pendientes.slice(0, 6).map((p) => (
-                <li key={p.id} className="inicio-pend-item">
-                  <div className="inicio-pend-item__info">
-                    <span className={`inicio-status inicio-status--${p.status}`}>
-                      {p.status === "revision" ? t("pedStatusRevision") : t("pedStatusPendiente")}
-                    </span>
-                    <strong>{p.cliente_nombre || p.cliente_empresa || t("iniSinNombre")}</strong>
-                    <span className="inicio-pend-item__meta">
-                      {p.folio ? `${p.folio} · ` : ""}Guardada {formatDate(preorderSavedAt(p), language)}
-                    </span>
-                  </div>
-                  <button
-                    className="secondary-button inicio-pend-item__action"
-                    type="button"
-                    onClick={() => onReviewClient?.(p.client_id)}
-                  >
-                    {t("iniRevisar")}
-                  </button>
-                </li>
-              ))}
+            <ul className="inicio-notification-list">
+              {clientNotifications.slice(0, 8).map((p) => {
+                const type = notificationType(p);
+                return (
+                  <li key={p.id} className="inicio-notification-item">
+                    <span className={`inicio-notification-dot inicio-notification-dot--${type}`} aria-hidden="true" />
+                    <div className="inicio-pend-item__info">
+                      <span className={`inicio-status inicio-status--${type}`}>
+                        {type === "modificada" ? "Preorden modificada" : "Nueva preorden"}
+                      </span>
+                      <strong>{p.cliente_nombre || p.cliente_empresa || t("iniSinNombre")}</strong>
+                      <span className="inicio-pend-item__meta">
+                        {p.folio ? `${p.folio} - ` : ""}Guardada {formatDate(preorderSavedAt(p), language)}
+                      </span>
+                    </div>
+                    <button
+                      className="secondary-button inicio-pend-item__action"
+                      type="button"
+                      onClick={() => onReviewClient?.(p.client_id)}
+                    >
+                      {t("iniRevisar")}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </article>
