@@ -12237,6 +12237,120 @@ tr.client-row--expanded td {
   border-radius: var(--radius-md);
 }
 
+.admin-catalog-shell .admin-product-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.admin-catalog-shell .admin-product-card {
+  border-radius: 8px;
+  display: grid;
+  grid-template-rows: 176px 122px 84px;
+  min-height: 382px;
+}
+
+.admin-catalog-shell .admin-product-card .admin-product-image {
+  height: 176px;
+}
+
+.admin-catalog-shell .admin-product-card.no-photo::before {
+  align-items: center;
+  background: #f4f6fb;
+  border-bottom: 1px solid var(--color-border);
+  color: #6b7890;
+  content: "Sin foto";
+  display: flex;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  grid-row: 1;
+  justify-content: center;
+  min-height: 176px;
+}
+
+.admin-catalog-shell .admin-product-card.no-photo .admin-product-info {
+  min-height: 0;
+  padding-top: var(--sp-3);
+}
+
+.admin-catalog-shell .admin-product-info {
+  align-content: start;
+  gap: 6px;
+  min-height: 0;
+  overflow: hidden;
+  padding: var(--sp-3);
+}
+
+.admin-catalog-shell .admin-product-info > strong,
+.admin-catalog-shell .admin-product-info > h3,
+.admin-catalog-shell .admin-product-info > p,
+.admin-catalog-shell .admin-product-info > span,
+.admin-catalog-shell .custom-product-field {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-catalog-shell .admin-product-info > strong {
+  display: block;
+  font-size: var(--text-sm);
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.admin-catalog-shell .admin-product-info > h3 {
+  -webkit-line-clamp: 2;
+  font-size: var(--text-sm);
+  line-height: 1.25;
+  min-height: 35px;
+}
+
+.admin-catalog-shell .admin-product-info > p,
+.admin-catalog-shell .admin-product-info > span {
+  font-size: var(--text-xs);
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.admin-catalog-shell .custom-product-field {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(52px, auto) minmax(0, 1fr);
+  margin: 0;
+}
+
+.admin-catalog-shell .custom-product-field span,
+.admin-catalog-shell .custom-product-field strong {
+  font-size: var(--text-xs);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-catalog-shell .admin-product-actions {
+  align-content: stretch;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  min-height: 84px;
+  padding: 8px;
+}
+
+.admin-catalog-shell .product-action-admin,
+.admin-catalog-shell .product-action-client {
+  gap: 6px;
+}
+
+.admin-catalog-shell .admin-product-actions .compact-action,
+.admin-catalog-shell .admin-product-actions .action-button {
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1;
+  min-height: 32px;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
 .gf-segmented button,
 .gf-chip,
 .fin-card,
