@@ -12249,7 +12249,20 @@ tr.client-row--expanded td {
 }
 
 .admin-catalog-shell .admin-product-card .admin-product-image {
+  align-items: center;
+  display: flex;
   height: 176px;
+  justify-content: center;
+  padding: 10px;
+}
+
+.admin-catalog-shell .admin-product-card .admin-product-image img {
+  height: 100%;
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center center;
+  width: 100%;
 }
 
 .admin-catalog-shell .admin-product-card.no-photo::before {
@@ -12339,6 +12352,8 @@ tr.client-row--expanded td {
 .admin-catalog-shell .product-action-admin,
 .admin-catalog-shell .product-action-client {
   gap: 6px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(2, minmax(32px, auto));
 }
 
 .admin-catalog-shell .admin-product-actions .compact-action,
@@ -12349,6 +12364,11 @@ tr.client-row--expanded td {
   min-height: 32px;
   padding: 0 8px;
   white-space: nowrap;
+}
+
+.admin-catalog-shell .admin-product-card .product-action-client .action-button.preorder,
+.admin-catalog-shell .admin-product-card .product-action-client .action-button.catalog {
+  width: 100%;
 }
 
 .gf-segmented button,
