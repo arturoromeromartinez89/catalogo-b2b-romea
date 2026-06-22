@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import PreorderEditor from "./PreorderEditor";
 import { fetchAllPreorders } from "../services/preorderService";
+import { preorderSavedAt, sortPreordersByLastSaved } from "../utils/preorderSorting";
 
 const STATUS_LABELS = {
   pendiente:  { label: "Pendiente revision",  color: "#f59e0b" },
@@ -18,6 +19,21 @@ const TAB_LIST = "list";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const isClientPreorder = (po) => po?.creator?.role === "client";
+
+const formatSavedAt = (value) => {
+  if (!value) return "Sin fecha";
+  try {
+    return new Date(value).toLocaleString("es-MX", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "Sin fecha";
+  }
+};
 
 // ─── Pestaña individual ───────────────────────────────────────────────────────
 function Tab({ tab, active, onClick, onClose }) {
@@ -86,11 +102,12 @@ function PreorderListView({
     ? preorders.filter((p) => p.client_id === clientFilter)
     : preorders;
 
-  const filtered = (() => {
+  const filtered = sortPreordersByLastSaved((() => {
     if (filter === "all")     return baseList;
     if (filter === "clients") return baseList.filter(isClientPreorder);
     return baseList.filter((p) => p.status === filter);
-  })();
+  })());
+  const latestClientPreorder = sortPreordersByLastSaved(baseList.filter(isClientPreorder))[0] || null;
 
   const countFor = (key) => {
     if (key === "clients") return baseList.filter(isClientPreorder).length;
@@ -147,6 +164,14 @@ function PreorderListView({
 
       {statusMsg ? <p className="status info">{statusMsg}</p> : null}
 
+      {latestClientPreorder ? (
+        <button className="po-latest-client-notice" type="button" onClick={() => onOpen(latestClientPreorder)}>
+          <span className="po-latest-client-notice__label">Ultima preorden guardada por cliente</span>
+          <strong>{latestClientPreorder.folio || "Sin folio"} · {latestClientPreorder.cliente_empresa || latestClientPreorder.cliente_nombre || "Cliente"}</strong>
+          <span>{formatSavedAt(preorderSavedAt(latestClientPreorder))}</span>
+        </button>
+      ) : null}
+
       {/* Tabla */}
       {loading ? (
         <div className="po-list-empty"><span className="loading-spinner" /><p>Cargando preórdenes...</p></div>
@@ -163,7 +188,7 @@ function PreorderListView({
                 <th>Folio</th>
                 <th>Origen</th>
                 <th>Cliente</th>
-                <th>Fecha</th>
+                <th>Ultimo guardado</th>
                 <th className="right">Piezas</th>
                 <th className="right">Gramos</th>
                 <th className="right">Total MXN</th>
@@ -195,7 +220,10 @@ function PreorderListView({
                         {po.cliente_email ? <small>{po.cliente_email}</small> : null}
                       </div>
                     </td>
-                    <td className="po-date-cell">{new Date(po.created_at).toLocaleDateString("es-MX")}</td>
+                    <td className="po-date-cell">
+                      <strong>{formatSavedAt(preorderSavedAt(po))}</strong>
+                      <small>Creada {formatSavedAt(po.created_at)}</small>
+                    </td>
                     <td className="right">{po.total_piezas ?? "—"}</td>
                     <td className="right">{po.total_gramos != null ? Number(po.total_gramos).toFixed(2) : "—"}</td>
                     <td className="right"><strong>{fmt(po.total_mxn)}</strong></td>
@@ -250,7 +278,7 @@ export default function PreorderWorkspace({
     setLoading(true);
     try {
       const data = await fetchAllPreorders({ ...profile, tenant_id: tenantId || profile?.tenant_id || "" });
-      setPreorders(data);
+      setPreorders(sortPreordersByLastSaved(data));
     } catch (e) {
       setListMsg(`Error al cargar: ${e.message}`);
     } finally {

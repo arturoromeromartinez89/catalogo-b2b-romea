@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { fetchAllPreorders } from "../../services/preorderService";
+import { preorderSavedAt, sortPreordersByLastSaved } from "../../utils/preorderSorting";
 import { fetchClientAccessStatuses } from "../../services/supabaseCatalog";
 
 /**
@@ -31,9 +32,11 @@ const resolveDisplayName = (profile) => {
 const formatDate = (value, language) => {
   if (!value) return "";
   try {
-    return new Date(value).toLocaleDateString(language === "en" ? "en-US" : "es-MX", {
+    return new Date(value).toLocaleString(language === "en" ? "en-US" : "es-MX", {
       day: "2-digit",
       month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   } catch {
     return "";
@@ -121,9 +124,9 @@ export default function InicioTab({
   }, [preorders]);
 
   const pendientes = useMemo(
-    () => preorders.filter(
+    () => sortPreordersByLastSaved(preorders.filter(
       (p) => p?.creator?.role === "client" && (p.status === "pendiente" || p.status === "revision")
-    ),
+    )),
     [preorders]
   );
 
@@ -265,7 +268,7 @@ export default function InicioTab({
                     </span>
                     <strong>{p.cliente_nombre || p.cliente_empresa || t("iniSinNombre")}</strong>
                     <span className="inicio-pend-item__meta">
-                      {p.folio ? `${p.folio} · ` : ""}{formatDate(p.created_at, language)}
+                      {p.folio ? `${p.folio} · ` : ""}Guardada {formatDate(preorderSavedAt(p), language)}
                     </span>
                   </div>
                   <button

@@ -6258,6 +6258,43 @@ body > div[data-portal] {
   padding: 1px 6px;
 }
 
+.po-latest-client-notice {
+  align-items: center;
+  background: #eef7ff;
+  border: 1px solid #b8d9ff;
+  border-left: 4px solid #2f80ed;
+  border-radius: 8px;
+  color: #12315d;
+  cursor: pointer;
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.po-latest-client-notice:hover {
+  background: #e4f1ff;
+}
+
+.po-latest-client-notice__label {
+  color: #356cae;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.po-latest-client-notice strong {
+  color: #102a56;
+  font-size: 14px;
+}
+
+.po-latest-client-notice span:last-child {
+  color: #53657d;
+  font-size: 12px;
+}
+
 .po-list-empty {
   align-items: center;
   color: var(--romea-muted);
@@ -6324,6 +6361,22 @@ body > div[data-portal] {
 .po-date-cell {
   color: var(--romea-muted);
   white-space: nowrap;
+}
+
+.po-date-cell strong,
+.po-date-cell small {
+  display: block;
+}
+
+.po-date-cell strong {
+  color: var(--romea-ink);
+  font-size: 12px;
+}
+
+.po-date-cell small {
+  color: var(--romea-muted);
+  font-size: 11px;
+  margin-top: 2px;
 }
 
 .po-status-badge {

@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 import { getTenantId, isSuperAdmin, withTenant } from "./tenantUtils";
+import { sortPreordersByLastSaved } from "../utils/preorderSorting";
 
 const buildFolio = () => {
   const d = new Date();
@@ -146,6 +147,7 @@ export const fetchAllPreorders = async (profile) => {
   let query = supabase
     .from("preorders")
     .select("*, preorder_items(*)")
+    .order("updated_at", { ascending: false })
     .order("created_at", { ascending: false });
   query = withTenant(query, tenantId);
   const { data, error } = await query;
@@ -161,13 +163,13 @@ export const fetchAllPreorders = async (profile) => {
       .in("id", creatorIds);
     if (profiles?.length) {
       const roleMap = new Map(profiles.map((p) => [p.id, p.role]));
-      return data.map((po) => hydratePreorder({
+      return sortPreordersByLastSaved(data.map((po) => hydratePreorder({
         ...po,
         creator: po.created_by ? { role: roleMap.get(po.created_by) || "admin" } : null,
-      }));
+      })));
     }
   }
-  return data.map(hydratePreorder);
+  return sortPreordersByLastSaved(data.map(hydratePreorder));
 };
 
 export const fetchPreorder = async (id) => {
@@ -276,9 +278,10 @@ export const fetchClientPreorders = async (clientId) => {
     .from("preorders")
     .select("*, preorder_items(*)")
     .eq("client_id", clientId)
+    .order("updated_at", { ascending: false })
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data || []).map(hydratePreorder);
+  return sortPreordersByLastSaved((data || []).map(hydratePreorder));
 };
 
 export const submitClientPreorder = async (profile, cartItems, customer) => {
