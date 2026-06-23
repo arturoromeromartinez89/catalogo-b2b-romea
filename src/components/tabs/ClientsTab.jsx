@@ -1,8 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { normalizeText } from "../../utils/textNormalizer";
-import { fetchClientAccessStatuses, fetchClientPreorderStats, fetchClientProfileStatus, setClientProfileActive, updateClientAccessPassword, setClientPassword } from "../../services/supabaseCatalog";
-import { supabase } from "../../lib/supabaseClient";
-import { lockAuth, unlockAuth } from "../../lib/authLock";
+import { fetchClientAccessStatuses, fetchClientPreorderStats, fetchClientProfileStatus, setClientProfileActive, setClientPassword } from "../../services/supabaseCatalog";
 
 const displayContactEmail = (email) =>
   String(email || "").endsWith("@prospect.local") ? "-" : email || "-";
@@ -290,52 +288,14 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
     setCreating(true);
     setMsg({ text: "", ok: true });
 
-    // Guardar sesión del admin y bloquear AuthGate para evitar que la UI cambie
-    const { data: { session: adminSession } } = await supabase.auth.getSession();
-    lockAuth();
-
     try {
-      const { data: signUpData, error } = await supabase.auth.signUp({
-        email: emailTrimmed,
-        password: credPwd,
-      });
-
-      if (error) {
-        if (error.message?.toLowerCase().includes("already registered") ||
-            error.message?.toLowerCase().includes("user already")) {
-          unlockAuth();
-          showMsg("✅ Este correo ya tiene cuenta. Copia la invitación con la contraseña nueva.", true);
-          setAccessStatus("active");
-          onAccessGranted?.();
-          setCreating(false);
-          return;
-        }
-        unlockAuth();
-        throw error;
-      }
-
-      // Si Supabase creó una sesión para el cliente (email confirm desactivado),
-      // cerrarla y restaurar la del admin ANTES de desbloquear AuthGate.
-      const { data: { session: afterSession } } = await supabase.auth.getSession();
-      if (afterSession && adminSession && afterSession.user?.id !== adminSession.user?.id) {
-        await supabase.auth.signOut({ scope: "local" });
-        unlockAuth();  // Desbloquear ANTES de setSession para que AuthGate lo capture
-        await supabase.auth.setSession({
-          access_token:  adminSession.access_token,
-          refresh_token: adminSession.refresh_token,
-        });
-      } else {
-        unlockAuth();
-      }
-
-      showMsg("✅ Cuenta creada. Copia la invitación y mándala al cliente por WhatsApp.", true);
+      await setClientPassword(client.id, credPwd);
+      showMsg("✅ Cuenta creada o actualizada. Copia la invitación y mándala al cliente por WhatsApp.", true);
       setAccessStatus("active");
       setProfileActive(true);
       setCurrentPwd(credPwd);
-      updateClientAccessPassword(client.id, credPwd).catch(() => {});  // guarda la copia visible
       onAccessGranted?.();
     } catch (e) {
-      unlockAuth();
       showMsg(`❌ ${e.message}`, false);
     } finally {
       setCreating(false);
