@@ -89,12 +89,15 @@ Deno.serve(async (req) => {
   if (origin && !originPolicy.allowed) return json({ error: "Origen no autorizado." }, 403);
 
   try {
-    const { clientId, action, redirectTo } = await req.json();
-    if (!clientId || !["invite", "reset"].includes(action)) {
+    const { clientId, action, redirectTo, password } = await req.json();
+    if (!clientId || !["invite", "reset", "set_password"].includes(action)) {
       return json({ error: "Solicitud de acceso inválida." }, 400);
     }
-    if (!(await isAllowedRedirect(String(redirectTo || ""), origin, admin))) {
+    if (action !== "set_password" && !(await isAllowedRedirect(String(redirectTo || ""), origin, admin))) {
       return json({ error: "Dirección de retorno no autorizada." }, 400);
+    }
+    if (action === "set_password" && String(password || "").length < 6) {
+      return json({ error: "La contraseña debe tener al menos 6 caracteres." }, 400);
     }
 
     const authHeader = req.headers.get("Authorization") || "";
@@ -149,6 +152,43 @@ Deno.serve(async (req) => {
         return json({ error: "No se pudo vincular la cuenta con el cliente." }, 500);
       }
       return json({ ok: true, action: "invite" });
+    }
+
+    if (action === "set_password") {
+      if (existingProfile && (existingProfile.client_id !== client.id || existingProfile.tenant_id !== client.tenant_id)) {
+        return json({ error: "Este correo ya pertenece a otro cliente." }, 409);
+      }
+
+      let userId = existingProfile?.id;
+      if (!userId) {
+        const { data: created, error } = await admin.auth.admin.createUser({
+          email,
+          password: String(password),
+          email_confirm: true,
+        });
+        if (error) return json({ error: error.message }, 400);
+        userId = created.user?.id;
+        if (!userId) return json({ error: "No se pudo crear la cuenta del cliente." }, 500);
+      } else {
+        const { error } = await admin.auth.admin.updateUserById(userId, {
+          password: String(password),
+          email_confirm: true,
+        });
+        if (error) return json({ error: error.message }, 400);
+      }
+
+      const { error: profileError } = await admin
+        .from("profiles")
+        .upsert({
+          id: userId,
+          email,
+          role: "client",
+          client_id: client.id,
+          tenant_id: client.tenant_id,
+          active: true,
+        }, { onConflict: "id" });
+      if (profileError) return json({ error: "No se pudo vincular la cuenta con el cliente." }, 500);
+      return json({ ok: true, action: "set_password" });
     }
 
     if (!existingProfile || existingProfile.client_id !== client.id || existingProfile.tenant_id !== client.tenant_id) {

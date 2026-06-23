@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { normalizeText } from "../../utils/textNormalizer";
 import { fetchClientAccessStatuses, fetchClientPreorderStats, fetchClientProfileStatus, sendClientAccessEmail, setClientProfileActive } from "../../services/supabaseCatalog";
 import { getAppUrl } from "../../utils/basePath";
@@ -18,13 +18,69 @@ function ClientCatalogAccessSection({ client, products = [], onSave }) {
   const [allowedSkus, setAllowedSkus] = useState(() => client?.allowed_skus || []);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState("");
+  const importFileRef = useRef(null);
   const isRestricted = allowedSkus.length > 0;
+  const isNew = !client?.id;
 
   useEffect(() => {
     setAllowedSkus(client?.allowed_skus || []);
     setSearch("");
     setMsg("");
+    setImportMsg("");
   }, [client?.id, client?.allowed_skus]);
+
+  const handleExcelImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    event.target.value = "";
+
+    setImporting(true);
+    setImportMsg("");
+    try {
+      const XLSX = await import("xlsx");
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const sheetName = workbook.SheetNames.find((name) => normalizeText(name) === "preorden") || workbook.SheetNames[0];
+      if (!sheetName) {
+        setImportMsg("El archivo no contiene hojas.");
+        return;
+      }
+
+      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
+      if (!rows.length) {
+        setImportMsg("La hoja está vacía.");
+        return;
+      }
+
+      const codigoKey = Object.keys(rows[0]).find((key) => normalizeText(String(key)) === "codigo");
+      if (!codigoKey) {
+        setImportMsg("No se encontró columna 'codigo' en el archivo.");
+        return;
+      }
+
+      const rawCodes = rows
+        .map((row) => String(row[codigoKey] ?? "").trim())
+        .filter((code) => code && code.toLowerCase() !== "codigo");
+      const uniqueCodes = [...new Set(rawCodes)];
+      const productCodes = new Set(products.map((product) => product.codigo));
+      const validCodes = uniqueCodes.filter((code) => productCodes.has(code));
+      const invalidCodes = uniqueCodes.filter((code) => !productCodes.has(code));
+      const existing = new Set(allowedSkus);
+      const newCodes = validCodes.filter((code) => !existing.has(code));
+
+      if (newCodes.length) setAllowedSkus((prev) => [...prev, ...newCodes]);
+      const invalidText = invalidCodes.length
+        ? ` ${invalidCodes.length} no encontrados: ${invalidCodes.slice(0, 5).join(", ")}${invalidCodes.length > 5 ? "..." : ""}.`
+        : "";
+      setImportMsg(`${newCodes.length} productos importados.${invalidText}`);
+    } catch (error) {
+      setImportMsg(`Error al leer el archivo: ${error.message}`);
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const suggestions = useMemo(() => {
     if (!search || search.length < 2) return [];
@@ -45,6 +101,10 @@ function ClientCatalogAccessSection({ client, products = [], onSave }) {
   const removeSku = (codigo) => setAllowedSkus((prev) => prev.filter((s) => s !== codigo));
 
   const save = async (nextSkus = allowedSkus) => {
+    if (isNew) {
+      setMsg("Primero guarda la información comercial del cliente.");
+      return;
+    }
     setSaving(true);
     setMsg("");
     try {
@@ -66,11 +126,38 @@ function ClientCatalogAccessSection({ client, products = [], onSave }) {
           <p>Define si este cliente ve todo el catálogo o solo productos seleccionados.</p>
         </div>
         {isRestricted ? (
-          <span className="sku-badge sku-badge--restricted sku-badge--sm">{allowedSkus.length} productos</span>
+          <span className="sku-badge sku-badge--restricted sku-badge--sm">🔒 {allowedSkus.length} productos</span>
         ) : (
-          <span className="sku-badge sku-badge--open sku-badge--sm">Todo el catálogo</span>
+          <span className="sku-badge sku-badge--open sku-badge--sm">Sin límite</span>
         )}
       </div>
+
+      {isNew ? (
+        <p className="client-credentials-hint warn">Primero crea el cliente para poder configurar su catálogo permitido.</p>
+      ) : null}
+
+      <div className="sku-panel-toprow client-catalog-status-row">
+        <div className="sku-restriction-status">
+          {isRestricted ? (
+            <span className="sku-badge sku-badge--restricted">
+              🔒 Catálogo limitado: verá {allowedSkus.length} de {products.length} productos
+            </span>
+          ) : (
+            <span className="sku-badge sku-badge--open">
+              Sin límite: verá todos los productos ({products.length})
+            </span>
+          )}
+        </div>
+        <div className="sku-import-row">
+          <input ref={importFileRef} type="file" accept=".xlsx,.xls" style={{ display: "none" }} onChange={handleExcelImport} />
+          <button type="button" className="secondary-button sku-import-btn" onClick={() => importFileRef.current?.click()} disabled={importing || isNew}>
+            {importing ? "Importando..." : "Cargar desde Excel"}
+          </button>
+          <span className="sku-import-hint">Usa un Excel con columna codigo.</span>
+        </div>
+      </div>
+
+      {importMsg ? <p className={`sku-import-msg ${importMsg.startsWith("Error") || importMsg.startsWith("No ") || importMsg.startsWith("La ") ? "sku-import-msg--err" : "sku-import-msg--ok"}`}>{importMsg}</p> : null}
 
       <div className="client-catalog-access">
         <div className="client-catalog-search">
@@ -119,12 +206,70 @@ function ClientCatalogAccessSection({ client, products = [], onSave }) {
 
       <div className="client-management-actions">
         {isRestricted ? (
-          <button type="button" className="secondary-button" onClick={() => save([])} disabled={saving}>
+          <button type="button" className="secondary-button" onClick={() => save([])} disabled={saving || isNew}>
             Quitar límite
           </button>
         ) : null}
-        <button type="button" className="primary-button" onClick={() => save()} disabled={saving}>
+        <button type="button" className="primary-button" onClick={() => save()} disabled={saving || isNew}>
           {saving ? "Guardando..." : "Guardar catálogo"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ClientInfoSection({ client, blankClient, saving, onSave }) {
+  const [draft, setDraft] = useState(() => ({ ...blankClient, ...client }));
+  const [msg, setMsg] = useState("");
+  const isNew = !client?.id;
+
+  useEffect(() => {
+    setDraft({ ...blankClient, ...client });
+    setMsg("");
+  }, [client, blankClient]);
+
+  const set = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
+  const save = async () => {
+    setMsg("");
+    const saved = await onSave(draft);
+    if (saved) setMsg(isNew ? "Cliente creado. Ya puedes configurar accesos, precios y catálogo." : "Información guardada.");
+  };
+
+  return (
+    <div className="client-management-section client-management-section--wide">
+      <div className="client-management-section__head">
+        <div>
+          <h3>Información comercial</h3>
+          <p>Datos base del cliente. Esta es la primera parte de su hoja madre.</p>
+        </div>
+      </div>
+      <div className="client-info-form">
+        <label>Nombre
+          <input value={draft.name || ""} onChange={(e) => set("name", e.target.value)} />
+        </label>
+        <label>Empresa
+          <input value={draft.company || ""} onChange={(e) => set("company", e.target.value)} />
+        </label>
+        <label>Correo
+          <input value={draft.email && !String(draft.email).endsWith("@prospect.local") ? draft.email : ""} onChange={(e) => set("email", e.target.value)} />
+        </label>
+        <label>Celular
+          <input value={draft.phone || ""} onChange={(e) => set("phone", e.target.value)} />
+        </label>
+        <label>RFC
+          <input value={draft.rfc || ""} onChange={(e) => set("rfc", e.target.value)} />
+        </label>
+        <label>Estado
+          <select value={draft.active === false ? "inactive" : "active"} onChange={(e) => set("active", e.target.value === "active")}>
+            <option value="active">Activo</option>
+            <option value="inactive">Inactivo</option>
+          </select>
+        </label>
+      </div>
+      {msg ? <p className="client-cred-msg">{msg}</p> : null}
+      <div className="client-management-actions">
+        <button type="button" className="primary-button" onClick={save} disabled={saving}>
+          {saving ? "Guardando..." : isNew ? "Crear cliente" : "Guardar información"}
         </button>
       </div>
     </div>
@@ -135,6 +280,9 @@ function ClientCatalogAccessSection({ client, products = [], onSave }) {
 
 function ClientManagementPage({
   client,
+  blankClient,
+  savingClient,
+  onSaveClientDetails,
   hasAccess,
   stats,
   onViewPreorders,
@@ -144,12 +292,12 @@ function ClientManagementPage({
   onSaveLaborList,
   products = [],
   onSaveClientSkus,
-  onEditClient,
 }) {
   const rawEmail = client.email && !String(client.email).endsWith("@prospect.local") ? client.email : "";
   const [laborSel, setLaborSel] = useState(client.labor_list_id || "");
   const [savingLabor, setSavingLabor] = useState(false);
   const [creating,     setCreating]     = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ password: "", confirm: "" });
   const [accessStatus, setAccessStatus] = useState(hasAccess ? "active" : "none");
   const [profileActive, setProfileActive] = useState(null);  // null=cargando, true/false
   const [toggling,     setToggling]     = useState(false);
@@ -160,6 +308,7 @@ function ClientManagementPage({
   const skuCount = client.allowed_skus?.length ?? 0;
   const lastDate = fmtDate(stats?.lastDate);
   const isProspectEmail = !rawEmail;
+  const isNew = !client?.id;
 
   // Cargar estado activo/suspendido del perfil cuando hay cuenta
   useEffect(() => {
@@ -201,6 +350,26 @@ function ClientManagementPage({
       showMsg(action === "invite"
         ? "Invitación enviada. El cliente creará su propia contraseña desde el correo."
         : "Correo de recuperación enviado.", true);
+    } catch (e) {
+      showMsg(e.message, false);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleSetPassword = async () => {
+    if (!client.id) { showMsg("Primero guarda la información comercial del cliente.", false); return; }
+    if (!rawEmail) { showMsg("Guarda primero un correo válido para este cliente.", false); return; }
+    if (passwordForm.password.length < 6) { showMsg("La contraseña debe tener al menos 6 caracteres.", false); return; }
+    if (passwordForm.password !== passwordForm.confirm) { showMsg("Las contraseñas no coinciden.", false); return; }
+    setCreating(true);
+    try {
+      await sendClientAccessEmail(client.id, "set_password", { password: passwordForm.password });
+      setAccessStatus("active");
+      setProfileActive(true);
+      setPasswordForm({ password: "", confirm: "" });
+      onAccessGranted?.();
+      showMsg("Acceso creado o actualizado con la contraseña indicada.", true);
     } catch (e) {
       showMsg(e.message, false);
     } finally {
@@ -297,6 +466,13 @@ function ClientManagementPage({
       </div>
 
       <div className="client-management-grid">
+      <ClientInfoSection
+        client={client}
+        blankClient={blankClient}
+        saving={savingClient}
+        onSave={onSaveClientDetails}
+      />
+
       <div className="client-management-section">
         <div className="client-management-section__head">
           <div>
@@ -329,7 +505,7 @@ function ClientManagementPage({
         <div className="client-management-section__head">
           <div>
             <h3>Accesos</h3>
-            <p>Invita, recupera o suspende la cuenta del cliente.</p>
+            <p>Crea o actualiza la cuenta de acceso del cliente.</p>
           </div>
         </div>
 
@@ -345,8 +521,27 @@ function ClientManagementPage({
                 <strong className="client-access-email">{rawEmail}</strong>
               </div>
               <p className="client-credentials-hint">
-                La contraseña la crea el cliente desde su correo y nunca se muestra aquí.
+                Puedes asignar una contraseña temporal aquí o enviar recuperación por correo.
               </p>
+            </div>
+
+            <div className="client-password-grid">
+              <label>Nueva contraseña
+                <input
+                  type="password"
+                  value={passwordForm.password}
+                  onChange={(e) => setPasswordForm((current) => ({ ...current, password: e.target.value }))}
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </label>
+              <label>Confirmar contraseña
+                <input
+                  type="password"
+                  value={passwordForm.confirm}
+                  onChange={(e) => setPasswordForm((current) => ({ ...current, confirm: e.target.value }))}
+                  placeholder="Repite la contraseña"
+                />
+              </label>
             </div>
 
             {msg.text && (
@@ -357,8 +552,19 @@ function ClientManagementPage({
             <div className="client-access-actions-grid">
               <div className="client-access-action-card">
                 <button type="button" className="primary-button" style={{ width: "100%" }}
+                  onClick={handleSetPassword}
+                  disabled={creating || !rawEmail || isNew}>
+                  {creating ? "Guardando..." : "Guardar contraseña"}
+                </button>
+                <p className="client-access-action-desc">
+                  Crea o actualiza la cuenta con el correo del cliente y la contraseña indicada.
+                </p>
+              </div>
+
+              <div className="client-access-action-card">
+                <button type="button" className="secondary-button" style={{ width: "100%" }}
                   onClick={handleSendAccess}
-                  disabled={creating || !rawEmail}>
+                  disabled={creating || !rawEmail || isNew}>
                   {creating
                     ? "Enviando..."
                     : accessStatus === "active" ? "Enviar recuperación" : "Enviar acceso"}
@@ -372,51 +578,38 @@ function ClientManagementPage({
 
               <div className="client-access-action-card">
                 <button type="button" className="secondary-button" style={{ width: "100%" }}
-                  onClick={handleCopyInvite} disabled={!rawEmail}>
+                  onClick={handleCopyInvite} disabled={!rawEmail || isNew}>
                   Copiar invitación
                 </button>
                 <p className="client-access-action-desc">
                   Copia un mensaje con el enlace y el correo, sin compartir contraseñas.
                 </p>
               </div>
-
-              {total > 0 && (
-                <div className="client-access-action-card">
-                  <button type="button" className="secondary-button" style={{ width: "100%" }}
-                    onClick={() => { onViewPreorders(client.id); }}>
-                    Ver preórdenes ({total}) ↗
-                  </button>
-                  <p className="client-access-action-desc">
-                    Abre el historial completo de preórdenes de este cliente.
-                  </p>
-                </div>
-              )}
             </div>
           </>
         )}
       </div>
 
-      <ClientCatalogAccessSection client={client} products={products} onSave={onSaveClientSkus} />
-
       <div className="client-management-section">
         <div className="client-management-section__head">
           <div>
-            <h3>Datos del cliente</h3>
-            <p>Información comercial básica para identificarlo en pedidos y cotizaciones.</p>
+            <h3>Preórdenes</h3>
+            <p>Historial y pendientes generados por este cliente.</p>
           </div>
         </div>
-        <dl className="client-management-facts">
-          <div><dt>Nombre</dt><dd>{client.name || "-"}</dd></div>
-          <div><dt>Empresa</dt><dd>{client.company || "-"}</dd></div>
-          <div><dt>RFC</dt><dd>{client.rfc || "-"}</dd></div>
-          <div><dt>Estado</dt><dd>{client.active === false ? "Inactivo" : "Activo"}</dd></div>
-        </dl>
+        <div className="client-preorder-summary">
+          <div><strong>{total}</strong><span>Total</span></div>
+          <div><strong>{active}</strong><span>Activas</span></div>
+          <div><strong>{lastDate || "-"}</strong><span>Última</span></div>
+        </div>
         <div className="client-management-actions">
-          <button type="button" className="secondary-button" onClick={onEditClient}>
-            Editar datos
+          <button type="button" className="secondary-button" onClick={() => onViewPreorders(client.id)} disabled={isNew || total === 0}>
+            Ver preórdenes
           </button>
         </div>
       </div>
+
+      <ClientCatalogAccessSection client={client} products={products} onSave={onSaveClientSkus} />
       </div>
     </div>
   );
@@ -450,6 +643,7 @@ export default function ClientsTab({
   onViewClientPreorders,
 }) {
   const [managedClientId,   setManagedClientId]   = useState(null);
+  const [draftManagedClient, setDraftManagedClient] = useState(null);
   const [accessMap,         setAccessMap]         = useState(new Map());
   const [statsMap,          setStatsMap]          = useState(new Map());
 
@@ -479,18 +673,29 @@ export default function ClientsTab({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientIdKey, tenantId]);
 
-  const managedClient = managedClientId
+  const managedClient = draftManagedClient || (managedClientId
     ? filteredClients.find((client) => client.id === managedClientId)
-    : null;
+    : null);
 
   if (managedClient) {
     const email = String(managedClient.email || "").toLowerCase();
     const hasAccess = accessMap.get(email) === true;
+    const saveClientDetails = async (draft) => {
+      const saved = await handleSaveClient(draft);
+      if (saved) {
+        setDraftManagedClient(null);
+        setManagedClientId(saved.id);
+      }
+      return saved;
+    };
     return (
       <section className="admin-workspace clients-workspace">
         <ClientManagementPage
-          key={managedClient.id}
+          key={managedClient.id || "new-client"}
           client={managedClient}
+          blankClient={blankClient}
+          savingClient={savingClient}
+          onSaveClientDetails={saveClientDetails}
           hasAccess={hasAccess}
           stats={statsMap.get(managedClient.id)}
           laborLists={laborLists}
@@ -498,12 +703,7 @@ export default function ClientsTab({
           onSaveLaborList={onSaveClientLaborList}
           onSaveClientSkus={onSaveClientSkus}
           onViewPreorders={onViewClientPreorders || (() => {})}
-          onBack={() => setManagedClientId(null)}
-          onEditClient={() => {
-            setClientForm({ ...blankClient, ...managedClient });
-            setIsClientFormOpen(true);
-            setManagedClientId(null);
-          }}
+          onBack={() => { setManagedClientId(null); setDraftManagedClient(null); }}
           onAccessGranted={() => {
             if (email) setAccessMap((prev) => new Map(prev).set(email, true));
           }}
@@ -524,7 +724,7 @@ export default function ClientsTab({
         <button
           className="new-client-button"
           type="button"
-          onClick={() => { setClientForm(blankClient); setIsClientFormOpen(true); }}
+          onClick={() => { setClientForm(blankClient); setDraftManagedClient({ ...blankClient }); setManagedClientId(null); }}
         >
           + Nuevo cliente
         </button>
@@ -608,10 +808,6 @@ export default function ClientsTab({
                       </td>
                       <td>
                         <div className="client-action-row">
-                          <button className="secondary-button compact-action" type="button"
-                            onClick={() => { setClientForm({ ...blankClient, ...client }); setIsClientFormOpen(true); }}>
-                            Editar
-                          </button>
                           <button
                             className="secondary-button compact-action active-detail"
                             type="button"

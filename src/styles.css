@@ -9843,6 +9843,10 @@ tr.client-row--expanded td {
   padding: var(--sp-4);
 }
 
+.client-management-section--wide {
+  grid-column: 1 / -1;
+}
+
 .client-management-section__head {
   align-items: flex-start;
   display: flex;
@@ -9882,6 +9886,81 @@ tr.client-row--expanded td {
   max-height: 260px;
   min-height: 120px;
   overflow-y: auto;
+}
+
+.client-catalog-status-row {
+  align-items: flex-start;
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3);
+}
+
+.client-info-form,
+.client-password-grid {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.client-info-form label,
+.client-password-grid label {
+  color: var(--color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  gap: var(--sp-2);
+  min-width: 0;
+  text-transform: uppercase;
+}
+
+.client-info-form input,
+.client-info-form select,
+.client-password-grid input {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  min-height: 38px;
+  padding: 0 var(--sp-3);
+  text-transform: none;
+  width: 100%;
+}
+
+.client-preorder-summary {
+  display: grid;
+  gap: var(--sp-2);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.client-preorder-summary div {
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  min-width: 0;
+  padding: var(--sp-3);
+}
+
+.client-preorder-summary strong,
+.client-preorder-summary span {
+  display: block;
+}
+
+.client-preorder-summary strong {
+  color: var(--color-text-primary);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.client-preorder-summary span {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  margin-top: 2px;
 }
 
 .client-management-actions {
@@ -10026,7 +10105,10 @@ tr.client-row--expanded td {
   .client-management-header,
   .client-management-grid,
   .client-catalog-access,
-  .client-management-facts {
+  .client-management-facts,
+  .client-info-form,
+  .client-password-grid,
+  .client-preorder-summary {
     grid-template-columns: 1fr;
   }
   .client-management-header {

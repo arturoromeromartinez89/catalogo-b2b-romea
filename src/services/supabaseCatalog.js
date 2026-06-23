@@ -449,10 +449,10 @@ export const updateClientAllowedSkus = async (clientId, skus) => {
  * laborListId = "" o null → sin lista asignada (precios base).
  * laborListId = UUID → esa lista se auto-aplica en la preorden del cliente.
  */
-/** Envía una invitación inicial o un correo de recuperación sin manejar contraseñas. */
-export const sendClientAccessEmail = async (clientId, action) => {
+/** Gestiona accesos de cliente mediante la Edge Function segura. */
+export const sendClientAccessEmail = async (clientId, action, options = {}) => {
   const { data, error } = await supabase.functions.invoke("set-client-password", {
-    body: { clientId, action, redirectTo: getAppUrl() },
+    body: { clientId, action, redirectTo: getAppUrl(), ...options },
   });
   if (error) {
     let detail = error.message || "No se pudo enviar el correo de acceso.";

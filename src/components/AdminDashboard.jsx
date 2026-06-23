@@ -805,20 +805,21 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     setLastActionMessage(`Producto ${code} eliminado de pre-orden.`);
   };
 
-  const handleSaveClient = async () => {
+  const handleSaveClient = async (overrideClient = null) => {
+    const draftClient = overrideClient || clientForm;
     if (!tenantId) {
       setStatus("Primero selecciona una empresa para crear clientes.");
       notifyAction("warning", "Falta empresa", "Primero selecciona una empresa para crear clientes.");
-      return;
+      return null;
     }
-    if (!clientForm.name.trim() && !clientForm.company.trim()) {
+    if (!String(draftClient.name || "").trim() && !String(draftClient.company || "").trim()) {
       notifyAction("warning", "Datos incompletos", "Captura al menos nombre o empresa antes de guardar el cliente.");
-      return;
+      return null;
     }
     setSavingClient(true);
     setStatus("Guardando cliente...");
     try {
-      const saved = await saveClient({ ...clientForm, type: "cliente" }, tenantId);
+      const saved = await saveClient({ ...draftClient, type: "cliente" }, tenantId);
       setClientForm(blankClient);
       setIsClientFormOpen(false);
       setData((current) => {
@@ -831,12 +832,14 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       setStatus("Cliente guardado correctamente.");
       notifyAction(
         "success",
-        clientForm.id ? "Cliente actualizado" : "Cliente creado",
+        draftClient.id ? "Cliente actualizado" : "Cliente creado",
         `${saved.company || saved.name || "Cliente"} se guardo correctamente.`
       );
+      return saved;
     } catch (error) {
       setStatus(`Error creando cliente: ${error.message}`);
       notifyAction("error", "No se pudo guardar", `Error creando cliente: ${error.message}`);
+      return null;
     } finally {
       setSavingClient(false);
     }
@@ -1468,13 +1471,6 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             setClientSearch={setClientSearch}
             clientStatusFilter={clientStatusFilter}
             setClientStatusFilter={setClientStatusFilter}
-            priceLists={data.priceLists}
-            clientPriceLists={data.clientPriceLists}
-            selectedClientId={selectedClientId}
-            setSelectedClientId={setSelectedClientId}
-            selectedClient={selectedClient}
-            isClientPriceActive={isClientPriceActive}
-            handlePriceListToggle={handlePriceListToggle}
             isClientFormOpen={isClientFormOpen}
             setIsClientFormOpen={setIsClientFormOpen}
             clientForm={clientForm}
