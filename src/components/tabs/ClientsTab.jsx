@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { normalizeText } from "../../utils/textNormalizer";
 import { fetchClientAccessStatuses, fetchClientPreorderStats, fetchClientProfileStatus, sendClientAccessEmail, setClientProfileActive } from "../../services/supabaseCatalog";
 import { getAppUrl } from "../../utils/basePath";
@@ -11,75 +11,20 @@ const fmtDate = (iso) => {
   return new Date(iso).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
 };
 
-// ─── Panel de gestión de catálogo personalizado por cliente ───────────────────
+// ─── Catálogo permitido dentro de la página del cliente ──────────────────────
 
-function ClientSkuPanel({ client, products = [], onSave, onClose }) {
-  const [search, setSearch]         = useState("");
+function ClientCatalogAccessSection({ client, products = [], onSave }) {
+  const [search, setSearch] = useState("");
   const [allowedSkus, setAllowedSkus] = useState(() => client?.allowed_skus || []);
-  const [saving, setSaving]         = useState(false);
-  const [msg, setMsg]               = useState("");
-  const [importing, setImporting]   = useState(false);
-  const [importMsg, setImportMsg]   = useState("");
-  const importFileRef               = useRef(null);
-  const isRestricted                = allowedSkus.length > 0;
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const isRestricted = allowedSkus.length > 0;
 
-  const handleExcelImport = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-
-    setImporting(true);
-    setImportMsg("");
-    try {
-      const XLSX = await import("xlsx");
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
-
-      const sheetName = workbook.SheetNames.find((n) => normalizeText(n) === "preorden")
-        ?? workbook.SheetNames[0];
-
-      if (!sheetName) { setImportMsg("❌ El archivo no contiene hojas."); return; }
-
-      const sheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-
-      if (!rows.length) { setImportMsg("❌ La hoja está vacía."); return; }
-
-      const sampleRow = rows[0];
-      const codigoKey = Object.keys(sampleRow).find(
-        (k) => normalizeText(String(k)) === "codigo"
-      );
-
-      if (!codigoKey) { setImportMsg("❌ No se encontró columna 'codigo' en el archivo."); return; }
-
-      const rawCodes = rows
-        .map((row) => String(row[codigoKey] ?? "").trim())
-        .filter((c) => c && c.toLowerCase() !== "codigo");
-
-      const uniqueCodes = [...new Set(rawCodes)];
-      const productCodes = new Set(products.map((p) => p.codigo));
-      const validCodes   = uniqueCodes.filter((c) => productCodes.has(c));
-      const invalidCodes = uniqueCodes.filter((c) => !productCodes.has(c));
-      const existingSet  = new Set(allowedSkus);
-      const newCodes     = validCodes.filter((c) => !existingSet.has(c));
-
-      if (newCodes.length > 0) setAllowedSkus((prev) => [...prev, ...newCodes]);
-
-      let summary = `✅ ${newCodes.length} SKU${newCodes.length !== 1 ? "s" : ""} importados`;
-      const alreadyIn = validCodes.length - newCodes.length;
-      if (alreadyIn > 0) summary += ` (${alreadyIn} ya estaban en la lista)`;
-      if (invalidCodes.length > 0) {
-        const preview = invalidCodes.slice(0, 5).join(", ");
-        const extra   = invalidCodes.length > 5 ? ` y ${invalidCodes.length - 5} más…` : "";
-        summary += `. ${invalidCodes.length} no encontrados en el catálogo: ${preview}${extra}`;
-      }
-      setImportMsg(summary);
-    } catch (err) {
-      setImportMsg(`❌ Error al leer el archivo: ${err.message}`);
-    } finally {
-      setImporting(false);
-    }
-  };
+  useEffect(() => {
+    setAllowedSkus(client?.allowed_skus || []);
+    setSearch("");
+    setMsg("");
+  }, [client?.id, client?.allowed_skus]);
 
   const suggestions = useMemo(() => {
     if (!search || search.length < 2) return [];
@@ -89,144 +34,118 @@ function ClientSkuPanel({ client, products = [], onSave, onClose }) {
         !allowedSkus.includes(p.codigo) &&
         normalizeText([p.codigo, p.descripcion, p.linea, p.familia].join(" ")).includes(q)
       )
-      .slice(0, 10);
+      .slice(0, 8);
   }, [search, products, allowedSkus]);
 
-  const addSku    = (codigo) => { if (!codigo || allowedSkus.includes(codigo)) return; setAllowedSkus((prev) => [...prev, codigo]); setSearch(""); };
+  const addSku = (codigo) => {
+    if (!codigo || allowedSkus.includes(codigo)) return;
+    setAllowedSkus((prev) => [...prev, codigo]);
+    setSearch("");
+  };
   const removeSku = (codigo) => setAllowedSkus((prev) => prev.filter((s) => s !== codigo));
 
-  const handleSave = async () => {
-    setSaving(true); setMsg("");
+  const save = async (nextSkus = allowedSkus) => {
+    setSaving(true);
+    setMsg("");
     try {
-      await onSave(client.id, allowedSkus);
-      setMsg(`✅ Catálogo guardado — ${allowedSkus.length} SKU${allowedSkus.length !== 1 ? "s" : ""} asignados.`);
-      window.setTimeout(() => onClose(), 1400);
-    } catch (e) { setMsg(`❌ Error: ${e.message}`); setSaving(false); }
-  };
-
-  const handleClearRestriction = async () => {
-    setSaving(true); setMsg("");
-    try {
-      await onSave(client.id, []);
-      setAllowedSkus([]);
-      setMsg("✅ Restricción eliminada. El cliente verá todos los productos.");
-      window.setTimeout(() => onClose(), 1400);
-    } catch (e) { setMsg(`❌ Error: ${e.message}`); setSaving(false); }
+      await onSave(client.id, nextSkus);
+      setAllowedSkus(nextSkus);
+      setMsg(nextSkus.length ? `Catálogo guardado: ${nextSkus.length} productos visibles.` : "Sin límite: el cliente verá todo el catálogo.");
+    } catch (e) {
+      setMsg(`No se pudo guardar: ${e.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="client-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="client-modal client-modal--wide">
-        <header>
-          <div>
-            <h2>Catálogo personalizado</h2>
-            <p style={{ fontSize: 13, color: "var(--romea-muted)", margin: "2px 0 0" }}>
-              {client.company || client.name}
-            </p>
-          </div>
-          <button className="icon-button" type="button" aria-label="Cerrar" onClick={onClose}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </header>
+    <div className="client-management-section">
+      <div className="client-management-section__head">
+        <div>
+          <h3>Catálogo permitido</h3>
+          <p>Define si este cliente ve todo el catálogo o solo productos seleccionados.</p>
+        </div>
+        {isRestricted ? (
+          <span className="sku-badge sku-badge--restricted sku-badge--sm">{allowedSkus.length} productos</span>
+        ) : (
+          <span className="sku-badge sku-badge--open sku-badge--sm">Todo el catálogo</span>
+        )}
+      </div>
 
-        <div className="sku-panel-body">
-          <div className="sku-panel-toprow">
-            <div className="sku-restriction-status">
-              {isRestricted ? (
-                <span className="sku-badge sku-badge--restricted">
-                  🔒 Catálogo limitado — solo verá {allowedSkus.length} de {products.length} productos
-                </span>
-              ) : (
-                <span className="sku-badge sku-badge--open">
-                  🌐 Sin límite — verá todos los productos ({products.length})
-                </span>
-              )}
-            </div>
-            <div className="sku-import-row">
-              <input ref={importFileRef} type="file" accept=".xlsx,.xls" style={{ display: "none" }} onChange={handleExcelImport} />
-              <button type="button" className="secondary-button sku-import-btn" onClick={() => importFileRef.current?.click()} disabled={importing} title="Carga un Excel con el mismo formato que la descarga de preorden">
-                {importing ? "Importando…" : (
-                  <>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    Cargar desde Excel
-                  </>
-                )}
-              </button>
-              <span className="sku-import-hint">Usa el mismo archivo que descargas de la preorden</span>
-            </div>
-          </div>
-
-          {importMsg && <p className={`sku-import-msg ${importMsg.startsWith("✅") ? "sku-import-msg--ok" : "sku-import-msg--err"}`}>{importMsg}</p>}
-
-          <div className="sku-panel-workspace">
-            <div className="sku-panel-search">
-              <label className="sku-search-label">Agregar producto al catálogo</label>
-              <div style={{ position: "relative" }}>
-                <input className="rem-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por SKU, descripción, línea..." autoFocus />
-                {suggestions.length > 0 && (
-                  <div className="sku-suggestions">
-                    {suggestions.map((p) => (
-                      <button key={p.codigo} type="button" className="sku-suggestion-item" onClick={() => addSku(p.codigo)}>
-                        <strong>{p.codigo}</strong><span>{p.descripcion?.slice(0, 60)}</span><b>+ Agregar</b>
-                      </button>
-                    ))}
-                  </div>
-                )}
+      <div className="client-catalog-access">
+        <div className="client-catalog-search">
+          <label className="sku-search-label">Agregar producto</label>
+          <div className="client-catalog-search__box">
+            <input
+              className="rem-search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por código, descripción, línea..."
+            />
+            {suggestions.length > 0 ? (
+              <div className="sku-suggestions">
+                {suggestions.map((p) => (
+                  <button key={p.codigo} type="button" className="sku-suggestion-item" onClick={() => addSku(p.codigo)}>
+                    <strong>{p.codigo}</strong><span>{p.descripcion?.slice(0, 60)}</span><b>+ Agregar</b>
+                  </button>
+                ))}
               </div>
-            </div>
-
-            <div className="sku-panel-list">
-              {isRestricted ? (
-                <>
-                  <div className="sku-search-label">Productos visibles para el cliente ({allowedSkus.length})</div>
-                  <div className="sku-assigned-list">
-                    {allowedSkus.map((codigo) => {
-                      const product = products.find((p) => p.codigo === codigo);
-                      return (
-                        <div key={codigo} className="sku-assigned-item">
-                          <span className="sku-code">{codigo}</span>
-                          {product && <span className="sku-desc">{product.descripcion?.slice(0, 50)}</span>}
-                          <button type="button" className="sku-remove" onClick={() => removeSku(codigo)} title={`Quitar ${codigo}`}>×</button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : (
-                <p className="sku-empty-hint">Sin límite activo — el cliente ve todos los productos. Carga un Excel o busca productos para definir su catálogo personalizado.</p>
-              )}
-            </div>
+            ) : null}
           </div>
-
-          {msg && <p className={`sku-import-msg ${msg.startsWith("✅") ? "sku-import-msg--ok" : "sku-import-msg--err"}`}>{msg}</p>}
+          <p className="client-mini-hint">Al agregar uno o más productos, el catálogo queda limitado a esa selección.</p>
         </div>
 
-        <footer>
-          <div style={{ display: "flex", gap: 8, flex: 1 }}>
-            {isRestricted && (
-              <button type="button" className="secondary-button" onClick={handleClearRestriction} disabled={saving} title="Quitar el límite — el cliente vuelve a ver todos los productos">
-                Sin límite (ver todo)
-              </button>
-            )}
-          </div>
-          <button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancelar</button>
-          <button type="button" className="primary-button" onClick={handleSave} disabled={saving}>
-            {saving ? "Guardando..." : isRestricted ? `Habilitar ${allowedSkus.length} SKU${allowedSkus.length !== 1 ? "s" : ""} visibles` : "Guardar sin límite"}
+        <div className="client-catalog-list">
+          {isRestricted ? (
+            <div className="sku-assigned-list client-catalog-list__items">
+              {allowedSkus.map((codigo) => {
+                const product = products.find((p) => p.codigo === codigo);
+                return (
+                  <div key={codigo} className="sku-assigned-item">
+                    <span className="sku-code">{codigo}</span>
+                    {product ? <span className="sku-desc">{product.descripcion?.slice(0, 56)}</span> : null}
+                    <button type="button" className="sku-remove" onClick={() => removeSku(codigo)} title={`Quitar ${codigo}`}>×</button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="sku-empty-hint">Sin límite activo. El cliente ve todos los productos visibles del tenant.</p>
+          )}
+        </div>
+      </div>
+
+      {msg ? <p className={`client-cred-msg${msg.startsWith("No ") ? " client-cred-msg--err" : ""}`}>{msg}</p> : null}
+
+      <div className="client-management-actions">
+        {isRestricted ? (
+          <button type="button" className="secondary-button" onClick={() => save([])} disabled={saving}>
+            Quitar límite
           </button>
-        </footer>
+        ) : null}
+        <button type="button" className="primary-button" onClick={() => save()} disabled={saving}>
+          {saving ? "Guardando..." : "Guardar catálogo"}
+        </button>
       </div>
     </div>
   );
 }
 
-// ─── Mini-center de actividad y credenciales por cliente ──────────────────────
+// ─── Página de gestión por cliente ───────────────────────────────────────────
 
-function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, onAccessGranted, laborLists = [], onSaveLaborList }) {
+function ClientManagementPage({
+  client,
+  hasAccess,
+  stats,
+  onViewPreorders,
+  onBack,
+  onAccessGranted,
+  laborLists = [],
+  onSaveLaborList,
+  products = [],
+  onSaveClientSkus,
+  onEditClient,
+}) {
   const rawEmail = client.email && !String(client.email).endsWith("@prospect.local") ? client.email : "";
   const [laborSel, setLaborSel] = useState(client.labor_list_id || "");
   const [savingLabor, setSavingLabor] = useState(false);
@@ -324,10 +243,16 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
   };
 
   return (
-    <div className="client-mini-center">
-      {/* Encabezado con estado y toggle on/off */}
-      <div className="client-mini-center-header">
-        <span className="client-mini-center-eyebrow">Acceso y actividad — {client.company || client.name}</span>
+    <div className="client-management-page">
+      <div className="client-management-header">
+        <button type="button" className="secondary-button client-back-button" onClick={onBack}>
+          Volver a clientes
+        </button>
+        <div className="client-management-title">
+          <span className="client-mini-center-eyebrow">Cliente</span>
+          <h2>{client.company || client.name || "Sin nombre"}</h2>
+          <p>{displayContactEmail(client.email)}{client.phone ? ` · ${client.phone}` : ""}</p>
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {accessStatus === "active" ? (
             <span className={`client-access-badge ${profileActive === false ? "client-access-badge--suspended" : "client-access-badge--active"}`}>
@@ -352,7 +277,6 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
         </div>
       </div>
 
-      {/* Estadísticas */}
       <div className="client-mini-center-stats">
         <div className="client-stat-box">
           <div className="client-stat-value">{total}</div>
@@ -372,9 +296,14 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
         </div>
       </div>
 
-      {/* Lista de precios (mano de obra) que verá el cliente */}
-      <div className="client-credentials-section">
-        <div className="client-credentials-title">Lista de precios del cliente</div>
+      <div className="client-management-grid">
+      <div className="client-management-section">
+        <div className="client-management-section__head">
+          <div>
+            <h3>Lista de precios</h3>
+            <p>Controla qué precios verá el cliente dentro de su catálogo.</p>
+          </div>
+        </div>
         <p className="client-mini-hint">
           El cliente verá la <strong>mano de obra</strong> de esta lista al ver los productos y al armar su preorden.
         </p>
@@ -396,9 +325,13 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
         ) : null}
       </div>
 
-      {/* Sección de credenciales */}
-      <div className="client-credentials-section">
-        <div className="client-credentials-title">Credenciales de acceso</div>
+      <div className="client-management-section">
+        <div className="client-management-section__head">
+          <div>
+            <h3>Accesos</h3>
+            <p>Invita, recupera o suspende la cuenta del cliente.</p>
+          </div>
+        </div>
 
         {isProspectEmail ? (
           <p className="client-credentials-hint warn">
@@ -450,7 +383,7 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
               {total > 0 && (
                 <div className="client-access-action-card">
                   <button type="button" className="secondary-button" style={{ width: "100%" }}
-                    onClick={() => { onViewPreorders(client.id); onClose(); }}>
+                    onClick={() => { onViewPreorders(client.id); }}>
                     Ver preórdenes ({total}) ↗
                   </button>
                   <p className="client-access-action-desc">
@@ -461,6 +394,29 @@ function ClientMiniCenter({ client, hasAccess, stats, onViewPreorders, onClose, 
             </div>
           </>
         )}
+      </div>
+
+      <ClientCatalogAccessSection client={client} products={products} onSave={onSaveClientSkus} />
+
+      <div className="client-management-section">
+        <div className="client-management-section__head">
+          <div>
+            <h3>Datos del cliente</h3>
+            <p>Información comercial básica para identificarlo en pedidos y cotizaciones.</p>
+          </div>
+        </div>
+        <dl className="client-management-facts">
+          <div><dt>Nombre</dt><dd>{client.name || "-"}</dd></div>
+          <div><dt>Empresa</dt><dd>{client.company || "-"}</dd></div>
+          <div><dt>RFC</dt><dd>{client.rfc || "-"}</dd></div>
+          <div><dt>Estado</dt><dd>{client.active === false ? "Inactivo" : "Activo"}</dd></div>
+        </dl>
+        <div className="client-management-actions">
+          <button type="button" className="secondary-button" onClick={onEditClient}>
+            Editar datos
+          </button>
+        </div>
+      </div>
       </div>
     </div>
   );
@@ -475,13 +431,6 @@ export default function ClientsTab({
   setClientSearch,
   clientStatusFilter,
   setClientStatusFilter,
-  priceLists,
-  clientPriceLists,
-  selectedClientId,
-  setSelectedClientId,
-  selectedClient,
-  isClientPriceActive,
-  handlePriceListToggle,
   isClientFormOpen,
   setIsClientFormOpen,
   clientForm,
@@ -500,8 +449,7 @@ export default function ClientsTab({
   tenantId = "",
   onViewClientPreorders,
 }) {
-  const [skuClient,         setSkuClient]         = useState(null);
-  const [expandedClientId,  setExpandedClientId]  = useState(null);
+  const [managedClientId,   setManagedClientId]   = useState(null);
   const [accessMap,         setAccessMap]         = useState(new Map());
   const [statsMap,          setStatsMap]          = useState(new Map());
 
@@ -531,8 +479,38 @@ export default function ClientsTab({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientIdKey, tenantId]);
 
-  const toggleExpanded = (clientId) =>
-    setExpandedClientId((prev) => (prev === clientId ? null : clientId));
+  const managedClient = managedClientId
+    ? filteredClients.find((client) => client.id === managedClientId)
+    : null;
+
+  if (managedClient) {
+    const email = String(managedClient.email || "").toLowerCase();
+    const hasAccess = accessMap.get(email) === true;
+    return (
+      <section className="admin-workspace clients-workspace">
+        <ClientManagementPage
+          key={managedClient.id}
+          client={managedClient}
+          hasAccess={hasAccess}
+          stats={statsMap.get(managedClient.id)}
+          laborLists={laborLists}
+          products={products}
+          onSaveLaborList={onSaveClientLaborList}
+          onSaveClientSkus={onSaveClientSkus}
+          onViewPreorders={onViewClientPreorders || (() => {})}
+          onBack={() => setManagedClientId(null)}
+          onEditClient={() => {
+            setClientForm({ ...blankClient, ...managedClient });
+            setIsClientFormOpen(true);
+            setManagedClientId(null);
+          }}
+          onAccessGranted={() => {
+            if (email) setAccessMap((prev) => new Map(prev).set(email, true));
+          }}
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="admin-workspace clients-workspace">
@@ -587,15 +565,13 @@ export default function ClientsTab({
             </thead>
             <tbody>
               {filteredClients.length ? filteredClients.map((client) => {
-                const assignedPriceList = clientPriceLists.find((item) => item.client_id === client.id);
-                const priceList   = priceLists.find((item) => item.id === assignedPriceList?.price_list_id);
+                const priceList   = laborLists.find((item) => item.id === client.labor_list_id);
                 const initials    = (client.company || client.name || "?").trim().slice(0, 1).toUpperCase();
                 const skuCount    = client.allowed_skus?.length || 0;
-                const isExpanded  = expandedClientId === client.id;
                 const hasAccess   = accessMap.get(String(client.email || "").toLowerCase()) === true;
                 return (
                   <Fragment key={client.id}>
-                    <tr className={isExpanded ? "client-row--expanded" : ""}>
+                    <tr>
                       <td>
                         <div className="client-name-cell">
                           <span>{initials}</span>
@@ -636,21 +612,13 @@ export default function ClientsTab({
                             onClick={() => { setClientForm({ ...blankClient, ...client }); setIsClientFormOpen(true); }}>
                             Editar
                           </button>
-                          <button className="secondary-button compact-action" type="button"
-                            onClick={() => setSelectedClientId(client.id)}>
-                            Precios
-                          </button>
-                          <button className="secondary-button compact-action" type="button"
-                            onClick={() => setSkuClient(client)} title="Administrar catálogo personalizado">
-                            Catálogo
-                          </button>
                           <button
-                            className={`secondary-button compact-action${isExpanded ? " active-detail" : ""}`}
+                            className="secondary-button compact-action active-detail"
                             type="button"
-                            onClick={() => toggleExpanded(client.id)}
-                            title={isExpanded ? "Cerrar actividad" : "Ver actividad, accesos y preórdenes"}
+                            onClick={() => setManagedClientId(client.id)}
+                            title="Gestionar accesos, precios y catálogo del cliente"
                           >
-                            {isExpanded ? "▴ Cerrar" : "▾ Actividad"}
+                            Gestionar
                           </button>
                           {handleDeleteClient ? (
                             <button className="secondary-button compact-action danger-action" type="button"
@@ -661,25 +629,6 @@ export default function ClientsTab({
                         </div>
                       </td>
                     </tr>
-                    {isExpanded ? (
-                      <tr key={`${client.id}-detail`} className="client-detail-row">
-                        <td colSpan="8">
-                          <ClientMiniCenter
-                            client={client}
-                            hasAccess={hasAccess}
-                            stats={statsMap.get(client.id)}
-                            laborLists={laborLists}
-                            onSaveLaborList={onSaveClientLaborList}
-                            onViewPreorders={onViewClientPreorders || (() => {})}
-                            onClose={() => setExpandedClientId(null)}
-                            onAccessGranted={() => {
-                              const email = String(client.email || "").toLowerCase();
-                              if (email) setAccessMap((prev) => new Map(prev).set(email, true));
-                            }}
-                          />
-                        </td>
-                      </tr>
-                    ) : null}
                   </Fragment>
                 );
               }) : (
@@ -689,29 +638,6 @@ export default function ClientsTab({
           </table>
         </div>
       </div>
-
-      {/* Panel de lista de precios */}
-      {selectedClient ? (
-        <div className="clients-pricing-panel">
-          <div>
-            <span className="tool-eyebrow">Lista de precios</span>
-            <h3>{selectedClient.company || selectedClient.name}</h3>
-            <p>Selecciona la lista activa para este cliente.</p>
-          </div>
-          <div className="client-price-list-options">
-            {priceLists.map((priceList) => (
-              <label className="switch-row" key={priceList.id}>
-                <input
-                  type="checkbox"
-                  checked={isClientPriceActive(priceList.id)}
-                  onChange={(e) => handlePriceListToggle(priceList.id, e.target.checked)}
-                />
-                <span>{priceList.name}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      ) : null}
 
       {/* Modal editar/crear cliente */}
       {isClientFormOpen ? (
@@ -750,7 +676,7 @@ export default function ClientsTab({
                   <option value="inactive">Inactivo</option>
                 </select>
               </label>
-              {/* La lista de precios del cliente se asigna desde su menú "Actividad". */}
+              {/* La lista de precios del cliente se asigna desde su página de gestión. */}
             </div>
             <footer>
               <button className="secondary-button" type="button" onClick={() => setIsClientFormOpen(false)}>
@@ -764,18 +690,6 @@ export default function ClientsTab({
         </div>
       ) : null}
 
-      {/* Modal de catálogo personalizado */}
-      {skuClient ? (
-        <ClientSkuPanel
-          client={skuClient}
-          products={products}
-          onSave={async (clientId, skus) => {
-            await onSaveClientSkus(clientId, skus);
-            setSkuClient((prev) => prev ? { ...prev, allowed_skus: skus.length ? skus : null } : null);
-          }}
-          onClose={() => setSkuClient(null)}
-        />
-      ) : null}
     </section>
   );
 }
