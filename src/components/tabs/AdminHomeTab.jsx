@@ -18,6 +18,15 @@ const preorderNeedsAttention = (status = "") => {
   return !["confirmada", "confirmed", "cancelada", "cancelled"].includes(value);
 };
 
+const prettifyName = (value = "") => {
+  const clean = String(value || "").trim();
+  if (!clean) return "";
+  if (/geronimo\s+cardenas/i.test(clean)) return "Gerónimo Cárdenas";
+  return clean
+    .toLowerCase()
+    .replace(/\b\p{L}/gu, (letter) => letter.toUpperCase());
+};
+
 export default function AdminHomeTab({
   activeCompany,
   activeTenant,
@@ -39,7 +48,8 @@ export default function AdminHomeTab({
     "tu empresa";
 
   const displayName =
-    activeCompany?.contact_name ||
+    prettifyName(activeCompany?.contact_name) ||
+    prettifyName(activeTenant?.name) ||
     profile?.full_name ||
     profile?.email?.split("@")[0] ||
     "admin";
