@@ -20,6 +20,7 @@ import CatalogTab from "./tabs/CatalogTab";
 import ClientsTab from "./tabs/ClientsTab";
 import ProspectsTab from "./tabs/ProspectsTab";
 import DatabaseTab from "./tabs/DatabaseTab";
+import ValidationTab from "./tabs/ValidationTab";
 import ComponentsTab from "./tabs/ComponentsTab";
 import RemisionWorkspace from "./RemisionWorkspace";
 import GastosTab from "./tabs/GastosTab";
@@ -59,7 +60,7 @@ const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ci
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
 const PRODUCT_RENDER_BATCH = 60;
-const baseTabs = ["home", "catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
+const baseTabs = ["home", "catalog", "preorders", "clients", "prospects", "prices", "company", "validation", "database"];
 const configurableOnlyTabs = ["components"];
 const adminModuleTabs = ["administracion"];
 // Navegación organizada por las preguntas del negocio, no por tablas.
@@ -85,6 +86,7 @@ const tabKeys = {
   prospects:     "prospects",
   prices:        "priceMenu",
   company:       "company",
+  validation:    "validation",
   database:      "database",
   components:    "components",
   administracion: "administracion",
@@ -98,6 +100,7 @@ const titleKeys = {
   prospects:     "prospects",
   prices:        "priceMenu",
   company:       "company",
+  validation:    "validation",
   database:      "database",
   components:    "components",
   administracion: "administracion",
@@ -112,6 +115,7 @@ const formProductToRow = (product) => ({
   linea: product.linea,
   familia: product.familia,
   grupo: product.grupo,
+  proveedor: product.proveedor,
   genero: product.genero,
   acabado: product.acabado,
   piedra: product.piedra,
@@ -709,6 +713,32 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     } catch (error) {
       setStatus(`Error guardando producto: ${error.message}`);
       notifyAction("error", "No se pudo guardar", `Error guardando producto: ${error.message}`);
+    }
+  };
+
+  const saveValidatedProduct = async (product) => {
+    if (!tenantId) {
+      const error = new Error("Primero selecciona una empresa para guardar productos.");
+      setStatus(error.message);
+      notifyAction("warning", "Falta empresa", error.message);
+      throw error;
+    }
+    setStatus("Guardando validacion...");
+    try {
+      const saved = await upsertProducts([normalizeProduct(formProductToRow(product))], tenantId);
+      setData((current) => {
+        if (!current) return current;
+        const savedMap = new Map(saved.map((p) => [p.codigo, p]));
+        const updated = current.products.map((p) => savedMap.get(p.codigo) || p);
+        saved.forEach((p) => { if (!current.products.some((ex) => ex.codigo === p.codigo)) updated.push(p); });
+        return { ...current, products: updated };
+      });
+      setStatus(`Validacion de ${product.codigo} guardada correctamente.`);
+      return saved[0] || product;
+    } catch (error) {
+      setStatus(`Error guardando validacion: ${error.message}`);
+      notifyAction("error", "No se pudo guardar", `Error guardando validacion: ${error.message}`);
+      throw error;
     }
   };
 
@@ -1445,6 +1475,15 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           <CompanySettingsPanel tenantId={tenantId} />
         ) : null}
 
+        {tab === "validation" ? (
+          <ValidationTab
+            products={products}
+            tenantId={tenantId}
+            onSaveProduct={saveValidatedProduct}
+            notifyAction={notifyAction}
+          />
+        ) : null}
+
         {tab === "database" ? (
           <DatabaseTab
             t={t}
@@ -1551,7 +1590,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       ) : null}
       {/* El cajón de selección es del flujo de catálogo/preórdenes — no estorba
           en el módulo financiero ni en empresa/base de datos */}
-      {tab !== "administracion" && tab !== "company" && tab !== "database" ? (
+      {tab !== "administracion" && tab !== "company" && tab !== "validation" && tab !== "database" ? (
         <SelectedProductsDrawer
           preorderProducts={preorderProducts}
           catalogProducts={catalogSelectionProducts}
