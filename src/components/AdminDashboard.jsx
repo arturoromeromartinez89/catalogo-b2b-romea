@@ -15,6 +15,7 @@ import { fetchCompanySettings } from "../services/companySettings";
 import { fetchTenantFeatures } from "../services/adminModuleService";
 // Tabs extraídos — step 1 del refactor progresivo
 import TenantsTab from "./tabs/TenantsTab";
+import AdminHomeTab from "./tabs/AdminHomeTab";
 import CatalogTab from "./tabs/CatalogTab";
 import ClientsTab from "./tabs/ClientsTab";
 import ProspectsTab from "./tabs/ProspectsTab";
@@ -58,7 +59,7 @@ const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ci
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
 const PRODUCT_RENDER_BATCH = 60;
-const baseTabs = ["catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
+const baseTabs = ["home", "catalog", "preorders", "clients", "prospects", "prices", "company", "database"];
 const configurableOnlyTabs = ["components"];
 const adminModuleTabs = ["administracion"];
 // Navegación organizada por las preguntas del negocio, no por tablas.
@@ -77,6 +78,7 @@ const ADMIN_SUB_TABS = [
 ];
 const tabKeys = {
   tenants:       "tenants",
+  home:          "home",
   catalog:       "catalog",
   preorders:     "preorders",
   clients:       "clients",
@@ -89,6 +91,7 @@ const tabKeys = {
 };
 const titleKeys = {
   tenants:       "tenants",
+  home:          "home",
   catalog:       "adminCatalog",
   preorders:     "preorders",
   clients:       "clients",
@@ -229,7 +232,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const activeTenant = useMemo(() => tenants.find((tenant) => tenant.id === tenantId), [tenants, tenantId]);
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
   const tabs = superadmin ? ["tenants", ...baseTabs] : [...baseTabs]; // se extiende abajo con extraTabs
-  const [tab, setTab] = useState("catalog");
+  const [tab, setTab] = useState("home");
   const [adminSubTab, setAdminSubTab] = useState("inicio");
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("");
@@ -1283,6 +1286,18 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             handleTenantSave={handleTenantSave}
             handleTenantChange={handleTenantChange}
             setTab={setTab}
+          />
+        ) : null}
+
+        {tab === "home" ? (
+          <AdminHomeTab
+            activeCompany={activeCompany}
+            activeTenant={activeTenant}
+            clients={data.clients || []}
+            products={products}
+            tenantId={tenantId}
+            profile={profile}
+            onNavigate={changeTab}
           />
         ) : null}
 

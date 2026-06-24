@@ -6,6 +6,7 @@ export const languages = {
 export const translations = {
   es: {
     brand: "Catálogo B2B",
+    home: "Inicio",
     company: "Mi empresa",
     preorders: "Preórdenes",
     b2bCatalog: "Catálogo B2B",
@@ -239,6 +240,7 @@ export const translations = {
   },
   en: {
     brand: "B2B Catalog",
+    home: "Home",
     company: "My company",
     preorders: "Preorders",
     b2bCatalog: "B2B Catalog",
