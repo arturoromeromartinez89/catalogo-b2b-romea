@@ -45,6 +45,15 @@ export const updateProfileAccess = async (profileId, changes) => {
   return data;
 };
 
+export const setAdminPassword = async ({ email, password, tenantId, role = "tenant_admin" }) => {
+  const { data, error } = await supabase.functions.invoke("set-admin-password", {
+    body: { email, password, tenantId, role },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+};
+
 export const fetchTenantMetrics = async (tenants = []) => {
   const metrics = await Promise.all(tenants.map(async (tenant) => {
     const [products, clients, preorders] = await Promise.all([

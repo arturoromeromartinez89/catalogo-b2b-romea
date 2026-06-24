@@ -1,10 +1,22 @@
 import { useState } from "react";
-import { updateProfileAccess } from "../../services/tenantService";
+import { setAdminPassword, updateProfileAccess } from "../../services/tenantService";
 
 const roles = ["superadmin", "tenant_admin", "admin", "client"];
+const adminRoles = ["tenant_admin", "admin"];
+
+const emptyForm = {
+  email: "",
+  password: "",
+  tenantId: "",
+  role: "tenant_admin",
+};
 
 export default function UsersPanel({ profiles, tenants, onRefresh }) {
   const [status, setStatus] = useState("");
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+
+  const setField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
   const handleChange = async (profile, changes) => {
     try {
@@ -20,6 +32,31 @@ export default function UsersPanel({ profiles, tenants, onRefresh }) {
     }
   };
 
+  const handleCreateAdmin = async (event) => {
+    event.preventDefault();
+    setStatus("");
+    if (!form.email.trim() || !form.password.trim() || !form.tenantId) {
+      setStatus("Error: completa correo, contrasena y empresa.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await setAdminPassword({
+        email: form.email,
+        password: form.password,
+        tenantId: form.tenantId,
+        role: form.role,
+      });
+      setStatus("Usuario administrador creado. Ya puede iniciar sesion.");
+      setForm(emptyForm);
+      onRefresh();
+    } catch (error) {
+      setStatus(`Error: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const tenantName = (tenantId) => tenants.find((tenant) => tenant.id === tenantId)?.name || "Sin empresa";
 
   return (
@@ -28,6 +65,50 @@ export default function UsersPanel({ profiles, tenants, onRefresh }) {
       <h2>Usuarios y permisos</h2>
       <p className="muted">Asigna cada usuario a su empresa. El superadmin puede quedar sin empresa.</p>
       {status ? <p className="status info">{status}</p> : null}
+      <form className="admin-user-create-panel" onSubmit={handleCreateAdmin}>
+        <div>
+          <strong>Crear admin de empresa</strong>
+          <p className="muted">Usa este acceso para Paco o cualquier cliente que administrara su catalogo.</p>
+        </div>
+        <label>
+          <span>Correo</span>
+          <input
+            type="email"
+            value={form.email}
+            onChange={(event) => setField("email", event.target.value)}
+            placeholder="admin@empresa.com"
+            required
+          />
+        </label>
+        <label>
+          <span>Contrasena temporal</span>
+          <input
+            type="password"
+            value={form.password}
+            onChange={(event) => setField("password", event.target.value)}
+            minLength={6}
+            required
+          />
+        </label>
+        <label>
+          <span>Empresa</span>
+          <select value={form.tenantId} onChange={(event) => setField("tenantId", event.target.value)} required>
+            <option value="">Selecciona empresa</option>
+            {tenants.map((tenant) => (
+              <option key={tenant.id} value={tenant.id}>{tenant.name}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Rol</span>
+          <select value={form.role} onChange={(event) => setField("role", event.target.value)}>
+            {adminRoles.map((role) => <option key={role} value={role}>{role}</option>)}
+          </select>
+        </label>
+        <button className="primary-button" type="submit" disabled={saving}>
+          {saving ? "Creando..." : "Crear acceso admin"}
+        </button>
+      </form>
       <div className="responsive-table">
         <table className="simple-admin-table">
           <thead>
