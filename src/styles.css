@@ -2364,6 +2364,57 @@ dd {
   grid-template-columns: minmax(220px, 1fr) auto;
 }
 
+.admin-user-create-panel {
+  align-items: end;
+  background: #f8fafc;
+  border: 1px solid var(--romea-line);
+  border-radius: 12px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(180px, 1fr) minmax(180px, 1fr) minmax(180px, 1fr) minmax(130px, 0.7fr) auto;
+  padding: 14px;
+}
+
+.admin-user-create-panel strong {
+  color: var(--romea-blue);
+  display: block;
+  font-size: 14px;
+  margin-bottom: 3px;
+}
+
+.admin-user-create-panel label {
+  color: var(--romea-muted);
+  display: grid;
+  font-size: 11px;
+  font-weight: 800;
+  gap: 6px;
+  text-transform: uppercase;
+}
+
+.admin-user-create-panel input,
+.admin-user-create-panel select {
+  background: #ffffff;
+  border: 1px solid var(--romea-line);
+  border-radius: 8px;
+  color: var(--romea-blue);
+  min-height: 38px;
+  padding: 8px 10px;
+  text-transform: none;
+}
+
+.login-access-note {
+  color: var(--romea-muted);
+  font-size: 12px;
+  margin: 0;
+  text-align: center;
+}
+
+@media (max-width: 1180px) {
+  .admin-user-create-panel {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
 .admin-product-grid {
   display: grid;
   gap: 18px;

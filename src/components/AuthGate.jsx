@@ -28,7 +28,7 @@ const copy = {
     createAccount: "Crear cuenta",
     enter: "Entrar",
     haveAccount: "Ya tengo cuenta",
-    createClientAccount: "Crear cuenta de cliente",
+    accessByInvitation: "El acceso lo crea tu proveedor.",
     welcome: "Bienvenido",
     loginHelp: "Ingresa tus credenciales para continuar",
     loginProductName: "Catálogo B2B",
@@ -82,7 +82,7 @@ const copy = {
     createAccount: "Create account",
     enter: "Enter",
     haveAccount: "I already have an account",
-    createClientAccount: "Create client account",
+    accessByInvitation: "Access is created by your provider.",
     welcome: "Welcome",
     loginHelp: "Enter your credentials to continue",
     loginProductName: "B2B Catalog",
@@ -126,7 +126,7 @@ const withTimeout = (promise, ms = 9000, message = copy.es.timeout) =>
 export default function AuthGate({ children }) {
   const { language, t } = useLanguage();
   const text = copy[language] || copy.es;
-  // modos: "signin" | "signup" | "reset" | "new-password"
+  // modos: "signin" | "reset" | "new-password"
   const [mode, setMode] = useState("signin");
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -198,13 +198,9 @@ export default function AuthGate({ children }) {
     setMessage("");
     setLoading(true);
     try {
-      const action =
-        mode === "signup"
-          ? supabase.auth.signUp({ email: form.email, password: form.password })
-          : supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+      const action = supabase.auth.signInWithPassword({ email: form.email, password: form.password });
       const { error } = await withTimeout(action, 9000, text.timeout);
       if (error) throw error;
-      if (mode === "signup") setMessage(text.accountCreated);
       const next = await withTimeout(getSessionAndProfile(), 9000, text.timeout);
       setSession(next.session);
       setProfile(next.profile);
@@ -421,7 +417,7 @@ export default function AuthGate({ children }) {
           ) : (
             <form className="login-form-card" onSubmit={submit}>
               <div>
-                <h2>{mode === "signup" ? text.createAccess : text.welcome}</h2>
+                <h2>{text.welcome}</h2>
                 <p>{text.loginHelp}</p>
               </div>
               <label>
@@ -440,11 +436,9 @@ export default function AuthGate({ children }) {
               </label>
               {message ? <p className="status info">{message}</p> : null}
               <button className="primary-button full login-submit" type="submit">
-                {mode === "signup" ? text.createAccount : text.signIn}
+                {text.signIn}
               </button>
-              <button className="link-button" type="button" onClick={() => goToMode(mode === "signup" ? "signin" : "signup")}>
-                {mode === "signup" ? text.haveAccount : text.createClientAccount}
-              </button>
+              <p className="login-access-note">{text.accessByInvitation}</p>
               {mode === "signin" ? (
                 <button className="link-button" type="button" onClick={() => goToMode("reset")}>
                   {text.forgotPassword}
