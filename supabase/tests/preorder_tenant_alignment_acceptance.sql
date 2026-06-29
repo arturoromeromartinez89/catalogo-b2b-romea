@@ -24,6 +24,14 @@ begin
     (v_client_a, v_tenant_a, 'Cliente A', 'Empresa A', 'codex-client-a@example.com', true),
     (v_client_b, v_tenant_b, 'Cliente B', 'Empresa B', 'codex-client-b@example.com', true);
 
+  insert into public.products (
+    tenant_id, codigo, descripcion, metal, kilataje, linea,
+    peso_promedio, precio_minimo, mano_obra, visible_web
+  ) values (
+    v_tenant_a, 'CODEX-CLIENT-001', 'Producto recalculado desde servidor',
+    'Plata', '925', '010', 4, 20, 5, true
+  );
+
   insert into auth.users (
     id, aud, role, email, encrypted_password, email_confirmed_at,
     raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -182,7 +190,14 @@ begin
       'folio', 'CODEX-CLIENT-OWN', 'tenant_id', v_tenant_a,
       'client_id', v_client_b, 'status', 'confirmada', 'total_piezas', 1
     ),
-    jsonb_build_array(jsonb_build_object('producto_codigo', 'CODEX-CLIENT-001', 'piezas', 1)),
+    jsonb_build_array(jsonb_build_object(
+      'producto_codigo', 'CODEX-CLIENT-001',
+      'piezas', 1,
+      'gramos_por_pieza', 999,
+      'gramos_total', 999,
+      'precio_gramo_mxn', 999,
+      'subtotal_mxn', 999
+    )),
     null,
     false
   );
@@ -193,11 +208,14 @@ begin
       and tenant_id = v_tenant_a
       and client_id = v_client_a
       and status = 'pendiente'
+      and total_gramos = 4
+      and total_mxn = 80
   ) then
-    raise exception 'TEST_FAILED: client ownership/status was not enforced';
+    raise exception 'TEST_FAILED: client ownership/status/server totals were not enforced';
   end if;
 
   delete from public.preorders where folio like 'CODEX-%';
+  delete from public.products where codigo in ('CODEX-CLIENT-001');
   delete from auth.users where id in (v_admin, v_client_user);
   delete from public.clients where id in (v_client_a, v_client_b);
   delete from public.tenants where id in (v_tenant_a, v_tenant_b);

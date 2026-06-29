@@ -1,4 +1,4 @@
-import { normalizeText, termsFromQuery } from "./textNormalizer";
+import { normalizeText, termsFromQuery } from "./textNormalizer.js";
 
 const textFilters = ["metal", "kilataje", "linea", "familia", "grupo"];
 
