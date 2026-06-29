@@ -207,7 +207,7 @@ begin
     where id = (v_client_saved->>'id')::uuid
       and tenant_id = v_tenant_a
       and client_id = v_client_a
-      and status = 'pendiente'
+      and status in ('pendiente', 'revision')
       and total_gramos = 4
       and total_mxn = 80
   ) then

@@ -154,7 +154,7 @@ begin
     end if;
 
     if v_actor.role = 'client'
-       and (v_existing.client_id <> v_client_id or v_existing.status <> 'pendiente') then
+       and (v_existing.client_id <> v_client_id or v_existing.status not in ('pendiente', 'revision')) then
       raise exception 'CLIENT_PREORDER_LOCKED';
     end if;
 
