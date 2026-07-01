@@ -30,6 +30,7 @@ export default function CatalogTab({
   setProductModal,
   toggleProductCheck,
   interfaceSettings,
+  searchBar,
   filterBar,   // Barra de filtros inline — pasada desde AdminDashboard
 }) {
   const isSelectedConfigurable = isConfigurableProductGroup(selectedProduct);
@@ -41,11 +42,15 @@ export default function CatalogTab({
     <section className="admin-workspace">
       {!selectedProductCode ? (
         <div className="catalog-page-topbar">
-          <div>
-            <span className="tool-eyebrow">Catalogo</span>
+          <div className="catalog-topbar-title">
             <h2>Catalogo administrador</h2>
             <p>{t("showingFiltered", renderedProducts.length.toLocaleString(), filteredProducts.length.toLocaleString())}</p>
           </div>
+          {searchBar ? (
+            <div className="catalog-topbar-search">
+              {searchBar}
+            </div>
+          ) : null}
           <div className="catalog-topbar-actions">
             <label className="check-row catalog-select-visible">
               <input type="checkbox" checked={allRenderedChecked} onChange={toggleRenderedChecks} />
@@ -128,7 +133,7 @@ export default function CatalogTab({
 
               return (
                 <article
-                  className={`admin-product-card enabled ${customCardEnabled ? `admin-theme-${interfaceSettings.theme_key}` : ""} ${inPreorder ? "in-preorder" : ""} ${isConfigurable ? "configurable-card" : ""} ${product.fotoUrl ? "" : "no-photo"}`}
+                  className={`admin-product-card enabled ${customCardEnabled ? `tenant-theme-${interfaceSettings.visual_theme_key || "ejecutivo"}` : ""} ${inPreorder ? "in-preorder" : ""} ${isConfigurable ? "configurable-card" : ""} ${product.fotoUrl ? "" : "no-photo"}`}
                   key={product.id || product.codigo}
                 >
                   <label className="product-select-check" onClick={(event) => event.stopPropagation()}>

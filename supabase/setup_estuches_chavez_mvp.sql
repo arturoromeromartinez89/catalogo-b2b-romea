@@ -52,5 +52,38 @@ begin
     (v_tenant_id, 'bases', 'Bases', array['base', 'bases', 'escalonada', 'escalonadas'], 'terms', true, 3),
     (v_tenant_id, 'vitrinas', 'Vitrinas', array['vitrina', 'vitrinas', 'escaparate'], 'terms', true, 4);
 
+  insert into public.tenant_interface_settings (
+    tenant_id, theme_key, client_portal_config
+  ) values (
+    v_tenant_id,
+    'premium',
+    jsonb_build_object(
+      'announcement', jsonb_build_object(
+        'enabled', true,
+        'text', 'Envio gratis en pedidos mayoristas seleccionados',
+        'dismissible', true
+      ),
+      'banner', jsonb_build_object(
+        'enabled', true,
+        'autoplay', true,
+        'interval_ms', 5200,
+        'slides', jsonb_build_array(
+          jsonb_build_object('id', 'estuches-envio-gratis', 'image_url', 'https://www.estucheschavez.com.mx/baner/bannerchicoenviogratis1.png', 'alt', 'Envio gratis Estuches Chavez'),
+          jsonb_build_object('id', 'estuches-banner-03', 'image_url', 'https://www.estucheschavez.com.mx/baner/banner-estu03.png', 'alt', 'Banner Estuches Chavez'),
+          jsonb_build_object('id', 'estuches-banner-04', 'image_url', 'https://www.estucheschavez.com.mx/baner/estuchez-4.png', 'alt', 'Estuches Chavez'),
+          jsonb_build_object('id', 'estuches-banner-foto', 'image_url', 'https://www.estucheschavez.com.mx/baner/325610423_1119270275413616_8671899750654311871_n%20(1).jpg', 'alt', 'Productos Estuches Chavez')
+        )
+      ),
+      'whatsapp', jsonb_build_object(
+        'enabled', true,
+        'number', '5213326551832',
+        'message', 'Hola, quiero apoyo con mi pedido del catalogo B2B.'
+      )
+    )
+  )
+  on conflict (tenant_id) do update
+  set client_portal_config = excluded.client_portal_config,
+      updated_at = now();
+
   raise notice 'Estuches Chavez listo. tenant_id=%', v_tenant_id;
 end $$;

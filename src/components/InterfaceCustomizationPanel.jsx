@@ -48,30 +48,53 @@ const move = (items, index, direction) => {
 export default function InterfaceCustomizationPanel({
   tenantId = "",
   settings = DEFAULT_INTERFACE_SETTINGS,
+  draftSettings = null,
+  onDraftChange,
   onSaved,
+  hideSave = false,
 }) {
-  const [draft, setDraft] = useState(() => normalizeInterfaceSettings(settings));
+  const controlled = typeof onDraftChange === "function";
+  const [localDraft, setLocalDraft] = useState(() => normalizeInterfaceSettings(settings));
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  const draft = normalizeInterfaceSettings(controlled ? (draftSettings || settings) : localDraft);
 
   useEffect(() => {
-    setDraft(normalizeInterfaceSettings(settings));
-    setStatus("");
-  }, [settings]);
+    if (!controlled) {
+      setLocalDraft(normalizeInterfaceSettings(settings));
+      setStatus("");
+    }
+  }, [controlled, settings]);
+
+  const updateDraft = (updater) => {
+    const next = normalizeInterfaceSettings(
+      typeof updater === "function" ? updater(draft) : updater
+    );
+    if (controlled) onDraftChange(next);
+    else setLocalDraft(next);
+  };
 
   const enabledFields = draft.admin_product_card_config.fields;
   const enabledButtons = draft.admin_product_card_config.buttons;
   const selectedTheme = useMemo(
-    () => INTERFACE_THEMES.find((theme) => theme.key === draft.theme_key) || INTERFACE_THEMES[0],
-    [draft.theme_key]
+    () => INTERFACE_THEMES.find((theme) => theme.key === draft.visual_theme_key) || INTERFACE_THEMES[0],
+    [draft.visual_theme_key]
   );
 
   const setTheme = (themeKey) => {
-    setDraft((current) => ({ ...current, theme_key: themeKey, hasCustomSettings: true }));
+    updateDraft((current) => ({
+      ...current,
+      visual_theme_key: themeKey,
+      hasCustomSettings: true,
+      admin_product_card_config: {
+        ...current.admin_product_card_config,
+        visual_theme_key: themeKey,
+      },
+    }));
   };
 
   const toggleField = (fieldKey) => {
-    setDraft((current) => {
+    updateDraft((current) => {
       const fields = current.admin_product_card_config.fields;
       const nextFields = fields.includes(fieldKey)
         ? fields.filter((key) => key !== fieldKey)
@@ -88,7 +111,7 @@ export default function InterfaceCustomizationPanel({
   };
 
   const toggleButton = (buttonKey) => {
-    setDraft((current) => {
+    updateDraft((current) => {
       const buttons = current.admin_product_card_config.buttons;
       const nextButtons = buttons.includes(buttonKey)
         ? buttons.filter((key) => key !== buttonKey)
@@ -105,7 +128,7 @@ export default function InterfaceCustomizationPanel({
   };
 
   const moveField = (index, direction) => {
-    setDraft((current) => ({
+    updateDraft((current) => ({
       ...current,
       hasCustomSettings: true,
       admin_product_card_config: {
@@ -134,8 +157,8 @@ export default function InterfaceCustomizationPanel({
       <header>
         <span aria-hidden="true">□</span>
         <div>
-          <h3>Personalizacion</h3>
-          <p>Configura el tema y la informacion visible en las tarjetas del catalogo administrador.</p>
+          <h3>Temas y tarjetas de producto</h3>
+          <p>Controla el estilo general y la informacion visible en tarjetas de administrador y cliente.</p>
         </div>
       </header>
 
@@ -146,7 +169,7 @@ export default function InterfaceCustomizationPanel({
             <div className="theme-choice-grid">
               {INTERFACE_THEMES.map((theme) => (
                 <button
-                  className={`theme-choice theme-choice--${theme.key}${draft.theme_key === theme.key ? " active" : ""}`}
+                  className={`theme-choice theme-choice--${theme.key}${draft.visual_theme_key === theme.key ? " active" : ""}`}
                   key={theme.key}
                   type="button"
                   onClick={() => setTheme(theme.key)}
@@ -206,7 +229,7 @@ export default function InterfaceCustomizationPanel({
           </section>
         </div>
 
-        <aside className={`interface-preview admin-theme-${selectedTheme.key}`} aria-label="Vista previa de tarjeta">
+        <aside className={`interface-preview tenant-theme-${selectedTheme.key}`} aria-label="Vista previa de tarjeta">
           <p className="tool-eyebrow">Vista previa</p>
           <article className="admin-product-card enabled no-photo custom-product-card">
             <div className="admin-product-info custom-product-info">
@@ -238,13 +261,15 @@ export default function InterfaceCustomizationPanel({
         </aside>
       </div>
 
-      {status ? <p className="status info">{status}</p> : null}
+      {!hideSave && status ? <p className="status info">{status}</p> : null}
 
-      <div className="company-save-row">
-        <button className="primary-button compact-action" type="button" onClick={handleSave} disabled={saving || !tenantId}>
-          {saving ? "Guardando..." : "Guardar personalizacion"}
-        </button>
-      </div>
+      {!hideSave ? (
+        <div className="company-save-row">
+          <button className="primary-button compact-action" type="button" onClick={handleSave} disabled={saving || !tenantId}>
+            {saving ? "Guardando..." : "Guardar personalizacion"}
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

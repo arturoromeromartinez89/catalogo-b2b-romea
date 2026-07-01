@@ -11,6 +11,7 @@ import QuoteLinkPanel from "./QuoteLinkPanel";
 import SelectedProductsDrawer from "./SelectedProductsDrawer";
 import ProductFormModal from "./ProductFormModal";
 import LanguageToggle from "./LanguageToggle";
+import TenantTopBanner from "./TenantTopBanner";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings } from "../services/companySettings";
 import { fetchTenantFeatures } from "../services/adminModuleService";
@@ -54,7 +55,7 @@ import { normalizeProduct } from "../utils/excelParser";
 import { buildConfigurableCatalogProducts, isConfigurableProductGroup } from "../utils/configurableCatalog";
 import { applyFilters, buildFilterOptions, emptyFilters, DEFAULT_QUICK_FILTER_DEFINITIONS } from "../utils/filters";
 import { fetchCatalogQuickFilters } from "../services/catalogQuickFiltersService";
-import { DEFAULT_INTERFACE_SETTINGS, fetchInterfaceSettings } from "../services/interfaceSettingsService";
+import { DEFAULT_INTERFACE_SETTINGS, fetchInterfaceSettings, resolveClientPortalConfig } from "../services/interfaceSettingsService";
 import QuickFiltersManager from "./QuickFiltersManager";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
@@ -448,6 +449,16 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const accountInitial = (accountName || "?").charAt(0).toUpperCase();
   const accountRoleLabel = profile?.role === "client" ? t("hdrRoleClient") : t("hdrRoleAdmin");
   const headerBrandName = activeCompany?.brand_name || activeCompany?.legal_name || t("b2bCatalog");
+  const adminPortalConfig = useMemo(
+    () => resolveClientPortalConfig(interfaceSettings?.client_portal_config, {
+      profile,
+      companyName: headerBrandName,
+      phone: activeCompany?.phone,
+      email: activeCompany?.email,
+    }),
+    [interfaceSettings?.client_portal_config, profile?.email, headerBrandName, activeCompany?.phone, activeCompany?.email]
+  );
+  const interfaceThemeClass = `tenant-theme-${interfaceSettings?.visual_theme_key || "ejecutivo"}`;
   const selectedClient = useMemo(() => data?.clients.find((client) => client.id === selectedClientId), [data?.clients, selectedClientId]);
   const configurableCatalogEnabled = tenantFeatures?.modulo_configurable === true;
   const adminModuleEnabled = tenantFeatures?.modulo_admin === true;
@@ -1210,7 +1221,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   }
 
   return (
-    <div className={`admin-catalog-shell${tab === "administracion" && adminModuleEnabled ? " has-secondary-sidebar" : ""}`}>
+    <div className={`admin-catalog-shell ${interfaceThemeClass}${tab === "administracion" && adminModuleEnabled ? " has-secondary-sidebar" : ""}`}>
       <aside className="admin-romea-sidebar">
         <div className="brand-block">
           <BrandLogo company={activeCompany} />
@@ -1323,6 +1334,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       ) : null}
 
       <main className="admin-catalog-main">
+        <TenantTopBanner config={adminPortalConfig} />
         <header className="admin-catalog-header app-topbar">
           <div className="topbar-brand">
             <span className="topbar-brand__role">{t("hdrPortalAdmin")}</span>
@@ -1385,6 +1397,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             clients={data?.clients || []}
             brandName={headerBrandName}
             company={activeCompany}
+            interfaceSettings={interfaceSettings}
             onGoToPreorders={() => changeTab("preorders")}
             onGoToCatalog={() => changeTab("catalog")}
             onGoToClients={() => changeTab("clients")}
@@ -1431,9 +1444,21 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             removeFromCatalogSelection={removeFromCatalogSelection}
             setProductModal={setProductModal}
             interfaceSettings={interfaceSettings}
-            filterBar={!selectedProductCode ? (
-              <>
+            searchBar={!selectedProductCode ? (
               <CatalogFilterBar
+                mode="search"
+                productQuery={productQuery}
+                searchChips={searchChips}
+                products={products}
+                onQueryChange={setProductQuery}
+                onAddChip={addSearchChip}
+                onRemoveChip={(chip) => setSearchChips((c) => c.filter((item) => item !== chip))}
+              />
+            ) : null}
+            filterBar={!selectedProductCode ? (
+              <div className="catalog-filter-strip">
+              <CatalogFilterBar
+                mode="filters"
                 totalCount={products.length}
                 filteredCount={productQuery !== deferredProductQuery ? filteredProducts.length : filteredProducts.length}
                 loadingProducts={loadingProducts}
@@ -1455,10 +1480,10 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               />
               <div className="qf-launch-row">
                 <button type="button" className="secondary-button compact-action" onClick={() => setShowQuickMgr(true)}>
-                  ⚙ Botones rápidos
+                  Botones rapidos
                 </button>
               </div>
-              </>
+              </div>
             ) : null}
           />
         ) : null}
@@ -1566,6 +1591,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
         {tab === "company" ? (
           <CompanySettingsPanel
             tenantId={tenantId}
+            profile={profile}
             interfaceSettings={interfaceSettings}
             onInterfaceSettingsChange={setInterfaceSettings}
           />

@@ -60,6 +60,7 @@ export default function CatalogFilterBar({
   // Colapsar / expandir
   collapsed        = false,
   onToggleCollapse,
+  mode             = "full",
 }) {
   const { language } = useLanguage();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -85,8 +86,23 @@ export default function CatalogFilterBar({
 
   const pillLabel = (f) => f.labels?.[language] || f.label || f.id;
 
+  if (mode === "search") {
+    return (
+      <div className="cfb-search cfb-search--header">
+        <AdvancedSearch
+          value={productQuery}
+          chips={searchChips}
+          products={products}
+          onChange={onQueryChange}
+          onAddChip={(chip) => { onAddChip(chip); onQueryChange(""); }}
+          onRemoveChip={onRemoveChip}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className={`cfb${collapsed ? " cfb--collapsed" : ""}`} role="toolbar" aria-label="Filtros del catálogo">
+    <div className={`cfb${collapsed ? " cfb--collapsed" : ""}${mode === "filters" ? " cfb--filters-only" : ""}`} role="toolbar" aria-label="Filtros del catálogo">
 
       {/* ── Métricas ─────────────────────────────────── */}
       <div className="cfb-metrics">
@@ -104,7 +120,7 @@ export default function CatalogFilterBar({
       {!collapsed && (
         <>
           {/* Búsqueda */}
-          <div className="cfb-search">
+          {mode !== "filters" ? <div className="cfb-search">
             <AdvancedSearch
               value={productQuery}
               chips={searchChips}
@@ -113,7 +129,7 @@ export default function CatalogFilterBar({
               onAddChip={(chip) => { onAddChip(chip); onQueryChange(""); }}
               onRemoveChip={onRemoveChip}
             />
-          </div>
+          </div> : null}
 
           {/* Botón Filtros → popover */}
           <div className="cfb-filter-wrap" ref={popoverRef}>

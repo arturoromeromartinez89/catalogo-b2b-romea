@@ -3,6 +3,7 @@ import AuthGate from "./components/AuthGate";
 import AdminDashboard from "./components/AdminDashboard";
 import ClientCatalogApp from "./components/ClientCatalogApp";
 import SuperAdminDashboard from "./components/superadmin/SuperAdminDashboard";
+import DataValidationPage from "./pages/DataValidationPage";
 import QuotePage from "./pages/QuotePage";
 import { ImpersonationProvider, useImpersonation } from "./contexts/ImpersonationContext";
 import { LanguageProvider } from "./i18n/LanguageContext";
@@ -10,7 +11,9 @@ import { isAdminRole, isSuperAdmin } from "./services/tenantUtils";
 import { getAppPathname } from "./utils/basePath";
 
 const languageKey = "catalogo-b2b-language";
-const isStaging = import.meta.env.VITE_DEPLOY_ENV === "staging";
+const deploymentEnvironment = import.meta.env.VITE_DEPLOY_ENV || "development";
+const isStaging = deploymentEnvironment === "staging";
+const isProduction = deploymentEnvironment === "production";
 const appVersion = import.meta.env.VITE_APP_VERSION || "development";
 
 const readLanguage = () => {
@@ -59,7 +62,9 @@ function AuthenticatedApp() {
 
 export default function App() {
   const [language, setLanguageState] = useState(readLanguage);
-  const isPublicQuoteRoute = getAppPathname().startsWith("/cotizacion/");
+  const appPathname = getAppPathname();
+  const isPublicQuoteRoute = appPathname.startsWith("/cotizacion/");
+  const isDataValidationRoute = appPathname === "/validacion-skus" || appPathname.startsWith("/validacion-skus/");
 
   const setLanguage = (nextLanguage) => {
     setLanguageState(nextLanguage);
@@ -68,13 +73,13 @@ export default function App() {
 
   return (
     <LanguageProvider language={language} setLanguage={setLanguage}>
-      {isStaging ? (
-        <div className="environment-banner" role="status">
-          VERSIÓN DE PRUEBAS · {appVersion}
+      {isStaging || isProduction ? (
+        <div className={`environment-banner${isProduction ? " environment-banner--production" : ""}`} role="status">
+          {isProduction ? "VERSION PRODUCCION" : "VERSION DE PRUEBAS"} - {appVersion}
         </div>
       ) : null}
       <ImpersonationProvider>
-        {isPublicQuoteRoute ? <QuotePage /> : <AuthenticatedApp />}
+        {isPublicQuoteRoute ? <QuotePage /> : isDataValidationRoute ? <DataValidationPage /> : <AuthenticatedApp />}
       </ImpersonationProvider>
     </LanguageProvider>
   );

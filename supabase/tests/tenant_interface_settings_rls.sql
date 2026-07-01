@@ -78,8 +78,17 @@ begin
   set local role authenticated;
 
   select count(*) into v_count from public.tenant_interface_settings where tenant_id = v_tenant_a;
-  if v_count <> 0 then raise exception 'FAIL: tenant client read admin interface settings'; end if;
-  raise notice 'PASS: tenant client cannot read admin interface settings';
+  if v_count <> 1 then raise exception 'FAIL: tenant client cannot read own portal interface settings'; end if;
+  raise notice 'PASS: tenant client can read own portal interface settings';
+
+  select count(*) into v_count from public.tenant_interface_settings where tenant_id = v_tenant_b;
+  if v_count <> 0 then raise exception 'FAIL: tenant client read another tenant interface settings'; end if;
+  raise notice 'PASS: tenant client cannot read another tenant interface settings';
+
+  update public.tenant_interface_settings set theme_key = 'neutro' where tenant_id = v_tenant_a;
+  get diagnostics v_count = row_count;
+  if v_count <> 0 then raise exception 'FAIL: tenant client updated interface settings'; end if;
+  raise notice 'PASS: tenant client cannot update interface settings';
 
   reset role;
   delete from public.tenant_interface_settings where tenant_id in (v_tenant_a, v_tenant_b);

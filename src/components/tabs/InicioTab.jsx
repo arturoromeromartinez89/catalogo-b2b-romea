@@ -3,6 +3,10 @@ import { useLanguage } from "../../i18n/LanguageContext";
 import { fetchAllPreorders } from "../../services/preorderService";
 import { preorderSavedAt, sortPreordersByLastSaved } from "../../utils/preorderSorting";
 import { fetchClientAccessStatuses } from "../../services/supabaseCatalog";
+import {
+  DEFAULT_INTERFACE_SETTINGS,
+  resolveClientPortalConfig,
+} from "../../services/interfaceSettingsService";
 
 /**
  * InicioTab — página de inicio del portal de administrador (versión central,
@@ -67,6 +71,14 @@ const notificationType = (preorder = {}) => {
   return saved - created > 60000 ? "modificada" : "nueva";
 };
 
+const toWhatsAppUrl = (config) => {
+  if (!config?.whatsapp?.enabled) return "";
+  const digits = String(config.whatsapp.number || "").replace(/\D/g, "");
+  if (digits.length < 8) return "";
+  const normalizedNumber = digits.length === 10 ? `52${digits}` : digits;
+  return `https://wa.me/${normalizedNumber}?text=${encodeURIComponent(config.whatsapp.message || "Hola, quiero apoyo con mi pedido.")}`;
+};
+
 export default function InicioTab({
   profile,
   tenantId,
@@ -74,6 +86,7 @@ export default function InicioTab({
   clients = [],
   brandName = "",
   company = {},
+  interfaceSettings = DEFAULT_INTERFACE_SETTINGS,
   onGoToPreorders,
   onGoToCatalog,
   onGoToClients,
@@ -140,6 +153,14 @@ export default function InicioTab({
   const totalClientes = clients.length;
   const accesoPendiente = accessCount === null ? null : Math.max(totalClientes - accessCount, 0);
   const companyName = company?.brand_name || company?.legal_name || brandName || t("b2bCatalog");
+  const portalConfig = resolveClientPortalConfig(interfaceSettings?.client_portal_config, {
+    profile,
+    companyName,
+    phone: company?.phone,
+    email: company?.email,
+  });
+  const firstSlide = portalConfig.banner.slides[0];
+  const whatsappUrl = toWhatsAppUrl(portalConfig);
 
   return (
     <div className="inicio-page">
@@ -152,6 +173,32 @@ export default function InicioTab({
           <p className="inicio-hero__sub">Bienvenido a tu sistema.</p>
         </div>
       </section>
+
+      {portalConfig.banner.enabled && firstSlide ? (
+        <section className="inicio-client-preview">
+          <div className="inicio-client-preview__surface">
+            <div className="inicio-client-preview__banner">
+              {firstSlide ? (
+                <img src={firstSlide.image_url} alt={firstSlide.alt || "Banner del portal cliente"} />
+              ) : (
+                <span>Banner de inicio</span>
+              )}
+              {firstSlide?.title ? <strong>{firstSlide.title}</strong> : null}
+              {firstSlide?.subtitle ? <em>{firstSlide.subtitle}</em> : null}
+            </div>
+          </div>
+          <div className="inicio-client-preview__actions">
+            <button className="primary-button compact-action" type="button" onClick={onGoToCatalog}>
+              Ver catalogo
+            </button>
+            {whatsappUrl ? (
+              <a className="secondary-button compact-action inicio-client-preview__whatsapp" href={whatsappUrl} target="_blank" rel="noreferrer">
+                WhatsApp
+              </a>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <section className="inicio-metrics" aria-label={t("iniResumen")}>
         <MetricCard

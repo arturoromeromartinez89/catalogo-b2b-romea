@@ -5,6 +5,7 @@ import { normalizeText } from "../utils/textNormalizer";
 import { getAppUrl } from "../utils/basePath";
 
 const PAGE_SIZE = 500;
+const PRODUCT_CODE_BATCH_SIZE = 200;
 const UPSERT_BATCH_SIZE = 500;
 const PUBLIC_PRODUCT_COLUMNS = [
   "id",
@@ -75,6 +76,27 @@ export const fetchAllProducts = async ({ visibleOnly = false, tenantId = "", col
 
     if (result.data.length < PAGE_SIZE) break;
     from += PAGE_SIZE;
+  }
+
+  return rows;
+};
+
+const fetchProductsByCodes = async ({ codes = [], tenantId = "", columns = "*" } = {}) => {
+  const rows = [];
+  const cleanCodes = [...new Set((codes || []).map((code) => String(code || "").trim()).filter(Boolean))];
+
+  for (let index = 0; index < cleanCodes.length; index += PRODUCT_CODE_BATCH_SIZE) {
+    const batch = cleanCodes.slice(index, index + PRODUCT_CODE_BATCH_SIZE);
+    let query = supabase
+      .from("products")
+      .select(columns)
+      .in("codigo", batch)
+      .order("codigo");
+    query = withTenant(query, tenantId);
+
+    const result = await query;
+    throwIfError(result);
+    rows.push(...(result.data || []));
   }
 
   return rows;
@@ -547,6 +569,20 @@ export const setClientProfileActive = async (email, active) => {
 
 export const fetchClientData = async (profile) => {
   const tenantId = getTenantId(profile);
+  if (profile?.role === "client") {
+    const rpcResult = await supabase.rpc("get_client_catalog");
+    if (!rpcResult.error && rpcResult.data) {
+      const payload = rpcResult.data || {};
+      return {
+        products: (payload.products || []).map(dbProductToProduct).map(sanitizeProductForClient),
+        priceItems: [],
+        client: payload.client || null,
+      };
+    }
+    if (!String(rpcResult.error?.message || "").toLowerCase().includes("function")) {
+      throw new Error(rpcResult.error.message);
+    }
+  }
 
   // Obtener el registro del cliente primero para saber sus allowed_skus
   const clientResult = profile?.client_id
@@ -560,15 +596,8 @@ export const fetchClientData = async (profile) => {
   if (allowedSkus?.length > 0) {
     // Cliente con catálogo restringido — traer solo sus productos asignados directamente.
     // No se filtra por visible_web: el cliente solo ve lo que el admin le asignó.
-    // PUBLIC_PRODUCT_COLUMNS ya es un string "col1,col2,..." — no aplicar .join
-    let q = supabase
-      .from("products")
-      .select(PUBLIC_PRODUCT_COLUMNS)
-      .in("codigo", allowedSkus);
-    if (tenantId) q = q.eq("tenant_id", tenantId);
-    const { data, error } = await q;
-    if (error) throw new Error(error.message);
-    productList = data || [];
+    // Pedir por lotes evita URLs demasiado largas cuando el cliente tiene miles de SKUs.
+    productList = await fetchProductsByCodes({ codes: allowedSkus, tenantId, columns: PUBLIC_PRODUCT_COLUMNS });
   } else {
     // Sin restricción de SKUs — ver todos los productos marcados visible_web
     productList = await fetchAllProducts({ visibleOnly: true, tenantId, columns: PUBLIC_PRODUCT_COLUMNS });

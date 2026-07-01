@@ -3,6 +3,7 @@ import DatabaseHealthDashboard from "../DatabaseHealthDashboard";
 import ExcelTemplateButton from "../ExcelTemplateButton";
 import ImportPanel from "../ImportPanel";
 import ProductImageImportPanel from "../ProductImageImportPanel";
+import { withBasePath } from "../../utils/basePath";
 
 export default function DatabaseTab({
   t,
@@ -36,6 +37,12 @@ export default function DatabaseTab({
             />
             <ExcelTemplateButton />
             <CatalogExportButton products={products} />
+            <a
+              className="secondary-button compact-action database-validation-link"
+              href={withBasePath("validacion-skus")}
+            >
+              {language === "en" ? "Validate SKUs" : "Validar SKUs"}
+            </a>
             <button
               className="secondary-button compact-action database-new-product"
               type="button"
