@@ -15,6 +15,12 @@ import TenantTopBanner from "./TenantTopBanner";
 import { useCompany } from "../contexts/CompanyContext";
 import { fetchCompanySettings } from "../services/companySettings";
 import { fetchTenantFeatures } from "../services/adminModuleService";
+import {
+  DEFAULT_COMMERCE_SETTINGS,
+  fetchAllCommerceSettings,
+  fetchCommerceSettings,
+  saveCommerceSettings,
+} from "../services/commerceSettingsService";
 // Tabs extraídos — step 1 del refactor progresivo
 import TenantsTab from "./tabs/TenantsTab";
 import InicioTab from "./tabs/InicioTab";
@@ -233,6 +239,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const company = useCompany();
   const [tenantCompany, setTenantCompany] = useState(null);
   const [tenantFeatures, setTenantFeatures] = useState(null);
+  const [commerceSettings, setCommerceSettings] = useState(DEFAULT_COMMERCE_SETTINGS);
+  const [commerceByTenant, setCommerceByTenant] = useState(() => new Map());
   const [interfaceSettings, setInterfaceSettings] = useState(DEFAULT_INTERFACE_SETTINGS);
   const superadmin = isSuperAdmin(profile) && !supportMode;
   const [tenants, setTenants] = useState([]);
@@ -414,6 +422,25 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     }
     fetchTenantFeatures(tenantId).then(setTenantFeatures).catch(() => setTenantFeatures(null));
   }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId) {
+      setCommerceSettings(DEFAULT_COMMERCE_SETTINGS);
+      return;
+    }
+    let alive = true;
+    fetchCommerceSettings(tenantId)
+      .then((settings) => { if (alive) setCommerceSettings(settings); })
+      .catch(() => { if (alive) setCommerceSettings(DEFAULT_COMMERCE_SETTINGS); });
+    return () => { alive = false; };
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!superadmin || tab !== "tenants") return;
+    let alive = true;
+    fetchAllCommerceSettings().then((map) => { if (alive) setCommerceByTenant(map); });
+    return () => { alive = false; };
+  }, [superadmin, tab]);
 
   useEffect(() => {
     if (!tenantId) {
@@ -1415,6 +1442,17 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             handleTenantSave={handleTenantSave}
             handleTenantChange={handleTenantChange}
             setTab={setTab}
+            commerceByTenant={commerceByTenant}
+            onSaveCommerce={async (targetTenantId, settings) => {
+              const saved = await saveCommerceSettings(targetTenantId, settings);
+              setCommerceByTenant((current) => {
+                const next = new Map(current);
+                next.set(targetTenantId, saved);
+                return next;
+              });
+              if (targetTenantId === tenantId) setCommerceSettings(saved);
+              return saved;
+            }}
           />
         ) : null}
 
@@ -1575,6 +1613,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             }}
             onCreateRemision={adminModuleEnabled ? handleCreateRemisionFromPreorder : undefined}
             configurableCatalogEnabled={configurableCatalogEnabled}
+            allowedPricingModes={commerceSettings.allowed_pricing_modes}
+            allowedCurrencies={commerceSettings.allowed_currencies}
             clientFilter={preorderClientFilter}
             onClearClientFilter={() => setPreorderClientFilter(null)}
           />

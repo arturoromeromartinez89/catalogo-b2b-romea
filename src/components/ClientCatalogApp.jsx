@@ -15,6 +15,10 @@ import {
   resolveClientPortalConfig,
 } from "../services/interfaceSettingsService";
 import { supabase } from "../lib/supabaseClient";
+import {
+  DEFAULT_COMMERCE_SETTINGS,
+  fetchCommerceSettings,
+} from "../services/commerceSettingsService";
 import { fastSignOut } from "../services/authService";
 import { fetchClientData } from "../services/supabaseCatalog";
 import { fetchClientPreorders, deletePreorder } from "../services/preorderService";
@@ -232,6 +236,7 @@ export default function ClientCatalogApp({ profile }) {
   const company = useCompany();
   const [tenantCompany, setTenantCompany] = useState(null);
   const [interfaceSettings, setInterfaceSettings] = useState(DEFAULT_INTERFACE_SETTINGS);
+  const [commerceSettings, setCommerceSettings] = useState(DEFAULT_COMMERCE_SETTINGS);
   const [products, setProducts] = useState([]);
   const [clientData, setClientData] = useState(null);
   const [cartItems, setCartItems] = useState([]);
@@ -424,6 +429,11 @@ export default function ClientCatalogApp({ profile }) {
     fetchInterfaceSettings(tenantId).then(setInterfaceSettings).catch(() => setInterfaceSettings(DEFAULT_INTERFACE_SETTINGS));
   }, [tenantId]);
 
+  useEffect(() => {
+    if (!tenantId) { setCommerceSettings(DEFAULT_COMMERCE_SETTINGS); return; }
+    fetchCommerceSettings(tenantId).then(setCommerceSettings).catch(() => setCommerceSettings(DEFAULT_COMMERCE_SETTINGS));
+  }, [tenantId]);
+
   // Botones rápidos configurados por el tenant (con fallback joyero)
   useEffect(() => {
     let alive = true;
@@ -607,11 +617,18 @@ export default function ClientCatalogApp({ profile }) {
     setSelectedCode("");
   };
 
+  // Tenants solo-pieza (p. ej. Estuches Chávez): la preorden del cliente nace
+  // en modo pieza con precio unitario, sin campos de gramo/labor.
+  const pieceOnlyTenant =
+    commerceSettings.allowed_pricing_modes.length === 1
+    && commerceSettings.allowed_pricing_modes[0] === "piece";
+
   const cartToPreorder = () => ({
     status: "revision",   // las preórdenes del cliente entran "en revisión" para que el taller agregue plata fina
     tenant_id: tenantId,
     created_by: profile.id,
     client_id: profile.client_id,
+    ...(pieceOnlyTenant ? { pricing_mode: "piece" } : {}),
     cliente_nombre:   customer.name,
     cliente_empresa:  customer.company,
     cliente_email:    customer.email,
@@ -629,6 +646,26 @@ export default function ClientCatalogApp({ profile }) {
       const gramos  = Number(product.pesoPromedio || 0);
       const labor   = Number(product.quoteLaborPerGramMxn ?? product.quoteLaborPerGram ?? 0);
       const precio  = Number(product.quotePricePerGramMxn ?? product.quotePricePerGram ?? product.precioMinimo ?? 0);
+      if (pieceOnlyTenant) {
+        const precioPieza = Number(product.precioMinimo || 0);
+        return {
+          producto_codigo:      product.codigo,
+          producto_descripcion: product.descripcion,
+          producto_metal:       product.metal,
+          producto_kilataje:    product.kilataje,
+          producto_linea:       product.linea,
+          producto_foto_url:    product.fotoUrl,
+          piezas,
+          pricing_mode:     "piece",
+          gramos_por_pieza: 0,
+          gramos_total:     0,
+          labor_mxn:        0,
+          precio_gramo_mxn: 0,
+          precio_pieza_mxn: precioPieza,
+          subtotal_mxn:     piezas * precioPieza,
+          sort_order:       idx,
+        };
+      }
       return {
         producto_codigo:      product.codigo,
         producto_descripcion: product.descripcion,
@@ -1046,6 +1083,8 @@ export default function ClientCatalogApp({ profile }) {
             products={baseProducts}
             tenantId={tenantId}
             profile={profile}
+            allowedPricingModes={commerceSettings.allowed_pricing_modes}
+            allowedCurrencies={commerceSettings.allowed_currencies}
             pricingLocked
             onClose={(updatedDraft) => {
               if (editingOrder) { setEditingOrder(null); return; }
