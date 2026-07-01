@@ -6,7 +6,7 @@ import PreorderEditor from "./PreorderEditor";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useCompany } from "../contexts/CompanyContext";
 import BrandLogo from "./BrandLogo";
-import TenantTopBanner from "./TenantTopBanner";
+import TenantTopBanner, { SocialIcon } from "./TenantTopBanner";
 import { fetchCompanySettings } from "../services/companySettings";
 import {
   DEFAULT_INTERFACE_SETTINGS,
@@ -744,8 +744,15 @@ export default function ClientCatalogApp({ profile }) {
           </div>
           <div className="admin-header-actions">
             {whatsappUrl ? (
-              <a className="client-whatsapp-header" href={whatsappUrl} target="_blank" rel="noreferrer">
-                WhatsApp
+              <a
+                className="client-whatsapp-header"
+                href={whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                title="WhatsApp"
+                aria-label="WhatsApp"
+              >
+                <SocialIcon name="whatsapp" />
               </a>
             ) : null}
             <LanguageToggle />
@@ -1157,8 +1164,15 @@ export default function ClientCatalogApp({ profile }) {
       ) : null}
 
       {whatsappUrl ? (
-        <a className="client-whatsapp-fab" href={whatsappUrl} target="_blank" rel="noreferrer">
-          Enviar WhatsApp
+        <a
+          className="client-whatsapp-fab"
+          href={whatsappUrl}
+          target="_blank"
+          rel="noreferrer"
+          title="Enviar WhatsApp"
+          aria-label="Enviar WhatsApp"
+        >
+          <SocialIcon name="whatsapp" size={20} />
         </a>
       ) : null}
     </div>

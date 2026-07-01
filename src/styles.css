@@ -11538,11 +11538,24 @@ tr.client-row--expanded td {
 .client-whatsapp-fab:hover {
   background: #15803d;
 }
+.client-whatsapp-header svg,
+.client-whatsapp-fab svg {
+  display: block;
+  flex: none;
+}
+.client-whatsapp-header {
+  min-width: 34px;
+  padding: 8px;
+}
 .client-whatsapp-fab {
+  border-radius: var(--radius-full);
   bottom: 18px;
   box-shadow: 0 12px 30px rgba(22, 163, 74, .28);
+  height: 46px;
   left: 18px;
+  padding: 0;
   position: fixed;
+  width: 46px;
   z-index: 9000;
 }
 .client-product-package {
@@ -12249,13 +12262,15 @@ tr.client-row--expanded td {
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text-primary);
+  gap: 0;
   min-height: 0;
-  padding: var(--sp-4);
+  padding: 0;
+  position: relative;
 }
 .inicio-client-preview__surface {
   display: grid;
   flex: 1 1 auto;
-  gap: var(--sp-2);
+  gap: 0;
   min-width: 0;
 }
 .inicio-client-preview__announcement {
@@ -12269,14 +12284,24 @@ tr.client-row--expanded td {
 }
 .inicio-client-preview__banner {
   align-items: center;
-  aspect-ratio: 3.5 / 1;
+  aspect-ratio: 4 / 1;
   background: var(--color-bg-subtle);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 0;
+  border-radius: 0;
   display: flex;
   justify-content: center;
+  max-height: 260px;
+  min-height: 140px;
   overflow: hidden;
   position: relative;
+  width: 100%;
+}
+.inicio-client-preview__banner::after {
+  background: linear-gradient(180deg, transparent 55%, rgba(7, 8, 13, .38));
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
 }
 .inicio-client-preview__banner img {
   height: 100%;
@@ -12313,12 +12338,27 @@ tr.client-row--expanded td {
 }
 .inicio-client-preview__actions {
   align-content: center;
-  min-width: 150px;
+  bottom: var(--sp-4);
+  margin: 0;
+  min-width: 0;
+  position: absolute;
+  right: var(--sp-4);
+  z-index: 1;
 }
 .inicio-client-preview__whatsapp {
   background: var(--color-success);
   border-color: var(--color-success-hover);
   color: var(--color-text-inverse);
+}
+@media (max-width: 720px) {
+  .inicio-client-preview {
+    flex-direction: column;
+  }
+  .inicio-client-preview__actions {
+    justify-content: flex-end;
+    padding: var(--sp-3);
+    position: static;
+  }
 }
 
 .inicio-company-facts {
@@ -12694,6 +12734,18 @@ tr.client-row--expanded td {
   text-overflow: ellipsis;
 }
 
+.tenant-top-banner__pill svg,
+.tenant-top-banner__social svg {
+  display: block;
+  flex: none;
+}
+
+.tenant-top-banner__pill--whatsapp,
+.tenant-top-banner__social {
+  min-width: 28px;
+  padding: 6px;
+}
+
 .tenant-top-banner__pill--whatsapp {
   background: rgba(22, 163, 74, .24);
   border-color: rgba(134, 239, 172, .46);
@@ -12762,7 +12814,7 @@ tr.client-row--expanded td {
 .portal-social-grid {
   display: grid;
   gap: var(--sp-3);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .portal-contact-grid .wide-field {
@@ -12770,14 +12822,15 @@ tr.client-row--expanded td {
 }
 
 .portal-social-row {
-  align-items: end;
+  align-items: center;
   display: grid;
-  gap: var(--sp-2);
-  grid-template-columns: minmax(128px, .55fr) minmax(0, 1fr);
+  gap: var(--sp-3);
+  grid-template-columns: minmax(132px, 172px) minmax(0, 1fr);
 }
 
 .portal-social-row input {
-  min-height: 38px;
+  min-height: 42px;
+  width: 100%;
 }
 
 @media (max-width: 900px) {
