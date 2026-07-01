@@ -1573,7 +1573,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               changeTab("orders");
               setStatus(`Orden ${order?.folio || ""} confirmada. Puedes verla en Ordenes de compra.`);
             }}
-            onCreateRemision={handleCreateRemisionFromPreorder}
+            onCreateRemision={adminModuleEnabled ? handleCreateRemisionFromPreorder : undefined}
             configurableCatalogEnabled={configurableCatalogEnabled}
             clientFilter={preorderClientFilter}
             onClearClientFilter={() => setPreorderClientFilter(null)}
