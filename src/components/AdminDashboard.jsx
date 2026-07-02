@@ -52,7 +52,7 @@ import {
 import { fetchTenants, makeTenantSlug, saveTenant } from "../services/tenantService";
 import { isSuperAdmin } from "../services/tenantUtils";
 import { normalizeProduct } from "../utils/excelParser";
-import { buildConfigurableCatalogProducts, isConfigurableProductGroup } from "../utils/configurableCatalog";
+import { buildConfigurableCatalogProducts, hasConfigurableCatalogProducts, isConfigurableProductGroup } from "../utils/configurableCatalog";
 import { applyFilters, buildFilterOptions, emptyFilters, DEFAULT_QUICK_FILTER_DEFINITIONS } from "../utils/filters";
 import { fetchCatalogQuickFilters } from "../services/catalogQuickFiltersService";
 import { DEFAULT_INTERFACE_SETTINGS, fetchInterfaceSettings, resolveClientPortalConfig } from "../services/interfaceSettingsService";
@@ -272,6 +272,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [selectedPriceListId, setSelectedPriceListId] = useState("");
   const [productQuery, setProductQuery] = useState("");
   const [searchChips, setSearchChips] = useState([]);
+  const [excludeQuery, setExcludeQuery] = useState("");
+  const [excludeChips, setExcludeChips] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
   const [quickFilters, setQuickFilters] = useState([]);
   const [quickFilterDefs, setQuickFilterDefs] = useState(DEFAULT_QUICK_FILTER_DEFINITIONS);
@@ -279,6 +281,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const reloadQuickFilterDefs = () => fetchCatalogQuickFilters(tenantId).then(setQuickFilterDefs).catch(() => {});
   const deferredProductQuery = useDeferredValue(productQuery);
   const deferredSearchChips = useDeferredValue(searchChips);
+  const deferredExcludeChips = useDeferredValue(excludeChips);
   const deferredFilters = useDeferredValue(filters);
   const deferredQuickFilters = useDeferredValue(quickFilters);
   const [selectedProductCode, setSelectedProductCode] = useState("");
@@ -467,15 +470,19 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     ...(configurableCatalogEnabled ? configurableOnlyTabs : []),
     ...(adminModuleEnabled ? adminModuleTabs : []),
   ];
-  const catalogProducts = useMemo(
-    () => configurableCatalogEnabled ? buildConfigurableCatalogProducts(products) : products,
+  const shouldGroupCatalogProducts = useMemo(
+    () => configurableCatalogEnabled || hasConfigurableCatalogProducts(products),
     [configurableCatalogEnabled, products]
+  );
+  const catalogProducts = useMemo(
+    () => shouldGroupCatalogProducts ? buildConfigurableCatalogProducts(products) : products,
+    [shouldGroupCatalogProducts, products]
   );
   const selectedProduct = useMemo(() => catalogProducts.find((product) => product.codigo === selectedProductCode), [catalogProducts, selectedProductCode]);
   const filterOptions = useMemo(() => buildFilterOptions(products), [products]);
   const filteredProducts = useMemo(
-    () => applyFilters(catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs),
-    [catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs]
+    () => applyFilters(catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs, deferredExcludeChips),
+    [catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs, deferredExcludeChips]
   );
   const renderedProducts = useMemo(
     () => filteredProducts.slice(0, visibleProductLimit),
@@ -542,7 +549,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   );
   useEffect(() => {
     setVisibleProductLimit(PRODUCT_RENDER_BATCH);
-  }, [deferredProductQuery, deferredSearchChips, deferredFilters, deferredQuickFilters]);
+  }, [deferredProductQuery, deferredSearchChips, deferredExcludeChips, deferredFilters, deferredQuickFilters]);
 
   useEffect(() => {
     if (!catalogSelectionIds.size && !preorderProducts.length) setSelectionDrawerOpen(false);
@@ -606,6 +613,14 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     const trimmed = chip.trim();
     if (!trimmed) return;
     setSearchChips((current) =>
+      current.some((item) => normalizeText(item) === normalizeText(trimmed)) ? current : [...current, trimmed]
+    );
+  };
+
+  const addExcludeChip = (chip) => {
+    const trimmed = chip.trim();
+    if (!trimmed) return;
+    setExcludeChips((current) =>
       current.some((item) => normalizeText(item) === normalizeText(trimmed)) ? current : [...current, trimmed]
     );
   };
@@ -790,14 +805,22 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
 
   const addToCart = (product, quantity = 1) => {
     if (isConfigurableProductGroup(product)) {
+      const isRingSizeGroup = product.configurableType === "ring_size";
       addRealProductToCart(product, quantity, {
         producto_descripcion: product.configurableTitle || product.descripcion,
-        comentarios: "Pendiente de configurar tipo de pieza",
+        comentarios: isRingSizeGroup ? "Pendiente de seleccionar talla" : "Pendiente de configurar tipo de pieza",
         _configurable_group: true,
+        _configurable_type: product.configurableType || "components",
+        _configurable_base_code: product.configurableBaseCode || product.configurableKey || product.codigo,
         _configurable_title: product.configurableTitle || product.descripcion,
+        _configurable_base_description: product.configurableTitle || product.descripcion,
+        _configurable_base_foto_url: product.fotoUrl || "",
+        _configurable_base_weight: Number(product.pesoPromedio || 0),
+        _configurable_selections: {},
         _configurable_variants: (product.variants || []).map((variant) => ({
           code: variant.code,
           label: variant.label,
+          size: variant.size || "",
           product: variant.product,
         })),
       });
@@ -1044,6 +1067,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const clearCatalogFilters = () => {
     setProductQuery("");
     setSearchChips([]);
+    setExcludeQuery("");
+    setExcludeChips([]);
     setFilters(emptyFilters);
     setQuickFilters([]);
     setSelectedProductCode("");
@@ -1464,10 +1489,15 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                 loadingProducts={loadingProducts}
                 productQuery={productQuery}
                 searchChips={searchChips}
+                excludeQuery={excludeQuery}
+                excludeChips={excludeChips}
                 products={products}
                 onQueryChange={setProductQuery}
                 onAddChip={addSearchChip}
                 onRemoveChip={(chip) => setSearchChips((c) => c.filter((item) => item !== chip))}
+                onExcludeQueryChange={setExcludeQuery}
+                onAddExcludeChip={addExcludeChip}
+                onRemoveExcludeChip={(chip) => setExcludeChips((c) => c.filter((item) => item !== chip))}
                 filters={filters}
                 filterOptions={filterOptions}
                 onFiltersChange={setFilters}

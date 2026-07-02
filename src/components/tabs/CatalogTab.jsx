@@ -97,6 +97,7 @@ export default function CatalogTab({
           <div className="admin-product-grid">
             {renderedProducts.map((product) => {
               const isConfigurable = isConfigurableProductGroup(product);
+              const isRingSizeGroup = product.configurableType === "ring_size";
               const inPreorder = isConfigurable ? false : addedCodes.includes(product.codigo);
               const inCatalogSelection = isConfigurable
                 ? (product.variants || []).some((variant) => catalogSelectionIds.has(variant.product?.codigo))
@@ -174,12 +175,12 @@ export default function CatalogTab({
                         <strong>{isConfigurable ? product.configurableTitle || product.descripcion : product.codigo}</strong>
                         <h3>
                           {isConfigurable
-                            ? `${(product.variants || []).length} tipos disponibles`
+                            ? `${(product.variants || []).length} ${isRingSizeGroup ? "tallas" : "tipos"} disponibles`
                             : shortText(product.descripcion, 72)}
                         </h3>
                         <p>
                           {isConfigurable
-                            ? "Configura tipo de pieza al agregar"
+                            ? (isRingSizeGroup ? "Selecciona talla al agregar" : "Configura tipo de pieza al agregar")
                             : [product.metal, product.kilataje, formatWeight(product.pesoPromedio)].filter(Boolean).join(" / ")}
                         </p>
                         <span>

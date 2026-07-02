@@ -66,6 +66,8 @@ const tipoPiezaFuerzaPlacaMilitar = (item) =>
 
 const tipoPiezaRequiereDiseñoPlaca = (item) =>
   Boolean(item?._configurable_selections?.tipo_pieza?.metadata?.requiere_diseño_placa);
+
+const isRingSizeConfigurableItem = (item) => item?._configurable_type === "ring_size";
 const PREORDER_EXCEL_COLUMNS = [
   { key: "codigo", aliases: ["codigo", "sku", "code", "modelo"] },
   { key: "cantidad", aliases: ["cantidad", "piezas", "qty", "quantity"] },
@@ -87,9 +89,12 @@ const calcItem = (item) => {
 
 const buildConfigurablePreorderItem = (product, quantity = 1) => {
   const piezas = Math.max(1, Number(quantity || 1));
+  const isRingSizeGroup = product.configurableType === "ring_size";
   // SKU base = solo el código de tejido + tamaño, ej: "CHI-10MM"
   // product.codigo puede ser "CFG-001-CHI-10MM" → quitamos el prefijo "CFG-XXX-"
-  const baseCodigo = String(product.codigo || "").replace(/^CFG-[^-]+-/, "");
+  const baseCodigo = isRingSizeGroup
+    ? product.configurableBaseCode || product.configurableKey || String(product.codigo || "").replace(/^RING-/, "")
+    : String(product.codigo || "").replace(/^CFG-[^-]+-/, "");
   return {
     producto_codigo: product.codigo,
     producto_descripcion: product.configurableTitle || product.descripcion,
@@ -103,8 +108,9 @@ const buildConfigurablePreorderItem = (product, quantity = 1) => {
     labor_mxn: 0,
     precio_gramo_mxn: 0,
     subtotal_mxn: 0,
-    comentarios: "Pendiente de configurar tipo de pieza",
+    comentarios: isRingSizeGroup ? "Pendiente de seleccionar talla" : "Pendiente de configurar tipo de pieza",
     _configurable_group: true,
+    _configurable_type: product.configurableType || "components",
     _configurable_base_code: baseCodigo,
     _configurable_title: product.configurableTitle || product.descripcion,
     _configurable_base_description: product.configurableTitle || product.descripcion,
@@ -114,6 +120,7 @@ const buildConfigurablePreorderItem = (product, quantity = 1) => {
     _configurable_variants: (product.variants || []).map((variant) => ({
       code: variant.code,
       label: variant.label,
+      size: variant.size || "",
       product: variant.product,
     })),
   };
@@ -121,6 +128,7 @@ const buildConfigurablePreorderItem = (product, quantity = 1) => {
 
 const isConfigurableItemComplete = (item) => {
   if (!item?._configurable_group) return true;
+  if (isRingSizeConfigurableItem(item)) return Boolean(item._configurable_variant_code);
   const selections = item._configurable_selections || {};
   return CONFIGURABLE_COMPONENT_STEPS.every((step) => {
     if (step.key === "diseño_placa") {
@@ -152,6 +160,10 @@ const componentLabel = (component) => component?.nombre || component?.label || c
 
 const buildConfiguredDescription = (item, selections = {}) => {
   const base = item?._configurable_base_description || item?._configurable_title || item?.producto_descripcion || "";
+  if (isRingSizeConfigurableItem(item)) {
+    const size = selections.ring_size?.size || selections.ring_size?.label || selections.ring_size?.nombre || "";
+    return [base, size ? `Talla ${String(size).replace(/^Talla\s+/i, "")}` : ""].filter(Boolean).join(" - ");
+  }
   const type = componentLabel(selections.tipo_pieza);
   const broche = componentLabel(selections.broche);
   const largo = componentLabel(selections.largo);
@@ -1080,6 +1092,16 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   };
 
   const getConfigurableOptions = (item, componentType) => {
+    if (componentType === "ring_size") {
+      return (item._configurable_variants || []).map((variant) => ({
+        codigo: variant.code,
+        nombre: variant.label,
+        label: variant.label,
+        size: variant.size || String(variant.label || "").replace(/^Talla\s+/i, ""),
+        product: variant.product,
+      }));
+    }
+
     // tipo_pieza: usa lista fija (selector lógico, no un componente con peso)
     if (componentType === "tipo_pieza") {
       return PIECE_TYPES;
@@ -1119,6 +1141,37 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
       if (selected) selections[componentType] = selected;
       else delete selections[componentType];
+
+      if (isRingSizeConfigurableItem(item) && componentType === "ring_size") {
+        const sourceProduct = selected?.product || products.find((product) => product.codigo === selected?.codigo);
+        const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
+        const selectedPieceList = piecePriceLists.find((entry) => entry.id === selectedPiecePriceListId);
+        const baseItem = sourceProduct ? buildPreorderItemFromProduct(sourceProduct, item.piezas, lines, plataFinaMxn) : null;
+        const pricedSource = baseItem
+          ? (isPieceMode
+              ? pricePieceItemFromList({ ...baseItem, pricing_mode: "piece" }, piecePriceItems, selectedPieceList)
+              : priceItemFromLines(baseItem, lines, selectedList, getListSilverMxn(selectedList)))
+          : {};
+        const next = {
+          ...item,
+          ...pricedSource,
+          _configurable_selections: selections,
+          _configurable_variant_code: sourceProduct?.codigo || selected?.codigo || "",
+          producto_codigo: sourceProduct?.codigo || selected?.codigo || item.producto_codigo,
+          producto_descripcion: buildConfiguredDescription(item, selections),
+          producto_foto_url: sourceProduct?.fotoUrl || item.producto_foto_url,
+          producto_metal: sourceProduct?.metal || item.producto_metal,
+          producto_kilataje: sourceProduct?.kilataje || item.producto_kilataje,
+          producto_linea: sourceProduct?.linea || item.producto_linea,
+          _configurable_base_weight: Number(sourceProduct?.pesoPromedio || item._configurable_base_weight || item.gramos_por_pieza || 0),
+          comentarios: selected ? "" : "Pendiente de seleccionar talla",
+        };
+        return calcItem({
+          ...next,
+          gramos_por_pieza: Number(sourceProduct?.pesoPromedio || next.gramos_por_pieza || 0),
+          _gt_manual: null,
+        });
+      }
 
       // Cuando cambia tipo_pieza → limpiar broche y diseño_placa dependientes
       if (componentType === "tipo_pieza") {
@@ -2225,6 +2278,22 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                                   <span className="cfg-section__num">1</span> Configurar modelo
                                 </div>
                                 <div className="cfg-selectors">
+                                  {isRingSizeConfigurableItem(item) ? (
+                                    <label className="cfg-field cfg-field--full cfg-field--ring-size">
+                                      <span className="cfg-field__label">Talla</span>
+                                      <select
+                                        className="cfg-field__select"
+                                        value={item._configurable_selections?.ring_size?.codigo || ""}
+                                        onChange={(e) => setConfigurableComponent(idx, "ring_size", e.target.value)}
+                                      >
+                                        <option value="">— Selecciona talla —</option>
+                                        {getConfigurableOptions(item, "ring_size").map((c) => (
+                                          <option key={c.codigo} value={c.codigo}>{c.nombre}</option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                  ) : (
+                                    <>
 
                                   {/* Tipo de pieza — ancho completo */}
                                   <label className="cfg-field cfg-field--full">
@@ -2317,6 +2386,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                                     </select>
                                   </label>
 
+                                    </>
+                                  )}
                                 </div>
                               </div>
 

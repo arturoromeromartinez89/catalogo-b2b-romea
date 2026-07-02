@@ -8,8 +8,10 @@ const PIECE_TYPE_LABELS = {
 };
 
 const PIECE_TYPE_ORDER = ["CHN", "BRC", "IDB", "IDL"];
+const VANGUARDIA_JOYERA_TENANT_ID = "77d5d8e5-9a8b-4e90-a125-06d7d70cc2eb";
 
 const productCodePattern = /^([A-Za-z0-9]+)-([A-Za-z0-9]+)-([A-Za-z0-9]+)-(\d+(?:\.\d+)?MM)$/i;
+const ringSizeCodePattern = /^(.+)#(\d+)$/;
 
 const toTitleCase = (value) =>
   String(value || "")
@@ -30,6 +32,38 @@ const getConfigParts = (product) => {
     pieceTypeCode: pieceTypeCode.toUpperCase(),
     sizeCode: sizeCode.toUpperCase(),
   };
+};
+
+const isVanguardiaCaballeroRing = (product) =>
+  String(product?.tenantId || product?.tenant_id || "") === VANGUARDIA_JOYERA_TENANT_ID &&
+  normalizeText(product?.linea) === "008" &&
+  normalizeText(product?.familia) === "anillo caballero";
+
+const getRingSizeParts = (product) => {
+  if (!isVanguardiaCaballeroRing(product)) return null;
+  const code = String(product?.codigo || "").trim();
+  if (!code) return null;
+  const match = code.match(ringSizeCodePattern);
+  return {
+    baseCode: match ? match[1] : code,
+    size: match ? match[2] : "",
+  };
+};
+
+const getRingDisplayName = (product, baseCode) => {
+  const description = String(product?.descripcion || product?.modelo || baseCode || "")
+    .replace(/\s+MAESTRO\b/gi, "")
+    .replace(/\s+MEDIDA\s+\d+\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return description || baseCode;
+};
+
+const ringVariantSort = (a, b) => {
+  const sizeA = Number(a.size || 999);
+  const sizeB = Number(b.size || 999);
+  if (sizeA !== sizeB) return sizeA - sizeB;
+  return String(a.code || "").localeCompare(String(b.code || ""), "es");
 };
 
 const getWeaveName = (product, parts) => {
@@ -60,7 +94,15 @@ export const isConfigurableProductGroup = (product) => Boolean(product?.isConfig
 
 export const hasConfigurableCatalogProducts = (products = []) => {
   const groups = new Map();
+  const ringGroups = new Map();
   products.forEach((product) => {
+    const ringParts = getRingSizeParts(product);
+    if (ringParts?.size) {
+      const current = ringGroups.get(ringParts.baseCode) || new Set();
+      current.add(ringParts.size);
+      ringGroups.set(ringParts.baseCode, current);
+    }
+
     const parts = getConfigParts(product);
     if (!parts) return;
     const key = `${parts.collection}-${parts.weaveCode}-${parts.sizeCode}`;
@@ -68,14 +110,38 @@ export const hasConfigurableCatalogProducts = (products = []) => {
     current.add(parts.pieceTypeCode);
     groups.set(key, current);
   });
-  return [...groups.values()].some((types) => types.size >= 2);
+  return [...groups.values()].some((types) => types.size >= 2) || [...ringGroups.values()].some((sizes) => sizes.size >= 2);
 };
 
 export const buildConfigurableCatalogProducts = (products = []) => {
   const groups = new Map();
+  const ringGroups = new Map();
   const passthrough = [];
 
   products.forEach((product) => {
+    const ringParts = getRingSizeParts(product);
+    if (ringParts) {
+      const existing = ringGroups.get(ringParts.baseCode) || {
+        baseCode: ringParts.baseCode,
+        baseProduct: null,
+        variants: [],
+        products: [],
+      };
+      existing.products.push(product);
+      if (!ringParts.size) {
+        existing.baseProduct = product;
+      } else {
+        existing.variants.push({
+          code: product.codigo,
+          label: `Talla ${ringParts.size}`,
+          size: ringParts.size,
+          product,
+        });
+      }
+      ringGroups.set(ringParts.baseCode, existing);
+      return;
+    }
+
     const parts = getConfigParts(product);
     if (!parts) {
       passthrough.push(product);
@@ -141,7 +207,54 @@ export const buildConfigurableCatalogProducts = (products = []) => {
     }),
   }));
 
-  return [...configurableGroups, ...passthrough].sort((a, b) => {
+  const ringSizeGroups = [];
+  ringGroups.forEach((group) => {
+    const variants = [...group.variants].sort(ringVariantSort);
+    if (variants.length < 2) {
+      passthrough.push(...group.products);
+      return;
+    }
+
+    const baseProduct = group.baseProduct || variants[0].product || group.products[0];
+    const title = getRingDisplayName(baseProduct, group.baseCode);
+
+    ringSizeGroups.push({
+      ...baseProduct,
+      id: `ring-size-${group.baseCode}`,
+      codigo: `RING-${group.baseCode}`,
+      modelo: group.baseCode,
+      descripcion: title,
+      familia: "ANILLO CABALLERO",
+      grupo: baseProduct.grupo || "GPO 8",
+      linea: "008",
+      searchText: normalizeText([
+        group.baseCode,
+        title,
+        baseProduct.metal,
+        baseProduct.kilataje,
+        baseProduct.linea,
+        baseProduct.familia,
+        baseProduct.grupo,
+        baseProduct.tagsBusqueda,
+        variants.map((variant) => variant.label).join(" "),
+        "anillo caballero talla tallas medidas",
+      ].join(" ")),
+      tagsBusqueda: [
+        group.baseCode,
+        title,
+        "anillo caballero talla tallas medidas",
+        variants.map((variant) => variant.label).join(" "),
+      ].join(" "),
+      isConfigurableGroup: true,
+      configurableType: "ring_size",
+      configurableKey: group.baseCode,
+      configurableBaseCode: group.baseCode,
+      configurableTitle: title,
+      variants,
+    });
+  });
+
+  return [...configurableGroups, ...ringSizeGroups, ...passthrough].sort((a, b) => {
     const orderA = Number(a.ordenWeb || 999999);
     const orderB = Number(b.ordenWeb || 999999);
     if (orderA !== orderB) return orderA - orderB;

@@ -56,11 +56,22 @@ const publicComponentSelection = (selection) => selection ? {
   id: selection.id || null,
   codigo: selection.codigo || "",
   nombre: selection.nombre || "",
+  label: selection.label || selection.nombre || "",
+  size: selection.size || "",
   tipo: selection.tipo || "",
   peso: Number(selection.peso || 0),
   unidad: selection.unidad || "",
   fotoUrl: selection.fotoUrl || "",
   metadata: selection.metadata || {},
+  product: selection.product ? {
+    codigo: selection.product.codigo || "",
+    descripcion: selection.product.descripcion || "",
+    metal: selection.product.metal || "",
+    kilataje: selection.product.kilataje || "",
+    linea: selection.product.linea || "",
+    fotoUrl: selection.product.fotoUrl || "",
+    pesoPromedio: Number(selection.product.pesoPromedio || 0),
+  } : null,
 } : null;
 
 const itemConfiguration = (item) => {
@@ -73,6 +84,7 @@ const itemConfiguration = (item) => {
   return {
     version: 1,
     group: true,
+    type: item._configurable_type || "components",
     base_code: item._configurable_base_code || "",
     title: item._configurable_title || "",
     base_description: item._configurable_base_description || "",
@@ -82,6 +94,16 @@ const itemConfiguration = (item) => {
     variants: (item._configurable_variants || []).map((variant) => ({
       code: variant.code || "",
       label: variant.label || "",
+      size: variant.size || "",
+      product: variant.product ? {
+        codigo: variant.product.codigo || "",
+        descripcion: variant.product.descripcion || "",
+        metal: variant.product.metal || "",
+        kilataje: variant.product.kilataje || "",
+        linea: variant.product.linea || "",
+        fotoUrl: variant.product.fotoUrl || "",
+        pesoPromedio: Number(variant.product.pesoPromedio || 0),
+      } : null,
     })),
     variant_code: item._configurable_variant_code || "",
   };
@@ -93,6 +115,7 @@ const hydratePreorderItem = (item) => {
   return {
     ...item,
     _configurable_group: true,
+    _configurable_type: config.type || "components",
     _configurable_base_code: config.base_code || "",
     _configurable_title: config.title || "",
     _configurable_base_description: config.base_description || "",

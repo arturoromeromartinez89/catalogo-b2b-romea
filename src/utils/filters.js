@@ -83,11 +83,15 @@ const matchesQuickFilter = (product, filterId, definitions = DEFAULT_QUICK_FILTE
 export const productMatchesSearch = (product, query, searchChips = []) =>
   matchesTerms(product.searchText, query) && searchChips.every((chip) => matchesTerms(product.searchText, chip));
 
-export const applyFilters = (products, query, filters, quickFilters = [], searchChips = [], definitions = DEFAULT_QUICK_FILTER_DEFINITIONS) =>
+export const productMatchesExclude = (product, excludeChips = []) =>
+  excludeChips.some((chip) => matchesTerms(product.searchText, chip));
+
+export const applyFilters = (products, query, filters, quickFilters = [], searchChips = [], definitions = DEFAULT_QUICK_FILTER_DEFINITIONS, excludeChips = []) =>
   products.filter((product) => {
     if (!product.visibleWeb) return false;
     if (normalizeText(product.estatus) === "baja" || normalizeText(product.estatus) === "discontinued") return false;
     if (!productMatchesSearch(product, query, searchChips)) return false;
+    if (productMatchesExclude(product, excludeChips)) return false;
     if (quickFilters.length && !quickFilters.every((filterId) => matchesQuickFilter(product, filterId, definitions))) return false;
 
     for (const key of textFilters) {

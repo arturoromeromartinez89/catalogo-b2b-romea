@@ -4,9 +4,10 @@ import { getTenantId, withTenant } from "./tenantUtils";
 import { normalizeText } from "../utils/textNormalizer";
 import { getAppUrl } from "../utils/basePath";
 
-const PAGE_SIZE = 500;
+const PAGE_SIZE = 1000;
 const PRODUCT_CODE_BATCH_SIZE = 200;
 const UPSERT_BATCH_SIZE = 500;
+const VANGUARDIA_JOYERA_TENANT_ID = "77d5d8e5-9a8b-4e90-a125-06d7d70cc2eb";
 const PUBLIC_PRODUCT_COLUMNS = [
   "id",
   "tenant_id",
@@ -40,6 +41,47 @@ const PUBLIC_PRODUCT_COLUMNS = [
   "search_text",
 ].join(",");
 
+const ADMIN_PRODUCT_COLUMNS = [
+  "id",
+  "tenant_id",
+  "created_at",
+  "updated_at",
+  "codigo",
+  "modelo",
+  "descripcion",
+  "metal",
+  "kilataje",
+  "linea",
+  "familia",
+  "grupo",
+  "proveedor",
+  "genero",
+  "acabado",
+  "piedra",
+  "medida",
+  "estatus",
+  "peso_promedio",
+  "unidad_venta",
+  "clave_venta",
+  "precio_minimo",
+  "mano_obra",
+  "moneda_precio_min",
+  "foto_url",
+  "foto_url_2",
+  "foto_url_3",
+  "visible_web",
+  "orden_web",
+  "tags_busqueda",
+  "search_text",
+].join(",");
+
+const hasProductImage = (product) => Boolean(resolveImageUrl(product?.foto_url || product?.fotoUrl || ""));
+
+const prioritizeProductsWithPhotos = (products = [], tenantId = "") => {
+  if (tenantId !== VANGUARDIA_JOYERA_TENANT_ID) return products;
+  return [...products].sort((a, b) => Number(hasProductImage(b)) - Number(hasProductImage(a)));
+};
+
 const firstValue = (...values) => values.find((value) => value !== undefined && value !== null);
 
 const toDbNumber = (...values) => {
@@ -57,25 +99,43 @@ const toDbBoolean = (...values) => {
 };
 
 export const fetchAllProducts = async ({ visibleOnly = false, tenantId = "", columns = "*" } = {}) => {
-  const rows = [];
-  let from = 0;
-
-  while (true) {
+  const makeQuery = (from, withCount = false) => {
     let query = supabase
       .from("products")
-      .select(columns)
+      .select(columns, withCount ? { count: "exact" } : undefined)
       .order("codigo")
       .range(from, from + PAGE_SIZE - 1);
 
     if (visibleOnly) query = query.eq("visible_web", true);
-    query = withTenant(query, tenantId);
+    return withTenant(query, tenantId);
+  };
 
-    const result = await query;
-    throwIfError(result);
-    rows.push(...result.data);
+  const firstResult = await makeQuery(0, true);
+  throwIfError(firstResult);
 
-    if (result.data.length < PAGE_SIZE) break;
-    from += PAGE_SIZE;
+  const rows = [...(firstResult.data || [])];
+  const total = Number.isFinite(firstResult.count) ? firstResult.count : null;
+
+  if (total && total > PAGE_SIZE) {
+    const pageStarts = [];
+    for (let from = PAGE_SIZE; from < total; from += PAGE_SIZE) pageStarts.push(from);
+    const pageResults = await Promise.all(pageStarts.map((from) => makeQuery(from)));
+    pageResults.forEach((result) => {
+      throwIfError(result);
+      rows.push(...(result.data || []));
+    });
+    return rows;
+  }
+
+  if (!total && firstResult.data?.length === PAGE_SIZE) {
+    let from = PAGE_SIZE;
+    while (true) {
+      const result = await makeQuery(from);
+      throwIfError(result);
+      rows.push(...(result.data || []));
+      if ((result.data || []).length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
   }
 
   return rows;
@@ -276,7 +336,7 @@ export const getSessionAndProfile = async () => {
 
 export const fetchAdminData = async (profile) => {
   const tenantId = getTenantId(profile);
-  const allProducts = await fetchAllProducts({ tenantId });
+  const allProducts = await fetchAllProducts({ tenantId, columns: ADMIN_PRODUCT_COLUMNS });
   const clientsQuery      = withTenant(supabase.from("clients").select("*").order("company"), tenantId);
   const catalogsQuery     = withTenant(supabase.from("catalogs").select("*").order("name"), tenantId);
   const priceListsQuery   = withTenant(supabase.from("price_lists").select("*").order("name"), tenantId);
@@ -302,7 +362,7 @@ export const fetchAdminData = async (profile) => {
   if (laborLists.error) console.warn("labor_lists fetch:", laborLists.error.message);
 
   return {
-    products: products.data.map(dbProductToProduct),
+    products: prioritizeProductsWithPhotos(products.data, tenantId).map(dbProductToProduct),
     clients: clients.data,
     catalogs: catalogs.data,
     catalogProducts: catalogProducts.data,
@@ -574,7 +634,7 @@ export const fetchClientData = async (profile) => {
     if (!rpcResult.error && rpcResult.data) {
       const payload = rpcResult.data || {};
       return {
-        products: (payload.products || []).map(dbProductToProduct).map(sanitizeProductForClient),
+        products: prioritizeProductsWithPhotos(payload.products || [], tenantId).map(dbProductToProduct).map(sanitizeProductForClient),
         priceItems: [],
         client: payload.client || null,
       };
@@ -604,7 +664,7 @@ export const fetchClientData = async (profile) => {
   }
 
   return {
-    products: productList.map(dbProductToProduct).map(sanitizeProductForClient),
+    products: prioritizeProductsWithPhotos(productList, tenantId).map(dbProductToProduct).map(sanitizeProductForClient),
     priceItems: [],
     client: clientRecord,
   };

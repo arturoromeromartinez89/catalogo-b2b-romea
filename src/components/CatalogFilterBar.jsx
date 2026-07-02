@@ -43,10 +43,15 @@ export default function CatalogFilterBar({
   // AdvancedSearch
   productQuery     = "",
   searchChips      = [],
+  excludeQuery     = "",
+  excludeChips     = [],
   products         = [],
   onQueryChange,
   onAddChip,
   onRemoveChip,
+  onExcludeQueryChange,
+  onAddExcludeChip,
+  onRemoveExcludeChip,
   // FilterPanel (selects + rangos)
   filters          = {},
   filterOptions    = {},
@@ -66,6 +71,7 @@ export default function CatalogFilterBar({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const popoverRef = useRef(null);
   const terminology = useMemo(() => getCatalogTerminology(products, language), [products, language]);
+  const canExclude = typeof onExcludeQueryChange === "function" && typeof onAddExcludeChip === "function" && typeof onRemoveExcludeChip === "function";
 
   // Cierra el popover al hacer click fuera
   useEffect(() => {
@@ -81,8 +87,8 @@ export default function CatalogFilterBar({
 
   // Cuenta filtros activos (selects + rangos + quick filters)
   const activeSelectCount = Object.values(filters).filter(Boolean).length;
-  const activeCount = activeSelectCount + quickFilters.length;
-  const hasAnyFilter = activeCount > 0 || searchChips.length > 0 || productQuery.length > 0;
+  const activeCount = activeSelectCount + quickFilters.length + (canExclude ? excludeChips.length : 0);
+  const hasAnyFilter = activeCount > 0 || searchChips.length > 0 || productQuery.length > 0 || (canExclude && excludeQuery.length > 0);
 
   const pillLabel = (f) => f.labels?.[language] || f.label || f.id;
 
@@ -177,6 +183,18 @@ export default function CatalogFilterBar({
               );
             })}
           </div>
+
+          {canExclude ? <div className="cfb-exclude" aria-label="Descartar productos">
+            <AdvancedSearch
+              value={excludeQuery}
+              chips={excludeChips}
+              products={products}
+              onChange={onExcludeQueryChange}
+              onAddChip={(chip) => { onAddExcludeChip(chip); onExcludeQueryChange(""); }}
+              onRemoveChip={onRemoveExcludeChip}
+              placeholder="Descartar..."
+            />
+          </div> : null}
 
           {/* Botón limpiar — solo visible cuando hay algo activo */}
           {hasAnyFilter && (

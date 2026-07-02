@@ -9525,6 +9525,33 @@ textarea:focus {
 }
 .cfb-pill--active:hover { background: #1a46c8; border-color: #1a46c8; }
 
+.cfb-exclude {
+  flex: 0 0 230px;
+  min-width: 190px;
+  position: relative;
+}
+
+.cfb-exclude .search-token-box {
+  background: #fff7ed;
+  border-color: #fb923c;
+  box-shadow: inset 3px 0 0 #f97316;
+}
+
+.cfb-exclude .search-token-box:focus-within {
+  border-color: #ea580c;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.16), inset 3px 0 0 #ea580c;
+}
+
+.cfb-exclude .search-chip {
+  background: #fed7aa;
+  border-color: #fdba74;
+  color: #7c2d12;
+}
+
+.cfb-exclude .search-token-box input::placeholder {
+  color: #9a3412;
+}
+
 /* ── Limpiar filtros ── */
 .cfb-clear {
   align-items: center;

@@ -6,7 +6,6 @@ const PUBLIC_PORTAL_BRANDS = [
     key: "estuches-chavez",
     hosts: [
       "estucheschavez.com.mx",
-      "catalogo-b2b-staging-security.vercel.app",
     ],
     pathPrefix: "/catalogo",
     name: "Estuches Chavez",

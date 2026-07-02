@@ -56,7 +56,7 @@ export const fetchCompanySettings = async (tenantId = "") => {
   if (tenantId) query = query.eq("tenant_id", tenantId);
   else query = query.is("tenant_id", null);
   let { data, error } = await query.maybeSingle();
-  if (error && tenantId) {
+  if (tenantId && (error || !data)) {
     const rpc = await supabase.rpc("get_public_company_branding", { p_tenant_id: tenantId });
     data = rpc.error ? null : rpc.data;
     error = rpc.error;

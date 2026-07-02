@@ -37,8 +37,17 @@ const today = () => new Date().toISOString().split("T")[0];
 //    y remisión, igual que preorderService (itemConfiguration / hydrate). Sin
 //    esto, la remisión guardada perdía las imágenes de componentes en el PDF.
 const publicComp = (s) => (s ? {
-  codigo: s.codigo || "", nombre: s.nombre || "", peso: Number(s.peso || 0),
+  codigo: s.codigo || "", nombre: s.nombre || "", label: s.label || s.nombre || "", size: s.size || "", peso: Number(s.peso || 0),
   unidad: s.unidad || "", fotoUrl: s.fotoUrl || s.foto_url || "", metadata: s.metadata || {},
+  product: s.product ? {
+    codigo: s.product.codigo || "",
+    descripcion: s.product.descripcion || "",
+    metal: s.product.metal || "",
+    kilataje: s.product.kilataje || "",
+    linea: s.product.linea || "",
+    fotoUrl: s.product.fotoUrl || "",
+    pesoPromedio: Number(s.product.pesoPromedio || 0),
+  } : null,
 } : null);
 
 const buildConfiguracion = (item) => {
@@ -50,13 +59,27 @@ const buildConfiguracion = (item) => {
   );
   return {
     version: 1, group: true,
+    type: item._configurable_type || "components",
     base_code: item._configurable_base_code || "",
     title: item._configurable_title || "",
     base_description: item._configurable_base_description || "",
     base_photo_url: item._configurable_base_foto_url || "",
     base_weight: Number(item._configurable_base_weight || 0),
     selections,
-    variants: (item._configurable_variants || []).map((v) => ({ code: v.code || "", label: v.label || "" })),
+    variants: (item._configurable_variants || []).map((v) => ({
+      code: v.code || "",
+      label: v.label || "",
+      size: v.size || "",
+      product: v.product ? {
+        codigo: v.product.codigo || "",
+        descripcion: v.product.descripcion || "",
+        metal: v.product.metal || "",
+        kilataje: v.product.kilataje || "",
+        linea: v.product.linea || "",
+        fotoUrl: v.product.fotoUrl || "",
+        pesoPromedio: Number(v.product.pesoPromedio || 0),
+      } : null,
+    })),
     variant_code: item._configurable_variant_code || "",
   };
 };
@@ -65,6 +88,7 @@ const hydrateConfigurable = (config) => {
   if (!config?.group) return {};
   return {
     _configurable_group: true,
+    _configurable_type: config.type || "components",
     _configurable_base_code: config.base_code || "",
     _configurable_title: config.title || "",
     _configurable_base_description: config.base_description || "",

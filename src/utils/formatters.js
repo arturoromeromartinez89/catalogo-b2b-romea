@@ -64,6 +64,15 @@ export const imageUrlForSize = (value, width = 360) => {
     const parsed = new URL(url);
     const size = Math.max(80, Math.min(1600, Number(width) || 360));
 
+    if (parsed.hostname.endsWith(".supabase.co") && parsed.pathname.includes("/storage/v1/object/public/")) {
+      parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
+      parsed.searchParams.set("width", String(size));
+      parsed.searchParams.set("height", String(size));
+      parsed.searchParams.set("resize", "contain");
+      parsed.searchParams.set("quality", "75");
+      return parsed.toString();
+    }
+
     if (parsed.hostname.includes("drive.google.com") && parsed.pathname.includes("/thumbnail")) {
       parsed.searchParams.set("sz", `w${size}`);
       return parsed.toString();

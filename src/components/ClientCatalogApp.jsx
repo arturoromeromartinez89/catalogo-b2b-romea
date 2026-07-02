@@ -654,8 +654,7 @@ export default function ClientCatalogApp({ profile }) {
       {/* ── Sidebar: solo métricas + botón preorden ── */}
       <aside className="admin-romea-sidebar">
         <div className="brand-block">
-          <BrandLogo company={activeCompany} />
-          <p>{t("b2bCatalog")}</p>
+          <BrandLogo size="lg" company={activeCompany} />
         </div>
 
         <div className="client-sidebar-scroll">

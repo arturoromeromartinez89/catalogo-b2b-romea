@@ -1,7 +1,7 @@
 import { buildSearchSuggestions } from "../utils/filters";
 import { useLanguage } from "../i18n/LanguageContext";
 
-export default function AdvancedSearch({ value, chips, products, onChange, onAddChip, onRemoveChip }) {
+export default function AdvancedSearch({ value, chips, products, onChange, onAddChip, onRemoveChip, placeholder = "" }) {
   const { t } = useLanguage();
   const suggestions = buildSearchSuggestions(products, value, chips);
 
@@ -33,7 +33,7 @@ export default function AdvancedSearch({ value, chips, products, onChange, onAdd
               onRemoveChip(chips[chips.length - 1]);
             }
           }}
-          placeholder={chips.length ? t("addAnotherFilter") : t("searchPlaceholder")}
+          placeholder={chips.length ? t("addAnotherFilter") : placeholder || t("searchPlaceholder")}
         />
       </div>
       {suggestions.length ? (
