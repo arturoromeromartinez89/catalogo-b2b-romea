@@ -14,7 +14,7 @@ import {
   uploadClientPortalBanner,
 } from "../services/interfaceSettingsService";
 import InterfaceCustomizationPanel from "./InterfaceCustomizationPanel";
-import TenantTopBanner from "./TenantTopBanner";
+import TenantTopBanner, { SocialIcon } from "./TenantTopBanner";
 
 const toCompanyForm = (settings = {}, interfaceSettings = DEFAULT_INTERFACE_SETTINGS, profile = {}) => {
   const portalConfig = resolveClientPortalConfig(interfaceSettings?.client_portal_config, {
@@ -628,7 +628,9 @@ export default function CompanySettingsPanel({
               <div className="client-preview-actions">
                 <button className="primary-button compact-action" type="button">Ver catalogo</button>
                 {portalConfig.whatsapp.enabled ? (
-                  <button className="secondary-button compact-action" type="button">WhatsApp</button>
+                  <button className="secondary-button compact-action" type="button" title="WhatsApp" aria-label="WhatsApp">
+                    <SocialIcon name="whatsapp" />
+                  </button>
                 ) : null}
               </div>
             </aside>

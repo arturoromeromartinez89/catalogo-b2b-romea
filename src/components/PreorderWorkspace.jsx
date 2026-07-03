@@ -267,6 +267,8 @@ export default function PreorderWorkspace({
   clientFilter = null,
   onClearClientFilter,
   configurableCatalogEnabled = false,
+  allowedPricingModes = null,
+  allowedCurrencies = null,
 }) {
   const [tabs, setTabs] = useState([{ id: TAB_LIST, type: TAB_LIST, label: "Preórdenes", dirty: false }]);
   const [activeId, setActiveId] = useState(TAB_LIST);
@@ -428,6 +430,8 @@ export default function PreorderWorkspace({
             onDirty={() => markDirty(activeTab.id)}
             onCreateRemision={onCreateRemision}
             configurableCatalogEnabled={configurableCatalogEnabled}
+            allowedPricingModes={allowedPricingModes}
+            allowedCurrencies={allowedCurrencies}
           />
         )}
       </div>

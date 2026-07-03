@@ -7,6 +7,7 @@ import {
   DEFAULT_INTERFACE_SETTINGS,
   resolveClientPortalConfig,
 } from "../../services/interfaceSettingsService";
+import { SocialIcon } from "../TenantTopBanner";
 
 /**
  * InicioTab — página de inicio del portal de administrador (versión central,
@@ -192,8 +193,15 @@ export default function InicioTab({
               Ver catalogo
             </button>
             {whatsappUrl ? (
-              <a className="secondary-button compact-action inicio-client-preview__whatsapp" href={whatsappUrl} target="_blank" rel="noreferrer">
-                WhatsApp
+              <a
+                className="secondary-button compact-action inicio-client-preview__whatsapp"
+                href={whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                title="WhatsApp"
+                aria-label="WhatsApp"
+              >
+                <SocialIcon name="whatsapp" />
               </a>
             ) : null}
           </div>

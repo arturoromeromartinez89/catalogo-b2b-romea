@@ -351,6 +351,10 @@ function ImportarPreordenModal({ tenantId, profile, onSelect, onClose }) {
 }
 
 function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, onCreateRemision, onOrderConfirmed, pricingLocked = false, tenantId = "", profile, configurableCatalogEnabled = false,
+  // Reglas de comercio del tenant (tenant_commerce_settings). Cuando solo hay
+  // un modo/moneda permitido, el selector se oculta y el valor se fuerza.
+  allowedPricingModes = null,
+  allowedCurrencies = null,
   // ── Modo documento ────────────────────────────────────────────────────────
   // documentType="preorden" (default) deja la Preorden 100% idéntica.
   // documentType="remision" reutiliza el mismo editor como Remisión.
@@ -368,6 +372,14 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const resolvedTenantId = tenantId || initial?.tenant_id || initial?.tenantId || profile?.tenant_id || "";
 
   const isRemision = documentType === "remision";
+  const commercePricingModes = Array.isArray(allowedPricingModes) && allowedPricingModes.length
+    ? allowedPricingModes
+    : ["gram", "piece"];
+  const commerceCurrencies = Array.isArray(allowedCurrencies) && allowedCurrencies.length
+    ? allowedCurrencies
+    : ["MXN", "USD"];
+  const singlePricingMode = commercePricingModes.length === 1 ? commercePricingModes[0] : "";
+  const singleCurrency = commerceCurrencies.length === 1 ? commerceCurrencies[0] : "";
   const statusConfig = statusMap || STATUS;
   const docLabels = labels || {};
   const defaultStatus = defaultStatusKey || Object.keys(statusConfig)[0] || "pendiente";
@@ -390,9 +402,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     cliente_telefono: "",
     cliente_rfc: "",
     tipo_cambio: "",
-    moneda: "MXN",
+    moneda: singleCurrency || "MXN",
     notas: "",
-    pricing_mode: initial?.pricing_mode || "gram",
+    pricing_mode: initial?.pricing_mode || singlePricingMode || "gram",
     pf_mode: "manual",
     kitco_usd_oz: "",
     premio_pct: 0,
@@ -579,6 +591,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const useUsd = po.moneda === "USD" && exchangeRate > 0;
   const moneyLabel = po.moneda === "USD" ? "USD" : "MXN";
   const pricingMode = po.pricing_mode || "gram";
+  // Tenants con un solo modo/moneda no ven controles de joyeria (gramo, USD,
+  // tipo de cambio). Si un documento legacy trae otro modo, se muestra igual.
+  const hidePricingModeSelector = Boolean(singlePricingMode && pricingMode === singlePricingMode);
+  const hideCurrencySelector = Boolean(singleCurrency && (po.moneda || "MXN") === singleCurrency);
+  const hideExchangeRate = singleCurrency === "MXN" && (po.moneda || "MXN") === "MXN";
   const isPieceMode = pricingMode === "piece";
 
   useEffect(() => {
@@ -1859,18 +1876,22 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           <section className="po-remission-group">
             <div className="po-remission-title">Moneda y lista</div>
             <div className="po-remission-fields">
-              <Field label={t("pedMoneda")}>
-                <select value={po.moneda} onChange={set("moneda", { pricing: true })} style={inp}>
-                  <option value="MXN">MXN</option>
-                  <option value="USD">USD</option>
-                </select>
-              </Field>
-              <Field label={t("pedTipo")}>
-                <select value={pricingMode} onChange={(e) => changePricingMode(e.target.value)} disabled={pricingLocked} style={inp}>
-                  <option value="gram">{t("pedPorGramo")}</option>
-                  <option value="piece">{t("pedPorPieza")}</option>
-                </select>
-              </Field>
+              {!hideCurrencySelector ? (
+                <Field label={t("pedMoneda")}>
+                  <select value={po.moneda} onChange={set("moneda", { pricing: true })} style={inp}>
+                    <option value="MXN">MXN</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </Field>
+              ) : null}
+              {!hidePricingModeSelector ? (
+                <Field label={t("pedTipo")}>
+                  <select value={pricingMode} onChange={(e) => changePricingMode(e.target.value)} disabled={pricingLocked} style={inp}>
+                    <option value="gram">{t("pedPorGramo")}</option>
+                    <option value="piece">{t("pedPorPieza")}</option>
+                  </select>
+                </Field>
+              ) : null}
               <Field label={isPieceMode ? t("pedListaPieza", po.moneda) : t("pedListaGramo", po.moneda)}>
                 {isPieceMode ? (
                   <select
@@ -1900,9 +1921,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   </select>
                 )}
               </Field>
-              <Field label={t("pedTipoCambio")}>
-                <input type="number" step="0.01" placeholder={t("pedPhTipoCambio")} value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
-              </Field>
+              {!hideExchangeRate ? (
+                <Field label={t("pedTipoCambio")}>
+                  <input type="number" step="0.01" placeholder={t("pedPhTipoCambio")} value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
+                </Field>
+              ) : null}
               <div style={{ gridColumn: "1 / -1" }}>
                 <Field label={t("pedComentariosTitulo")}>
                   <textarea value={po.notas || ""} onChange={set("notas")} placeholder={docLabels.notesPlaceholder || t("pedComentariosPlaceholder")} />
@@ -1957,18 +1980,22 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 <strong>Costeo</strong>
                 <span>{isPieceMode ? "Por pieza" : selectedLaborListId === CUSTOM_PRICE_LIST_VALUE ? "Personalizada" : "Por gramo"}</span>
               </div>
-              <Field label={t("pedMoneda")}>
-                <select value={po.moneda} onChange={set("moneda", { pricing: true })} style={inp}>
-                  <option value="MXN">MXN</option>
-                  <option value="USD">USD</option>
-                </select>
-              </Field>
-              <Field label={t("pedFieldTipoCotizacion")}>
-                <select value={pricingMode} onChange={(e) => changePricingMode(e.target.value)} disabled={pricingLocked} style={inp}>
-                  <option value="gram">{t("pedPorGramo")}</option>
-                  <option value="piece">{t("pedPorPieza")}</option>
-                </select>
-              </Field>
+              {!hideCurrencySelector ? (
+                <Field label={t("pedMoneda")}>
+                  <select value={po.moneda} onChange={set("moneda", { pricing: true })} style={inp}>
+                    <option value="MXN">MXN</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </Field>
+              ) : null}
+              {!hidePricingModeSelector ? (
+                <Field label={t("pedFieldTipoCotizacion")}>
+                  <select value={pricingMode} onChange={(e) => changePricingMode(e.target.value)} disabled={pricingLocked} style={inp}>
+                    <option value="gram">{t("pedPorGramo")}</option>
+                    <option value="piece">{t("pedPorPieza")}</option>
+                  </select>
+                </Field>
+              ) : null}
               <Field label={isPieceMode ? t("pedListaPieza", po.moneda) : t("pedListaGramo", po.moneda)}>
                 {isPieceMode ? (
                   <select
@@ -1998,9 +2025,11 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                   </select>
                 )}
               </Field>
-              <Field label={t("pedFieldTipoCambioUsd")}>
-                <input type="number" step="0.01" placeholder={t("pedPhTipoCambio")} value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
-              </Field>
+              {!hideExchangeRate ? (
+                <Field label={t("pedFieldTipoCambioUsd")}>
+                  <input type="number" step="0.01" placeholder={t("pedPhTipoCambio")} value={po.tipo_cambio || ""} onChange={set("tipo_cambio", { pricing: true })} style={inp} />
+                </Field>
+              ) : null}
               <Field label={t("pedFieldEstatus")}>
                 <select value={po.status || defaultStatus} onChange={set("status")} style={inp}>
                   {Object.entries(statusConfig).map(([key, value]) => <option key={key} value={key}>{statusLabel(key, value.label)}</option>)}

@@ -181,6 +181,8 @@ const normalizeBannerUrl = (value = "") => {
   return `${ESTUCHES_CHAVEZ_SITE_URL}/${text.replace(/^\/+/, "")}`;
 };
 
+// Sin trim aqui: normalize corre en cada tecleo del panel de personalizacion
+// y recortar espacios al vuelo impide escribirlos. deepTrimStrings limpia al guardar.
 const normalizeSlide = (slide = {}, index = 0) => {
   if (!slide || typeof slide !== "object") return null;
   const imageUrl = normalizeBannerUrl(slide.image_url || slide.imageUrl || slide.url);
@@ -188,10 +190,10 @@ const normalizeSlide = (slide = {}, index = 0) => {
   return {
     id: String(slide.id || `slide-${index + 1}`),
     image_url: imageUrl,
-    title: String(slide.title || "").trim(),
-    subtitle: String(slide.subtitle || "").trim(),
-    link: String(slide.link || "").trim(),
-    alt: String(slide.alt || slide.title || "Banner del portal cliente").trim(),
+    title: String(slide.title || ""),
+    subtitle: String(slide.subtitle || ""),
+    link: String(slide.link || ""),
+    alt: String(slide.alt || slide.title || "Banner del portal cliente"),
   };
 };
 
@@ -221,17 +223,17 @@ const normalizeAnnouncementContact = (announcement = {}, source = {}) => {
       source.whatsapp_number ||
       whatsapp.number ||
       ""
-    ).trim(),
+    ),
     whatsapp_message: String(
       contact.whatsapp_message ||
       source.whatsapp_message ||
       whatsapp.message ||
       DEFAULT_CLIENT_PORTAL_CONFIG.announcement.contact.whatsapp_message
-    ).trim(),
+    ),
     show_phone: Boolean(contact.show_phone ?? source.show_phone),
-    phone: String(contact.phone || source.phone || "").trim(),
+    phone: String(contact.phone || source.phone || ""),
     show_email: Boolean(contact.show_email ?? source.show_email),
-    email: String(contact.email || source.email || "").trim(),
+    email: String(contact.email || source.email || ""),
   };
 };
 
@@ -241,15 +243,15 @@ const normalizeAnnouncementSocials = (announcement = {}, source = {}) => {
     ...DEFAULT_CLIENT_PORTAL_CONFIG.announcement.socials,
     ...socials,
     show_website: Boolean(socials.show_website ?? source.show_website),
-    website: String(socials.website || source.website || "").trim(),
+    website: String(socials.website || source.website || ""),
     show_instagram: Boolean(socials.show_instagram ?? source.show_instagram),
-    instagram: String(socials.instagram || source.instagram || "").trim(),
+    instagram: String(socials.instagram || source.instagram || ""),
     show_facebook: Boolean(socials.show_facebook ?? source.show_facebook),
-    facebook: String(socials.facebook || source.facebook || "").trim(),
+    facebook: String(socials.facebook || source.facebook || ""),
     show_tiktok: Boolean(socials.show_tiktok ?? source.show_tiktok),
-    tiktok: String(socials.tiktok || source.tiktok || "").trim(),
+    tiktok: String(socials.tiktok || source.tiktok || ""),
     show_linkedin: Boolean(socials.show_linkedin ?? source.show_linkedin),
-    linkedin: String(socials.linkedin || source.linkedin || "").trim(),
+    linkedin: String(socials.linkedin || source.linkedin || ""),
   };
 };
 
@@ -275,7 +277,7 @@ export const normalizeClientPortalConfig = (config = {}) => {
       ...DEFAULT_CLIENT_PORTAL_CONFIG.announcement,
       ...announcement,
       enabled: Boolean(announcement.enabled ?? source.announcement_enabled),
-      text: String(announcement.text || source.announcement_text || "").trim(),
+      text: String(announcement.text || source.announcement_text || ""),
       dismissible: announcement.dismissible !== false,
       animate: announcement.animate !== false,
       contact: normalizeAnnouncementContact(announcement, source),
@@ -299,16 +301,27 @@ export const normalizeClientPortalConfig = (config = {}) => {
         announcement.contact?.whatsapp_number ||
         source.contact?.whatsapp_number ||
         ""
-      ).trim(),
+      ),
       message: String(
         whatsapp.message ||
         source.whatsapp_message ||
         announcement.contact?.whatsapp_message ||
         source.contact?.whatsapp_message ||
         DEFAULT_CLIENT_PORTAL_CONFIG.whatsapp.message
-      ).trim(),
+      ),
     },
   };
+};
+
+const deepTrimStrings = (value) => {
+  if (typeof value === "string") return value.trim();
+  if (Array.isArray(value)) return value.map(deepTrimStrings);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, deepTrimStrings(item)])
+    );
+  }
+  return value;
 };
 
 export const hasClientPortalConfig = (config = {}) => {
@@ -316,7 +329,7 @@ export const hasClientPortalConfig = (config = {}) => {
   const contact = normalized.announcement.contact || {};
   const socials = normalized.announcement.socials || {};
   return Boolean(
-    (normalized.announcement.enabled && normalized.announcement.text) ||
+    (normalized.announcement.enabled && normalized.announcement.text.trim()) ||
     (normalized.announcement.enabled && contact.show_whatsapp && contact.whatsapp_number) ||
     (normalized.announcement.enabled && contact.show_phone && contact.phone) ||
     (normalized.announcement.enabled && contact.show_email && contact.email) ||
@@ -448,7 +461,7 @@ export const saveInterfaceSettings = async (tenantId, settings) => {
     tenant_id: tenantId,
     theme_key: legacyThemeKeyFor(normalized.visual_theme_key),
     admin_product_card_config: normalized.admin_product_card_config,
-    client_portal_config: normalized.client_portal_config,
+    client_portal_config: deepTrimStrings(normalized.client_portal_config),
   };
   const { data, error } = await supabase
     .from("tenant_interface_settings")
