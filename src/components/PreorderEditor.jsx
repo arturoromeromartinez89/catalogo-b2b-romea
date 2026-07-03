@@ -29,6 +29,16 @@ const IVA_RATE = 0.16;
 const PROSPECT_CLIENT_VALUE = "__new_prospect__";
 const CUSTOM_PRICE_LIST_VALUE = "__custom_price_list__";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const friendlyPreorderError = (error) => {
+  const message = String(error?.message || error || "");
+  if (/PRICING_MODE_NOT_ALLOWED/i.test(message)) {
+    return "Esta empresa solo cotiza por pieza. Cambia la preorden a modo por pieza e intenta guardar nuevamente.";
+  }
+  if (/PRICING_CURRENCY_NOT_ALLOWED/i.test(message)) {
+    return "Esta empresa no permite esa moneda para preordenes. Revisa la moneda seleccionada e intenta guardar nuevamente.";
+  }
+  return message;
+};
 // ---------------------------------------------------------------------------
 // Tipos de pieza — selector lógico, NO es un componente con peso.
 // Determina qué componentes físicos se activan (broche, diseño de placa).
@@ -1464,7 +1474,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
           : "hora desconocida";
         setMsg(t("pedMsgConflicto", hora));
       } else {
-        setMsg(t("pedMsgError", error.message));
+        setMsg(t("pedMsgError", friendlyPreorderError(error)));
       }
     } finally {
       setSaving(false);
