@@ -8,6 +8,9 @@ export const getTenantId = (profileOrTenantId) => {
 
 export const isAdminRole = (role) => ADMIN_ROLES.includes(role);
 
+// Rol comercial: acceso al portal admin pero solo a inicio y agenda.
+export const isComercialRole = (role) => role === "comercial";
+
 export const isSuperAdmin = (profile) => profile?.role === "superadmin";
 
 export const withTenant = (query, tenantId) => (tenantId ? query.eq("tenant_id", tenantId) : query);

@@ -24,6 +24,7 @@ import {
 // Tabs extraídos — step 1 del refactor progresivo
 import TenantsTab from "./tabs/TenantsTab";
 import InicioTab from "./tabs/InicioTab";
+import AgendaTab from "./tabs/AgendaTab";
 import CatalogTab from "./tabs/CatalogTab";
 import ClientsTab from "./tabs/ClientsTab";
 import ProspectsTab from "./tabs/ProspectsTab";
@@ -74,6 +75,9 @@ const PRODUCT_RENDER_BATCH = 60;
 const baseTabs = ["inicio", "catalog", "preorders", "orders", "clients", "prospects", "prices", "company", "database"];
 const configurableOnlyTabs = ["components"];
 const adminModuleTabs = ["administracion"];
+const agendaTabs = ["agenda"];
+// El rol comercial solo ve inicio y agenda.
+const comercialTabs = ["inicio", "agenda"];
 // Navegación organizada por las preguntas del negocio, no por tablas.
 // "Configuración" agrupa los catálogos internos con jerarquía visual menor.
 const ADMIN_SUB_TABS = [
@@ -101,6 +105,7 @@ const tabKeys = {
   database:      "database",
   components:    "components",
   administracion: "administracion",
+  agenda:        "agenda",
 };
 const titleKeys = {
   tenants:       "tenants",
@@ -115,6 +120,7 @@ const titleKeys = {
   database:      "database",
   components:    "components",
   administracion: "administracion",
+  agenda:        "agenda",
 };
 
 const formProductToRow = (product) => ({
@@ -249,7 +255,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const activeTenant = useMemo(() => tenants.find((tenant) => tenant.id === tenantId), [tenants, tenantId]);
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
   const tabs = superadmin ? ["tenants", ...baseTabs] : [...baseTabs]; // se extiende abajo con extraTabs
-  const [tab, setTab] = useState("inicio");
+  const [tab, setTab] = useState(profile?.role === "comercial" ? "agenda" : "inicio");
   const [adminSubTab, setAdminSubTab] = useState("inicio");
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [data, setData] = useState(null);
@@ -492,11 +498,16 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const selectedClient = useMemo(() => data?.clients.find((client) => client.id === selectedClientId), [data?.clients, selectedClientId]);
   const configurableCatalogEnabled = tenantFeatures?.modulo_configurable === true;
   const adminModuleEnabled = tenantFeatures?.modulo_admin === true;
-  const allTabs = [
-    ...tabs,
-    ...(configurableCatalogEnabled ? configurableOnlyTabs : []),
-    ...(adminModuleEnabled ? adminModuleTabs : []),
-  ];
+  const agendaEnabled = tenantFeatures?.modulo_agenda === true;
+  const isComercial = profile?.role === "comercial";
+  const allTabs = isComercial
+    ? comercialTabs
+    : [
+      ...tabs,
+      ...(agendaEnabled ? agendaTabs : []),
+      ...(configurableCatalogEnabled ? configurableOnlyTabs : []),
+      ...(adminModuleEnabled ? adminModuleTabs : []),
+    ];
   const shouldGroupCatalogProducts = useMemo(
     () => configurableCatalogEnabled || hasConfigurableCatalogProducts(products),
     [configurableCatalogEnabled, products]
@@ -1454,6 +1465,14 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             onGoToCatalog={() => changeTab("catalog")}
             onGoToClients={() => changeTab("clients")}
             onReviewClient={handleViewClientPreorders}
+          />
+        ) : null}
+
+        {tab === "agenda" && (agendaEnabled || isComercial) ? (
+          <AgendaTab
+            tenantId={tenantId}
+            profile={profile}
+            clients={data?.clients || []}
           />
         ) : null}
 
