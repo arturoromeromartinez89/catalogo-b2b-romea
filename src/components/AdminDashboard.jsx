@@ -483,7 +483,11 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       .replace(/[._-]+/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase())
   ) || t("hdrRoleAdmin");
   const accountInitial = (accountName || "?").charAt(0).toUpperCase();
-  const accountRoleLabel = profile?.role === "client" ? t("hdrRoleClient") : t("hdrRoleAdmin");
+  const accountRoleLabel = profile?.role === "client"
+    ? t("hdrRoleClient")
+    : profile?.role === "comercial"
+      ? t("hdrRoleComercial")
+      : t("hdrRoleAdmin");
   const headerBrandName = activeCompany?.brand_name || activeCompany?.legal_name || t("b2bCatalog");
   const adminPortalConfig = useMemo(
     () => resolveClientPortalConfig(interfaceSettings?.client_portal_config, {
