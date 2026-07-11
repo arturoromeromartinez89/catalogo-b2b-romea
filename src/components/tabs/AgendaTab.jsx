@@ -222,8 +222,10 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
     }
   };
 
-  const handleDropOnDay = async (dayKey) => {
-    const taskId = draggingTaskId;
+  // El id viaja en el dataTransfer (no solo en estado): el estado de React
+  // puede no estar actualizado aún cuando llega el drop.
+  const handleDropOnDay = async (dayKey, droppedId = "") => {
+    const taskId = droppedId || draggingTaskId;
     setDraggingTaskId(null);
     setDropDayKey("");
     if (!taskId) return;
@@ -796,7 +798,7 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
                   className={`agenda-column${isToday ? " agenda-column--today" : ""}${dropDayKey === dayKey && draggingTaskId ? " agenda-column--dropover" : ""}`}
                   key={dayKey}
                   onDragOver={(event) => {
-                    if (!draggingTaskId) return;
+                    if (!draggingTaskId && !event.dataTransfer.types.includes("text/plain")) return;
                     event.preventDefault();
                     event.dataTransfer.dropEffect = "move";
                     if (dropDayKey !== dayKey) setDropDayKey(dayKey);
@@ -807,7 +809,7 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
                   }}
                   onDrop={(event) => {
                     event.preventDefault();
-                    handleDropOnDay(dayKey);
+                    handleDropOnDay(dayKey, event.dataTransfer.getData("text/plain"));
                   }}
                 >
                   <header>
