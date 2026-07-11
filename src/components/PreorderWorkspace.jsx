@@ -263,12 +263,14 @@ export default function PreorderWorkspace({
   onDraftClose,
   onDraftSaved,
   onOrderConfirmed,
+  onPreorderConfirmed,
   onCreateRemision,
   clientFilter = null,
   onClearClientFilter,
   configurableCatalogEnabled = false,
   allowedPricingModes = null,
   allowedCurrencies = null,
+  estuchesChavezMode = false,
 }) {
   const [tabs, setTabs] = useState([{ id: TAB_LIST, type: TAB_LIST, label: "Preórdenes", dirty: false }]);
   const [activeId, setActiveId] = useState(TAB_LIST);
@@ -427,11 +429,24 @@ export default function PreorderWorkspace({
               setListMsg(`Orden ${order?.folio || ""} confirmada.`);
               onOrderConfirmed?.(order);
             }}
+            onPreorderConfirmed={(updatedPreorder) => {
+              loadPreorders();
+              setTabs((prev) =>
+                prev.map((item) =>
+                  item.id === activeTab.id
+                    ? { ...item, dirty: false, preorder: { ...(item.preorder || {}), ...updatedPreorder } }
+                    : item
+                )
+              );
+              setListMsg(`Preorden ${updatedPreorder?.folio || ""} confirmada.`);
+              onPreorderConfirmed?.(updatedPreorder);
+            }}
             onDirty={() => markDirty(activeTab.id)}
             onCreateRemision={onCreateRemision}
             configurableCatalogEnabled={configurableCatalogEnabled}
             allowedPricingModes={allowedPricingModes}
             allowedCurrencies={allowedCurrencies}
+            estuchesChavezMode={estuchesChavezMode}
           />
         )}
       </div>

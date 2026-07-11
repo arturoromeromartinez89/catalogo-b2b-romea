@@ -27,21 +27,34 @@ import { applyFilters, buildFilterOptions, emptyFilters, DEFAULT_QUICK_FILTER_DE
 import { fetchCatalogQuickFilters } from "../services/catalogQuickFiltersService";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
+import {
+  ESTUCHES_CHAVEZ_CATEGORIES,
+  ESTUCHES_CHAVEZ_OTHER_CATEGORY,
+  getEstuchesDisplayCode,
+  getEstuchesDisplayDescription,
+  getEstuchesPackageLabel,
+  getEstuchesProductCategory,
+  isEstuchesChavezCatalogExperience,
+  productMatchesEstuchesCategory,
+} from "../config/estuchesChavezCatalog";
 
 const orderDefaults = {
   es: { concept: "Preorden mayorista", status: "Pendiente" },
   en: { concept: "Wholesale preorder", status: "Pending" },
 };
 const PRODUCT_RENDER_BATCH = 60;
+const CLIENT_HIDDEN_PRICE_FIELDS = new Set(["precio", "mano_obra"]);
+const WE_GROUP_TENANT_ID = "feffc1b3-c5a8-4442-9f8d-8065cc8d3516";
 
-const formatClientLaborLabel = (product, fallbackLabel) => {
+const formatClientLaborLabel = (product, fallbackLabel, options = {}) => {
   const labor = Number(product.quoteDisplayLaborPerGram ?? product.quoteLaborPerGram ?? product.precioMinimo ?? 0);
   if (!labor) return fallbackLabel;
-  const prefix = formatClientPackageLabel(product) ? "" : "MO - ";
+  const prefix = formatClientPackageLabel(product, options) ? "" : "MO - ";
   return `${prefix}${formatCurrency(labor, product.quotePricingCurrency || product.monedaPrecioMin || "MXN")}`;
 };
 
-const formatClientPackageLabel = (product) => {
+const formatClientPackageLabel = (product, options = {}) => {
+  if (options.estuchesChavezMode) return getEstuchesPackageLabel(product);
   const raw = String(product?.unidadVenta || product?.claveVenta || "").trim();
   if (!raw) return "";
   if (/^\d+$/.test(raw)) return `${raw} piezas`;
@@ -84,38 +97,81 @@ const getClientLaborPrice = ({ product, baseLine, listLine, laborList, metalPric
   };
 };
 
-const clientProductFieldValue = (product, fieldKey, fallbackLabel) => {
-  if (fieldKey === "codigo") return product.codigo;
-  if (fieldKey === "descripcion") return shortText(product.descripcion, 72);
+const clientProductFieldValue = (product, fieldKey, fallbackLabel, options = {}) => {
+  if (fieldKey === "codigo") return options.estuchesChavezMode ? getEstuchesDisplayCode(product) : product.codigo;
+  if (fieldKey === "descripcion") {
+    const description = options.estuchesChavezMode ? getEstuchesDisplayDescription(product) : product.descripcion;
+    return shortText(description, 72);
+  }
   if (fieldKey === "metal") return product.metal;
   if (fieldKey === "kilataje") return product.kilataje;
   if (fieldKey === "peso") return formatWeight(product.pesoPromedio);
-  if (fieldKey === "precio") return formatClientLaborLabel(product, fallbackLabel);
-  if (fieldKey === "mano_obra") return formatClientLaborLabel(product, fallbackLabel);
+  if (fieldKey === "precio") return formatClientLaborLabel(product, fallbackLabel, options);
+  if (fieldKey === "mano_obra") return formatClientLaborLabel(product, fallbackLabel, options);
   if (fieldKey === "linea") return product.linea;
   if (fieldKey === "familia") return product.familia;
   if (fieldKey === "grupo") return product.grupo;
   return "";
 };
 
-const getClientRenderedFields = (product, fieldKeys = [], fallbackLabel = "") => {
+const getClientRenderedFields = (product, fieldKeys = [], fallbackLabel = "", options = {}) => {
   const safeFieldKeys = Array.isArray(fieldKeys) && fieldKeys.length
     ? fieldKeys
-    : ["codigo", "descripcion", "metal", "kilataje", "peso", "precio"];
+    : ["codigo", "descripcion", "metal", "kilataje", "peso"];
   const dedupedKeys = safeFieldKeys.filter((fieldKey) =>
-    !(fieldKey === "mano_obra" && safeFieldKeys.includes("precio"))
+    !CLIENT_HIDDEN_PRICE_FIELDS.has(fieldKey)
   );
   const renderedFields = dedupedKeys
     .map((fieldKey) => ({
       key: fieldKey,
       label: PRODUCT_CARD_FIELDS.find((field) => field.key === fieldKey)?.label || fieldKey,
-      value: clientProductFieldValue(product, fieldKey, fallbackLabel),
+      value: clientProductFieldValue(product, fieldKey, fallbackLabel, options),
     }))
     .filter((field) => field.value);
   return renderedFields.length
     ? renderedFields
-    : [{ key: "codigo", label: "Codigo", value: product.codigo }];
+    : [{ key: "codigo", label: "Codigo", value: options.estuchesChavezMode ? getEstuchesDisplayCode(product) : product.codigo }];
 };
+
+const getWeGroupCatalogBlock = (product) => {
+  const commercialText = normalizeText([
+    product?.linea,
+    product?.proveedor,
+    product?.descripcion,
+    product?.tagsBusqueda,
+  ].filter(Boolean).join(" "));
+  if (commercialText.includes("real looking") || commercialText.includes("looking real")) return 2;
+
+  const stoneText = normalizeText([
+    product?.descripcion,
+    product?.piedra,
+    product?.tagsBusqueda,
+    product?.familia,
+    product?.grupo,
+  ].filter(Boolean).join(" "));
+  if (stoneText.includes("larimar")) return 0;
+  if (stoneText.includes("opalo")) return 1;
+  return 3;
+};
+
+const sortWeGroupClientCatalog = (items = []) =>
+  items
+    .map((product, index) => ({ product, index }))
+    .sort((a, b) => {
+      const blockA = getWeGroupCatalogBlock(a.product);
+      const blockB = getWeGroupCatalogBlock(b.product);
+      if (blockA !== blockB) return blockA - blockB;
+
+      const orderA = Number(a.product?.ordenWeb || 0) || Number.MAX_SAFE_INTEGER;
+      const orderB = Number(b.product?.ordenWeb || 0) || Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
+
+      const codeA = String(a.product?.codigo || "");
+      const codeB = String(b.product?.codigo || "");
+      const codeCompare = codeA.localeCompare(codeB, "es", { numeric: true, sensitivity: "base" });
+      return codeCompare || a.index - b.index;
+    })
+    .map((entry) => entry.product);
 
 // Estatus de preorden visibles para el cliente (etiqueta + color).
 const ORDER_STATUS = {
@@ -253,6 +309,7 @@ export default function ClientCatalogApp({ profile }) {
   const deferredFilters = useDeferredValue(filters);
   const deferredQuickFilters = useDeferredValue(quickFilters);
   const [selectedCode, setSelectedCode] = useState("");
+  const [selectedCatalogCategoryKey, setSelectedCatalogCategoryKey] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);   // preorden existente abierta para ver/editar
   const [status, setStatus] = useState("");
@@ -296,6 +353,8 @@ export default function ClientCatalogApp({ profile }) {
   };
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
   const companyName = activeCompany?.brand_name || activeCompany?.legal_name || activeCompany?.name || activeCompany?.nombre || t("b2bCatalog");
+  const useWeGroupCatalogOrder = tenantId === WE_GROUP_TENANT_ID;
+  const estuchesChavezMode = isEstuchesChavezCatalogExperience();
   const clientPortalConfig = useMemo(
     () => resolveClientPortalConfig(interfaceSettings?.client_portal_config, {
       profile,
@@ -465,17 +524,71 @@ export default function ClientCatalogApp({ profile }) {
 
   // ── Filtros y búsqueda ────────────────────────────────────────────────────
   const filterOptions   = useMemo(() => buildFilterOptions(baseProducts), [baseProducts]);
-  const filteredProducts = useMemo(
-    () => applyFilters(baseProducts, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs),
-    [baseProducts, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs]
+  const hasActiveCatalogFilters = useMemo(
+    () => Boolean(
+      normalizeText(deferredQuery) ||
+      deferredSearchChips.length ||
+      deferredQuickFilters.length ||
+      Object.entries(deferredFilters || {}).some(([key, value]) =>
+        String(value || "").trim() !== String(emptyFilters[key] || "").trim()
+      )
+    ),
+    [deferredQuery, deferredSearchChips, deferredQuickFilters, deferredFilters]
   );
+  const estuchesCategoryProducts = useMemo(
+    () => estuchesChavezMode
+      ? applyFilters(baseProducts, "", emptyFilters, [], [], quickFilterDefs)
+      : [],
+    [baseProducts, estuchesChavezMode, quickFilterDefs]
+  );
+  const estuchesCategoryCards = useMemo(() => {
+    if (!estuchesChavezMode) return [];
+    const cards = ESTUCHES_CHAVEZ_CATEGORIES
+      .map((category) => {
+        const matches = estuchesCategoryProducts.filter((product) => productMatchesEstuchesCategory(product, category));
+        return { ...category, count: matches.length, products: matches.slice(0, 4) };
+      })
+      .filter((category) => category.count > 0);
+    const unmatched = estuchesCategoryProducts.filter((product) => !getEstuchesProductCategory(product));
+    if (unmatched.length) {
+      cards.push({ ...ESTUCHES_CHAVEZ_OTHER_CATEGORY, count: unmatched.length, products: unmatched.slice(0, 4) });
+    }
+    return cards;
+  }, [estuchesCategoryProducts, estuchesChavezMode]);
+  const selectedEstuchesCategory = useMemo(
+    () => estuchesCategoryCards.find((category) => category.key === selectedCatalogCategoryKey) || null,
+    [estuchesCategoryCards, selectedCatalogCategoryKey]
+  );
+  const filteredAllProducts = useMemo(
+    () => {
+      const nextProducts = applyFilters(baseProducts, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs);
+      return useWeGroupCatalogOrder ? sortWeGroupClientCatalog(nextProducts) : nextProducts;
+    },
+    [baseProducts, deferredQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs, useWeGroupCatalogOrder]
+  );
+  const filteredProducts = useMemo(() => {
+    if (!estuchesChavezMode || !selectedEstuchesCategory) return filteredAllProducts;
+    if (selectedEstuchesCategory.key === ESTUCHES_CHAVEZ_OTHER_CATEGORY.key) {
+      return filteredAllProducts.filter((product) => !getEstuchesProductCategory(product));
+    }
+    return filteredAllProducts.filter((product) => productMatchesEstuchesCategory(product, selectedEstuchesCategory));
+  }, [estuchesChavezMode, filteredAllProducts, selectedEstuchesCategory]);
+  const outsideCategoryMatchCount = useMemo(() => {
+    if (!estuchesChavezMode || !selectedEstuchesCategory || !hasActiveCatalogFilters) return 0;
+    return Math.max(0, filteredAllProducts.length - filteredProducts.length);
+  }, [estuchesChavezMode, filteredAllProducts.length, filteredProducts.length, hasActiveCatalogFilters, selectedEstuchesCategory]);
+  const showEstuchesCategoryLanding =
+    estuchesChavezMode &&
+    clientTab === "catalog" &&
+    !selectedCatalogCategoryKey &&
+    !hasActiveCatalogFilters;
   const renderedProducts = useMemo(
     () => filteredProducts.slice(0, visibleProductLimit),
     [filteredProducts, visibleProductLimit]
   );
 
   useEffect(() => { setVisibleProductLimit(PRODUCT_RENDER_BATCH); },
-    [deferredQuery, deferredSearchChips, deferredFilters, deferredQuickFilters]);
+    [deferredQuery, deferredSearchChips, deferredFilters, deferredQuickFilters, selectedCatalogCategoryKey]);
 
   const selectedProduct  = baseProducts.find((p) => p.codigo === selectedCode);
   const preorderPieces   = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
@@ -484,6 +597,7 @@ export default function ClientCatalogApp({ profile }) {
   const openOrdersView = () => {
     setShowOrders(true);
     setSelectedCode("");
+    setSelectedCatalogCategoryKey("");
     setIsCartOpen(false);
     setEditingOrder(null);
     loadOrders();
@@ -492,6 +606,7 @@ export default function ClientCatalogApp({ profile }) {
   const goClientHome = () => {
     setClientTab("home");
     setSelectedCode("");
+    setSelectedCatalogCategoryKey("");
     setShowOrders(false);
     setIsCartOpen(false);
     setEditingOrder(null);
@@ -500,6 +615,7 @@ export default function ClientCatalogApp({ profile }) {
   const goClientCatalog = () => {
     setClientTab("catalog");
     setSelectedCode("");
+    setSelectedCatalogCategoryKey("");
     setShowOrders(false);
     setIsCartOpen(false);
     setEditingOrder(null);
@@ -556,7 +672,7 @@ export default function ClientCatalogApp({ profile }) {
       return [...current, { product, quantity: amount }];
     });
     setAddedCodes((current) => current.includes(product.codigo) ? current : [...current, product.codigo]);
-    setStatus(t("cpAdded", product.codigo));
+    setStatus(t("cpAdded", estuchesChavezMode ? getEstuchesDisplayCode(product) : product.codigo));
   };
 
   const removeFromCart = (codigo) => {
@@ -615,6 +731,7 @@ export default function ClientCatalogApp({ profile }) {
     setFilters(emptyFilters);
     setQuickFilters([]);
     setSelectedCode("");
+    setSelectedCatalogCategoryKey("");
   };
 
   // Tenants solo-pieza (p. ej. Estuches Chávez): la preorden del cliente nace
@@ -646,11 +763,12 @@ export default function ClientCatalogApp({ profile }) {
       const gramos  = Number(product.pesoPromedio || 0);
       const labor   = Number(product.quoteLaborPerGramMxn ?? product.quoteLaborPerGram ?? 0);
       const precio  = Number(product.quotePricePerGramMxn ?? product.quotePricePerGram ?? product.precioMinimo ?? 0);
+      const preorderDescription = estuchesChavezMode ? getEstuchesDisplayDescription(product) : product.descripcion;
       if (pieceOnlyTenant) {
         const precioPieza = Number(product.precioMinimo || 0);
         return {
           producto_codigo:      product.codigo,
-          producto_descripcion: product.descripcion,
+          producto_descripcion: preorderDescription,
           producto_metal:       product.metal,
           producto_kilataje:    product.kilataje,
           producto_linea:       product.linea,
@@ -668,7 +786,7 @@ export default function ClientCatalogApp({ profile }) {
       }
       return {
         producto_codigo:      product.codigo,
-        producto_descripcion: product.descripcion,
+        producto_descripcion: preorderDescription,
         producto_metal:       product.metal,
         producto_kilataje:    product.kilataje,
         producto_linea:       product.linea,
@@ -943,14 +1061,84 @@ export default function ClientCatalogApp({ profile }) {
                 </section>
               </div>
             </div>
+          ) : showEstuchesCategoryLanding ? (
+            <section className="estuches-category-landing">
+              <div className="estuches-category-titlebar">
+                <p className="eyebrow">Categorias</p>
+                <h2>Elige una categoria</h2>
+                <span>Mostramos primero una vista resumida del catalogo. Al abrir una categoria veras sus articulos.</span>
+              </div>
+              <div className="estuches-category-grid">
+                {estuchesCategoryCards.map((category) => (
+                  <article className="estuches-category-card" key={category.key}>
+                    <button
+                      type="button"
+                      className="estuches-category-open"
+                      onClick={() => {
+                        setSelectedCatalogCategoryKey(category.key);
+                        setSelectedCode("");
+                      }}
+                    >
+                      <div className="estuches-category-media" aria-hidden="true">
+                        {category.products.length ? (
+                          <div className="estuches-category-collage">
+                            {category.products.map((product, index) => (
+                              <span key={product.id || product.codigo || index}>
+                                <img
+                                  src={imageUrlForSize(product.fotoUrl, 220) || buildPlaceholderUrl(t("noPhoto"))}
+                                  alt=""
+                                  loading="lazy"
+                                  decoding="async"
+                                  onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(t("noPhoto")); }}
+                                />
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="estuches-category-empty-image">Sin foto</div>
+                        )}
+                      </div>
+                      <strong>{category.label}</strong>
+                      <small>{category.count.toLocaleString()} producto{category.count !== 1 ? "s" : ""}</small>
+                      <span className="estuches-category-cta">+ Ver mas</span>
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </section>
           ) : selectedCode ? (
             <ProductDetail
               product={selectedProduct}
               onBack={() => setSelectedCode("")}
               onAdd={addToCart}
+              showPrice={false}
+              estuchesChavezMode={estuchesChavezMode}
             />
-          ) : filteredProducts.length ? (
+          ) : (filteredProducts.length || selectedEstuchesCategory) ? (
             <>
+              {selectedEstuchesCategory ? (
+                <div className="estuches-category-header">
+                  <div>
+                    <p className="eyebrow">Categoria</p>
+                    <h2>{selectedEstuchesCategory.label}</h2>
+                    <span>{filteredProducts.length.toLocaleString()} producto{filteredProducts.length !== 1 ? "s" : ""} visible{filteredProducts.length !== 1 ? "s" : ""}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="secondary-button compact-action"
+                    onClick={() => setSelectedCatalogCategoryKey("")}
+                  >
+                    Volver a categorias
+                  </button>
+                </div>
+              ) : null}
+              {outsideCategoryMatchCount ? (
+                <div className="estuches-category-notice">
+                  Hay {outsideCategoryMatchCount.toLocaleString()} producto{outsideCategoryMatchCount !== 1 ? "s" : ""} que coincide{outsideCategoryMatchCount !== 1 ? "n" : ""} con la busqueda, pero pertenece{outsideCategoryMatchCount !== 1 ? "n" : ""} a otra categoria.
+                </div>
+              ) : null}
+              {filteredProducts.length ? (
+                <>
               <div className="client-bulk-bar">
                 <span className="client-bulk-count">{t("cpInSelection", cartItems.length)}</span>
                 <button type="button" className="secondary-button compact-action" onClick={() => selectAllProducts(renderedProducts)}>
@@ -968,8 +1156,10 @@ export default function ClientCatalogApp({ profile }) {
                   const renderedFields = getClientRenderedFields(
                     product,
                     interfaceSettings?.admin_product_card_config?.fields,
-                    t("priceToConfirm")
+                    t("priceToConfirm"),
+                    { estuchesChavezMode }
                   );
+                  const packageLabel = formatClientPackageLabel(product, { estuchesChavezMode });
                   return (
                   <article
                     className={`admin-product-card enabled${interfaceSettings?.hasCustomSettings ? ` tenant-theme-${interfaceSettings.visual_theme_key || "ejecutivo"}` : ""}${addedCodes.includes(product.codigo) ? " in-preorder" : ""}${product.fotoUrl ? "" : " no-photo"}`}
@@ -986,7 +1176,7 @@ export default function ClientCatalogApp({ profile }) {
                       >
                         <img
                           src={imageUrlForSize(product.fotoUrl, 360)}
-                          alt={product.descripcion}
+                          alt={estuchesChavezMode ? getEstuchesDisplayDescription(product) : product.descripcion}
                           loading="lazy"
                           decoding="async"
                           fetchPriority="low"
@@ -1005,8 +1195,8 @@ export default function ClientCatalogApp({ profile }) {
                           </p>
                         );
                       })}
-                      {formatClientPackageLabel(product) ? (
-                        <small className="client-product-package">{formatClientPackageLabel(product)}</small>
+                      {packageLabel ? (
+                        <small className="client-product-package">{packageLabel}</small>
                       ) : null}
                     </div>
                     <div className="admin-product-actions">
@@ -1040,6 +1230,16 @@ export default function ClientCatalogApp({ profile }) {
                   </button>
                 </div>
               ) : null}
+                </>
+              ) : (
+                <div className="empty-state estuches-category-empty-state">
+                  <h2>No hay productos en esta categoria</h2>
+                  <p>El producto puede pertenecer a otra categoria o no estar disponible en este catalogo.</p>
+                  <button type="button" className="secondary-button compact-action" onClick={() => setSelectedCatalogCategoryKey("")}>
+                    Volver a categorias
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <div className="empty-state">

@@ -2,6 +2,11 @@ import ProductDetail from "../ProductDetail";
 import { isConfigurableProductGroup } from "../../utils/configurableCatalog";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../../utils/formatters";
 import { PRODUCT_CARD_FIELDS } from "../../services/interfaceSettingsService";
+import {
+  getEstuchesDisplayCode,
+  getEstuchesDisplayDescription,
+  getEstuchesPackageLabel,
+} from "../../config/estuchesChavezCatalog";
 
 const PRODUCT_RENDER_BATCH = 60; // debe coincidir con AdminDashboard
 
@@ -30,6 +35,15 @@ export default function CatalogTab({
   setProductModal,
   toggleProductCheck,
   interfaceSettings,
+  estuchesCategoryMode = false,
+  catalogDisplayMode = "full",
+  onCatalogDisplayModeChange,
+  categoryCards = [],
+  selectedCategory = null,
+  onSelectCategory,
+  onClearCategory,
+  showCategoryLanding = false,
+  outsideCategoryMatchCount = 0,
   searchBar,
   filterBar,   // Barra de filtros inline — pasada desde AdminDashboard
 }) {
@@ -37,26 +51,52 @@ export default function CatalogTab({
   const selectedInCatalog = isSelectedConfigurable
     ? (selectedProduct?.variants || []).some((variant) => catalogSelectionIds.has(variant.product?.codigo))
     : catalogSelectionIds.has(selectedProduct?.codigo);
+  const isSummaryMode = estuchesCategoryMode && catalogDisplayMode === "summary";
+  const showCatalogControls = !showCategoryLanding;
 
   return (
     <section className="admin-workspace">
       {!selectedProductCode ? (
         <div className="catalog-page-topbar">
           <div className="catalog-topbar-title">
-            <h2>Catalogo administrador</h2>
-            <p>{t("showingFiltered", renderedProducts.length.toLocaleString(), filteredProducts.length.toLocaleString())}</p>
+            <h2>Catálogo administrador</h2>
+            <p>
+              {showCategoryLanding
+                ? `${categoryCards.length.toLocaleString()} categorías disponibles`
+                : t("showingFiltered", renderedProducts.length.toLocaleString(), filteredProducts.length.toLocaleString())}
+            </p>
           </div>
-          {searchBar ? (
+          {searchBar && !showCategoryLanding ? (
             <div className="catalog-topbar-search">
               {searchBar}
             </div>
           ) : null}
           <div className="catalog-topbar-actions">
+            {estuchesCategoryMode ? (
+              <div className="catalog-view-toggle" role="group" aria-label="Vista de catálogo">
+                <button
+                  type="button"
+                  className={isSummaryMode ? "active" : ""}
+                  onClick={() => onCatalogDisplayModeChange?.("summary")}
+                >
+                  Versión resumida
+                </button>
+                <button
+                  type="button"
+                  className={!isSummaryMode ? "active" : ""}
+                  onClick={() => onCatalogDisplayModeChange?.("full")}
+                >
+                  Vista completa
+                </button>
+              </div>
+            ) : null}
+            {showCatalogControls ? (
             <label className="check-row catalog-select-visible">
               <input type="checkbox" checked={allRenderedChecked} onChange={toggleRenderedChecks} />
               Seleccionar pantalla ({renderedProducts.length.toLocaleString()})
             </label>
-            {filteredProducts.length > renderedProducts.length ? (
+            ) : null}
+            {showCatalogControls && filteredProducts.length > renderedProducts.length ? (
               <button
                 className={`selection-action all-filtered ${allFilteredChecked ? "selected" : ""}`}
                 type="button"
@@ -67,17 +107,21 @@ export default function CatalogTab({
                   : `Seleccionar todos filtrados (${filteredProducts.length.toLocaleString()})`}
               </button>
             ) : null}
+            {showCatalogControls ? (
             <button className="selection-action catalog" type="button" onClick={addCheckedToCatalogSelection} disabled={!checkedIds.size}>
               + Catalogo
             </button>
+            ) : null}
+            {showCatalogControls ? (
             <button className="selection-action preorder" type="button" onClick={addCheckedToPreorder} disabled={!checkedIds.size}>
               + Pre-orden
             </button>
+            ) : null}
           </div>
         </div>
       ) : null}
 
-      {filterBar}
+      {showCatalogControls ? filterBar : null}
 
       {selectedProductCode ? (
         <ProductDetail
@@ -91,9 +135,69 @@ export default function CatalogTab({
           inCatalogSelection={selectedInCatalog}
           onEdit={isSelectedConfigurable ? null : (product) => setProductModal({ open: true, product, mode: "edit" })}
           onDuplicate={isSelectedConfigurable ? null : (product) => setProductModal({ open: true, product, mode: "duplicate" })}
+          estuchesChavezMode={estuchesCategoryMode}
         />
+      ) : showCategoryLanding ? (
+        <section className="estuches-category-landing estuches-category-landing--admin">
+          <div className="estuches-category-titlebar">
+            <p className="eyebrow">Versión resumida</p>
+            <h2>Categorías</h2>
+            <span>Abre una categoría para ver y administrar sus productos.</span>
+          </div>
+          <div className="estuches-category-grid">
+            {categoryCards.map((category) => (
+              <article className="estuches-category-card" key={category.key}>
+                <button
+                  type="button"
+                  className="estuches-category-open"
+                  onClick={() => onSelectCategory?.(category.key)}
+                >
+                  <div className="estuches-category-media" aria-hidden="true">
+                    {category.products?.length ? (
+                      <div className="estuches-category-collage">
+                        {category.products.map((product, index) => (
+                          <span key={product.id || product.codigo || index}>
+                            <img
+                              src={imageUrlForSize(product.fotoUrl, 220) || buildPlaceholderUrl(t("noPhoto"))}
+                              alt=""
+                              loading="lazy"
+                              decoding="async"
+                              onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(t("noPhoto")); }}
+                            />
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="estuches-category-empty-image">Sin foto</div>
+                    )}
+                  </div>
+                  <strong>{category.label}</strong>
+                  <small>{category.count.toLocaleString()} producto{category.count !== 1 ? "s" : ""}</small>
+                  <span className="estuches-category-cta">+ Ver mas</span>
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
       ) : filteredProducts.length ? (
         <>
+          {selectedCategory && isSummaryMode ? (
+            <div className="estuches-category-header">
+              <div>
+                <p className="eyebrow">Versión resumida</p>
+                <h2>{selectedCategory.label}</h2>
+                <span>{filteredProducts.length.toLocaleString()} producto{filteredProducts.length !== 1 ? "s" : ""} visible{filteredProducts.length !== 1 ? "s" : ""}</span>
+              </div>
+              <button type="button" className="secondary-button compact-action" onClick={() => onClearCategory?.()}>
+                Volver a categorías
+              </button>
+            </div>
+          ) : null}
+          {outsideCategoryMatchCount ? (
+            <div className="estuches-category-notice">
+              Hay {outsideCategoryMatchCount.toLocaleString()} producto{outsideCategoryMatchCount !== 1 ? "s" : ""} que coincide{outsideCategoryMatchCount !== 1 ? "n" : ""}, pero pertenece{outsideCategoryMatchCount !== 1 ? "n" : ""} a otra categoría.
+            </div>
+          ) : null}
           <div className="admin-product-grid">
             {renderedProducts.map((product) => {
               const isConfigurable = isConfigurableProductGroup(product);
@@ -108,9 +212,12 @@ export default function CatalogTab({
               const customCardEnabled = interfaceSettings?.hasCustomSettings && !isConfigurable;
               const cardConfig = interfaceSettings?.admin_product_card_config || {};
               const visibleButtons = new Set(cardConfig.buttons || []);
+              const displayCode = estuchesCategoryMode ? getEstuchesDisplayCode(product) : product.codigo;
+              const displayDescription = estuchesCategoryMode ? getEstuchesDisplayDescription(product) : product.descripcion;
+              const packageLabel = estuchesCategoryMode ? getEstuchesPackageLabel(product) : "";
               const productFieldValue = (fieldKey) => {
-                if (fieldKey === "codigo") return product.codigo;
-                if (fieldKey === "descripcion") return shortText(product.descripcion, 72);
+                if (fieldKey === "codigo") return displayCode;
+                if (fieldKey === "descripcion") return shortText(displayDescription, 72);
                 if (fieldKey === "metal") return product.metal;
                 if (fieldKey === "kilataje") return product.kilataje;
                 if (fieldKey === "peso") return formatWeight(product.pesoPromedio);
@@ -130,7 +237,7 @@ export default function CatalogTab({
                 .filter((field) => field.value);
               const safeRenderedFields = renderedFields.length
                 ? renderedFields
-                : [{ key: "codigo", label: "Codigo", value: product.codigo }];
+                : [{ key: "codigo", label: "Codigo", value: displayCode }];
 
               return (
                 <article
@@ -150,7 +257,7 @@ export default function CatalogTab({
                     <button className="admin-product-image" type="button" onClick={() => setSelectedProductCode(product.codigo)}>
                       <img
                         src={imageUrlForSize(product.fotoUrl, 360)}
-                        alt={product.descripcion}
+                        alt={displayDescription}
                         loading="lazy"
                         decoding="async"
                         fetchPriority="low"
@@ -160,23 +267,26 @@ export default function CatalogTab({
                   ) : null}
                   <div className="admin-product-info">
                     {customCardEnabled ? (
-                      safeRenderedFields.map((field, index) => {
-                        if (index === 0) return <strong key={field.key}>{field.value}</strong>;
-                        if (index === 1) return <h3 key={field.key}>{field.value}</h3>;
-                        return (
-                          <p className="custom-product-field" key={field.key}>
-                            <span>{field.label}</span>
-                            <strong>{field.value}</strong>
-                          </p>
-                        );
-                      })
+                      <>
+                        {safeRenderedFields.map((field, index) => {
+                          if (index === 0) return <strong key={field.key}>{field.value}</strong>;
+                          if (index === 1) return <h3 key={field.key}>{field.value}</h3>;
+                          return (
+                            <p className="custom-product-field" key={field.key}>
+                              <span>{field.label}</span>
+                              <strong>{field.value}</strong>
+                            </p>
+                          );
+                        })}
+                        {packageLabel ? <small className="client-product-package">{packageLabel}</small> : null}
+                      </>
                     ) : (
                       <>
-                        <strong>{isConfigurable ? product.configurableTitle || product.descripcion : product.codigo}</strong>
+                        <strong>{isConfigurable ? product.configurableTitle || displayDescription : displayCode}</strong>
                         <h3>
                           {isConfigurable
                             ? `${(product.variants || []).length} ${isRingSizeGroup ? "tallas" : "tipos"} disponibles`
-                            : shortText(product.descripcion, 72)}
+                            : shortText(displayDescription, 72)}
                         </h3>
                         <p>
                           {isConfigurable
@@ -186,6 +296,7 @@ export default function CatalogTab({
                         <span>
                           {isConfigurable ? "Producto configurable" : `${priceText} - MO ${formatCurrency(product.manoObra || 0, product.monedaPrecioMin)}`}
                         </span>
+                        {packageLabel ? <small className="client-product-package">{packageLabel}</small> : null}
                       </>
                     )}
                   </div>

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+output/
+outputs/
+tmp/
+.env
+.env.local
+.env.*.local
+.claude/
+supabase/.temp/

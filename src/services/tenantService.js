@@ -45,6 +45,32 @@ export const updateProfileAccess = async (profileId, changes) => {
   return data;
 };
 
+export const createAdminUser = async ({ email, password, role, tenant_id }) => {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  const accessToken = sessionData?.session?.access_token;
+  if (!accessToken) throw new Error("Tu sesión expiró. Cierra sesión y vuelve a entrar.");
+
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-admin-user`, {
+    method: "POST",
+    headers: {
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email,
+      password,
+      role,
+      tenant_id: role === "superadmin" ? null : tenant_id || null,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error || `Error HTTP ${response.status}`);
+  if (data?.error) throw new Error(data.error);
+  return data;
+};
+
 export const fetchTenantMetrics = async (tenants = []) => {
   const metrics = await Promise.all(tenants.map(async (tenant) => {
     const [products, clients, preorders] = await Promise.all([

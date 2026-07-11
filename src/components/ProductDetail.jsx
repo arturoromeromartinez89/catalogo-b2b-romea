@@ -1,7 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize } from "../utils/formatters";
 import { useLanguage } from "../i18n/LanguageContext";
 import { getCatalogTerminology } from "../utils/catalogTerminology";
+import {
+  getEstuchesDisplayCode,
+  getEstuchesDisplayDescription,
+  getEstuchesPackageLabel,
+  isEstuchesChavezCatalogExperience,
+} from "../config/estuchesChavezCatalog";
 
 export default function ProductDetail({
   product,
@@ -14,9 +20,13 @@ export default function ProductDetail({
   inCatalogSelection = false,
   onEdit,
   onDuplicate,
+  showPrice = true,
+  estuchesChavezMode: estuchesChavezModeProp = false,
 }) {
   const { t, language } = useLanguage();
   const [selectedImage, setSelectedImage] = useState(product?.fotoUrl || "");
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 });
   const [quantity, setQuantity] = useState(1);
   const terminology = useMemo(() => getCatalogTerminology(product ? [product] : [], language), [product, language]);
 
@@ -24,6 +34,12 @@ export default function ProductDetail({
     () => [product?.fotoUrl, product?.fotoUrl2, product?.fotoUrl3].filter(Boolean),
     [product]
   );
+
+  useEffect(() => {
+    setSelectedImage(product?.fotoUrl || "");
+    setIsZoomed(false);
+    setZoomOrigin({ x: 50, y: 50 });
+  }, [product?.codigo, product?.fotoUrl]);
 
   if (!product) {
     return (
@@ -38,6 +54,23 @@ export default function ProductDetail({
   }
 
   const mainImage = imageUrlForSize(selectedImage || images[0], 1200) || buildPlaceholderUrl(t("noPhoto"));
+  const activeImage = selectedImage || images[0] || "";
+  const estuchesChavezMode = estuchesChavezModeProp || isEstuchesChavezCatalogExperience();
+  const displayCode = estuchesChavezMode ? getEstuchesDisplayCode(product) : product.codigo;
+  const displayDescription = estuchesChavezMode ? getEstuchesDisplayDescription(product) : product.descripcion;
+  const packageLabel = estuchesChavezMode ? getEstuchesPackageLabel(product) : "";
+
+  const updateZoomOrigin = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(100, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100));
+    setZoomOrigin({ x, y });
+  };
+
+  const toggleZoom = (event) => {
+    updateZoomOrigin(event);
+    setIsZoomed((current) => !current);
+  };
 
   return (
     <section className="product-detail">
@@ -59,28 +92,55 @@ export default function ProductDetail({
 
       <div className="detail-layout">
         <div className="detail-gallery">
-          <div className="detail-main-image">
+          <div
+            className={`detail-main-image${isZoomed ? " is-zoomed" : ""}`}
+            onClick={toggleZoom}
+            onPointerMove={(event) => {
+              if (isZoomed) updateZoomOrigin(event);
+            }}
+            style={{
+              "--zoom-x": `${zoomOrigin.x}%`,
+              "--zoom-y": `${zoomOrigin.y}%`,
+            }}
+          >
             <img
               src={mainImage}
-              alt={product.descripcion || product.codigo}
+              alt={displayDescription || displayCode}
               decoding="async"
+              draggable="false"
               onError={(event) => {
                 event.currentTarget.src = buildPlaceholderUrl(t("noPhoto"));
               }}
             />
+            <button
+              aria-label={isZoomed ? "Alejar imagen" : "Acercar imagen"}
+              className="detail-zoom-button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setIsZoomed((current) => !current);
+              }}
+              title={isZoomed ? "Alejar imagen" : "Acercar imagen"}
+              type="button"
+            >
+              {isZoomed ? "-" : "+"}
+            </button>
           </div>
           {images.length > 1 ? (
             <div className="thumb-list">
               {images.map((image) => (
                 <button
-                  className={image === mainImage ? "active" : ""}
+                  className={image === activeImage ? "active" : ""}
                   key={image}
                   type="button"
-                  onClick={() => setSelectedImage(image)}
+                  onClick={() => {
+                    setSelectedImage(image);
+                    setIsZoomed(false);
+                    setZoomOrigin({ x: 50, y: 50 });
+                  }}
                 >
                   <img
                     src={imageUrlForSize(image, 160) || buildPlaceholderUrl(t("noPhoto"))}
-                    alt={product.codigo}
+                    alt={displayCode}
                     loading="lazy"
                     decoding="async"
                   />
@@ -92,13 +152,16 @@ export default function ProductDetail({
 
         <div className="detail-info">
           <p className="eyebrow">{t("productDetail")}</p>
-          <h2>{product.descripcion}</h2>
-          <div className="detail-code">{product.codigo}</div>
-          {product.modelo ? <p className="detail-model">{product.modelo}</p> : null}
+          <h2>{displayDescription}</h2>
+          <div className="detail-code">{displayCode}</div>
+          {!estuchesChavezMode && product.modelo ? <p className="detail-model">{product.modelo}</p> : null}
+          {packageLabel ? <p className="detail-model">{packageLabel}</p> : null}
 
-          <div className="detail-price">
-            {product.precioMinimo ? formatCurrency(product.precioMinimo, product.monedaPrecioMin) : t("priceToConfirm")}
-          </div>
+          {showPrice ? (
+            <div className="detail-price">
+              {product.precioMinimo ? formatCurrency(product.precioMinimo, product.monedaPrecioMin) : t("priceToConfirm")}
+            </div>
+          ) : null}
 
           <dl className="detail-specs">
             <div><dt>{terminology.metal || t("metal")}</dt><dd>{product.metal || "-"}</dd></div>

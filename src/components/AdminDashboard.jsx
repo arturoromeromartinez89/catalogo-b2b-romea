@@ -24,6 +24,7 @@ import {
 // Tabs extraídos — step 1 del refactor progresivo
 import TenantsTab from "./tabs/TenantsTab";
 import InicioTab from "./tabs/InicioTab";
+import AgendaTab from "./tabs/AgendaTab";
 import CatalogTab from "./tabs/CatalogTab";
 import ClientsTab from "./tabs/ClientsTab";
 import ProspectsTab from "./tabs/ProspectsTab";
@@ -65,6 +66,13 @@ import { DEFAULT_INTERFACE_SETTINGS, fetchInterfaceSettings, resolveClientPortal
 import QuickFiltersManager from "./QuickFiltersManager";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { normalizeText } from "../utils/textNormalizer";
+import {
+  ESTUCHES_CHAVEZ_CATEGORIES,
+  ESTUCHES_CHAVEZ_OTHER_CATEGORY,
+  getEstuchesProductCategory,
+  isEstuchesChavezTenantContext,
+  productMatchesEstuchesCategory,
+} from "../config/estuchesChavezCatalog";
 
 const blankClient = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", domicilio: "", comentarios: "", type: "cliente", active: true, labor_list_id: null };
 const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ciudad: "", domicilio: "", comentarios: "", badge_raw: "", obtenido_en: "JCK", type: "prospecto", active: true };
@@ -74,6 +82,8 @@ const PRODUCT_RENDER_BATCH = 60;
 const baseTabs = ["inicio", "catalog", "preorders", "orders", "clients", "prospects", "prices", "company", "database"];
 const configurableOnlyTabs = ["components"];
 const adminModuleTabs = ["administracion"];
+const agendaTabs = ["agenda"];
+const comercialTabs = ["inicio", "agenda"];
 // Navegación organizada por las preguntas del negocio, no por tablas.
 // "Configuración" agrupa los catálogos internos con jerarquía visual menor.
 const ADMIN_SUB_TABS = [
@@ -101,6 +111,7 @@ const tabKeys = {
   database:      "database",
   components:    "components",
   administracion: "administracion",
+  agenda:        "agenda",
 };
 const titleKeys = {
   tenants:       "tenants",
@@ -115,6 +126,7 @@ const titleKeys = {
   database:      "database",
   components:    "components",
   administracion: "administracion",
+  agenda:        "agenda",
 };
 
 const formProductToRow = (product) => ({
@@ -243,13 +255,16 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [commerceByTenant, setCommerceByTenant] = useState(() => new Map());
   const [interfaceSettings, setInterfaceSettings] = useState(DEFAULT_INTERFACE_SETTINGS);
   const superadmin = isSuperAdmin(profile) && !supportMode;
+  const isComercial = profile?.role === "comercial";
   const [tenants, setTenants] = useState([]);
   const [selectedTenantId, setSelectedTenantId] = useState(() => localStorage.getItem("catalogo-b2b-selected-tenant") || profile?.tenant_id || profile?.tenantId || "");
   const tenantId = tenantOverride || (superadmin ? selectedTenantId : profile?.tenant_id || profile?.tenantId || "");
   const activeTenant = useMemo(() => tenants.find((tenant) => tenant.id === tenantId), [tenants, tenantId]);
   const activeCompany = tenantId ? (tenantCompany || {}) : company;
-  const tabs = superadmin ? ["tenants", ...baseTabs] : [...baseTabs]; // se extiende abajo con extraTabs
-  const [tab, setTab] = useState("inicio");
+  const isEstuchesChavezAdminCatalog = isEstuchesChavezTenantContext({ tenant: activeTenant, company: activeCompany });
+  const tenantBaseTabs = isEstuchesChavezAdminCatalog ? baseTabs.filter((id) => id !== "orders") : baseTabs;
+  const tabs = isComercial ? comercialTabs : (superadmin ? ["tenants", ...tenantBaseTabs] : [...tenantBaseTabs]);
+  const [tab, setTab] = useState(isComercial ? "agenda" : "inicio");
   const [adminSubTab, setAdminSubTab] = useState("inicio");
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [data, setData] = useState(null);
@@ -293,11 +308,17 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const deferredFilters = useDeferredValue(filters);
   const deferredQuickFilters = useDeferredValue(quickFilters);
   const [selectedProductCode, setSelectedProductCode] = useState("");
+  const [catalogDisplayMode, setCatalogDisplayMode] = useState("summary");
+  const [selectedCatalogCategoryKey, setSelectedCatalogCategoryKey] = useState("");
   // Botones rápidos configurados por el tenant seleccionado (fallback joyero)
   useEffect(() => {
     let alive = true;
     fetchCatalogQuickFilters(tenantId).then((defs) => { if (alive) setQuickFilterDefs(defs); });
     return () => { alive = false; };
+  }, [tenantId]);
+  useEffect(() => {
+    setCatalogDisplayMode("summary");
+    setSelectedCatalogCategoryKey("");
   }, [tenantId]);
   const [draftPreorder, setDraftPreorder] = useState(null);
   const [draftStorageReadyKey, setDraftStorageReadyKey] = useState(null);
@@ -327,7 +348,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     setLastActionMessage(message);
   }, []);
 
-  const changeTab = useCallback((nextTab) => {
+  const changeTab = useCallback((requestedTab) => {
+    const nextTab = isEstuchesChavezAdminCatalog && requestedTab === "orders" ? "preorders" : requestedTab;
     setTab((current) => {
       if (current === "preorders" && nextTab !== "preorders" && draftPreorder?.preorder_items?.length) {
         setTabChangeModal({ open: true, nextTab });
@@ -338,7 +360,13 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     if (nextTab !== "preorders") setPreorderClientFilter(null);
     if (nextTab !== "orders") setOpenOrderId("");
     setSelectedProductCode("");
-  }, [draftPreorder]);
+  }, [draftPreorder, isEstuchesChavezAdminCatalog]);
+
+  useEffect(() => {
+    if (!isEstuchesChavezAdminCatalog || tab !== "orders") return;
+    setOpenOrderId("");
+    setTab("preorders");
+  }, [isEstuchesChavezAdminCatalog, tab]);
 
   const handleViewClientPreorders = useCallback((clientId) => {
     setPreorderClientFilter(clientId);
@@ -477,7 +505,11 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       .replace(/[._-]+/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase())
   ) || t("hdrRoleAdmin");
   const accountInitial = (accountName || "?").charAt(0).toUpperCase();
-  const accountRoleLabel = profile?.role === "client" ? t("hdrRoleClient") : t("hdrRoleAdmin");
+  const accountRoleLabel = profile?.role === "client"
+    ? t("hdrRoleClient")
+    : profile?.role === "comercial"
+      ? t("hdrRoleComercial")
+      : t("hdrRoleAdmin");
   const headerBrandName = activeCompany?.brand_name || activeCompany?.legal_name || t("b2bCatalog");
   const adminPortalConfig = useMemo(
     () => resolveClientPortalConfig(interfaceSettings?.client_portal_config, {
@@ -492,11 +524,24 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const selectedClient = useMemo(() => data?.clients.find((client) => client.id === selectedClientId), [data?.clients, selectedClientId]);
   const configurableCatalogEnabled = tenantFeatures?.modulo_configurable === true;
   const adminModuleEnabled = tenantFeatures?.modulo_admin === true;
-  const allTabs = [
-    ...tabs,
-    ...(configurableCatalogEnabled ? configurableOnlyTabs : []),
-    ...(adminModuleEnabled ? adminModuleTabs : []),
-  ];
+  const agendaEnabled = tenantFeatures?.modulo_agenda === true;
+  const canAccessAgenda = Boolean(tenantId) && (
+    agendaEnabled ||
+    isComercial ||
+    superadmin ||
+    ["tenant_admin", "admin"].includes(profile?.role)
+  );
+  const allTabs = isComercial
+    ? comercialTabs
+    : [
+      ...tabs,
+      ...(canAccessAgenda ? agendaTabs : []),
+      ...(configurableCatalogEnabled ? configurableOnlyTabs : []),
+      ...(adminModuleEnabled ? adminModuleTabs : []),
+    ];
+  useEffect(() => {
+    if (tab === "agenda" && !canAccessAgenda) setTab("inicio");
+  }, [tab, canAccessAgenda]);
   const shouldGroupCatalogProducts = useMemo(
     () => configurableCatalogEnabled || hasConfigurableCatalogProducts(products),
     [configurableCatalogEnabled, products]
@@ -507,10 +552,61 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   );
   const selectedProduct = useMemo(() => catalogProducts.find((product) => product.codigo === selectedProductCode), [catalogProducts, selectedProductCode]);
   const filterOptions = useMemo(() => buildFilterOptions(products), [products]);
-  const filteredProducts = useMemo(
+  const hasActiveCatalogFilters = useMemo(
+    () => Boolean(
+      normalizeText(deferredProductQuery) ||
+      deferredSearchChips.length ||
+      deferredExcludeChips.length ||
+      deferredQuickFilters.length ||
+      Object.entries(deferredFilters || {}).some(([key, value]) =>
+        String(value || "").trim() !== String(emptyFilters[key] || "").trim()
+      )
+    ),
+    [deferredProductQuery, deferredSearchChips, deferredExcludeChips, deferredQuickFilters, deferredFilters]
+  );
+  const estuchesCategoryProducts = useMemo(
+    () => isEstuchesChavezAdminCatalog
+      ? applyFilters(catalogProducts, "", emptyFilters, [], [], quickFilterDefs, [])
+      : [],
+    [catalogProducts, isEstuchesChavezAdminCatalog, quickFilterDefs]
+  );
+  const estuchesCategoryCards = useMemo(() => {
+    if (!isEstuchesChavezAdminCatalog) return [];
+    const cards = ESTUCHES_CHAVEZ_CATEGORIES
+      .map((category) => {
+        const matches = estuchesCategoryProducts.filter((product) => productMatchesEstuchesCategory(product, category));
+        return { ...category, count: matches.length, products: matches.slice(0, 4) };
+      })
+      .filter((category) => category.count > 0);
+    const unmatched = estuchesCategoryProducts.filter((product) => !getEstuchesProductCategory(product));
+    if (unmatched.length) {
+      cards.push({ ...ESTUCHES_CHAVEZ_OTHER_CATEGORY, count: unmatched.length, products: unmatched.slice(0, 4) });
+    }
+    return cards;
+  }, [estuchesCategoryProducts, isEstuchesChavezAdminCatalog]);
+  const selectedEstuchesCategory = useMemo(
+    () => estuchesCategoryCards.find((category) => category.key === selectedCatalogCategoryKey) || null,
+    [estuchesCategoryCards, selectedCatalogCategoryKey]
+  );
+  const fullFilteredProducts = useMemo(
     () => applyFilters(catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs, deferredExcludeChips),
     [catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs, deferredExcludeChips]
   );
+  const filteredProducts = useMemo(() => {
+    const useCategory =
+      isEstuchesChavezAdminCatalog &&
+      catalogDisplayMode === "summary" &&
+      selectedEstuchesCategory;
+    if (!useCategory) return fullFilteredProducts;
+    if (selectedEstuchesCategory.key === ESTUCHES_CHAVEZ_OTHER_CATEGORY.key) {
+      return fullFilteredProducts.filter((product) => !getEstuchesProductCategory(product));
+    }
+    return fullFilteredProducts.filter((product) => productMatchesEstuchesCategory(product, selectedEstuchesCategory));
+  }, [catalogDisplayMode, fullFilteredProducts, isEstuchesChavezAdminCatalog, selectedEstuchesCategory]);
+  const outsideCategoryMatchCount = useMemo(() => {
+    if (!isEstuchesChavezAdminCatalog || catalogDisplayMode !== "summary" || !selectedEstuchesCategory || !hasActiveCatalogFilters) return 0;
+    return Math.max(0, fullFilteredProducts.length - filteredProducts.length);
+  }, [catalogDisplayMode, filteredProducts.length, fullFilteredProducts.length, hasActiveCatalogFilters, isEstuchesChavezAdminCatalog, selectedEstuchesCategory]);
   const renderedProducts = useMemo(
     () => filteredProducts.slice(0, visibleProductLimit),
     [filteredProducts, visibleProductLimit]
@@ -576,7 +672,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   );
   useEffect(() => {
     setVisibleProductLimit(PRODUCT_RENDER_BATCH);
-  }, [deferredProductQuery, deferredSearchChips, deferredExcludeChips, deferredFilters, deferredQuickFilters]);
+  }, [deferredProductQuery, deferredSearchChips, deferredExcludeChips, deferredFilters, deferredQuickFilters, catalogDisplayMode, selectedCatalogCategoryKey]);
 
   useEffect(() => {
     if (!catalogSelectionIds.size && !preorderProducts.length) setSelectionDrawerOpen(false);
@@ -1099,6 +1195,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     setFilters(emptyFilters);
     setQuickFilters([]);
     setSelectedProductCode("");
+    setSelectedCatalogCategoryKey("");
   };
 
   const toggleProductCheck = (code) => {
@@ -1457,6 +1554,14 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
           />
         ) : null}
 
+        {tab === "agenda" && canAccessAgenda ? (
+          <AgendaTab
+            tenantId={tenantId}
+            profile={profile}
+            clients={data?.clients || []}
+          />
+        ) : null}
+
         {tab === "tenants" && superadmin ? (
           <TenantsTab
             tenants={tenants}
@@ -1507,6 +1612,29 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             removeFromCatalogSelection={removeFromCatalogSelection}
             setProductModal={setProductModal}
             interfaceSettings={interfaceSettings}
+            estuchesCategoryMode={isEstuchesChavezAdminCatalog}
+            catalogDisplayMode={catalogDisplayMode}
+            onCatalogDisplayModeChange={(mode) => {
+              setCatalogDisplayMode(mode);
+              setSelectedCatalogCategoryKey("");
+              setSelectedProductCode("");
+            }}
+            categoryCards={estuchesCategoryCards}
+            selectedCategory={selectedEstuchesCategory}
+            selectedCategoryKey={selectedCatalogCategoryKey}
+            onSelectCategory={(key) => {
+              setCatalogDisplayMode("summary");
+              setSelectedCatalogCategoryKey(key);
+              setSelectedProductCode("");
+            }}
+            onClearCategory={() => setSelectedCatalogCategoryKey("")}
+            showCategoryLanding={
+              isEstuchesChavezAdminCatalog &&
+              catalogDisplayMode === "summary" &&
+              !selectedCatalogCategoryKey &&
+              !hasActiveCatalogFilters
+            }
+            outsideCategoryMatchCount={outsideCategoryMatchCount}
             searchBar={!selectedProductCode ? (
               <CatalogFilterBar
                 mode="search"
@@ -1637,20 +1765,28 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
               setStatus("Preorden guardada correctamente. Puedes verla en el menu Preordenes.");
             }}
             onOrderConfirmed={(order) => {
+              if (isEstuchesChavezAdminCatalog) {
+                setStatus(`Preorden ${order?.folio || ""} confirmada.`);
+                return;
+              }
               setOpenOrderId(order?.id || "");
               changeTab("orders");
               setStatus(`Orden ${order?.folio || ""} confirmada. Puedes verla en Ordenes de compra.`);
+            }}
+            onPreorderConfirmed={(preorder) => {
+              setStatus(`Preorden ${preorder?.folio || ""} confirmada.`);
             }}
             onCreateRemision={adminModuleEnabled ? handleCreateRemisionFromPreorder : undefined}
             configurableCatalogEnabled={configurableCatalogEnabled}
             allowedPricingModes={commerceSettings.allowed_pricing_modes}
             allowedCurrencies={commerceSettings.allowed_currencies}
+            estuchesChavezMode={isEstuchesChavezAdminCatalog}
             clientFilter={preorderClientFilter}
             onClearClientFilter={() => setPreorderClientFilter(null)}
           />
         ) : null}
 
-        {tab === "orders" ? (
+        {tab === "orders" && !isEstuchesChavezAdminCatalog ? (
           <SalesOrdersWorkspace
             tenantId={tenantId}
             initialOrderId={openOrderId}

@@ -310,6 +310,11 @@ function ClientManagementPage({
   const isProspectEmail = !rawEmail;
   const isNew = !client?.id;
 
+  useEffect(() => {
+    setAccessStatus(hasAccess ? "active" : "none");
+    setProfileActive(null);
+  }, [client?.id, rawEmail, hasAccess]);
+
   // Cargar estado activo/suspendido del perfil cuando hay cuenta
   useEffect(() => {
     if (!rawEmail || accessStatus !== "active") return;

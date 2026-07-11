@@ -2,7 +2,7 @@ import { memo } from "react";
 import { buildPlaceholderUrl, formatCurrency, formatWeight, imageUrlForSize, shortText } from "../utils/formatters";
 import { useLanguage } from "../i18n/LanguageContext";
 
-function ProductCard({ product, onAdd, onOpenDetail }) {
+function ProductCard({ product, onAdd, onOpenDetail, showPrice = true }) {
   const { t } = useLanguage();
   const imageUrl = imageUrlForSize(product.fotoUrl, 360);
 
@@ -26,9 +26,11 @@ function ProductCard({ product, onAdd, onOpenDetail }) {
         <p className="product-brief">
           {[product.metal, product.kilataje, formatWeight(product.pesoPromedio)].filter(Boolean).join(" / ")}
         </p>
-        <strong className="product-price">
-          {product.precioMinimo ? formatCurrency(product.precioMinimo, product.monedaPrecioMin) : t("priceToConfirm")}
-        </strong>
+        {showPrice ? (
+          <strong className="product-price">
+            {product.precioMinimo ? formatCurrency(product.precioMinimo, product.monedaPrecioMin) : t("priceToConfirm")}
+          </strong>
+        ) : null}
       </div>
       <div className="product-actions">
         <button className="secondary-button" type="button" onClick={() => onOpenDetail(product.codigo)}>

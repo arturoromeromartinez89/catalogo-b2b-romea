@@ -286,8 +286,14 @@ export const savePreorder = async (preorder, items, { expectedUpdatedAt = null, 
 };
 
 export const updatePreorderStatus = async (id, status) => {
-  const { error } = await supabase.from("preorders").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
+  const { data, error } = await supabase
+    .from("preorders")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select("id, folio, status, updated_at")
+    .single();
   if (error) throw error;
+  return data;
 };
 
 export const deletePreorder = async (id) => {

@@ -4,7 +4,7 @@ import { fetchCompanySettings } from "../services/companySettings";
 import { fetchLines, fetchMetalPrices, calcPrecioGramo, getSilverFinePrice, fetchLaborLists, fetchLaborListLines, fetchPiecePriceLists, fetchPiecePriceListItems, roundUp2 } from "../services/pricingService";
 import { fetchProductComponents, groupProductComponents } from "../services/productComponentsService";
 import { saveClient } from "../services/supabaseCatalog";
-import { savePreorder, deletePreorder, fetchAllPreorders } from "../services/preorderService";
+import { savePreorder, deletePreorder, fetchAllPreorders, updatePreorderStatus } from "../services/preorderService";
 import { confirmPreorderAsOrder } from "../services/salesOrderService";
 import { generatePdf } from "../utils/pdfGenerator";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -12,6 +12,11 @@ import { buildPlaceholderUrl, imageUrlForSize, shortText } from "../utils/format
 import { normalizeText } from "../utils/textNormalizer";
 import { buildPreorderItemFromProduct } from "../utils/preorderUtils";
 import { buildConfigurableCatalogProducts, hasConfigurableCatalogProducts, isConfigurableProductGroup } from "../utils/configurableCatalog";
+import {
+  getEstuchesDisplayCode,
+  getEstuchesDisplayDescription,
+  isEstuchesChavezCatalogExperience,
+} from "../config/estuchesChavezCatalog";
 
 const STATUS = {
   pendiente: { label: "Pendiente", tone: "amber" },
@@ -360,7 +365,8 @@ function ImportarPreordenModal({ tenantId, profile, onSelect, onClose }) {
   );
 }
 
-function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, onCreateRemision, onOrderConfirmed, pricingLocked = false, tenantId = "", profile, configurableCatalogEnabled = false,
+function PreorderEditorContent({ preorder: initial, clients, products = [], onClose, onSaved, onDirty, onCreateRemision, onOrderConfirmed, onPreorderConfirmed, pricingLocked = false, tenantId = "", profile, configurableCatalogEnabled = false,
+  estuchesChavezMode: estuchesChavezModeProp = false,
   // Reglas de comercio del tenant (tenant_commerce_settings). Cuando solo hay
   // un modo/moneda permitido, el selector se oculta y el valor se fuerza.
   allowedPricingModes = null,
@@ -457,6 +463,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const [showCreateRem, setShowCreateRem] = useState(false);           // confirmación "Crear remisión"
   const [showConfirmOrder, setShowConfirmOrder] = useState(false);
   const [confirmingOrder, setConfirmingOrder] = useState(false);
+  const [confirmingPreorder, setConfirmingPreorder] = useState(false);
   const [confirmedOrder, setConfirmedOrder] = useState(null);
   const [orderConfirmForm, setOrderConfirmForm] = useState({
     anticipo_mxn: "",
@@ -607,6 +614,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
   const hideCurrencySelector = Boolean(singleCurrency && (po.moneda || "MXN") === singleCurrency);
   const hideExchangeRate = singleCurrency === "MXN" && (po.moneda || "MXN") === "MXN";
   const isPieceMode = pricingMode === "piece";
+  const estuchesChavezMode = estuchesChavezModeProp || isEstuchesChavezCatalogExperience();
 
   useEffect(() => {
     const currentList = laborLists.find((list) => list.id === selectedLaborListId);
@@ -934,6 +942,25 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     () => preorderConfigurableEnabled ? buildConfigurableCatalogProducts(products || []) : (products || []),
     [preorderConfigurableEnabled, products]
   );
+  const productByInternalCode = useMemo(
+    () => new Map((products || []).map((product) => [normalizeText(product.codigo), product])),
+    [products]
+  );
+  const displayProductCode = (product) =>
+    estuchesChavezMode ? getEstuchesDisplayCode(product) : product.codigo;
+  const getSourceProductForItem = (item) =>
+    productByInternalCode.get(normalizeText(item?.producto_codigo || "")) || null;
+  const displayItemCode = (item) =>
+    estuchesChavezMode ? getEstuchesDisplayCode(item, productByInternalCode) : item.producto_codigo;
+  const displayItemDescription = (item) => {
+    if (!estuchesChavezMode) return item.producto_descripcion || "";
+    const sourceProduct = getSourceProductForItem(item);
+    return getEstuchesDisplayDescription({
+      ...(sourceProduct || {}),
+      descripcion: item.producto_descripcion || sourceProduct?.descripcion || "",
+      producto_descripcion: item.producto_descripcion || "",
+    });
+  };
   const componentGroups = useMemo(() => groupProductComponents(productComponents), [productComponents]);
 
   const productResults = useMemo(() => {
@@ -941,7 +968,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     if (!term || term.length < 2) return [];
     return preorderCatalogProducts
       .filter((product) => {
-        const text = product.searchText || normalizeText([product.codigo, product.descripcion, product.linea, product.familia].join(" "));
+        const text = product.searchText || normalizeText([product.codigo, product.modelo, product.descripcion, product.linea, product.familia].join(" "));
         return term.split(/\s+/).every((word) => text.includes(word));
       })
       .slice(0, 8);
@@ -955,11 +982,14 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
     const selectedPieceList = piecePriceLists.find((entry) => entry.id === selectedPiecePriceListId);
     const rawItem = buildPreorderItemFromProduct(product, 1, lines, plataFinaMxn);
+    const sourceItem = estuchesChavezMode
+      ? { ...rawItem, producto_descripcion: getEstuchesDisplayDescription(product) }
+      : rawItem;
     const nextItem = isConfigurableProductGroup(product)
       ? buildConfigurablePreorderItem(product, 1)
       : isPieceMode
-        ? pricePieceItemFromList({ ...rawItem, pricing_mode: "piece" }, piecePriceItems, selectedPieceList)
-        : priceItemFromLines(rawItem, lines, selectedList, getListSilverMxn(selectedList));
+        ? pricePieceItemFromList({ ...sourceItem, pricing_mode: "piece" }, piecePriceItems, selectedPieceList)
+        : priceItemFromLines(sourceItem, lines, selectedList, getListSilverMxn(selectedList));
 
     // ── Detección de duplicado ──────────────────────────────────────────────
     const existing = items.find((item) => item.producto_codigo === nextItem.producto_codigo);
@@ -967,7 +997,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
       setPendingDuplicate({ product, nextItem });
       setProductStatus({
         type: "error",
-        text: t("pedStDuplicado", product.codigo, existing.piezas),
+        text: t("pedStDuplicado", displayProductCode(product), existing.piezas),
       });
       return; // no agrega aún — espera confirmación
     }
@@ -979,13 +1009,13 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     setMsg(
       isConfigurableProductGroup(product)
         ? t("pedMsgProductoAgregadoConfig", product.configurableTitle || product.descripcion)
-        : t("pedMsgProductoAgregado", product.codigo)
+        : t("pedMsgProductoAgregado", displayProductCode(product))
     );
     setProductStatus({
       type: "success",
       text: isConfigurableProductGroup(product)
         ? t("pedStConfigBase")
-        : t("pedStAgregadoListo", product.codigo),
+        : t("pedStAgregadoListo", displayProductCode(product)),
     });
     // Foco vuelve a la barra que usó el usuario (no siempre la de arriba)
     window.setTimeout(() => getActiveScannerRef().current?.focus(), 80);
@@ -999,7 +1029,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     markEdited();
     setProductSearch("");
     setPendingDuplicate(null);
-    setProductStatus({ type: "success", text: t("pedStAgregadoDuplicado", product.codigo) });
+    setProductStatus({ type: "success", text: t("pedStAgregadoDuplicado", displayProductCode(product)) });
     window.setTimeout(() => getActiveScannerRef().current?.focus(), 80);
   };
 
@@ -1015,9 +1045,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     const selectedList = laborLists.find((entry) => entry.id === selectedLaborListId);
     const selectedPieceList = piecePriceLists.find((entry) => entry.id === selectedPiecePriceListId);
     const rawItem = buildPreorderItemFromProduct(product, quantity, lines, plataFinaMxn);
+    const sourceItem = estuchesChavezMode
+      ? { ...rawItem, producto_descripcion: getEstuchesDisplayDescription(product) }
+      : rawItem;
     let pricedItem = isPieceMode
-      ? pricePieceItemFromList({ ...rawItem, pricing_mode: "piece" }, listItemsOverride, selectedPieceList)
-      : priceItemFromLines(rawItem, lines, selectedList, getListSilverMxn(selectedList));
+      ? pricePieceItemFromList({ ...sourceItem, pricing_mode: "piece" }, listItemsOverride, selectedPieceList)
+      : priceItemFromLines(sourceItem, lines, selectedList, getListSilverMxn(selectedList));
     if (isPieceMode && priceOverride !== null) {
       pricedItem = {
         ...pricedItem,
@@ -1073,7 +1106,12 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
         ? (piecePriceItems.length ? piecePriceItems : await fetchPiecePriceListItems(selectedPiecePriceListId))
         : [];
       if (hasValidSelectedList && !piecePriceItems.length) setPiecePriceItems(activePieceItems);
-      const productByCode = new Map(products.map((product) => [normalizeText(product.codigo), product]));
+      const productByCode = new Map();
+      products.forEach((product) => {
+        [product.codigo, product.modelo, product.claveVenta, product.clave_venta, product.id]
+          .filter(Boolean)
+          .forEach((value) => productByCode.set(normalizeText(value), product));
+      });
       const found = [];
       const missing = [];
       let rowsWithExcelPrice = 0;
@@ -1547,8 +1585,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
 
     const pdfItems = items.map((item) => ({
       product: {
-        codigo: item.producto_codigo,
-        descripcion: item.producto_descripcion,
+        codigo: displayItemCode(item),
+        descripcion: displayItemDescription(item),
         metal: item.producto_metal,
         kilataje: item.producto_kilataje,
         fotoUrl: item.producto_foto_url,
@@ -1595,9 +1633,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
         if (isPieceMode) {
           return {
             "#": idx + 1,
-            codigo: item.producto_codigo || "",
+            codigo: displayItemCode(item) || "",
             cantidad: piezas,
-            descripcion: item.producto_descripcion || "",
+            descripcion: displayItemDescription(item) || "",
             linea: item.producto_linea || "",
             metal: item.producto_metal || "",
             kilataje: item.producto_kilataje || "",
@@ -1609,9 +1647,9 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
         const fineSilver = Math.max(0, Number(item.precio_gramo_mxn || 0) - Number(item.labor_mxn || 0));
         return {
           "#": idx + 1,
-          codigo: item.producto_codigo || "",
+          codigo: displayItemCode(item) || "",
           cantidad: piezas,
-          descripcion: item.producto_descripcion || "",
+          descripcion: displayItemDescription(item) || "",
           linea: item.producto_linea || "",
           metal: item.producto_metal || "",
           kilataje: item.producto_kilataje || "",
@@ -1696,7 +1734,31 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
     onClose?.({ ...po, preorder_items: items });
   };
 
-  const canConfirmOrder = adminViewOnly && !isRemision && !isNew && !po.confirmed_order_id && items.length > 0;
+  const canConfirmOrder = !estuchesChavezMode && adminViewOnly && !isRemision && !isNew && !po.confirmed_order_id && items.length > 0;
+  const canConfirmPreorder = estuchesChavezMode && adminViewOnly && !isRemision && !isNew && po.status !== "confirmada" && po.status !== "cancelada" && items.length > 0;
+  const handleConfirmPreorder = async () => {
+    if (!canConfirmPreorder || confirmingPreorder) return;
+    if (!window.confirm("Confirmar esta preorden? Para Estuches Chavez no se generara una orden de compra adicional.")) return;
+    setConfirmingPreorder(true);
+    setMsg("");
+    try {
+      const updated = await updatePreorderStatus(po.id || initial?.id, "confirmada");
+      const updatedAt = updated?.updated_at || new Date().toISOString();
+      const next = { ...po, status: "confirmada", updated_at: updatedAt };
+      setPo(next);
+      setLoadedAt(updatedAt);
+      setSavedAt(updatedAt);
+      setSaved(true);
+      setMsg("Preorden confirmada.");
+      onPreorderConfirmed?.({ ...next, ...(updated || {}) });
+    } catch (error) {
+      console.error("Error confirming preorder", error);
+      setMsg(error?.message || "No se pudo confirmar la preorden.");
+    } finally {
+      setConfirmingPreorder(false);
+    }
+  };
+
   const handleConfirmOrder = async () => {
     if (!canConfirmOrder || confirmingOrder) return;
     setConfirmingOrder(true);
@@ -1812,6 +1874,17 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               onClick={() => setShowConfirmOrder(true)}
             >
               Confirmar orden
+            </button>
+          ) : null}
+          {canConfirmPreorder ? (
+            <button
+              className="primary-button compact-action"
+              type="button"
+              title="Confirmar preorden"
+              onClick={handleConfirmPreorder}
+              disabled={confirmingPreorder}
+            >
+              {confirmingPreorder ? "Confirmando..." : "Confirmar preorden"}
             </button>
           ) : null}
           {editMode || pricingLocked ? (
@@ -2178,7 +2251,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                 {/* Confirmación de duplicado — aparece en la barra que activó el warning */}
                 {pendingDuplicate && activeScannerRef.current === "top" ? (
                   <div className="quote-duplicate-confirm">
-                    <span>⚠ <strong>{pendingDuplicate.product.codigo}</strong> ya está en la preorden</span>
+                    <span>⚠ <strong>{displayProductCode(pendingDuplicate.product)}</strong> ya está en la preorden</span>
                     <button type="button" className="primary-button compact-action" onClick={confirmDuplicate}>
                       Sí, agregar línea separada
                     </button>
@@ -2199,8 +2272,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                           onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
                         />
                         <span>
-                          <strong>{product.codigo}</strong>
-                          <small>{shortText(product.descripcion, 62)}</small>
+                          <strong>{displayProductCode(product)}</strong>
+                          <small>{shortText(estuchesChavezMode ? getEstuchesDisplayDescription(product) : product.descripcion, 62)}</small>
                         </span>
                         <b>Agregar</b>
                       </button>
@@ -2221,7 +2294,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     <tr>
                       <th className="preorder-row-move-head">{t("pedColOrden")}</th>
                       <th>{t("pedColFoto")}</th>
-                      <th>SKU</th>
+                      <th>{estuchesChavezMode ? "Modelo" : "SKU"}</th>
                       <th className="right">{t("pedColCantidad")}</th>
                       <th>{t("pedColDescripcion")}</th>
                       <th>{t("pedColLinea")}</th>
@@ -2234,7 +2307,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                     <tr>
                       <th className="preorder-row-move-head">{t("pedColOrden")}</th>
                       <th>{t("pedColFoto")}</th>
-                      <th>SKU</th>
+                      <th>{estuchesChavezMode ? "Modelo" : "SKU"}</th>
                       <th className="right">{t("pedColCantidad")}</th>
                       <th>{t("pedColDescripcion")}</th>
                       <th>{t("pedColLinea")}</th>
@@ -2523,7 +2596,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                             <img
                               className="quote-item-photo"
                               src={imageUrlForSize(item.producto_foto_url, 240)}
-                              alt={item.producto_codigo}
+                              alt={displayItemCode(item)}
                               loading="lazy"
                               decoding="async"
                               onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
@@ -2532,7 +2605,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                             <span className="quote-item-photo-placeholder">Sin foto</span>
                           )}
                         </td>
-                        <td><strong>{item.producto_codigo}</strong></td>
+                        <td><strong>{displayItemCode(item)}</strong></td>
                         <td>
                           <div className="qty-stepper">
                             <button type="button" onClick={() => adjustQuantity(idx, -1)}>-</button>
@@ -2541,7 +2614,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                           </div>
                         </td>
                         <td>
-                          <div>{item.producto_descripcion}</div>
+                          <div>{displayItemDescription(item)}</div>
                           <small>{[item.producto_metal, item.producto_kilataje].filter(Boolean).join(" / ")}</small>
                         </td>
                         <td><strong>{item.producto_linea || "-"}</strong></td>
@@ -2610,7 +2683,7 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
               {/* Confirmación de duplicado en barra inferior */}
               {pendingDuplicate && activeScannerRef.current === "bottom" ? (
                 <div className="quote-duplicate-confirm">
-                  <span>⚠ <strong>{pendingDuplicate.product.codigo}</strong> ya está en la preorden</span>
+                  <span>⚠ <strong>{displayProductCode(pendingDuplicate.product)}</strong> ya está en la preorden</span>
                   <button type="button" className="primary-button compact-action" onClick={confirmDuplicate}>
                     Sí, agregar línea separada
                   </button>
@@ -2631,8 +2704,8 @@ function PreorderEditorContent({ preorder: initial, clients, products = [], onCl
                         onError={(event) => { event.currentTarget.src = buildPlaceholderUrl(); }}
                       />
                       <span>
-                        <strong>{product.codigo}</strong>
-                        <small>{shortText(product.descripcion, 62)}</small>
+                        <strong>{displayProductCode(product)}</strong>
+                        <small>{shortText(estuchesChavezMode ? getEstuchesDisplayDescription(product) : product.descripcion, 62)}</small>
                       </span>
                       <b>Agregar</b>
                     </button>
