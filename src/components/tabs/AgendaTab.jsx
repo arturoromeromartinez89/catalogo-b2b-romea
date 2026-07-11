@@ -148,20 +148,16 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
     [tasks, filterClientId]
   );
 
-  // Rollover por consulta: pendientes vencidas caen en la columna de hoy
-  // (solo cuando hoy está dentro de la semana visible).
-  const tasksForDay = (dayKey) => visibleTasks.filter((task) => {
-    const overdue = task.status === "pending" && task.task_date < todayKey;
-    if (dayKey === todayKey) return task.task_date === dayKey || overdue;
-    if (overdue) return false;
-    return task.task_date === dayKey;
-  });
+  // El tablero respeta SIEMPRE el día donde está la tarjeta (incluido el que
+  // elegiste al arrastrar). Las pendientes vencidas no se mueven de columna:
+  // se marcan en ámbar y la tabla "Pendientes de hoy" es la que las rescata.
+  const tasksForDay = (dayKey) => visibleTasks.filter((task) => task.task_date === dayKey);
 
+  // Pendientes con fecha anterior a la semana visible (no salen en el tablero,
+  // pero sí en la tabla de hoy).
   const overdueOutsideWeek = useMemo(
-    () => (days.includes(todayKey) ? [] : visibleTasks.filter(
-      (task) => task.status === "pending" && task.task_date < fromKey
-    )),
-    [visibleTasks, days, todayKey, fromKey]
+    () => visibleTasks.filter((task) => task.status === "pending" && task.task_date < fromKey),
+    [visibleTasks, fromKey]
   );
 
   // KPIs de la banda superior. Presupuestos: visuales, fuente pendiente.
