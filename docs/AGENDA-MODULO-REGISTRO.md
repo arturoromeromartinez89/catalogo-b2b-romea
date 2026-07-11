@@ -2,7 +2,7 @@
 
 > Actualizar este documento en CADA entrega del módulo (commit, migración o deploy).
 
-## Última actualización: 2026-07-11 (rediseño UI)
+## Última actualización: 2026-07-11 (v2: tabla de hoy, citas con hora, categoría viaje)
 
 ## Base de datos (Supabase staging `vafqcvpzksjlrborxoos`)
 
@@ -42,8 +42,11 @@ Codex commiteado como `bc913f4` en `codex/fase0-cajita-consolidation` →
 - Producción: **NO desplegado**.
 - Regla: desplegar solo desde la rama fusionada más reciente; verificar el
   bundle vivo (`grep agenda_tasks assets/index-*.js`) tras cada deploy.
+- Migración adicional aplicada: `20260711130000_agenda_citas_viaje.sql`
+  (aditiva: item_type task/appointment, start_time, categoría 'viaje';
+  comercial y viaje pueden llevar cliente; RLS sin cambios).
 - **Deploy vigente:** 2026-07-11, rama `claude/agenda-redesign` (commit `18ecfbf`),
-  bundle `assets/index-CyYUilcm.js`. QA funcional 2026-07-11: 17/17 requisitos
+  bundle `assets/index-BCgvpw4O.js` (v2, commit `b7a1c7e`). QA funcional 2026-07-11: 17/17 requisitos
   verificados con cuentas temporales (admin/comercial/cliente), eliminadas al
   terminar; el rol client confirmado SIN acceso a la agenda.
 
