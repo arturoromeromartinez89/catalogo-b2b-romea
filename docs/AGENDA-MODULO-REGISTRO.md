@@ -42,6 +42,10 @@ Codex commiteado como `bc913f4` en `codex/fase0-cajita-consolidation` →
 - Producción: **NO desplegado**.
 - Regla: desplegar solo desde la rama fusionada más reciente; verificar el
   bundle vivo (`grep agenda_tasks assets/index-*.js`) tras cada deploy.
+- **Deploy vigente:** 2026-07-11, rama `claude/agenda-redesign` (commit `18ecfbf`),
+  bundle `assets/index-CyYUilcm.js`. QA funcional 2026-07-11: 17/17 requisitos
+  verificados con cuentas temporales (admin/comercial/cliente), eliminadas al
+  terminar; el rol client confirmado SIN acceso a la agenda.
 
 ## Acceso por rol
 
