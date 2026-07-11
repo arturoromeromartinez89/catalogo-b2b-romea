@@ -36,7 +36,11 @@ export const addDays = (date, days) => {
 };
 
 // ── Tareas ───────────────────────────────────────────────────────────────────
-const TASK_COLUMNS = "id, tenant_id, title, task_date, category, client_id, objective_id, status, completed_at, assignee_id, position, notes, created_at";
+const TASK_COLUMNS = "id, tenant_id, title, task_date, category, client_id, objective_id, status, completed_at, assignee_id, position, notes, created_at, item_type, start_time";
+
+export const AGENDA_CATEGORIES = ["comercial", "administrativo", "viaje"];
+// Categorías que pueden llevar cliente (mismo criterio que el CHECK en BD)
+export const CLIENT_CATEGORIES = ["comercial", "viaje"];
 
 // Trae la semana visible + todo pendiente anterior (rollover por consulta).
 export const fetchAgendaTasks = async (tenantId, { from, to } = {}) => {
@@ -46,6 +50,7 @@ export const fetchAgendaTasks = async (tenantId, { from, to } = {}) => {
     .select(TASK_COLUMNS)
     .eq("tenant_id", tenantId)
     .or(`and(task_date.gte.${from},task_date.lte.${to}),and(task_date.lt.${from},status.eq.pending)`)
+    .order("start_time", { ascending: true, nullsFirst: false })
     .order("position", { ascending: true })
     .order("created_at", { ascending: true });
   if (error) throw error;
@@ -53,12 +58,16 @@ export const fetchAgendaTasks = async (tenantId, { from, to } = {}) => {
 };
 
 export const createAgendaTask = async (tenantId, task, profileId = "") => {
+  const category = AGENDA_CATEGORIES.includes(task.category) ? task.category : "administrativo";
+  const isAppointment = task.item_type === "appointment";
   const row = {
     tenant_id: tenantId,
     title: String(task.title || "").trim(),
     task_date: task.task_date,
-    category: task.category === "comercial" ? "comercial" : "administrativo",
-    client_id: task.category === "comercial" ? (task.client_id || null) : null,
+    category,
+    item_type: isAppointment ? "appointment" : "task",
+    start_time: isAppointment ? (task.start_time || null) : null,
+    client_id: CLIENT_CATEGORIES.includes(category) ? (task.client_id || null) : null,
     objective_id: task.objective_id || null,
     notes: task.notes || null,
     assignee_id: task.assignee_id || profileId || null,
@@ -66,6 +75,7 @@ export const createAgendaTask = async (tenantId, task, profileId = "") => {
   };
   if (!row.title) throw new Error("La tarea necesita un título.");
   if (!row.task_date) throw new Error("La tarea necesita una fecha.");
+  if (isAppointment && !row.start_time) throw new Error("La cita necesita una hora.");
   const { data, error } = await supabase
     .from("agenda_tasks")
     .insert(row)

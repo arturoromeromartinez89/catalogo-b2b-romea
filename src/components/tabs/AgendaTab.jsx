@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { supabase } from "../../lib/supabaseClient";
 import {
+  CLIENT_CATEGORIES,
   addDays,
   createAgendaObjective,
   createAgendaTask,
@@ -68,6 +69,14 @@ const formatFileSize = (size = 0) => {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+const formatTime = (value = "") => String(value || "").slice(0, 5);
+
+const categoryLabelKey = {
+  comercial: "agCatComercial",
+  administrativo: "agCatAdministrativo",
+  viaje: "agCatViaje",
+};
+
 export default function AgendaTab({ tenantId = "", profile = {}, clients = [] }) {
   const { t, language } = useLanguage();
   const canManageObjectives = ["superadmin", "tenant_admin", "admin"].includes(profile?.role);
@@ -90,6 +99,8 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
     category: "comercial",
     client_id: "",
     objective_id: "",
+    item_type: "task",
+    start_time: "",
   });
   const [objectiveForm, setObjectiveForm] = useState({ period_type: "month", title: "" });
 
@@ -161,13 +172,21 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
     setStatus("");
     try {
       await createAgendaTask(tenantId, form, profile?.id);
-      setForm((current) => ({ ...current, title: "", client_id: "", objective_id: "" }));
+      setForm((current) => ({ ...current, title: "", client_id: "", objective_id: "", start_time: "" }));
       await load();
-      setStatus(t("agTaskCreated"));
+      setStatus(form.item_type === "appointment" ? t("agAppointmentCreated") : t("agTaskCreated"));
     } catch (error) {
       setStatus(`${t("agTaskError")}: ${error.message}`);
     }
   };
+
+  // Pendientes de HOY (tareas y citas, incluye arrastradas): tabla interactiva.
+  const todayPending = useMemo(
+    () => visibleTasks
+      .filter((task) => task.status === "pending" && task.task_date <= todayKey)
+      .sort((a, b) => String(a.start_time || "99:99").localeCompare(String(b.start_time || "99:99"))),
+    [visibleTasks, todayKey]
+  );
 
   const handleToggleTask = async (task) => {
     const next = task.status === "done" ? "pending" : "done";
@@ -262,7 +281,8 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
     const done = scopeTasks.filter((task) => task.status === "done");
     const line = (task) => {
       const client = task.client_id ? ` — ${clientLabel(clients, task.client_id)}` : "";
-      return `• ${task.title}${client}`;
+      const hora = task.item_type === "appointment" && task.start_time ? `${formatTime(task.start_time)} · ` : "";
+      return `• ${hora}${task.title}${client}`;
     };
     const parts = [
       `*${t("agReportTitle")}* (${label})`,
@@ -351,9 +371,10 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
     const overdue = task.status === "pending" && task.task_date < todayKey;
     const attachments = taskAttachments[task.id] || [];
     const client = task.client_id ? clientLabel(clients, task.client_id) : "";
+    const isAppointment = task.item_type === "appointment";
     return (
       <article
-        className={`agenda-task agenda-task--${task.status} agenda-task--${task.category}${overdue ? " agenda-task--overdue" : ""}`}
+        className={`agenda-task agenda-task--${task.status} agenda-task--${task.category}${overdue ? " agenda-task--overdue" : ""}${isAppointment ? " agenda-task--appointment" : ""}`}
         key={task.id}
       >
         <div className="agenda-task-top">
@@ -364,7 +385,12 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
               onChange={() => handleToggleTask(task)}
               aria-label={t("agMarkDone")}
             />
-            <span className="agenda-task-title" title={task.title}>{task.title}</span>
+            <span className="agenda-task-title" title={task.title}>
+              {isAppointment && task.start_time ? (
+                <b className="agenda-task-time">{formatTime(task.start_time)}</b>
+              ) : null}
+              {task.title}
+            </span>
           </label>
           <div className="agenda-task-actions">
             <label className="agenda-icon-button" title={t("agAttachFile")}>
@@ -391,6 +417,9 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
         </div>
 
         <div className="agenda-task-meta">
+          {isAppointment ? (
+            <span className="agenda-chip agenda-chip--cita">{t("agTypeAppointment")}</span>
+          ) : null}
           {client ? (
             <button
               type="button"
@@ -401,9 +430,7 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
               {client}
             </button>
           ) : (
-            <span className="agenda-task-cat">
-              {task.category === "comercial" ? t("agCatComercial") : t("agCatAdministrativo")}
-            </span>
+            <span className="agenda-task-cat">{t(categoryLabelKey[task.category] || "agCatAdministrativo")}</span>
           )}
           {attachments.length ? (
             <span className="agenda-chip agenda-chip--files" title={t("agAttachmentVisualOnly")}>
@@ -513,8 +540,17 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
         </div>
 
         <form className="agenda-quick-add" onSubmit={handleAddTask}>
+          <select
+            className="agenda-type-select"
+            value={form.item_type}
+            onChange={(event) => setForm((current) => ({ ...current, item_type: event.target.value }))}
+            aria-label={t("agTypeLabel")}
+          >
+            <option value="task">{t("agTypeTask")}</option>
+            <option value="appointment">{t("agTypeAppointment")}</option>
+          </select>
           <input
-            placeholder={t("agTaskPlaceholder")}
+            placeholder={form.item_type === "appointment" ? t("agAppointmentPlaceholder") : t("agTaskPlaceholder")}
             value={form.title}
             onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
           />
@@ -523,14 +559,24 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
             value={form.task_date}
             onChange={(event) => setForm((current) => ({ ...current, task_date: event.target.value }))}
           />
+          {form.item_type === "appointment" ? (
+            <input
+              type="time"
+              value={form.start_time}
+              onChange={(event) => setForm((current) => ({ ...current, start_time: event.target.value }))}
+              aria-label={t("agHour")}
+              required
+            />
+          ) : null}
           <select
             value={form.category}
             onChange={(event) => setForm((current) => ({ ...current, category: event.target.value, client_id: "" }))}
           >
             <option value="comercial">{t("agCatComercial")}</option>
+            <option value="viaje">{t("agCatViaje")}</option>
             <option value="administrativo">{t("agCatAdministrativo")}</option>
           </select>
-          {form.category === "comercial" ? (
+          {CLIENT_CATEGORIES.includes(form.category) ? (
             <select
               value={form.client_id}
               onChange={(event) => setForm((current) => ({ ...current, client_id: event.target.value }))}
@@ -571,7 +617,82 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
         </div>
       </div>
 
-      {/* ── Tablero + panel lateral ── */}
+      {/* ── Pendientes de hoy: tabla interactiva, lo primero después del encabezado ── */}
+      <section className="admin-soft-panel compact-panel agenda-today-panel">
+        <header className="agenda-today-head">
+          <h3>{t("agTodayTitle")}</h3>
+          <span className="agenda-day-count">{todayPending.length}</span>
+        </header>
+        {todayPending.length ? (
+          <div className="agenda-today-table" role="table" aria-label={t("agTodayTitle")}>
+            {todayPending.map((task) => {
+              const overdue = task.task_date < todayKey;
+              const client = task.client_id ? clientLabel(clients, task.client_id) : "";
+              const attachments = taskAttachments[task.id] || [];
+              const isAppointment = task.item_type === "appointment";
+              return (
+                <div className={`agenda-today-row${isAppointment ? " is-cita" : ""}`} role="row" key={`today-${task.id}`}>
+                  <input
+                    type="checkbox"
+                    checked={false}
+                    onChange={() => handleToggleTask(task)}
+                    aria-label={t("agMarkDone")}
+                    title={t("agMarkDone")}
+                  />
+                  <span className="agenda-today-time">
+                    {isAppointment && task.start_time ? formatTime(task.start_time) : "—"}
+                  </span>
+                  <span className="agenda-today-title" title={task.title}>{task.title}</span>
+                  <span className={`agenda-chip ${isAppointment ? "agenda-chip--cita" : `agenda-chip--${task.category}`}`}>
+                    {isAppointment ? t("agTypeAppointment") : t(categoryLabelKey[task.category] || "agCatAdministrativo")}
+                  </span>
+                  <span className="agenda-today-client">
+                    {client ? (
+                      <button type="button" className="agenda-client-link" onClick={() => setFilterClientId(task.client_id)}>
+                        {client}
+                      </button>
+                    ) : "—"}
+                  </span>
+                  <span className="agenda-today-flags">
+                    {attachments.length ? (
+                      <span className="agenda-chip agenda-chip--files"><Icon name="paperclip" size={10} />{attachments.length}</span>
+                    ) : null}
+                    {overdue ? (
+                      <span className="agenda-chip agenda-chip--overdue">↩ {formatShortDate(task.task_date, language)}</span>
+                    ) : null}
+                  </span>
+                  <span className="agenda-task-actions agenda-today-actions">
+                    <label className="agenda-icon-button" title={t("agAttachFile")}>
+                      <Icon name="paperclip" />
+                      <input
+                        type="file"
+                        multiple
+                        onChange={(event) => {
+                          handleTaskFiles(task.id, event.target.files);
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="agenda-icon-button agenda-icon-button--danger"
+                      onClick={() => handleDeleteTask(task)}
+                      aria-label={t("agDeleteTask")}
+                      title={t("agDeleteTask")}
+                    >
+                      <Icon name="trash" />
+                    </button>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="agenda-empty">{loading ? "…" : t("agTodayEmpty")}</p>
+        )}
+      </section>
+
+      {/* ── Tablero semanal ── */}
       <div className="agenda-main">
         <div className="agenda-board-wrap">
           <div className={`agenda-board agenda-board--${viewMode}`} aria-label={t("agTitle")}>
@@ -599,7 +720,10 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
           ) : null}
         </div>
 
-        <aside className="agenda-side">
+      </div>
+
+      {/* ── Objetivos y seguimiento: a lo ancho, debajo del tablero ── */}
+      <div className="agenda-bottom">
           <section className="admin-soft-panel compact-panel agenda-side-panel">
             <h3>{t("agObjectives")}</h3>
             {["month", "week"].map((periodType) => {
@@ -697,7 +821,6 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
               </label>
             ) : null}
           </section>
-        </aside>
       </div>
 
       {reportOpen ? (
