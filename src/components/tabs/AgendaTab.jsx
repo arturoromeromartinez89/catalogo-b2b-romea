@@ -96,6 +96,9 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
   const [editingTask, setEditingTask] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  // Drag & drop entre días (reprograma task_date)
+  const [draggingTaskId, setDraggingTaskId] = useState(null);
+  const [dropDayKey, setDropDayKey] = useState("");
 
   const todayKey = toDateKey(new Date());
   const [form, setForm] = useState({
@@ -214,6 +217,22 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
         return next;
       });
       fetchClientFollowup(tenantId).then(setFollowup).catch(() => {});
+    } catch (error) {
+      setStatus(`${t("agTaskError")}: ${error.message}`);
+    }
+  };
+
+  const handleDropOnDay = async (dayKey) => {
+    const taskId = draggingTaskId;
+    setDraggingTaskId(null);
+    setDropDayKey("");
+    if (!taskId) return;
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task || task.task_date === dayKey) return;
+    try {
+      const updated = await updateAgendaTask(taskId, { task_date: dayKey });
+      setTasks((current) => current.map((item) => (item.id === taskId ? updated : item)));
+      setStatus(t("agRescheduled", formatShortDate(dayKey, language)));
     } catch (error) {
       setStatus(`${t("agTaskError")}: ${error.message}`);
     }
@@ -427,8 +446,16 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
     const isAppointment = task.item_type === "appointment";
     return (
       <article
-        className={`agenda-task agenda-task--${task.status} agenda-task--${task.category}${overdue ? " agenda-task--overdue" : ""}${isAppointment ? " agenda-task--appointment" : ""}`}
+        className={`agenda-task agenda-task--${task.status} agenda-task--${task.category}${overdue ? " agenda-task--overdue" : ""}${isAppointment ? " agenda-task--appointment" : ""}${draggingTaskId === task.id ? " agenda-task--dragging" : ""}`}
         key={task.id}
+        draggable
+        title={t("agDragHint")}
+        onDragStart={(event) => {
+          setDraggingTaskId(task.id);
+          event.dataTransfer.setData("text/plain", task.id);
+          event.dataTransfer.effectAllowed = "move";
+        }}
+        onDragEnd={() => { setDraggingTaskId(null); setDropDayKey(""); }}
       >
         <div className="agenda-task-top">
           <label className="agenda-task-check">
@@ -765,7 +792,24 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
               const dayTasks = tasksForDay(dayKey);
               const isToday = dayKey === todayKey;
               return (
-                <section className={`agenda-column${isToday ? " agenda-column--today" : ""}`} key={dayKey}>
+                <section
+                  className={`agenda-column${isToday ? " agenda-column--today" : ""}${dropDayKey === dayKey && draggingTaskId ? " agenda-column--dropover" : ""}`}
+                  key={dayKey}
+                  onDragOver={(event) => {
+                    if (!draggingTaskId) return;
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                    if (dropDayKey !== dayKey) setDropDayKey(dayKey);
+                  }}
+                  onDragLeave={(event) => {
+                    if (event.currentTarget.contains(event.relatedTarget)) return;
+                    if (dropDayKey === dayKey) setDropDayKey("");
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    handleDropOnDay(dayKey);
+                  }}
+                >
                   <header>
                     <strong>{DAY_LABELS[index]}</strong>
                     <span>{formatShortDate(dayKey, language)}</span>

@@ -11574,6 +11574,15 @@ tr.client-row--expanded td {
   border-left-color: #16a34a;
 }
 .agenda-task--appointment.agenda-task--overdue { border-left-color: #f59e0b; }
+.agenda-task { cursor: grab; }
+.agenda-task:active { cursor: grabbing; }
+.agenda-task--dragging { opacity: .4; }
+.agenda-column--dropover {
+  background: rgba(31, 51, 95, .05);
+  border-color: var(--color-text-brand, #1f335f);
+  border-style: dashed;
+}
+.agenda-column--dropover > header { background: rgba(31, 51, 95, .12); }
 .agenda-task-time {
   color: var(--color-success, #15803d);
   font-weight: 800;
