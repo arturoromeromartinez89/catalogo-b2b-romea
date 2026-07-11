@@ -15,6 +15,7 @@ import {
   monthKey,
   setAgendaTaskStatus,
   toDateKey,
+  updateAgendaTask,
   weekStart,
 } from "../../services/agendaService";
 
@@ -91,6 +92,10 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
   const [reportOpen, setReportOpen] = useState(false);
   const [taskAttachments, setTaskAttachments] = useState({});
   const [viewMode, setViewMode] = useState("compact");
+  // Tarjeta abierta estilo Trello (detalle + edición)
+  const [editingTask, setEditingTask] = useState(null);
+  const [editDraft, setEditDraft] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const todayKey = toDateKey(new Date());
   const [form, setForm] = useState({
@@ -211,6 +216,54 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
       fetchClientFollowup(tenantId).then(setFollowup).catch(() => {});
     } catch (error) {
       setStatus(`${t("agTaskError")}: ${error.message}`);
+    }
+  };
+
+  const openTaskCard = (task) => {
+    setEditingTask(task);
+    setEditDraft({
+      title: task.title || "",
+      item_type: task.item_type === "appointment" ? "appointment" : "task",
+      task_date: task.task_date,
+      start_time: formatTime(task.start_time || ""),
+      category: task.category || "administrativo",
+      client_id: task.client_id || "",
+      objective_id: task.objective_id || "",
+      notes: task.notes || "",
+    });
+  };
+
+  const closeTaskCard = () => {
+    setEditingTask(null);
+    setEditDraft(null);
+  };
+
+  const handleSaveTaskCard = async () => {
+    if (!editingTask || !editDraft) return;
+    const isAppointment = editDraft.item_type === "appointment";
+    if (!String(editDraft.title).trim()) { setStatus(t("agTaskError") + ": " + t("agTaskPlaceholder")); return; }
+    if (isAppointment && !editDraft.start_time) { setStatus(t("agHourRequired")); return; }
+    setSavingEdit(true);
+    try {
+      const patch = {
+        title: String(editDraft.title).trim(),
+        item_type: isAppointment ? "appointment" : "task",
+        task_date: editDraft.task_date,
+        start_time: isAppointment ? editDraft.start_time : null,
+        category: editDraft.category,
+        client_id: CLIENT_CATEGORIES.includes(editDraft.category) ? (editDraft.client_id || null) : null,
+        objective_id: editDraft.objective_id || null,
+        notes: editDraft.notes || null,
+      };
+      const updated = await updateAgendaTask(editingTask.id, patch);
+      setTasks((current) => current.map((item) => (item.id === editingTask.id ? updated : item)));
+      fetchClientFollowup(tenantId).then(setFollowup).catch(() => {});
+      closeTaskCard();
+      setStatus(t("agCardSaved"));
+    } catch (error) {
+      setStatus(`${t("agTaskError")}: ${error.message}`);
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -385,13 +438,18 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
               onChange={() => handleToggleTask(task)}
               aria-label={t("agMarkDone")}
             />
-            <span className="agenda-task-title" title={task.title}>
-              {isAppointment && task.start_time ? (
-                <b className="agenda-task-time">{formatTime(task.start_time)}</b>
-              ) : null}
-              {task.title}
-            </span>
           </label>
+          <button
+            type="button"
+            className="agenda-task-title"
+            title={`${task.title} — ${t("agClickToOpen")}`}
+            onClick={() => openTaskCard(task)}
+          >
+            {isAppointment && task.start_time ? (
+              <b className="agenda-task-time">{formatTime(task.start_time)}</b>
+            ) : null}
+            {task.title}
+          </button>
           <div className="agenda-task-actions">
             <label className="agenda-icon-button" title={t("agAttachFile")}>
               <Icon name="paperclip" />
@@ -642,7 +700,14 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
                   <span className="agenda-today-time">
                     {isAppointment && task.start_time ? formatTime(task.start_time) : "—"}
                   </span>
-                  <span className="agenda-today-title" title={task.title}>{task.title}</span>
+                  <button
+                    type="button"
+                    className="agenda-today-title"
+                    title={`${task.title} — ${t("agClickToOpen")}`}
+                    onClick={() => openTaskCard(task)}
+                  >
+                    {task.title}
+                  </button>
                   <span className={`agenda-chip ${isAppointment ? "agenda-chip--cita" : `agenda-chip--${task.category}`}`}>
                     {isAppointment ? t("agTypeAppointment") : t(categoryLabelKey[task.category] || "agCatAdministrativo")}
                   </span>
@@ -822,6 +887,164 @@ export default function AgendaTab({ tenantId = "", profile = {}, clients = [] })
             ) : null}
           </section>
       </div>
+
+      {editingTask && editDraft ? (
+        <div className="agenda-modal-overlay" role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) closeTaskCard(); }}>
+          <div className="agenda-modal agenda-card-modal">
+            <header className="agenda-card-head">
+              <span className={`agenda-chip ${editDraft.item_type === "appointment" ? "agenda-chip--cita" : `agenda-chip--${editDraft.category}`}`}>
+                {editDraft.item_type === "appointment" ? t("agTypeAppointment") : t("agTypeTask")}
+              </span>
+              <div className="agenda-card-head-actions">
+                <button
+                  type="button"
+                  className="agenda-icon-button agenda-icon-button--danger"
+                  onClick={() => { handleDeleteTask(editingTask); closeTaskCard(); }}
+                  title={t("agDeleteTask")}
+                  aria-label={t("agDeleteTask")}
+                >
+                  <Icon name="trash" />
+                </button>
+                <button type="button" className="agenda-icon-button" onClick={closeTaskCard} aria-label={t("agClose")} title={t("agClose")}>×</button>
+              </div>
+            </header>
+
+            <input
+              className="agenda-card-title-input"
+              value={editDraft.title}
+              onChange={(event) => setEditDraft((c) => ({ ...c, title: event.target.value }))}
+              placeholder={t("agTaskPlaceholder")}
+            />
+
+            <div className="agenda-card-fields">
+              <label>
+                {t("agTypeLabel")}
+                <select
+                  value={editDraft.item_type}
+                  onChange={(event) => setEditDraft((c) => ({ ...c, item_type: event.target.value }))}
+                >
+                  <option value="task">{t("agTypeTask")}</option>
+                  <option value="appointment">{t("agTypeAppointment")}</option>
+                </select>
+              </label>
+              <label>
+                {t("date")}
+                <input
+                  type="date"
+                  value={editDraft.task_date}
+                  onChange={(event) => setEditDraft((c) => ({ ...c, task_date: event.target.value }))}
+                />
+              </label>
+              {editDraft.item_type === "appointment" ? (
+                <label>
+                  {t("agHour")}
+                  <input
+                    type="time"
+                    value={editDraft.start_time}
+                    onChange={(event) => setEditDraft((c) => ({ ...c, start_time: event.target.value }))}
+                    required
+                  />
+                </label>
+              ) : null}
+              <label>
+                {t("agCategoryLabel")}
+                <select
+                  value={editDraft.category}
+                  onChange={(event) => setEditDraft((c) => ({ ...c, category: event.target.value, client_id: CLIENT_CATEGORIES.includes(event.target.value) ? c.client_id : "" }))}
+                >
+                  <option value="comercial">{t("agCatComercial")}</option>
+                  <option value="viaje">{t("agCatViaje")}</option>
+                  <option value="administrativo">{t("agCatAdministrativo")}</option>
+                </select>
+              </label>
+              {CLIENT_CATEGORIES.includes(editDraft.category) ? (
+                <label>
+                  {t("customer")}
+                  <select
+                    value={editDraft.client_id}
+                    onChange={(event) => setEditDraft((c) => ({ ...c, client_id: event.target.value }))}
+                  >
+                    <option value="">{t("agNoClient")}</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>{client.company || client.name}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <label>
+                {t("agObjectives")}
+                <select
+                  value={editDraft.objective_id}
+                  onChange={(event) => setEditDraft((c) => ({ ...c, objective_id: event.target.value }))}
+                >
+                  <option value="">{t("agNoObjective")}</option>
+                  {objectives.map((objective) => (
+                    <option key={objective.id} value={objective.id}>{objective.title}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <label className="agenda-card-description">
+              {t("agDescription")}
+              <textarea
+                rows={4}
+                placeholder={t("agDescriptionPlaceholder")}
+                value={editDraft.notes}
+                onChange={(event) => setEditDraft((c) => ({ ...c, notes: event.target.value }))}
+              />
+            </label>
+
+            <div className="agenda-card-attachments">
+              <div className="agenda-card-section-head">
+                <span>{t("agAttachmentsCount", (taskAttachments[editingTask.id] || []).length)}</span>
+                <small>{t("agAttachmentVisualOnly")}</small>
+                <label className="agenda-icon-button" title={t("agAttachFile")}>
+                  <Icon name="paperclip" />
+                  <input
+                    type="file"
+                    multiple
+                    onChange={(event) => {
+                      handleTaskFiles(editingTask.id, event.target.files);
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+              {(taskAttachments[editingTask.id] || []).length ? (
+                <div className="agenda-attachment-list">
+                  {(taskAttachments[editingTask.id] || []).map((file) => (
+                    <span className="agenda-attachment-chip" key={file.id} title={`${file.name} · ${formatFileSize(file.size)}`}>
+                      <Icon name="paperclip" size={10} />
+                      <span>{file.name}</span>
+                      <button type="button" onClick={() => handleRemoveAttachment(editingTask.id, file.id)} aria-label={t("agRemoveAttachment")}>×</button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <p className="agenda-card-activity">
+              {t("agCreatedOn", formatShortDate(toDateKey(new Date(editingTask.created_at)), language))}
+              {editingTask.completed_at
+                ? ` · ${t("agCompletedOn", formatShortDate(toDateKey(new Date(editingTask.completed_at)), language))}`
+                : ""}
+              {editingTask.status === "pending" && editingTask.task_date < todayKey
+                ? ` · ${t("agDraggedFrom", formatShortDate(editingTask.task_date, language))}`
+                : ""}
+            </p>
+
+            <div className="agenda-report-actions">
+              <button className="secondary-button compact-action" type="button" onClick={closeTaskCard}>
+                {t("cancel")}
+              </button>
+              <button className="primary-button compact-action" type="button" onClick={handleSaveTaskCard} disabled={savingEdit}>
+                {savingEdit ? "…" : t("agSaveCard")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {reportOpen ? (
         <div className="agenda-modal-overlay" role="dialog" aria-modal="true">
