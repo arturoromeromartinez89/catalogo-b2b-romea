@@ -7,7 +7,7 @@ import DataValidationPage from "./pages/DataValidationPage";
 import QuotePage from "./pages/QuotePage";
 import { ImpersonationProvider, useImpersonation } from "./contexts/ImpersonationContext";
 import { LanguageProvider } from "./i18n/LanguageContext";
-import { isAdminRole, isSuperAdmin } from "./services/tenantUtils";
+import { isAdminRole, isComercialRole, isSuperAdmin } from "./services/tenantUtils";
 import { getAppPathname } from "./utils/basePath";
 
 const languageKey = "catalogo-b2b-language";
@@ -42,7 +42,7 @@ function AuthenticatedApp() {
           return <SuperAdminDashboard profile={profile} />;
         }
 
-        if (isAdminRole(profile?.role)) {
+        if (isAdminRole(profile?.role) || isComercialRole(profile?.role)) {
           return (
             <AdminDashboard
               profile={profile}
