@@ -2,7 +2,7 @@
 
 > Actualizar este documento en CADA entrega del módulo (commit, migración o deploy).
 
-## Última actualización: 2026-07-11 (v4: drag & drop de tarjetas entre días)
+## Última actualización: 2026-07-11 (v5: el tablero respeta la colocación manual; rescate de vencidas solo en la tabla de hoy)
 
 ## Base de datos (Supabase staging `vafqcvpzksjlrborxoos`)
 
@@ -46,7 +46,7 @@ Codex commiteado como `bc913f4` en `codex/fase0-cajita-consolidation` →
   (aditiva: item_type task/appointment, start_time, categoría 'viaje';
   comercial y viaje pueden llevar cliente; RLS sin cambios).
 - **Deploy vigente:** 2026-07-11, rama `claude/agenda-redesign` (commit `18ecfbf`),
-  bundle `assets/index-DRu5xpsX.js` (v4, commit `e0e5c25`). QA funcional 2026-07-11: 17/17 requisitos
+  bundle `assets/index-DRu5xpsX.js` (v5, commit `af55886`). QA funcional 2026-07-11: 17/17 requisitos
   verificados con cuentas temporales (admin/comercial/cliente), eliminadas al
   terminar; el rol client confirmado SIN acceso a la agenda.
 
