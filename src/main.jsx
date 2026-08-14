@@ -7,6 +7,7 @@ import { initSentry } from "./lib/sentry";
 import "./styles/tokens.css";
 import "./styles/buttons.css";
 import "./styles.css";
+import "./projectHub.css";
 
 // Inicializar monitoreo de errores antes del primer render.
 // Solo activo si VITE_SENTRY_DSN está definido en .env

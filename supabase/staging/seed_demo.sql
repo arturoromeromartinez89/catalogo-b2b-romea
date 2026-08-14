@@ -67,11 +67,80 @@ begin
       sort_order = excluded.sort_order;
 
   insert into public.profiles (id, email, role, tenant_id, active)
-  select id, email, 'tenant_admin', v_tenant, true
+  select id, email, 'superadmin', null, true
   from auth.users
   where email = 'staging-admin@romea.example'
   on conflict (id) do update
   set role = excluded.role,
-      tenant_id = excluded.tenant_id,
+      tenant_id = null,
+      client_id = null,
       active = true;
+end $$;
+
+-- Project Hub presentation data for the three initial NEXOR tenants.
+do $$
+declare
+  v_estuches uuid;
+  v_vanguardia uuid;
+  v_romea uuid;
+  v_project uuid;
+begin
+  insert into public.tenants (name, slug, status) values
+    ('Estuches Chávez', 'estuches-chavez', 'active'),
+    ('Vanguardia Joyera', 'vanguardia-joyera', 'active'),
+    ('ROMEA', 'romea', 'active')
+  on conflict (slug) do update set name = excluded.name, status = excluded.status;
+
+  select id into v_estuches from public.tenants where slug = 'estuches-chavez';
+  select id into v_vanguardia from public.tenants where slug = 'vanguardia-joyera';
+  select id into v_romea from public.tenants where slug = 'romea';
+
+  insert into public.projects (
+    tenant_id, name, description, status, health, progress_percentage,
+    current_phase_name, start_date, estimated_end_date, internal_owner_name, published
+  ) values (
+    v_estuches, 'Módulo de inventario',
+    'Control centralizado de existencias, entradas, salidas y trazabilidad de productos.',
+    'active', 'green', 28, 'Diseño funcional', '2026-08-10', '2026-09-18', 'Equipo NEXOR IA', true
+  ) on conflict (tenant_id, name) do update set
+    description = excluded.description, status = excluded.status, health = excluded.health,
+    progress_percentage = excluded.progress_percentage, current_phase_name = excluded.current_phase_name,
+    start_date = excluded.start_date, estimated_end_date = excluded.estimated_end_date,
+    internal_owner_name = excluded.internal_owner_name, published = true
+  returning id into v_project;
+
+  insert into public.project_phases (id, tenant_id, project_id, name, sort_order, status, progress_percentage, estimated_end_date) values
+    ('e1000000-0000-4000-8000-000000000001', v_estuches, v_project, 'Definición de alcance', 10, 'completed', 100, '2026-08-12'),
+    ('e1000000-0000-4000-8000-000000000002', v_estuches, v_project, 'Diseño funcional', 20, 'in_progress', 55, '2026-08-21'),
+    ('e1000000-0000-4000-8000-000000000003', v_estuches, v_project, 'Desarrollo', 30, 'pending', 0, '2026-09-04'),
+    ('e1000000-0000-4000-8000-000000000004', v_estuches, v_project, 'Pruebas y ajustes', 40, 'pending', 0, '2026-09-14'),
+    ('e1000000-0000-4000-8000-000000000005', v_estuches, v_project, 'Entrega inicial', 50, 'pending', 0, '2026-09-18')
+  on conflict (id) do update set name = excluded.name, sort_order = excluded.sort_order, status = excluded.status, progress_percentage = excluded.progress_percentage, estimated_end_date = excluded.estimated_end_date;
+
+  insert into public.project_updates (id, tenant_id, project_id, title, description, update_type, visible_to_client, created_at) values
+    ('e2000000-0000-4000-8000-000000000001', v_estuches, v_project, 'Alcance inicial definido', 'Se organizó el módulo en productos, existencias y movimientos para mantener una operación sencilla.', 'milestone', true, '2026-08-12 12:00:00+00'),
+    ('e2000000-0000-4000-8000-000000000002', v_estuches, v_project, 'Diseño funcional en proceso', 'Estamos preparando el flujo de entradas y salidas que se presentará para revisión.', 'progress', true, '2026-08-13 12:00:00+00'),
+    ('e2000000-0000-4000-8000-000000000003', v_estuches, v_project, 'Preparación del ambiente de pruebas', 'El desarrollo se validará en un ambiente separado antes de habilitarse en la operación real.', 'information', true, '2026-08-13 14:00:00+00')
+  on conflict (id) do update set title = excluded.title, description = excluded.description, update_type = excluded.update_type, visible_to_client = true;
+
+  insert into public.project_deliverables (id, tenant_id, project_id, name, description, status, estimated_delivery_date, visible_to_client) values
+    ('e3000000-0000-4000-8000-000000000001', v_estuches, v_project, 'Definición funcional', 'Flujos, reglas y alcance aprobado del módulo.', 'in_progress', '2026-08-21', true),
+    ('e3000000-0000-4000-8000-000000000002', v_estuches, v_project, 'Módulo de inventario MVP', 'Productos, existencias, entradas, salidas e historial.', 'pending', '2026-09-04', true),
+    ('e3000000-0000-4000-8000-000000000003', v_estuches, v_project, 'Entrega inicial', 'Versión aprobada y habilitada para Estuches Chávez.', 'pending', '2026-09-18', true)
+  on conflict (id) do update set name = excluded.name, description = excluded.description, status = excluded.status, estimated_delivery_date = excluded.estimated_delivery_date, visible_to_client = true;
+
+  insert into public.project_documents (id, tenant_id, project_id, document_type, name, description, visible_to_client) values
+    ('e4000000-0000-4000-8000-000000000001', v_estuches, v_project, 'scope', 'Resumen de alcance', 'Documento demostrativo pendiente de enlace.', true),
+    ('e4000000-0000-4000-8000-000000000002', v_estuches, v_project, 'proposal', 'Propuesta de implementación', 'Documento demostrativo pendiente de enlace.', true),
+    ('e4000000-0000-4000-8000-000000000003', v_estuches, v_project, 'contract', 'Contrato', 'Aún no asociado.', true)
+  on conflict (id) do update set name = excluded.name, description = excluded.description, visible_to_client = true;
+
+  insert into public.project_approvals (id, tenant_id, project_id, title, description, status, due_date, visible_to_client) values
+    ('e5000000-0000-4000-8000-000000000001', v_estuches, v_project, 'Confirmar catálogo inicial', 'Definir qué lista de productos se utilizará para cargar las existencias iniciales.', 'pending', '2026-08-21', true)
+  on conflict (id) do update set title = excluded.title, description = excluded.description, status = excluded.status, due_date = excluded.due_date, visible_to_client = true;
+
+  insert into public.projects (tenant_id, name, description, status, health, progress_percentage, current_phase_name, start_date, estimated_end_date, internal_owner_name, published) values
+    (v_vanguardia, 'Evolución del sistema comercial', 'Consolidación del catálogo B2B, preórdenes y operación comercial de Vanguardia Joyera y Rapana Jewelers.', 'active', 'green', 68, 'Validación operativa', '2026-06-02', '2026-09-05', 'Equipo NEXOR IA', true),
+    (v_romea, 'NEXOR IA para operación ROMEA', 'Implementación modular de catálogo, operación comercial y administración para la empresa joyera ROMEA.', 'active', 'yellow', 44, 'Desarrollo modular', '2026-07-15', '2026-10-02', 'Equipo NEXOR IA', true)
+  on conflict (tenant_id, name) do update set description = excluded.description, status = excluded.status, health = excluded.health, progress_percentage = excluded.progress_percentage, current_phase_name = excluded.current_phase_name, start_date = excluded.start_date, estimated_end_date = excluded.estimated_end_date, published = true;
 end $$;

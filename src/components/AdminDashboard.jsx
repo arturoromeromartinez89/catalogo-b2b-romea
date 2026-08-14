@@ -17,6 +17,7 @@ import { fetchTenantFeatures } from "../services/adminModuleService";
 // Tabs extraídos — step 1 del refactor progresivo
 import TenantsTab from "./tabs/TenantsTab";
 import InicioTab from "./tabs/InicioTab";
+import ProjectHub from "./ProjectHub";
 import CatalogTab from "./tabs/CatalogTab";
 import ClientsTab from "./tabs/ClientsTab";
 import ProspectsTab from "./tabs/ProspectsTab";
@@ -64,7 +65,7 @@ const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ci
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
 const PRODUCT_RENDER_BATCH = 60;
-const baseTabs = ["inicio", "catalog", "preorders", "orders", "clients", "prospects", "prices", "company", "database"];
+const baseTabs = ["inicio", "projectHub", "catalog", "preorders", "orders", "clients", "prospects", "prices", "company", "database"];
 const configurableOnlyTabs = ["components"];
 const adminModuleTabs = ["administracion"];
 // Navegación organizada por las preguntas del negocio, no por tablas.
@@ -84,6 +85,7 @@ const ADMIN_SUB_TABS = [
 const tabKeys = {
   tenants:       "tenants",
   inicio:        "inicio",
+  projectHub:    "projectHub",
   catalog:       "catalog",
   preorders:     "preorders",
   orders:        "orders",
@@ -98,6 +100,7 @@ const tabKeys = {
 const titleKeys = {
   tenants:       "tenants",
   inicio:        "inicio",
+  projectHub:    "projectHub",
   catalog:       "adminCatalog",
   preorders:     "preorders",
   orders:        "orders",
@@ -1552,6 +1555,14 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             configurableCatalogEnabled={configurableCatalogEnabled}
             clientFilter={preorderClientFilter}
             onClearClientFilter={() => setPreorderClientFilter(null)}
+          />
+        ) : null}
+
+        {tab === "projectHub" ? (
+          <ProjectHub
+            tenantId={tenantId}
+            tenantSlug={activeTenant?.slug || ""}
+            companyName={supportTenantName || activeTenant?.name || headerBrandName}
           />
         ) : null}
 

@@ -3,6 +3,7 @@ import LanguageToggle from "../LanguageToggle";
 import CompaniesPanel from "./CompaniesPanel";
 import MetricsPanel from "./MetricsPanel";
 import UsersPanel from "./UsersPanel";
+import ProjectHubManager from "./ProjectHubManager";
 import { supabase } from "../../lib/supabaseClient";
 import { fastSignOut } from "../../services/authService";
 import { fetchProfiles, fetchTenantMetrics, fetchTenants } from "../../services/tenantService";
@@ -11,6 +12,7 @@ import { useImpersonation } from "../../contexts/ImpersonationContext";
 const tabs = [
   { id: "companies", label: "Empresas" },
   { id: "users", label: "Usuarios" },
+  { id: "projectHub", label: "Project Hub" },
   { id: "metrics", label: "Métricas" },
 ];
 
@@ -109,6 +111,9 @@ export default function SuperAdminDashboard({ profile }) {
           ) : null}
           {tab === "metrics" ? (
             <MetricsPanel tenants={tenants} metrics={metrics} />
+          ) : null}
+          {tab === "projectHub" ? (
+            <ProjectHubManager tenants={tenants} profile={profile} />
           ) : null}
         </section>
       </main>

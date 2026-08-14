@@ -4,6 +4,7 @@ import AdminDashboard from "./components/AdminDashboard";
 import ClientCatalogApp from "./components/ClientCatalogApp";
 import SuperAdminDashboard from "./components/superadmin/SuperAdminDashboard";
 import QuotePage from "./pages/QuotePage";
+import ProjectHubDemoPage from "./pages/ProjectHubDemoPage";
 import { ImpersonationProvider, useImpersonation } from "./contexts/ImpersonationContext";
 import { LanguageProvider } from "./i18n/LanguageContext";
 import { isAdminRole, isSuperAdmin } from "./services/tenantUtils";
@@ -60,6 +61,7 @@ function AuthenticatedApp() {
 export default function App() {
   const [language, setLanguageState] = useState(readLanguage);
   const isPublicQuoteRoute = getAppPathname().startsWith("/cotizacion/");
+  const isProjectHubDemoRoute = getAppPathname() === "/demo/project-hub";
 
   const setLanguage = (nextLanguage) => {
     setLanguageState(nextLanguage);
@@ -74,7 +76,7 @@ export default function App() {
         </div>
       ) : null}
       <ImpersonationProvider>
-        {isPublicQuoteRoute ? <QuotePage /> : <AuthenticatedApp />}
+        {isProjectHubDemoRoute && isStaging ? <ProjectHubDemoPage /> : isPublicQuoteRoute ? <QuotePage /> : <AuthenticatedApp />}
       </ImpersonationProvider>
     </LanguageProvider>
   );
