@@ -2883,7 +2883,7 @@
 /* NEXOR client shell: clean masthead + collapsible icon sidebar */
 .project-hub-demo-shell {
   display: grid;
-  grid-template-rows: 116px minmax(0, 1fr);
+  grid-template-rows: 70px minmax(0, 1fr);
   height: 100dvh;
   inset: 0;
   overflow: hidden;
@@ -2897,8 +2897,8 @@
   box-shadow: 0 10px 34px rgba(11, 19, 48, .07) !important;
   display: flex;
   justify-content: flex-start;
-  min-height: 116px;
-  padding: 20px 34px;
+  min-height: 70px;
+  padding: 9px 24px;
   z-index: 40;
 }
 
@@ -2907,21 +2907,12 @@
   width: min(760px, 72vw);
 }
 
-.project-hub-demo-bar .nexor-brand__lockup {
-  color: var(--nexor-ink);
-  font-size: 60px;
-  letter-spacing: -.055em;
-}
-
-.project-hub-demo-bar .nexor-brand__glyph {
-  height: .96em;
-  width: .96em;
-}
-
-.project-hub-demo-bar .nexor-brand__ia {
-  color: #0b9d90;
-  font-size: .36em;
-  letter-spacing: .13em;
+.project-hub-demo-logo {
+  display: block;
+  height: 48px;
+  object-fit: contain;
+  object-position: left center;
+  width: auto;
 }
 
 .project-hub {
@@ -3193,9 +3184,9 @@
 }
 
 @media (max-width: 760px) {
-  .project-hub-demo-shell { grid-template-rows: 84px minmax(0, 1fr); }
-  .project-hub-demo-bar { min-height: 84px; padding: 15px 19px; }
-  .project-hub-demo-bar .nexor-brand__lockup { font-size: 39px; }
+  .project-hub-demo-shell { grid-template-rows: 58px minmax(0, 1fr); }
+  .project-hub-demo-bar { min-height: 58px; padding: 7px 14px; }
+  .project-hub-demo-logo { height: 38px; }
   .project-hub,
   .project-hub--sidebar-collapsed { grid-template-columns: 66px minmax(0, 1fr); }
   .project-hub__sidebar { padding: 12px 8px; }

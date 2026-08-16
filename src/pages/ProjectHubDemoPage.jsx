@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import ProjectHub from "../components/ProjectHub";
-import NexorBrand from "../components/branding/NexorBrand";
+import { withBasePath } from "../utils/basePath";
 
 const tenant = { slug: "estuches-chavez", name: "Estuches Chávez" };
 
@@ -14,7 +14,7 @@ export default function ProjectHubDemoPage() {
   return (
     <div className="project-hub-demo-shell project-hub-demo-shell--light">
       <header className="project-hub-demo-bar">
-        <NexorBrand />
+        <img className="project-hub-demo-logo" src={withBasePath("brand/nexor-ia_lockup_dark-on-transparent.svg")} alt="NEXOR IA" />
       </header>
       <ProjectHub tenantSlug={tenant.slug} companyName={tenant.name} theme="light" />
     </div>
