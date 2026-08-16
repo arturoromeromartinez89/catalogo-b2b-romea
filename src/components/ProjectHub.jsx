@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { fetchPublishedProject, respondToProjectApproval } from "../services/projectHubService";
+import ProjectWorkboard from "./ProjectWorkboard";
 
 const icon = (name) => {
   const paths = {
     overview: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
+    planning: <><path d="M4 6h16M4 12h16M4 18h16" /><path d="M8 4v4M15 10v4M11 16v4" /></>,
     roadmap: <><path d="M5 4v16" /><circle cx="5" cy="7" r="2" /><circle cx="5" cy="17" r="2" /><path d="M9 7h10M9 17h10" /></>,
     updates: <><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14l-4-3-4 3-4-3-4 3Z" /><path d="M8 7h8M8 11h5" /></>,
     deliverables: <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5M12 22V12" /></>,
@@ -63,6 +65,23 @@ const demoProjects = {
     approvals: [
       { title: "Confirmar catálogo inicial", description: "Definir qué lista de productos se utilizará para cargar las existencias iniciales.", dueDate: "21 ago 2026", status: "pending" },
     ],
+    objectives: [
+      { id: "obj-alcance", title: "Cerrar alcance funcional", description: "Acordar reglas, catálogo inicial y movimientos que debe cubrir el inventario.", periodLabel: "10–21 agosto", periodStart: "2026-08-10", periodEnd: "2026-08-21", status: "active", progress: 68 },
+      { id: "obj-mvp", title: "Construir el inventario MVP", description: "Entregar productos, existencias, entradas, salidas e historial en ambiente de pruebas.", periodLabel: "24 agosto–4 septiembre", periodStart: "2026-08-24", periodEnd: "2026-09-04", status: "planned", progress: 18 },
+      { id: "obj-validacion", title: "Validar y preparar entrega", description: "Probar con usuarios, resolver ajustes y dejar lista la primera liberación.", periodLabel: "7–18 septiembre", periodStart: "2026-09-07", periodEnd: "2026-09-18", status: "planned", progress: 0 },
+    ],
+    tasks: [
+      { id: "task-1", objectiveId: "obj-alcance", title: "Mapear movimientos de inventario", description: "Documentar entradas, salidas, ajustes y responsables.", status: "done", priority: "high", startDate: "2026-08-10", dueDate: "2026-08-12", progress: 100, assignee: "NEXOR IA", sortOrder: 10, comments: [], attachments: [] },
+      { id: "task-2", objectiveId: "obj-alcance", title: "Diseñar entradas y salidas", description: "Prototipo del flujo operativo para revisión del cliente.", status: "in_progress", priority: "high", startDate: "2026-08-13", dueDate: "2026-08-18", progress: 65, assignee: "Diseño NEXOR", sortOrder: 20, comments: [{ id: "comment-demo", body: "El flujo inicial ya contempla ajuste por merma y devolución.", author: "Equipo NEXOR IA", createdAt: "2026-08-15" }], attachments: [] },
+      { id: "task-3", objectiveId: "obj-alcance", title: "Validar catálogo inicial", description: "Confirmar campos, familias y archivo de carga inicial.", status: "review", priority: "critical", startDate: "2026-08-17", dueDate: "2026-08-21", progress: 55, assignee: "Estuches Chávez", sortOrder: 30, comments: [], attachments: [] },
+      { id: "task-4", objectiveId: "obj-mvp", title: "Construir catálogo de productos", description: "Alta, edición, búsqueda y clasificación de productos.", status: "todo", priority: "high", startDate: "2026-08-24", dueDate: "2026-08-28", progress: 0, assignee: "Desarrollo NEXOR", sortOrder: 40, comments: [], attachments: [] },
+      { id: "task-5", objectiveId: "obj-mvp", title: "Programar existencias y movimientos", description: "Cálculo de stock e historial auditable por producto.", status: "backlog", priority: "critical", startDate: "2026-08-27", dueDate: "2026-09-02", progress: 0, assignee: "Desarrollo NEXOR", sortOrder: 50, comments: [], attachments: [] },
+      { id: "task-6", objectiveId: "obj-mvp", title: "Preparar ambiente de pruebas", description: "Instancia separada para revisión sin afectar la operación.", status: "in_progress", priority: "medium", startDate: "2026-08-24", dueDate: "2026-08-26", progress: 35, assignee: "NEXOR IA", sortOrder: 60, comments: [], attachments: [] },
+      { id: "task-7", objectiveId: "obj-validacion", title: "Cargar inventario inicial", description: "Importar y conciliar las existencias proporcionadas.", status: "todo", priority: "high", startDate: "2026-09-07", dueDate: "2026-09-09", progress: 0, assignee: "NEXOR IA", sortOrder: 70, comments: [], attachments: [] },
+      { id: "task-8", objectiveId: "obj-validacion", title: "Ejecutar pruebas con usuarios", description: "Sesión guiada y registro de hallazgos por prioridad.", status: "todo", priority: "high", startDate: "2026-09-10", dueDate: "2026-09-14", progress: 0, assignee: "Equipo conjunto", sortOrder: 80, comments: [], attachments: [] },
+      { id: "task-9", objectiveId: "obj-validacion", title: "Resolver ajustes de aceptación", description: "Corregir hallazgos críticos antes de liberar.", status: "backlog", priority: "medium", startDate: "2026-09-15", dueDate: "2026-09-17", progress: 0, assignee: "Desarrollo NEXOR", sortOrder: 90, comments: [], attachments: [] },
+      { id: "task-10", objectiveId: "obj-validacion", title: "Autorizar entrega inicial", description: "Confirmar la versión aprobada y fecha de activación.", status: "backlog", priority: "critical", startDate: "2026-09-18", dueDate: "2026-09-18", progress: 0, assignee: "Estuches Chávez", sortOrder: 100, comments: [], attachments: [] },
+    ],
   },
   "vanguardia-joyera": {
     name: "Evolución del sistema comercial",
@@ -116,6 +135,20 @@ const genericDocuments = [
   { name: "Resumen ejecutivo", type: "scope", date: "08 ago 2026", status: "available" },
   { name: "Propuesta de implementación", type: "proposal", date: "08 ago 2026", status: "available" },
   { name: "Contrato", type: "contract", date: "—", status: "pending" },
+];
+
+const genericObjectives = [
+  { id: "generic-discovery", title: "Definir y aprobar alcance", description: "Alinear los flujos, reglas y prioridades de la primera entrega.", periodLabel: "Periodo 1", periodStart: "2026-08-10", periodEnd: "2026-08-21", status: "completed", progress: 100 },
+  { id: "generic-build", title: "Construir módulos prioritarios", description: "Desarrollar y demostrar el bloque funcional acordado.", periodLabel: "Periodo 2", periodStart: "2026-08-24", periodEnd: "2026-09-11", status: "active", progress: 48 },
+  { id: "generic-release", title: "Validar y liberar", description: "Completar pruebas, ajustes y entrega controlada.", periodLabel: "Periodo 3", periodStart: "2026-09-14", periodEnd: "2026-10-02", status: "planned", progress: 0 },
+];
+
+const genericTasks = [
+  { id: "generic-task-1", objectiveId: "generic-discovery", title: "Confirmar alcance funcional", description: "Revisar reglas y prioridades de implementación.", status: "done", priority: "high", startDate: "2026-08-10", dueDate: "2026-08-14", progress: 100, assignee: "Equipo conjunto", sortOrder: 10, comments: [], attachments: [] },
+  { id: "generic-task-2", objectiveId: "generic-build", title: "Desarrollar flujo principal", description: "Construir el primer bloque funcional demostrable.", status: "in_progress", priority: "high", startDate: "2026-08-24", dueDate: "2026-09-04", progress: 62, assignee: "NEXOR IA", sortOrder: 20, comments: [], attachments: [] },
+  { id: "generic-task-3", objectiveId: "generic-build", title: "Revisión interna de calidad", description: "Validar reglas, permisos y comportamiento del módulo.", status: "review", priority: "medium", startDate: "2026-09-03", dueDate: "2026-09-11", progress: 35, assignee: "NEXOR IA", sortOrder: 30, comments: [], attachments: [] },
+  { id: "generic-task-4", objectiveId: "generic-release", title: "Pruebas con usuarios", description: "Ejecutar escenarios reales y registrar ajustes.", status: "todo", priority: "high", startDate: "2026-09-14", dueDate: "2026-09-23", progress: 0, assignee: "Equipo conjunto", sortOrder: 40, comments: [], attachments: [] },
+  { id: "generic-task-5", objectiveId: "generic-release", title: "Preparar liberación", description: "Cerrar pendientes y autorizar la versión inicial.", status: "backlog", priority: "critical", startDate: "2026-09-24", dueDate: "2026-10-02", progress: 0, assignee: "NEXOR IA", sortOrder: 50, comments: [], attachments: [] },
 ];
 
 const normalizeSlug = (value) => String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -193,13 +226,40 @@ const projectFromDatabase = (record) => {
       status: item.status,
       clientComment: item.client_comment,
     })),
+    objectives: (record.project_objectives || []).filter((item) => item.visible_to_client !== false).map((item) => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      periodLabel: item.period_label,
+      periodStart: item.period_start,
+      periodEnd: item.period_end,
+      status: item.status,
+      progress: Number(item.progress_percentage || 0),
+      sortOrder: Number(item.sort_order || 0),
+    })),
+    tasks: (record.project_tasks || []).filter((item) => item.visible_to_client !== false).map((item) => ({
+      id: item.id,
+      objectiveId: item.objective_id,
+      phaseId: item.phase_id,
+      title: item.title,
+      description: item.description,
+      status: item.status,
+      priority: item.priority,
+      startDate: item.start_date,
+      dueDate: item.due_date,
+      progress: Number(item.progress_percentage || 0),
+      assignee: item.assignee_name,
+      sortOrder: Number(item.sort_order || 0),
+      comments: (item.project_task_comments || []).filter((comment) => comment.visible_to_client !== false).map((comment) => ({ id: comment.id, body: comment.body, createdAt: comment.created_at, author: "Equipo del proyecto" })),
+      attachments: (item.project_task_attachments || []).filter((attachment) => attachment.visible_to_client !== false).map((attachment) => ({ id: attachment.id, fileName: attachment.file_name, storagePath: attachment.storage_path, mimeType: attachment.mime_type, fileSize: attachment.file_size, createdAt: attachment.created_at })),
+    })),
   };
 };
 
 export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName = "", theme = "light" }) {
   const { t } = useLanguage();
   const portalTheme = theme === "dark" ? "dark" : "light";
-  const [section, setSection] = useState("overview");
+  const [section, setSection] = useState("planning");
   const [previewNotice, setPreviewNotice] = useState("");
   const [databaseProject, setDatabaseProject] = useState(null);
   const [loading, setLoading] = useState(Boolean(tenantId));
@@ -234,6 +294,8 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
       deliverables: base.deliverables || genericDeliverables,
       documents: base.documents || genericDocuments,
       approvals: base.approvals || [],
+      objectives: base.objectives || genericObjectives,
+      tasks: base.tasks || genericTasks,
     };
   }, [tenantSlug, companyName]);
 
@@ -251,7 +313,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
     return <section className={`project-hub project-hub--${portalTheme}`}><div className="project-hub-state"><div className="project-empty project-empty--page"><i>{icon("roadmap")}</i><strong>{t("phNoPublishedProject")}</strong><p>{t("phNoPublishedProjectHelp")}</p></div></div></section>;
   }
 
-  const nav = ["overview", "roadmap", "updates", "deliverables", "documents", "approvals"];
+  const nav = ["planning", "overview", "roadmap", "updates", "deliverables", "documents", "approvals"];
   const remaining = daysUntil(project.endDate);
   const pendingApprovals = project.approvals.filter((item) => item.status === "pending").length;
   const healthLabel = project.health === "green" ? t("phOnTrack") : project.health === "yellow" ? t("phAttention") : t("phAtRisk");
@@ -315,6 +377,8 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
       </nav>
 
       {previewNotice ? <div className="project-hub__toast" role="status">{previewNotice}</div> : null}
+
+      {section === "planning" ? <ProjectWorkboard project={project} tenantId={tenantId} onReload={loadProject} onNotice={showPreviewNotice} /> : null}
 
       {section === "overview" ? (
         <div className="project-hub__overview">

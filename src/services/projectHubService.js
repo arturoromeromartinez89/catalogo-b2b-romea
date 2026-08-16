@@ -6,6 +6,8 @@ const childTables = new Set([
   "project_deliverables",
   "project_documents",
   "project_approvals",
+  "project_objectives",
+  "project_tasks",
 ]);
 
 const throwIfError = ({ error }) => {
@@ -21,6 +23,14 @@ const sortProjectChildren = (project) => {
     project_deliverables: [...(project.project_deliverables || [])].sort((a, b) => String(a.estimated_delivery_date || "9999").localeCompare(String(b.estimated_delivery_date || "9999"))),
     project_documents: [...(project.project_documents || [])].sort((a, b) => String(a.document_type).localeCompare(String(b.document_type))),
     project_approvals: [...(project.project_approvals || [])].sort((a, b) => String(a.due_date || "9999").localeCompare(String(b.due_date || "9999"))),
+    project_objectives: [...(project.project_objectives || [])].sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || String(a.period_start).localeCompare(String(b.period_start))),
+    project_tasks: [...(project.project_tasks || [])]
+      .map((task) => ({
+        ...task,
+        project_task_comments: [...(task.project_task_comments || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
+        project_task_attachments: [...(task.project_task_attachments || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
+      }))
+      .sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || String(a.due_date || "9999").localeCompare(String(b.due_date || "9999"))),
   };
 };
 
@@ -30,7 +40,9 @@ const projectSelection = `
   project_updates(*),
   project_deliverables(*),
   project_documents(*),
-  project_approvals(*)
+  project_approvals(*),
+  project_objectives(*),
+  project_tasks(*, project_task_comments(*), project_task_attachments(*))
 `;
 
 export const fetchPublishedProject = async (tenantId) => {
@@ -88,10 +100,15 @@ export const saveProjectChild = async (table, item, tenantId, projectId, userId 
   Object.keys(payload).forEach((key) => {
     if ((key.endsWith("_date") || key.endsWith("_at")) && payload[key] === "") payload[key] = null;
   });
+  if (payload.period_start === "") payload.period_start = null;
+  if (payload.period_end === "") payload.period_end = null;
+  if (payload.objective_id === "") payload.objective_id = null;
+  if (payload.phase_id === "") payload.phase_id = null;
   if (payload.external_url === "") payload.external_url = null;
   if (!payload.id) delete payload.id;
   if (["project_updates", "project_documents"].includes(table) && !payload.id && userId) payload.created_by = userId;
   if (table === "project_approvals" && !payload.id && userId) payload.requested_by = userId;
+  if (table === "project_tasks" && !payload.id && userId) payload.created_by = userId;
   const { data, error } = await supabase.from(table).upsert(payload).select("*").single();
   if (error) throw error;
   return data;
@@ -111,4 +128,91 @@ export const respondToProjectApproval = async (approvalId, status, comment = "")
   });
   if (error) throw error;
   return data;
+};
+
+export const moveProjectTask = async (taskId, status, sortOrder = 0) => {
+  const { data, error } = await supabase.rpc("move_project_task", {
+    p_task_id: taskId,
+    p_status: status,
+    p_sort_order: Number(sortOrder || 0),
+  });
+  if (error) throw error;
+  return data;
+};
+
+const currentUserId = async () => {
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  if (!data?.user?.id) throw new Error("Necesitas iniciar sesión para interactuar con esta tarea.");
+  return data.user.id;
+};
+
+export const addProjectTaskComment = async ({ tenantId, projectId, taskId, body }) => {
+  const createdBy = await currentUserId();
+  const { data, error } = await supabase
+    .from("project_task_comments")
+    .insert({
+      tenant_id: tenantId,
+      project_id: projectId,
+      task_id: taskId,
+      body: String(body || "").trim(),
+      created_by: createdBy,
+      visible_to_client: true,
+    })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+const safeFileName = (name) => String(name || "archivo")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/[^a-zA-Z0-9._-]+/g, "-")
+  .replace(/^-+|-+$/g, "")
+  .slice(0, 140) || "archivo";
+
+export const uploadProjectTaskAttachment = async ({ tenantId, projectId, taskId, file }) => {
+  if (!file) throw new Error("Selecciona un archivo.");
+  if (file.size > 26214400) throw new Error("El archivo no puede superar 25 MB.");
+  const createdBy = await currentUserId();
+  const storagePath = `${tenantId}/${projectId}/${taskId}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
+  const { data: attachment, error: metadataError } = await supabase
+    .from("project_task_attachments")
+    .insert({
+      tenant_id: tenantId,
+      project_id: projectId,
+      task_id: taskId,
+      file_name: String(file.name || "archivo").slice(0, 240),
+      storage_path: storagePath,
+      mime_type: file.type || "application/octet-stream",
+      file_size: file.size || 0,
+      created_by: createdBy,
+      visible_to_client: true,
+    })
+    .select("*")
+    .single();
+  if (metadataError) throw metadataError;
+
+  const { error: uploadError } = await supabase.storage
+    .from("project-hub-files")
+    .upload(storagePath, file, { contentType: file.type || "application/octet-stream", upsert: false });
+  if (uploadError) {
+    await supabase.from("project_task_attachments").delete().eq("id", attachment.id);
+    throw uploadError;
+  }
+  return attachment;
+};
+
+export const createTaskAttachmentUrl = async (storagePath) => {
+  const { data, error } = await supabase.storage.from("project-hub-files").createSignedUrl(storagePath, 300);
+  if (error) throw error;
+  return data.signedUrl;
+};
+
+export const deleteProjectTaskAttachment = async (attachment) => {
+  const { error: storageError } = await supabase.storage.from("project-hub-files").remove([attachment.storage_path]);
+  if (storageError) throw storageError;
+  const { error } = await supabase.from("project_task_attachments").delete().eq("id", attachment.id);
+  if (error) throw error;
 };
