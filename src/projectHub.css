@@ -1250,6 +1250,599 @@
   .ph-manager__span-2 { grid-column: auto; }
 }
 
+/* NEXOR IA — Nodo · Bóveda segura --------------------------------------- */
+.project-hub-demo-shell {
+  background:
+    radial-gradient(circle at 82% 2%, rgba(79, 123, 255, 0.16), transparent 34%),
+    radial-gradient(circle at 12% 70%, rgba(47, 227, 208, 0.07), transparent 30%),
+    var(--nexor-ink-deep);
+  color: var(--nexor-fog);
+  font-family: var(--nexor-text);
+}
+
+.project-hub-demo-bar {
+  background: rgba(7, 13, 34, 0.92);
+  border-bottom: 1px solid var(--nexor-line);
+  min-height: 86px;
+  padding: 16px clamp(20px, 4vw, 48px);
+  position: relative;
+}
+
+.project-hub-demo-bar::after {
+  background: linear-gradient(90deg, var(--nexor-signal), var(--nexor-link), transparent 78%);
+  bottom: -1px;
+  content: "";
+  height: 1px;
+  left: 0;
+  opacity: 0.75;
+  position: absolute;
+  width: min(620px, 70vw);
+}
+
+.project-hub-demo-bar__context {
+  align-items: center;
+  display: flex;
+  gap: 24px;
+}
+
+.project-hub-demo-bar__context > span {
+  align-items: center;
+  color: var(--nexor-signal);
+  display: inline-flex;
+  font-family: var(--nexor-display);
+  font-size: 10px;
+  font-weight: 600;
+  gap: 7px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.project-hub-demo-bar__context > span i {
+  background: var(--nexor-signal);
+  border-radius: 50%;
+  box-shadow: 0 0 14px rgba(47, 227, 208, 0.8);
+  height: 6px;
+  width: 6px;
+}
+
+.project-hub-demo-bar__context label {
+  color: var(--nexor-muted-bright);
+  font-family: var(--nexor-text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.project-hub-demo-bar select {
+  background: var(--nexor-card);
+  border: 1px solid var(--nexor-line);
+  border-radius: 10px;
+  color: var(--nexor-fog);
+  font-family: var(--nexor-text);
+  min-width: 210px;
+  outline: none;
+  padding: 10px 34px 10px 12px;
+}
+
+.project-hub-demo-bar select:focus {
+  border-color: var(--nexor-signal);
+  box-shadow: 0 0 0 3px var(--nexor-signal-soft);
+}
+
+.project-hub {
+  background:
+    linear-gradient(rgba(120, 140, 210, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 140, 210, 0.035) 1px, transparent 1px),
+    transparent;
+  background-size: 42px 42px;
+  color: var(--nexor-fog);
+  font-family: var(--nexor-text);
+  gap: 20px;
+  padding: clamp(22px, 3vw, 36px);
+}
+
+.project-hub__preview {
+  background: linear-gradient(90deg, var(--nexor-link-soft), rgba(47, 227, 208, 0.04));
+  border: 1px solid rgba(79, 123, 255, 0.3);
+  border-radius: 12px;
+  color: var(--nexor-muted-bright);
+}
+
+.project-hub__preview span {
+  background: var(--nexor-link);
+  border-radius: 8px;
+  color: #07112f;
+  letter-spacing: 0.08em;
+}
+
+.project-hub__heading {
+  max-width: 900px;
+}
+
+.project-hub__eyebrow,
+.project-panel header span,
+.project-section-page > header > p {
+  color: var(--nexor-signal);
+  font-family: var(--nexor-display);
+  letter-spacing: 0.16em;
+}
+
+.project-hub__title-row h1,
+.project-panel header h2,
+.project-section-page > header h2,
+.project-hub__metric strong,
+.project-phase-card h3,
+.project-deliverable h3,
+.project-document h3,
+.project-approval h3 {
+  color: var(--nexor-fog);
+  font-family: var(--nexor-display);
+}
+
+.project-hub__title-row h1 {
+  font-size: clamp(30px, 4vw, 46px);
+  letter-spacing: -0.04em;
+}
+
+.project-hub__heading > p:last-child,
+.project-section-page > header > span {
+  color: var(--nexor-muted-bright);
+}
+
+.project-hub__active-badge {
+  background: var(--nexor-signal-soft);
+  border: 1px solid rgba(47, 227, 208, 0.32);
+  color: var(--nexor-signal);
+  letter-spacing: 0.04em;
+}
+
+.project-hub .secondary-button,
+.project-hub .primary-button {
+  border-radius: 10px;
+  font-family: var(--nexor-text);
+  font-weight: 600;
+}
+
+.project-hub .secondary-button {
+  background: rgba(15, 26, 64, 0.82);
+  border: 1px solid var(--nexor-line);
+  color: var(--nexor-fog);
+}
+
+.project-hub .secondary-button:hover:not(:disabled) {
+  background: var(--nexor-slate);
+  border-color: rgba(47, 227, 208, 0.4);
+  color: var(--nexor-signal);
+}
+
+.project-hub .primary-button {
+  background: var(--nexor-signal);
+  border-color: var(--nexor-signal);
+  color: #06231f;
+}
+
+.project-hub .primary-button:hover:not(:disabled) {
+  background: #6df3e5;
+  border-color: #6df3e5;
+}
+
+.project-hub__nav {
+  background: rgba(15, 26, 64, 0.84);
+  border: 1px solid var(--nexor-line);
+  border-radius: 14px;
+  box-shadow: 0 18px 48px -36px rgba(47, 227, 208, 0.55);
+  scrollbar-color: var(--nexor-slate) transparent;
+}
+
+.project-hub__nav button {
+  color: var(--nexor-muted-bright);
+  min-height: 48px;
+}
+
+.project-hub__nav button:hover {
+  color: var(--nexor-fog);
+}
+
+.project-hub__nav button.active {
+  border-bottom-color: var(--nexor-signal);
+  color: var(--nexor-signal);
+}
+
+.project-hub__nav button > span {
+  background: rgba(255, 190, 92, 0.14);
+  color: #ffd68b;
+}
+
+.project-hub__toast {
+  background: var(--nexor-slate);
+  border: 1px solid rgba(47, 227, 208, 0.35);
+  box-shadow: 0 20px 60px rgba(4, 10, 30, 0.55);
+  color: var(--nexor-fog);
+}
+
+.project-hub__metric,
+.project-panel,
+.project-section-page,
+.project-phase-card,
+.project-deliverable,
+.project-document,
+.project-approval,
+.project-hub-state {
+  background: linear-gradient(150deg, rgba(20, 36, 92, 0.88), rgba(15, 26, 64, 0.94));
+  border: 1px solid var(--nexor-line);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px -42px rgba(47, 227, 208, 0.45), inset 0 1px 0 rgba(234, 240, 255, 0.025);
+}
+
+.project-hub__metric {
+  min-height: 142px;
+  overflow: hidden;
+  position: relative;
+}
+
+.project-hub__metric::after {
+  background: var(--nexor-signal);
+  content: "";
+  height: 44px;
+  opacity: 0.08;
+  position: absolute;
+  right: -22px;
+  top: -22px;
+  transform: rotate(45deg);
+  width: 88px;
+}
+
+.project-hub__metric > span,
+.project-hub__metric small,
+.project-phase-card span,
+.project-phase-card p,
+.project-deliverable p,
+.project-deliverable small,
+.project-document span,
+.project-document small,
+.project-approval p,
+.project-approval small,
+.project-update p,
+.project-approval-preview p,
+.project-update small,
+.project-approval-preview small,
+.project-week__item small,
+.project-timeline__item small,
+.project-timeline__item p,
+.project-empty,
+.project-hub-state p {
+  color: var(--nexor-muted-bright);
+}
+
+.project-hub__metric > span {
+  font-family: var(--nexor-display);
+  letter-spacing: 0.1em;
+}
+
+.project-hub__metric strong {
+  color: var(--nexor-fog);
+  font-size: 38px;
+}
+
+.project-hub__metric--progress strong {
+  color: var(--nexor-signal);
+}
+
+.project-hub__metric--attention {
+  background: linear-gradient(150deg, rgba(92, 58, 20, 0.65), rgba(40, 34, 42, 0.9));
+  border-color: rgba(255, 190, 92, 0.36);
+}
+
+.project-hub__metric--attention strong,
+.project-hub__metric--attention > span,
+.project-hub__metric--attention small {
+  color: #ffd68b;
+}
+
+.project-progress {
+  background: rgba(126, 139, 181, 0.18);
+}
+
+.project-progress i {
+  background: linear-gradient(90deg, var(--nexor-signal), var(--nexor-link));
+  box-shadow: 0 0 16px rgba(47, 227, 208, 0.45);
+}
+
+.project-health {
+  background: rgba(15, 26, 64, 0.76);
+  border: 1px solid var(--nexor-line);
+  border-left: 3px solid var(--nexor-signal);
+}
+
+.project-health--yellow {
+  border-left-color: #ffbe5c;
+}
+
+.project-health--red {
+  border-left-color: #ff7285;
+}
+
+.project-health__status i {
+  background: var(--nexor-signal);
+  box-shadow: 0 0 13px rgba(47, 227, 208, 0.7);
+}
+
+.project-health--yellow .project-health__status i {
+  background: #ffbe5c;
+  box-shadow: 0 0 13px rgba(255, 190, 92, 0.55);
+}
+
+.project-health--red .project-health__status i {
+  background: #ff7285;
+  box-shadow: 0 0 13px rgba(255, 114, 133, 0.55);
+}
+
+.project-health__status span,
+.project-health__dates {
+  color: var(--nexor-muted-bright);
+}
+
+.project-health__status strong,
+.project-health__dates strong,
+.project-week__item > span,
+.project-update strong,
+.project-approval-preview strong,
+.project-empty strong {
+  color: var(--nexor-fog);
+}
+
+.project-panel > header,
+.project-section-page > header {
+  border-color: var(--nexor-line);
+}
+
+.project-panel header button,
+.project-document__icon {
+  color: var(--nexor-link);
+}
+
+.project-roadmap-preview__step::before,
+.project-timeline__item::before,
+.project-week__item {
+  border-color: var(--nexor-line);
+}
+
+.project-roadmap-preview__step::before,
+.project-timeline__item::before {
+  background: var(--nexor-line);
+}
+
+.project-roadmap-preview__step--completed::before,
+.project-roadmap-preview__step--in_progress::before {
+  background: linear-gradient(90deg, var(--nexor-link), var(--nexor-signal));
+}
+
+.project-roadmap-preview__marker,
+.project-phase-card__number,
+.project-deliverable__icon,
+.project-document__icon {
+  background: rgba(126, 139, 181, 0.08);
+  border-color: var(--nexor-muted);
+  color: var(--nexor-muted-bright);
+}
+
+.project-roadmap-preview__step--completed .project-roadmap-preview__marker {
+  background: var(--nexor-signal);
+  border-color: var(--nexor-signal);
+  color: #06231f;
+}
+
+.project-roadmap-preview__step--in_progress .project-roadmap-preview__marker {
+  border-color: var(--nexor-link);
+  box-shadow: 0 0 0 4px var(--nexor-link-soft);
+  color: var(--nexor-link);
+}
+
+.project-roadmap-preview__step > span {
+  color: var(--nexor-muted-bright);
+}
+
+.project-week__item i {
+  border-color: var(--nexor-muted);
+  color: #06231f;
+}
+
+.project-week__item--completed i {
+  background: var(--nexor-signal);
+  border-color: var(--nexor-signal);
+}
+
+.project-week__item--in_progress i {
+  background: var(--nexor-link);
+  border-color: var(--nexor-link);
+  box-shadow: inset 0 0 0 4px var(--nexor-card);
+}
+
+.project-update > i,
+.project-timeline__item > i {
+  background: var(--nexor-link);
+}
+
+.project-update--milestone > i,
+.project-timeline__item--milestone > i {
+  background: var(--nexor-signal);
+}
+
+.project-timeline__item > i {
+  border-color: var(--nexor-card);
+  box-shadow: 0 0 0 2px var(--nexor-link-soft);
+}
+
+.project-timeline__item--milestone > i {
+  box-shadow: 0 0 0 2px var(--nexor-signal-soft);
+}
+
+.project-needs--pending,
+.project-approval {
+  border-top-color: #ffbe5c;
+}
+
+.project-approval {
+  border-left-color: #ffbe5c;
+}
+
+.project-empty > i,
+.project-phase-card--completed .project-phase-card__number,
+.project-deliverable__icon--delivered,
+.project-deliverable__icon--approved {
+  background: var(--nexor-signal-soft);
+  color: var(--nexor-signal);
+}
+
+.project-phase-card--in_progress {
+  border-left-color: var(--nexor-link);
+}
+
+.project-phase-card--in_progress .project-phase-card__number {
+  background: var(--nexor-link-soft);
+  color: var(--nexor-link);
+}
+
+.project-status--pending {
+  background: rgba(126, 139, 181, 0.12);
+  color: var(--nexor-muted-bright);
+}
+
+.project-status--in_progress {
+  background: var(--nexor-link-soft);
+  color: #9ab2ff;
+}
+
+.project-status--delivered,
+.project-status--approved,
+.project-status--completed {
+  background: var(--nexor-signal-soft);
+  color: var(--nexor-signal);
+}
+
+.project-approval__response textarea,
+.ph-manager input,
+.ph-manager select,
+.ph-manager textarea {
+  background: rgba(7, 13, 34, 0.75);
+  border: 1px solid var(--nexor-line);
+  color: var(--nexor-fog);
+  font-family: var(--nexor-text);
+}
+
+.project-approval__response textarea::placeholder,
+.ph-manager input::placeholder,
+.ph-manager textarea::placeholder {
+  color: var(--nexor-muted);
+}
+
+.project-approval__response textarea:focus,
+.ph-manager input:focus,
+.ph-manager select:focus,
+.ph-manager textarea:focus {
+  border-color: var(--nexor-signal);
+  box-shadow: 0 0 0 3px var(--nexor-signal-soft);
+  outline: none;
+}
+
+.project-approval__comment {
+  background: rgba(79, 123, 255, 0.08);
+  border-left-color: var(--nexor-link);
+}
+
+/* NEXOR Studio inherits the same operating-system identity. */
+.ph-manager {
+  background: var(--nexor-ink);
+  border: 1px solid var(--nexor-line);
+  border-radius: 18px;
+  color: var(--nexor-fog);
+  font-family: var(--nexor-text);
+  padding: clamp(18px, 3vw, 30px);
+}
+
+.ph-manager__header h2,
+.ph-manager__card h3,
+.ph-manager__child-form h4 {
+  color: var(--nexor-fog);
+  font-family: var(--nexor-display);
+}
+
+.ph-manager__header span,
+.ph-manager label,
+.ph-manager__projects > button span,
+.ph-manager__projects > button small,
+.ph-manager__child-item span,
+.ph-manager__child-item small {
+  color: var(--nexor-muted-bright);
+}
+
+.ph-manager__projects,
+.ph-manager__card,
+.ph-manager__child-list,
+.ph-manager__child-form {
+  background: linear-gradient(150deg, rgba(20, 36, 92, 0.84), rgba(15, 26, 64, 0.94));
+  border-color: var(--nexor-line);
+  box-shadow: none;
+}
+
+.ph-manager__projects > button:not(.secondary-button),
+.ph-manager__child-item {
+  background: rgba(7, 13, 34, 0.42);
+  border-color: var(--nexor-line);
+  color: var(--nexor-fog);
+}
+
+.ph-manager__projects > button.active,
+.ph-manager__section-tabs button.active {
+  background: var(--nexor-signal-soft);
+  border-color: rgba(47, 227, 208, 0.34);
+  color: var(--nexor-signal);
+}
+
+.ph-manager__section-tabs {
+  background: rgba(7, 13, 34, 0.42);
+  border-color: var(--nexor-line);
+}
+
+.ph-manager__section-tabs button {
+  color: var(--nexor-muted-bright);
+}
+
+@media (max-width: 700px) {
+  .project-hub-demo-bar {
+    gap: 16px;
+    min-height: 0;
+    padding: 16px 18px;
+  }
+
+  .project-hub-demo-bar__context {
+    align-items: stretch;
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+
+  .project-hub-demo-bar__context > span {
+    align-self: flex-start;
+  }
+
+  .project-hub-demo-bar__context label,
+  .project-hub-demo-bar select {
+    width: 100%;
+  }
+
+  .project-hub {
+    background-size: 30px 30px;
+    padding: 18px 16px 28px;
+  }
+
+  .project-hub__title-row h1 {
+    font-size: 30px;
+  }
+
+  .project-hub__preview span {
+    align-self: flex-start;
+  }
+}
+
 @media (max-width: 1100px) {
   .project-hub__metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -1,0 +1,91 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+:root {
+  --nexor-ink: #0b1330;
+  --nexor-ink-deep: #070d22;
+  --nexor-slate: #1e2a54;
+  --nexor-signal: #2fe3d0;
+  --nexor-link: #4f7bff;
+  --nexor-fog: #eaf0ff;
+  --nexor-muted: #7e8bb5;
+  --nexor-muted-bright: #a8b5d8;
+  --nexor-card: #0f1a40;
+  --nexor-card-raised: #14245c;
+  --nexor-line: rgba(120, 140, 210, 0.18);
+  --nexor-signal-soft: rgba(47, 227, 208, 0.12);
+  --nexor-link-soft: rgba(79, 123, 255, 0.14);
+  --nexor-display: "Space Grotesk", Inter, system-ui, sans-serif;
+  --nexor-text: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.nexor-brand {
+  align-items: flex-start;
+  color: var(--nexor-fog);
+  display: inline-flex;
+  flex-direction: column;
+  font-family: var(--nexor-text);
+}
+
+.nexor-brand__lockup {
+  align-items: center;
+  display: flex;
+  font-family: var(--nexor-display);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+  white-space: nowrap;
+}
+
+.nexor-brand__glyph {
+  color: var(--nexor-muted);
+  height: 0.9em;
+  transform: translateY(0.03em);
+  width: 0.9em;
+}
+
+.nexor-brand__ia {
+  color: var(--nexor-signal);
+  font-size: 0.4em;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  margin-left: 0.24em;
+  transform: translateY(-0.02em);
+}
+
+.nexor-brand__subtitle {
+  color: var(--nexor-muted-bright);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+
+.nexor-brand__handle {
+  align-items: center;
+  color: var(--nexor-signal);
+  display: inline-flex;
+  font-family: var(--nexor-display);
+  font-size: 12px;
+  gap: 7px;
+  letter-spacing: 0.04em;
+  margin-top: 7px;
+}
+
+.nexor-brand__handle i {
+  background: var(--nexor-signal);
+  border-radius: 50%;
+  box-shadow: 0 0 16px rgba(47, 227, 208, 0.8);
+  height: 6px;
+  width: 6px;
+}
+
+.nexor-brand--compact .nexor-brand__lockup {
+  font-size: 30px;
+}
+
+@media (max-width: 700px) {
+  .nexor-brand--compact .nexor-brand__lockup {
+    font-size: 27px;
+  }
+}

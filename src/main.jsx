@@ -7,6 +7,7 @@ import { initSentry } from "./lib/sentry";
 import "./styles/tokens.css";
 import "./styles/buttons.css";
 import "./styles.css";
+import "./nexorBrand.css";
 import "./projectHub.css";
 
 // Inicializar monitoreo de errores antes del primer render.
