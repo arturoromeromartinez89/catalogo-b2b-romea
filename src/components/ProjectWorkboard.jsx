@@ -89,7 +89,7 @@ export default function ProjectWorkboard({ project, tenantId = "", onReload, onN
     try {
       await moveProjectTask(taskId, status, sortOrder);
       await onReload?.();
-      onNotice?.("Tarea actualizada.");
+      onNotice?.("Actividad actualizada.");
     } catch (error) {
       setTasks(before);
       onNotice?.(error.message || "No se pudo mover la tarea.");
@@ -115,7 +115,7 @@ export default function ProjectWorkboard({ project, tenantId = "", onReload, onN
         setLocalComments((current) => ({ ...current, [selectedTask.id]: [...(current[selectedTask.id] || []), { id: `demo-${Date.now()}`, body, createdAt: new Date().toISOString(), author: "Tú" }] }));
       }
       setComment("");
-      onNotice?.("Comentario agregado a la tarea.");
+      onNotice?.("Comentario agregado a la actividad.");
     } catch (error) { onNotice?.(error.message || "No se pudo guardar el comentario."); }
     finally { setSaving(false); }
   };
@@ -131,7 +131,7 @@ export default function ProjectWorkboard({ project, tenantId = "", onReload, onN
         const demoAttachment = { id: `demo-file-${Date.now()}`, fileName: file.name, fileSize: file.size, mimeType: file.type, demo: true };
         setLocalAttachments((current) => ({ ...current, [selectedTask.id]: [...(current[selectedTask.id] || []), demoAttachment] }));
       }
-      onNotice?.("Archivo adjuntado a la tarjeta.");
+      onNotice?.("Archivo adjuntado a la actividad.");
     } catch (error) { onNotice?.(error.message || "No se pudo adjuntar el archivo."); }
     finally { setSaving(false); }
   };
@@ -147,16 +147,16 @@ export default function ProjectWorkboard({ project, tenantId = "", onReload, onN
   return (
     <section className="project-workboard">
       <header className="project-workboard__header">
-        <div><p>Plan de trabajo</p><h2>Objetivos, calendario y tareas</h2><span>Las fechas y tarjetas representan el mismo trabajo. Abre una tarea para comentar o adjuntar evidencia.</span></div>
+        <div><h2>Plan de trabajo</h2><span>Actividades concretas organizadas por objetivo y fecha.</span></div>
         <div className="project-workboard__view-toggle" role="group" aria-label="Vista del plan de trabajo">
-          <button type="button" className={view === "gantt" ? "active" : ""} onClick={() => setView("gantt")}>{smallIcon("gantt")}Gantt</button>
-          <button type="button" className={view === "kanban" ? "active" : ""} onClick={() => setView("kanban")}>{smallIcon("kanban")}Kanban</button>
+          <button type="button" className={view === "gantt" ? "active" : ""} onClick={() => setView("gantt")}>{smallIcon("gantt")}Cronograma</button>
+          <button type="button" className={view === "kanban" ? "active" : ""} onClick={() => setView("kanban")}>{smallIcon("kanban")}Tablero</button>
         </div>
       </header>
 
       <div className="project-objectives" aria-label="Objetivos por periodo">
         <button type="button" className={`project-objective project-objective--all${objectiveId === "all" ? " active" : ""}`} onClick={() => setObjectiveId("all")}>
-          <span>Vista completa</span><strong>{tasks.length} tareas</strong><small>{objectives.length} objetivos definidos</small>
+          <span>Vista completa</span><strong>{tasks.length} actividades</strong><small>{objectives.length} objetivos definidos</small>
         </button>
         {objectives.map((objective) => {
           const count = tasks.filter((task) => task.objectiveId === objective.id).length;
@@ -165,7 +165,7 @@ export default function ProjectWorkboard({ project, tenantId = "", onReload, onN
             <strong>{objective.title}</strong>
             <p>{objective.description}</p>
             <div><i><b style={{ width: `${objective.progress}%` }} /></i><em>{objective.progress}%</em></div>
-            <small>{objectiveStatusNames[objective.status] || objective.status} · {count} tareas</small>
+            <small>{objectiveStatusNames[objective.status] || objective.status} · {count} actividades</small>
           </button>;
         })}
       </div>
@@ -196,7 +196,7 @@ function GanttView({ tasks, timeline, onOpen }) {
   const todayIndex = dateDiff(timeline.start, today);
   return <div className="project-gantt-shell">
     <div className="project-gantt" style={{ "--gantt-width": `${timeline.width}px` }}>
-      <div className="project-gantt__corner"><span>Tarea</span><small>{tasks.length} visibles</small></div>
+      <div className="project-gantt__corner"><span>Actividad</span><small>{tasks.length} visibles</small></div>
       <div className="project-gantt__dates" style={{ width: timeline.width }}>
         {days.map((date, index) => <div className={date.getDay() === 0 || date.getDay() === 6 ? "weekend" : ""} style={{ width: DAY_WIDTH }} key={isoDate(date)}><span>{index === 0 || date.getDate() === 1 ? new Intl.DateTimeFormat("es-MX", { month: "short" }).format(date) : ""}</span><strong>{date.getDate()}</strong></div>)}
       </div>
@@ -214,7 +214,7 @@ function GanttView({ tasks, timeline, onOpen }) {
           </div>
         </div>;
       })}
-      {!tasks.length ? <div className="project-workboard__empty">No hay tareas para este objetivo.</div> : null}
+      {!tasks.length ? <div className="project-workboard__empty">No hay actividades para este objetivo.</div> : null}
     </div>
   </div>;
 }
@@ -242,7 +242,7 @@ function KanbanView({ tasks, onOpen, onDragStart, onDrop }) {
 function TaskPanel({ task, objective, comments, attachments, comment, setComment, saving, onClose, onStatus, onComment, onUpload, onOpenAttachment }) {
   return <div className="project-task-panel-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <aside className="project-task-panel" role="dialog" aria-modal="true" aria-label={`Detalle de ${task.title}`}>
-      <header><div><span>{objective?.periodLabel || "Tarea del proyecto"}</span><h2>{task.title}</h2></div><button type="button" aria-label="Cerrar tarea" onClick={onClose}>{smallIcon("close")}</button></header>
+      <header><div><span>{objective?.periodLabel || "Actividad del proyecto"}</span><h2>{task.title}</h2></div><button type="button" aria-label="Cerrar actividad" onClick={onClose}>{smallIcon("close")}</button></header>
       <p className="project-task-panel__description">{task.description || "Sin descripción adicional."}</p>
       <div className="project-task-panel__meta">
         <label>Estado<select value={task.status} disabled={saving} onChange={(event) => onStatus(event.target.value)}><option value="backlog">Backlog</option>{columns.map((column) => <option value={column.id} key={column.id}>{column.label}</option>)}</select></label>
@@ -253,11 +253,11 @@ function TaskPanel({ task, objective, comments, attachments, comment, setComment
       <section className="project-task-panel__section"><header><div><span>Avance</span><strong>{task.progress}%</strong></div></header><div className="project-progress"><i style={{ width: `${task.progress}%` }} /></div></section>
       <section className="project-task-panel__section">
         <header><div><span>Archivos</span><strong>{attachments.length}</strong></div><label className="project-task-panel__upload">{smallIcon("upload")}Adjuntar<input type="file" disabled={saving} accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.xls,.xlsx,.doc,.docx,.ppt,.pptx" onChange={(event) => { const file = event.target.files?.[0]; if (file) onUpload(file); event.target.value = ""; }} /></label></header>
-        <div className="project-task-files">{attachments.map((attachment) => <button type="button" key={attachment.id} onClick={() => onOpenAttachment(attachment)}>{smallIcon("paperclip")}<span><strong>{attachment.fileName}</strong><small>{formatBytes(attachment.fileSize)}</small></span></button>)}{!attachments.length ? <p>Adjunta propuestas, capturas, hojas de cálculo o evidencia de esta tarea.</p> : null}</div>
+        <div className="project-task-files">{attachments.map((attachment) => <button type="button" key={attachment.id} onClick={() => onOpenAttachment(attachment)}>{smallIcon("paperclip")}<span><strong>{attachment.fileName}</strong><small>{formatBytes(attachment.fileSize)}</small></span></button>)}{!attachments.length ? <p>Adjunta propuestas, capturas, hojas de cálculo o evidencia de esta actividad.</p> : null}</div>
       </section>
       <section className="project-task-panel__section project-task-panel__comments">
         <header><div><span>Conversación</span><strong>{comments.length}</strong></div></header>
-        <div className="project-task-comments">{comments.map((item) => <article key={item.id}><div><strong>{item.author || "Equipo del proyecto"}</strong><small>{item.createdAt ? formatLongDate(item.createdAt) : ""}</small></div><p>{item.body}</p></article>)}{!comments.length ? <p>Aún no hay comentarios en esta tarea.</p> : null}</div>
+        <div className="project-task-comments">{comments.map((item) => <article key={item.id}><div><strong>{item.author || "Equipo del proyecto"}</strong><small>{item.createdAt ? formatLongDate(item.createdAt) : ""}</small></div><p>{item.body}</p></article>)}{!comments.length ? <p>Aún no hay comentarios en esta actividad.</p> : null}</div>
         <div className="project-task-comment-form"><textarea value={comment} onChange={(event) => setComment(event.target.value)} maxLength={4000} placeholder="Escribe una actualización, duda o decisión..." /><button className="primary-button" type="button" disabled={saving || !comment.trim()} onClick={onComment}>{saving ? "Guardando..." : "Comentar"}</button></div>
       </section>
     </aside>

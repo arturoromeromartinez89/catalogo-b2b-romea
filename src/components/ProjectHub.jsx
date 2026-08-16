@@ -7,6 +7,7 @@ const icon = (name) => {
   const paths = {
     overview: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
     planning: <><path d="M4 6h16M4 12h16M4 18h16" /><path d="M8 4v4M15 10v4M11 16v4" /></>,
+    solutions: <><rect x="3" y="3" width="8" height="8" rx="2" /><rect x="13" y="3" width="8" height="8" rx="2" /><rect x="3" y="13" width="8" height="8" rx="2" /><path d="M17 14v6M14 17h6" /></>,
     sidebar: <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18M14 8l-3 4 3 4" /></>,
     roadmap: <><path d="M5 4v16" /><circle cx="5" cy="7" r="2" /><circle cx="5" cy="17" r="2" /><path d="M9 7h10M9 17h10" /></>,
     updates: <><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14l-4-3-4 3-4-3-4 3Z" /><path d="M8 7h8M8 11h5" /></>,
@@ -27,14 +28,27 @@ const icon = (name) => {
 
 const demoProjects = {
   "estuches-chavez": {
-    name: "Módulo de inventario",
-    description: "Control centralizado de existencias, entradas, salidas y trazabilidad de productos.",
+    name: "Digitalización de operaciones",
+    description: "Diseño e implementación del sistema adaptado a la operación de Estuches Chávez.",
     progress: 28,
     health: "green",
     phase: "Diseño funcional",
     startDate: "2026-08-10",
     endDate: "2026-09-18",
     owner: "Equipo NEXOR IA",
+    solutions: [
+      {
+        id: "inventory",
+        name: "Inventario",
+        description: "Control de productos, existencias, entradas, salidas y trazabilidad en una sola operación.",
+        status: "in_progress",
+        progress: 28,
+        phase: "Diseño funcional",
+        nextMilestone: "Aprobación del flujo de entradas y salidas",
+        targetDate: "18 sep 2026",
+        scope: ["Productos", "Existencias", "Entradas y salidas", "Trazabilidad"],
+      },
+    ],
     phases: [
       { name: "Definición de alcance", status: "completed", progress: 100, date: "10 ago" },
       { name: "Diseño funcional", status: "in_progress", progress: 55, date: "21 ago" },
@@ -48,13 +62,13 @@ const demoProjects = {
       { label: "Validación de catálogo inicial", status: "pending" },
     ],
     updates: [
-      { title: "Alcance inicial definido", text: "Se organizó el módulo en productos, existencias y movimientos para mantener una operación sencilla.", date: "12 ago 2026", type: "milestone" },
+      { title: "Alcance inicial definido", text: "Se organizó la solución en productos, existencias y movimientos para mantener una operación sencilla.", date: "12 ago 2026", type: "milestone" },
       { title: "Diseño funcional en proceso", text: "Estamos preparando el flujo de entradas y salidas que se presentará para revisión.", date: "13 ago 2026", type: "progress" },
       { title: "Preparación del ambiente de pruebas", text: "El desarrollo se validará en un ambiente separado antes de habilitarse en la operación real.", date: "13 ago 2026", type: "information" },
     ],
     deliverables: [
-      { name: "Definición funcional", status: "in_progress", date: "21 ago 2026", description: "Flujos, reglas y alcance aprobado del módulo." },
-      { name: "Módulo de inventario MVP", status: "pending", date: "04 sep 2026", description: "Productos, existencias, entradas, salidas e historial." },
+      { name: "Definición funcional", status: "in_progress", date: "21 ago 2026", description: "Flujos, reglas y alcance aprobado de la solución." },
+      { name: "Primera versión de Inventario", status: "pending", date: "04 sep 2026", description: "Productos, existencias, entradas, salidas e historial." },
       { name: "Pruebas con usuarios", status: "pending", date: "14 sep 2026", description: "Validación guiada y registro de ajustes finales." },
       { name: "Entrega inicial", status: "pending", date: "18 sep 2026", description: "Versión aprobada y habilitada para Estuches Chávez." },
     ],
@@ -116,7 +130,7 @@ const defaultPhases = [
 
 const genericWeek = [
   { label: "Revisión de flujos prioritarios", status: "completed" },
-  { label: "Configuración de módulos", status: "in_progress" },
+  { label: "Configuración de soluciones", status: "in_progress" },
   { label: "Preparación de pruebas", status: "pending" },
 ];
 
@@ -128,8 +142,22 @@ const genericUpdates = [
 
 const genericDeliverables = [
   { name: "Diseño funcional", status: "delivered", date: "08 ago 2026", description: "Estructura de navegación y flujos principales." },
-  { name: "Módulos prioritarios", status: "in_progress", date: "05 sep 2026", description: "Primera versión operativa de los módulos acordados." },
+  { name: "Soluciones prioritarias", status: "in_progress", date: "05 sep 2026", description: "Primera versión operativa de las soluciones acordadas." },
   { name: "Pruebas y entrega", status: "pending", date: "Por confirmar", description: "Validación de usuarios y liberación controlada." },
+];
+
+const genericSolutions = [
+  {
+    id: "primary-solution",
+    name: "Solución principal",
+    description: "La solución funcional que se está desarrollando para este proyecto.",
+    status: "in_progress",
+    progress: 48,
+    phase: "Desarrollo",
+    nextMilestone: "Primera versión demostrable",
+    targetDate: "Por confirmar",
+    scope: ["Configuración", "Flujo principal", "Pruebas", "Implementación"],
+  },
 ];
 
 const genericDocuments = [
@@ -140,14 +168,14 @@ const genericDocuments = [
 
 const genericObjectives = [
   { id: "generic-discovery", title: "Definir y aprobar alcance", description: "Alinear los flujos, reglas y prioridades de la primera entrega.", periodLabel: "Periodo 1", periodStart: "2026-08-10", periodEnd: "2026-08-21", status: "completed", progress: 100 },
-  { id: "generic-build", title: "Construir módulos prioritarios", description: "Desarrollar y demostrar el bloque funcional acordado.", periodLabel: "Periodo 2", periodStart: "2026-08-24", periodEnd: "2026-09-11", status: "active", progress: 48 },
+  { id: "generic-build", title: "Construir soluciones prioritarias", description: "Desarrollar y demostrar el bloque funcional acordado.", periodLabel: "Periodo 2", periodStart: "2026-08-24", periodEnd: "2026-09-11", status: "active", progress: 48 },
   { id: "generic-release", title: "Validar y liberar", description: "Completar pruebas, ajustes y entrega controlada.", periodLabel: "Periodo 3", periodStart: "2026-09-14", periodEnd: "2026-10-02", status: "planned", progress: 0 },
 ];
 
 const genericTasks = [
   { id: "generic-task-1", objectiveId: "generic-discovery", title: "Confirmar alcance funcional", description: "Revisar reglas y prioridades de implementación.", status: "done", priority: "high", startDate: "2026-08-10", dueDate: "2026-08-14", progress: 100, assignee: "Equipo conjunto", sortOrder: 10, comments: [], attachments: [] },
   { id: "generic-task-2", objectiveId: "generic-build", title: "Desarrollar flujo principal", description: "Construir el primer bloque funcional demostrable.", status: "in_progress", priority: "high", startDate: "2026-08-24", dueDate: "2026-09-04", progress: 62, assignee: "NEXOR IA", sortOrder: 20, comments: [], attachments: [] },
-  { id: "generic-task-3", objectiveId: "generic-build", title: "Revisión interna de calidad", description: "Validar reglas, permisos y comportamiento del módulo.", status: "review", priority: "medium", startDate: "2026-09-03", dueDate: "2026-09-11", progress: 35, assignee: "NEXOR IA", sortOrder: 30, comments: [], attachments: [] },
+  { id: "generic-task-3", objectiveId: "generic-build", title: "Revisión interna de calidad", description: "Validar reglas, permisos y comportamiento de la solución.", status: "review", priority: "medium", startDate: "2026-09-03", dueDate: "2026-09-11", progress: 35, assignee: "NEXOR IA", sortOrder: 30, comments: [], attachments: [] },
   { id: "generic-task-4", objectiveId: "generic-release", title: "Pruebas con usuarios", description: "Ejecutar escenarios reales y registrar ajustes.", status: "todo", priority: "high", startDate: "2026-09-14", dueDate: "2026-09-23", progress: 0, assignee: "Equipo conjunto", sortOrder: 40, comments: [], attachments: [] },
   { id: "generic-task-5", objectiveId: "generic-release", title: "Preparar liberación", description: "Cerrar pendientes y autorizar la versión inicial.", status: "backlog", priority: "critical", startDate: "2026-09-24", dueDate: "2026-10-02", progress: 0, assignee: "NEXOR IA", sortOrder: 50, comments: [], attachments: [] },
 ];
@@ -227,6 +255,17 @@ const projectFromDatabase = (record) => {
       status: item.status,
       clientComment: item.client_comment,
     })),
+    solutions: (record.project_solutions || []).filter((item) => item.visible_to_client !== false).map((item) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      status: item.status,
+      progress: Number(item.progress_percentage || 0),
+      phase: item.current_phase_name,
+      nextMilestone: item.next_milestone,
+      targetDate: formatPortalDate(item.estimated_end_date),
+      scope: item.scope_items || [],
+    })),
     objectives: (record.project_objectives || []).filter((item) => item.visible_to_client !== false).map((item) => ({
       id: item.id,
       title: item.title,
@@ -261,6 +300,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
   const { t } = useLanguage();
   const portalTheme = theme === "dark" ? "dark" : "light";
   const [section, setSection] = useState("planning");
+  const [selectedSolutionId, setSelectedSolutionId] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewNotice, setPreviewNotice] = useState("");
   const [databaseProject, setDatabaseProject] = useState(null);
@@ -296,6 +336,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
       deliverables: base.deliverables || genericDeliverables,
       documents: base.documents || genericDocuments,
       approvals: base.approvals || [],
+      solutions: base.solutions || genericSolutions,
       objectives: base.objectives || genericObjectives,
       tasks: base.tasks || genericTasks,
     };
@@ -315,10 +356,11 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
     return <section className={`project-hub project-hub--${portalTheme}`}><div className="project-hub-state"><div className="project-empty project-empty--page"><i>{icon("roadmap")}</i><strong>{t("phNoPublishedProject")}</strong><p>{t("phNoPublishedProjectHelp")}</p></div></div></section>;
   }
 
-  const nav = ["planning", "overview", "roadmap", "updates", "deliverables", "documents", "approvals"];
+  const nav = ["planning", "solutions", "deliverables", "documents", "approvals"];
   const remaining = daysUntil(project.endDate);
   const pendingApprovals = project.approvals.filter((item) => item.status === "pending").length;
   const healthLabel = project.health === "green" ? t("phOnTrack") : project.health === "yellow" ? t("phAttention") : t("phAtRisk");
+  const selectedSolution = project.solutions?.find((item) => item.id === selectedSolutionId) || project.solutions?.[0] || null;
 
   const showPreviewNotice = (message) => {
     setPreviewNotice(message);
@@ -346,7 +388,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
     <section className={`project-hub project-hub--${portalTheme}${sidebarCollapsed ? " project-hub--sidebar-collapsed" : ""}`} aria-label={t("projectHub")}>
       <aside className="project-hub__sidebar">
         <div className="project-hub__sidebar-head">
-          <div><span>Centro de proyecto</span><strong>Navegación</strong></div>
+          <div><strong>Proyecto</strong></div>
           <button type="button" aria-label={sidebarCollapsed ? "Abrir navegación" : "Contraer navegación"} title={sidebarCollapsed ? "Abrir navegación" : "Contraer navegación"} onClick={() => setSidebarCollapsed((current) => !current)}>{icon("sidebar")}</button>
         </div>
         <nav className="project-hub__nav" aria-label={t("phSections")}>
@@ -368,7 +410,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
 
       <header className="project-hub__header">
         <div className="project-hub__heading">
-          <p className="project-hub__eyebrow">{t("projectHub")} · {companyName || t("phYourCompany")}</p>
+          <p className="project-hub__eyebrow">Proyecto · {companyName || t("phYourCompany")}</p>
           <div className="project-hub__title-row">
             <h1>{project.name}</h1>
             <span className="project-hub__active-badge">{t("phActive")}</span>
@@ -388,6 +430,39 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
       {previewNotice ? <div className="project-hub__toast" role="status">{previewNotice}</div> : null}
 
       {section === "planning" ? <ProjectWorkboard project={project} tenantId={tenantId} onReload={loadProject} onNotice={showPreviewNotice} /> : null}
+
+      {section === "solutions" ? (
+        <section className="project-section-page project-solutions-page">
+          <header><h2>Soluciones</h2><span>Las partes del sistema que estamos construyendo para este proyecto.</span></header>
+          {project.solutions?.length ? <div className="project-solutions">
+            <div className="project-solutions__list" aria-label="Soluciones del proyecto">
+              {project.solutions.map((solution) => (
+                <button key={solution.id} type="button" className={selectedSolution?.id === solution.id ? "active" : ""} onClick={() => setSelectedSolutionId(solution.id)}>
+                  <span className="project-solutions__glyph">{icon("solutions")}</span>
+                  <span><strong>{solution.name}</strong><small>{solution.phase || "Por iniciar"}</small></span>
+                  <b>{solution.progress}%</b>
+                  {icon("arrow")}
+                </button>
+              ))}
+            </div>
+            {selectedSolution ? <article className="project-solution-detail">
+              <div className="project-solution-detail__top">
+                <span className={`project-status project-status--${selectedSolution.status}`}>{statusLabel(selectedSolution.status, t)}</span>
+                <strong>{selectedSolution.progress}%</strong>
+              </div>
+              <h3>{selectedSolution.name}</h3>
+              <p>{selectedSolution.description}</p>
+              <div className="project-progress" aria-label={`Avance de ${selectedSolution.name}: ${selectedSolution.progress}%`}><i style={{ width: `${selectedSolution.progress}%` }} /></div>
+              <dl>
+                <div><dt>Ahora</dt><dd>{selectedSolution.phase || "Por iniciar"}</dd></div>
+                <div><dt>Siguiente hito</dt><dd>{selectedSolution.nextMilestone || "Por definir"}</dd></div>
+                <div><dt>Fecha objetivo</dt><dd>{selectedSolution.targetDate || "Por confirmar"}</dd></div>
+              </dl>
+              {selectedSolution.scope?.length ? <div className="project-solution-detail__scope"><span>Incluye</span><div>{selectedSolution.scope.map((item) => <i key={item}>{item}</i>)}</div></div> : null}
+            </article> : null}
+          </div> : <div className="project-empty project-empty--page"><i>{icon("solutions")}</i><strong>Aún no hay soluciones publicadas</strong><p>Cuando una solución sea definida aparecerá aquí.</p></div>}
+        </section>
+      ) : null}
 
       {section === "overview" ? (
         <div className="project-hub__overview">
