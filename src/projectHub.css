@@ -3196,7 +3196,7 @@
 .solution-workspace {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
   margin: 0 auto;
   max-width: 1240px;
   width: 100%;
@@ -3227,13 +3227,13 @@
     radial-gradient(circle at 85% 12%, rgba(47, 227, 208, .13), transparent 30%),
     #fff;
   border: 1px solid #dfe5f1;
-  border-radius: 24px;
-  box-shadow: 0 16px 42px rgba(30, 42, 84, .07);
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgba(30, 42, 84, .055);
   display: flex;
-  gap: 30px;
+  gap: 22px;
   justify-content: space-between;
-  min-height: 210px;
-  padding: clamp(26px, 4vw, 48px);
+  min-height: 118px;
+  padding: 20px 24px;
 }
 
 .solution-workspace__hero > div {
@@ -3245,7 +3245,7 @@
   font-size: 10px;
   font-weight: 800;
   letter-spacing: .12em;
-  margin: 0 0 14px;
+  margin: 0 0 8px;
   text-transform: uppercase;
 }
 
@@ -3258,7 +3258,7 @@
 
 .solution-workspace__hero h1 {
   color: #101936;
-  font-size: clamp(34px, 5vw, 58px);
+  font-size: clamp(27px, 3.4vw, 39px);
   letter-spacing: -.05em;
   line-height: 1;
   margin: 0;
@@ -3267,17 +3267,17 @@
 .solution-workspace__hero > div > span {
   color: #627192;
   display: block;
-  font-size: 14px;
-  line-height: 1.65;
-  margin-top: 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 9px;
 }
 
 .solution-workspace__hero > aside {
   background: rgba(245, 247, 252, .86);
   border: 1px solid #e0e6f2;
-  border-radius: 18px;
-  flex: 0 0 220px;
-  padding: 22px;
+  border-radius: 14px;
+  flex: 0 0 160px;
+  padding: 14px 16px;
 }
 
 .solution-workspace__hero > aside strong,
@@ -3287,7 +3287,7 @@
 
 .solution-workspace__hero > aside strong {
   color: #4f7bff;
-  font-size: 34px;
+  font-size: 25px;
   letter-spacing: -.04em;
 }
 
@@ -3296,7 +3296,7 @@
   font-size: 10px;
   font-weight: 750;
   letter-spacing: .08em;
-  margin: 4px 0 14px;
+  margin: 2px 0 9px;
   text-transform: uppercase;
 }
 
@@ -3363,6 +3363,45 @@
   gap: 18px;
 }
 
+.solution-workspace__single-sheet {
+  background: #fff;
+  border: 1px solid #dfe5f1;
+  border-radius: 20px;
+  box-shadow: 0 14px 38px rgba(30, 42, 84, .06);
+  overflow: hidden;
+  padding: 0 clamp(20px, 3vw, 34px);
+}
+
+.solution-workspace__single-sheet > section {
+  padding: clamp(26px, 4vw, 40px) 0;
+}
+
+.solution-workspace__single-sheet > section + section {
+  border-top: 1px solid #e5e9f1;
+}
+
+.solution-workspace__single-sheet .solution-sheet-card,
+.solution-workspace__single-sheet .solution-sheet-page {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.solution-workspace__single-sheet .solution-sheet-card {
+  background: #f8f9fc;
+  border-radius: 16px;
+  padding: 22px;
+}
+
+.solution-workspace__single-sheet .solution-sheet-page {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.solution-workspace__sheet-section {
+  scroll-margin-top: 18px;
+}
+
 .solution-workspace__metrics {
   display: grid;
   gap: 12px;
@@ -3370,11 +3409,11 @@
 }
 
 .solution-workspace__metrics article {
-  background: #fff;
-  border: 1px solid #e0e5f0;
-  border-radius: 17px;
-  min-height: 126px;
-  padding: 20px;
+  background: #f8f9fc;
+  border: 1px solid #e7eaf2;
+  border-radius: 14px;
+  min-height: 108px;
+  padding: 17px;
 }
 
 .solution-workspace__metrics span,
@@ -3962,11 +4001,10 @@
   .project-solution-detail dl { grid-template-columns: 1fr; }
   .project-solution-detail dl > div { border-bottom: 1px solid #eef1f6; padding: 14px 0; }
   .project-solution-detail dl > div:last-child { border-bottom: 0; }
-  .solution-workspace__hero { align-items: stretch; flex-direction: column; padding: 24px; }
+  .solution-workspace__hero { align-items: stretch; flex-direction: column; gap: 14px; padding: 18px; }
   .solution-workspace__hero > aside { flex: none; }
-  .solution-workspace__floating-nav { align-self: stretch; border-radius: 15px; max-width: 100%; width: 100%; }
-  .solution-workspace__floating-nav button { padding: 0 11px; }
-  .solution-workspace__floating-nav button span { display: none; }
+  .solution-workspace__single-sheet { border-radius: 16px; padding: 0 16px; }
+  .solution-workspace__single-sheet > section { padding: 24px 0; }
   .solution-workspace__metrics { grid-template-columns: repeat(2, 1fr); }
   .solution-workspace__overview-grid,
   .solution-user-grid { grid-template-columns: 1fr; }

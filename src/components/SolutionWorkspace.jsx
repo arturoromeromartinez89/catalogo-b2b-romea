@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import ProjectWorkboard from "./ProjectWorkboard";
 
 const workspaceIcon = (name) => {
@@ -24,17 +24,7 @@ const statusNames = {
   rejected: "Requiere ajustes",
 };
 
-const sections = [
-  { id: "overview", label: "Resumen", icon: "overview" },
-  { id: "planning", label: "Actividades", icon: "planning" },
-  { id: "approvals", label: "Aprobaciones", icon: "approvals" },
-  { id: "files", label: "Archivos", icon: "files" },
-  { id: "users", label: "Usuarios", icon: "users" },
-];
-
 export default function SolutionWorkspace({ solution, project, tenantId = "", companyName = "", onBack, onReload, onNotice }) {
-  const [section, setSection] = useState("overview");
-
   const solutionProject = useMemo(() => {
     const tasks = (project.tasks || []).filter((task) => task.solutionId === solution.id);
     const objectiveIds = new Set(tasks.map((task) => task.objectiveId).filter(Boolean));
@@ -73,50 +63,49 @@ export default function SolutionWorkspace({ solution, project, tenantId = "", co
         </aside>
       </header>
 
-      <nav className="solution-workspace__floating-nav" aria-label="Secciones de la solución">
-        {sections.map((item) => <button key={item.id} type="button" className={section === item.id ? "active" : ""} onClick={() => setSection(item.id)}>{workspaceIcon(item.icon)}<span>{item.label}</span>{item.id === "approvals" && pendingApprovals ? <b>{pendingApprovals}</b> : null}</button>)}
-      </nav>
+      <div className="solution-workspace__single-sheet">
+        <section className="solution-workspace__overview" aria-label="Resumen de la solución">
+          <div className="solution-workspace__metrics">
+            <article><span>Etapa actual</span><strong>{solution.phase || "Por iniciar"}</strong><small>Trabajo activo</small></article>
+            <article><span>Actividades</span><strong>{solutionProject.tasks.length}</strong><small>{completedTasks} {completedTasks === 1 ? "completada" : "completadas"}</small></article>
+            <article><span>Aprobaciones</span><strong>{pendingApprovals}</strong><small>{pendingApprovals ? "Pendientes del cliente" : "Todo al día"}</small></article>
+            <article><span>Fecha objetivo</span><strong>{solution.targetDate || "Por confirmar"}</strong><small>Siguiente entrega</small></article>
+          </div>
+          <div className="solution-workspace__overview-grid">
+            <article className="solution-sheet-card">
+              <header><span>Alcance</span><h2>Qué incluye esta solución</h2></header>
+              <div className="solution-sheet-card__scope">{(solution.scope || []).map((item) => <span key={item}>{workspaceIcon("check")}{item}</span>)}</div>
+            </article>
+            <article className="solution-sheet-card">
+              <header><span>Siguiente</span><h2>{solution.nextMilestone || "Próximo hito por definir"}</h2></header>
+              <p>Las siguientes actividades están ordenadas por prioridad y fecha.</p>
+              <ul>{solutionProject.tasks.filter((task) => task.status !== "done").slice(0, 3).map((task) => <li key={task.id}><i /><span><strong>{task.title}</strong><small>{task.assignee || "Por asignar"} · {task.dueDate || "Sin fecha"}</small></span></li>)}</ul>
+            </article>
+          </div>
+        </section>
 
-      {section === "overview" ? <div className="solution-workspace__overview">
-        <div className="solution-workspace__metrics">
-          <article><span>Etapa actual</span><strong>{solution.phase || "Por iniciar"}</strong><small>Trabajo activo</small></article>
-          <article><span>Actividades</span><strong>{solutionProject.tasks.length}</strong><small>{completedTasks} {completedTasks === 1 ? "completada" : "completadas"}</small></article>
-          <article><span>Aprobaciones</span><strong>{pendingApprovals}</strong><small>{pendingApprovals ? "Pendientes del cliente" : "Todo al día"}</small></article>
-          <article><span>Fecha objetivo</span><strong>{solution.targetDate || "Por confirmar"}</strong><small>Siguiente entrega</small></article>
-        </div>
-        <div className="solution-workspace__overview-grid">
-          <article className="solution-sheet-card">
-            <header><span>Alcance</span><h2>Qué incluye esta solución</h2></header>
-            <div className="solution-sheet-card__scope">{(solution.scope || []).map((item) => <span key={item}>{workspaceIcon("check")}{item}</span>)}</div>
-          </article>
-          <article className="solution-sheet-card">
-            <header><span>Siguiente</span><h2>{solution.nextMilestone || "Próximo hito por definir"}</h2></header>
-            <p>Las siguientes actividades están ordenadas por prioridad y fecha.</p>
-            <ul>{solutionProject.tasks.filter((task) => task.status !== "done").slice(0, 3).map((task) => <li key={task.id}><i /><span><strong>{task.title}</strong><small>{task.assignee || "Por asignar"} · {task.dueDate || "Sin fecha"}</small></span></li>)}</ul>
-            <button type="button" onClick={() => setSection("planning")}>Abrir actividades</button>
-          </article>
-        </div>
-      </div> : null}
+        <section id="solution-activities" className="solution-workspace__sheet-section" aria-label="Actividades de la solución">
+          <ProjectWorkboard project={solutionProject} tenantId={tenantId} onReload={onReload} onNotice={onNotice} mode="solution" />
+        </section>
 
-      {section === "planning" ? <ProjectWorkboard project={solutionProject} tenantId={tenantId} onReload={onReload} onNotice={onNotice} mode="solution" /> : null}
+        <section className="solution-sheet-page solution-workspace__sheet-section">
+          <header><div><span>Aprobaciones</span><h2>Decisiones de la solución</h2><p>Revisa los puntos que necesitan confirmación para que el trabajo pueda avanzar.</p></div></header>
+          <div className="solution-approval-list">{approvals.map((approval) => <article key={approval.id || approval.title}><div><span className={`project-status project-status--${approval.status}`}>{statusNames[approval.status] || approval.status}</span><h3>{approval.title}</h3><p>{approval.description}</p><small>Fecha límite · {approval.dueDate || "Por confirmar"}</small></div><button type="button" onClick={() => onNotice?.("La aprobación se habilitará al conectar esta solución con el seguimiento real.")}>{approval.status === "pending" ? "Revisar" : "Ver detalle"}</button></article>)}</div>
+          {!approvals.length ? <div className="solution-sheet-empty">No hay aprobaciones pendientes en esta solución.</div> : null}
+        </section>
 
-      {section === "approvals" ? <section className="solution-sheet-page">
-        <header><div><span>Aprobaciones</span><h2>Decisiones de la solución</h2><p>Revisa los puntos que necesitan confirmación para que el trabajo pueda avanzar.</p></div></header>
-        <div className="solution-approval-list">{approvals.map((approval) => <article key={approval.id || approval.title}><div><span className={`project-status project-status--${approval.status}`}>{statusNames[approval.status] || approval.status}</span><h3>{approval.title}</h3><p>{approval.description}</p><small>Fecha límite · {approval.dueDate || "Por confirmar"}</small></div><button type="button" onClick={() => onNotice?.("La aprobación se habilitará al conectar esta solución con el seguimiento real.")}>{approval.status === "pending" ? "Revisar" : "Ver detalle"}</button></article>)}</div>
-        {!approvals.length ? <div className="solution-sheet-empty">No hay aprobaciones pendientes en esta solución.</div> : null}
-      </section> : null}
+        <section className="solution-sheet-page solution-workspace__sheet-section">
+          <header><div><span>Archivos</span><h2>Documentos y adjuntos</h2><p>Todo el material compartido para esta solución en un solo lugar.</p></div><button type="button" onClick={() => onNotice?.("La carga de archivos se habilitará para usuarios autorizados.")}>{workspaceIcon("upload")}Adjuntar archivo</button></header>
+          <div className="solution-file-list">{files.map((file) => <article key={file.id || file.name}><span>{workspaceIcon("files")}</span><div><strong>{file.name}</strong><small>{file.type || "Documento"} · {file.date || "Sin fecha"}</small></div><button type="button" onClick={() => onNotice?.("Archivo de demostración. Se abrirá al conectar el almacenamiento real.")}>Abrir</button></article>)}</div>
+          {!files.length ? <div className="solution-sheet-empty">Aún no hay archivos adjuntos.</div> : null}
+        </section>
 
-      {section === "files" ? <section className="solution-sheet-page">
-        <header><div><span>Archivos</span><h2>Documentos y adjuntos</h2><p>Todo el material compartido para esta solución en un solo lugar.</p></div><button type="button" onClick={() => onNotice?.("La carga de archivos se habilitará para usuarios autorizados.")}>{workspaceIcon("upload")}Adjuntar archivo</button></header>
-        <div className="solution-file-list">{files.map((file) => <article key={file.id || file.name}><span>{workspaceIcon("files")}</span><div><strong>{file.name}</strong><small>{file.type || "Documento"} · {file.date || "Sin fecha"}</small></div><button type="button" onClick={() => onNotice?.("Archivo de demostración. Se abrirá al conectar el almacenamiento real.")}>Abrir</button></article>)}</div>
-        {!files.length ? <div className="solution-sheet-empty">Aún no hay archivos adjuntos.</div> : null}
-      </section> : null}
-
-      {section === "users" ? <section className="solution-sheet-page">
-        <header><div><span>Usuarios</span><h2>Personas con acceso</h2><p>Participantes autorizados para consultar o trabajar en esta solución.</p></div><button type="button" onClick={() => onNotice?.("La invitación de usuarios estará disponible para administradores NEXOR.")}>{workspaceIcon("plus")}Agregar usuario</button></header>
-        <div className="solution-user-grid">{users.map((user) => <article key={user.id || user.name}><i>{user.initials || user.name?.split(" ").map((part) => part[0]).slice(0, 2).join("")}</i><div><strong>{user.name}</strong><span>{user.role}</span><small>{user.access || "Puede consultar"}</small></div><b>{user.status || "Activo"}</b></article>)}</div>
-        {!users.length ? <div className="solution-sheet-empty">No hay usuarios asignados a esta solución.</div> : null}
-      </section> : null}
+        <section className="solution-sheet-page solution-workspace__sheet-section">
+          <header><div><span>Usuarios</span><h2>Personas con acceso</h2><p>Participantes autorizados para consultar o trabajar en esta solución.</p></div><button type="button" onClick={() => onNotice?.("La invitación de usuarios estará disponible para administradores NEXOR.")}>{workspaceIcon("plus")}Agregar usuario</button></header>
+          <div className="solution-user-grid">{users.map((user) => <article key={user.id || user.name}><i>{user.initials || user.name?.split(" ").map((part) => part[0]).slice(0, 2).join("")}</i><div><strong>{user.name}</strong><span>{user.role}</span><small>{user.access || "Puede consultar"}</small></div><b>{user.status || "Activo"}</b></article>)}</div>
+          {!users.length ? <div className="solution-sheet-empty">No hay usuarios asignados a esta solución.</div> : null}
+        </section>
+      </div>
     </section>
   );
 }
