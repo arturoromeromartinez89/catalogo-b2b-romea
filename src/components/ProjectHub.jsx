@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { fetchPublishedProject, respondToProjectApproval } from "../services/projectHubService";
 import ProjectWorkboard from "./ProjectWorkboard";
+import SolutionWorkspace from "./SolutionWorkspace";
 
 const icon = (name) => {
   const paths = {
@@ -47,6 +48,20 @@ const demoProjects = {
         nextMilestone: "Aprobación del flujo de entradas y salidas",
         targetDate: "18 sep 2026",
         scope: ["Productos", "Existencias", "Entradas y salidas", "Trazabilidad"],
+        approvals: [
+          { id: "inventory-approval-1", title: "Confirmar catálogo inicial", description: "Definir qué lista de productos se utilizará para cargar las existencias iniciales.", dueDate: "21 ago 2026", status: "pending" },
+          { id: "inventory-approval-2", title: "Flujo general de movimientos", description: "La estructura inicial de entradas, salidas y ajustes fue validada.", dueDate: "12 ago 2026", status: "approved" },
+        ],
+        files: [
+          { id: "inventory-file-1", name: "Resumen de alcance — Inventario", type: "PDF", date: "12 ago 2026" },
+          { id: "inventory-file-2", name: "Mapa de movimientos", type: "Documento", date: "14 ago 2026" },
+          { id: "inventory-file-3", name: "Catálogo inicial de productos", type: "Excel", date: "15 ago 2026" },
+        ],
+        users: [
+          { id: "inventory-user-1", name: "Dirección NEXOR", initials: "NX", role: "Administración", access: "Control total", status: "Activo" },
+          { id: "inventory-user-2", name: "Desarrollo NEXOR", initials: "DN", role: "Equipo de desarrollo", access: "Puede editar", status: "Activo" },
+          { id: "inventory-user-3", name: "Estuches Chávez", initials: "EC", role: "Cliente", access: "Puede revisar y aprobar", status: "Activo" },
+        ],
       },
     ],
     phases: [
@@ -157,6 +172,11 @@ const genericSolutions = [
     nextMilestone: "Primera versión demostrable",
     targetDate: "Por confirmar",
     scope: ["Configuración", "Flujo principal", "Pruebas", "Implementación"],
+    approvals: [],
+    files: [],
+    users: [
+      { id: "generic-user-1", name: "Dirección NEXOR", initials: "NX", role: "Administración", access: "Control total", status: "Activo" },
+    ],
   },
 ];
 
@@ -254,6 +274,7 @@ const projectFromDatabase = (record) => {
       dueDate: formatPortalDate(item.due_date),
       status: item.status,
       clientComment: item.client_comment,
+      solutionId: item.solution_id,
     })),
     solutions: (record.project_solutions || []).filter((item) => item.visible_to_client !== false).map((item) => ({
       id: item.id,
@@ -265,6 +286,9 @@ const projectFromDatabase = (record) => {
       nextMilestone: item.next_milestone,
       targetDate: formatPortalDate(item.estimated_end_date),
       scope: item.scope_items || [],
+      approvals: item.project_solution_approvals || [],
+      files: item.project_solution_files || [],
+      users: item.project_solution_users || [],
     })),
     objectives: (record.project_objectives || []).filter((item) => item.visible_to_client !== false).map((item) => ({
       id: item.id,
@@ -281,6 +305,7 @@ const projectFromDatabase = (record) => {
       id: item.id,
       objectiveId: item.objective_id,
       phaseId: item.phase_id,
+      solutionId: item.solution_id,
       title: item.title,
       description: item.description,
       status: item.status,
@@ -301,6 +326,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
   const portalTheme = theme === "dark" ? "dark" : "light";
   const [section, setSection] = useState("planning");
   const [selectedSolutionId, setSelectedSolutionId] = useState("");
+  const [activeSolutionId, setActiveSolutionId] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewNotice, setPreviewNotice] = useState("");
   const [databaseProject, setDatabaseProject] = useState(null);
@@ -323,11 +349,16 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
   };
 
   useEffect(() => { loadProject(); }, [tenantId]);
+  useEffect(() => {
+    if (activeSolutionId) document.querySelector(".project-hub__workspace")?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeSolutionId]);
 
   const demoProject = useMemo(() => {
     const slug = normalizeSlug(tenantSlug || companyName);
     const matchedKey = Object.keys(demoProjects).find((key) => slug.includes(key)) || "romea";
     const base = demoProjects[matchedKey];
+    const solutions = base.solutions || genericSolutions;
+    const tasks = (base.tasks || genericTasks).map((task) => task.solutionId || solutions.length !== 1 ? task : { ...task, solutionId: solutions[0].id });
     return {
       ...base,
       phases: base.phases || defaultPhases,
@@ -336,9 +367,9 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
       deliverables: base.deliverables || genericDeliverables,
       documents: base.documents || genericDocuments,
       approvals: base.approvals || [],
-      solutions: base.solutions || genericSolutions,
+      solutions,
       objectives: base.objectives || genericObjectives,
-      tasks: base.tasks || genericTasks,
+      tasks,
     };
   }, [tenantSlug, companyName]);
 
@@ -361,6 +392,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
   const pendingApprovals = project.approvals.filter((item) => item.status === "pending").length;
   const healthLabel = project.health === "green" ? t("phOnTrack") : project.health === "yellow" ? t("phAttention") : t("phAtRisk");
   const selectedSolution = project.solutions?.find((item) => item.id === selectedSolutionId) || project.solutions?.[0] || null;
+  const activeSolution = project.solutions?.find((item) => item.id === activeSolutionId) || null;
 
   const showPreviewNotice = (message) => {
     setPreviewNotice(message);
@@ -393,7 +425,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
         </div>
         <nav className="project-hub__nav" aria-label={t("phSections")}>
           {nav.map((item) => (
-            <button key={item} type="button" aria-label={t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`)} title={sidebarCollapsed ? t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`) : undefined} className={section === item ? "active" : ""} onClick={() => setSection(item)}>
+            <button key={item} type="button" aria-label={t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`)} title={sidebarCollapsed ? t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`) : undefined} className={section === item ? "active" : ""} onClick={() => { setActiveSolutionId(""); setSection(item); }}>
               {icon(item)}
               <span className="project-hub__nav-label">{t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`)}</span>
               {item === "approvals" && pendingApprovals ? <span className="project-hub__nav-count">{pendingApprovals}</span> : null}
@@ -407,6 +439,18 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
         <span>{t("phPreviewLabel")}</span>
         <p>{t("phPreviewMessage")}</p>
       </div> : null}
+
+      {previewNotice ? <div className="project-hub__toast" role="status">{previewNotice}</div> : null}
+
+      {activeSolution ? <SolutionWorkspace
+        solution={activeSolution}
+        project={project}
+        tenantId={tenantId}
+        companyName={companyName || t("phYourCompany")}
+        onBack={() => { setActiveSolutionId(""); setSection("solutions"); }}
+        onReload={loadProject}
+        onNotice={showPreviewNotice}
+      /> : <>
 
       <header className="project-hub__header">
         <div className="project-hub__heading">
@@ -426,8 +470,6 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
           {t("phViewContract")}
         </button>
       </header>
-
-      {previewNotice ? <div className="project-hub__toast" role="status">{previewNotice}</div> : null}
 
       {section === "planning" ? <ProjectWorkboard project={project} tenantId={tenantId} onReload={loadProject} onNotice={showPreviewNotice} /> : null}
 
@@ -459,6 +501,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
                 <div><dt>Fecha objetivo</dt><dd>{selectedSolution.targetDate || "Por confirmar"}</dd></div>
               </dl>
               {selectedSolution.scope?.length ? <div className="project-solution-detail__scope"><span>Incluye</span><div>{selectedSolution.scope.map((item) => <i key={item}>{item}</i>)}</div></div> : null}
+              <button className="project-solution-detail__open" type="button" onClick={() => { setSection("solutions"); setActiveSolutionId(selectedSolution.id); }}>Abrir espacio de trabajo{icon("arrow")}</button>
             </article> : null}
           </div> : <div className="project-empty project-empty--page"><i>{icon("solutions")}</i><strong>Aún no hay soluciones publicadas</strong><p>Cuando una solución sea definida aparecerá aquí.</p></div>}
         </section>
@@ -586,6 +629,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
           {project.approvals.length ? <div className="project-approval-list">{project.approvals.map((approval) => <article className="project-approval" key={approval.title}><div><span className={`project-status project-status--${approval.status}`}>{statusLabel(approval.status, t)}</span><h3>{approval.title}</h3><p>{approval.description}</p><small>{t("phDueDate")} · {approval.dueDate}</small>{approval.clientComment ? <p className="project-approval__comment">{approval.clientComment}</p> : null}</div>{approval.status === "pending" ? <div className="project-approval__response"><textarea value={approvalComments[approval.id] || ""} onChange={(event) => setApprovalComments((current) => ({ ...current, [approval.id]: event.target.value }))} placeholder={t("phCommentPlaceholder")} maxLength={2000} /><div className="project-approval__actions"><button className="secondary-button" type="button" disabled={respondingApprovalId === approval.id} onClick={() => respondApproval(approval, "rejected")}>{t("phReject")}</button><button className="primary-button" type="button" disabled={respondingApprovalId === approval.id} onClick={() => respondApproval(approval, "approved")}>{respondingApprovalId === approval.id ? t("phSaving") : t("phApprove")}</button></div></div> : null}</article>)}</div> : <div className="project-empty project-empty--page"><i>{icon("check")}</i><strong>{t("phNothingPending")}</strong><p>{t("phNothingNeededHelp")}</p></div>}
         </section>
       ) : null}
+      </>}
       </main>
     </section>
   );
