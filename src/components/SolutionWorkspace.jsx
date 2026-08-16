@@ -26,7 +26,7 @@ const statusNames = {
 
 const sections = [
   { id: "overview", label: "Resumen", icon: "overview" },
-  { id: "planning", label: "Plan de trabajo", icon: "planning" },
+  { id: "planning", label: "Actividades", icon: "planning" },
   { id: "approvals", label: "Aprobaciones", icon: "approvals" },
   { id: "files", label: "Archivos", icon: "files" },
   { id: "users", label: "Usuarios", icon: "users" },
@@ -58,7 +58,7 @@ export default function SolutionWorkspace({ solution, project, tenantId = "", co
 
   return (
     <section className="solution-workspace" aria-label={`Espacio de trabajo de ${solution.name}`}>
-      <button className="solution-workspace__back" type="button" onClick={onBack}>{workspaceIcon("back")}Soluciones</button>
+      <button className="solution-workspace__back" type="button" onClick={onBack}>{workspaceIcon("back")}Plan maestro</button>
 
       <header className="solution-workspace__hero">
         <div>
@@ -93,12 +93,12 @@ export default function SolutionWorkspace({ solution, project, tenantId = "", co
             <header><span>Siguiente</span><h2>{solution.nextMilestone || "Próximo hito por definir"}</h2></header>
             <p>Las siguientes actividades están ordenadas por prioridad y fecha.</p>
             <ul>{solutionProject.tasks.filter((task) => task.status !== "done").slice(0, 3).map((task) => <li key={task.id}><i /><span><strong>{task.title}</strong><small>{task.assignee || "Por asignar"} · {task.dueDate || "Sin fecha"}</small></span></li>)}</ul>
-            <button type="button" onClick={() => setSection("planning")}>Abrir plan de trabajo</button>
+            <button type="button" onClick={() => setSection("planning")}>Abrir actividades</button>
           </article>
         </div>
       </div> : null}
 
-      {section === "planning" ? <ProjectWorkboard project={solutionProject} tenantId={tenantId} onReload={onReload} onNotice={onNotice} /> : null}
+      {section === "planning" ? <ProjectWorkboard project={solutionProject} tenantId={tenantId} onReload={onReload} onNotice={onNotice} mode="solution" /> : null}
 
       {section === "approvals" ? <section className="solution-sheet-page">
         <header><div><span>Aprobaciones</span><h2>Decisiones de la solución</h2><p>Revisa los puntos que necesitan confirmación para que el trabajo pueda avanzar.</p></div></header>

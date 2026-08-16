@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { fetchPublishedProject, respondToProjectApproval } from "../services/projectHubService";
-import ProjectWorkboard from "./ProjectWorkboard";
+import ProjectSolutionsPlan from "./ProjectSolutionsPlan";
 import SolutionWorkspace from "./SolutionWorkspace";
 
 const icon = (name) => {
@@ -45,6 +45,9 @@ const demoProjects = {
         status: "in_progress",
         progress: 28,
         phase: "Diseño funcional",
+        stage: "Etapa 1 · Operación",
+        startDate: "2026-08-10",
+        endDate: "2026-09-18",
         nextMilestone: "Aprobación del flujo de entradas y salidas",
         targetDate: "18 sep 2026",
         scope: ["Productos", "Existencias", "Entradas y salidas", "Trazabilidad"],
@@ -169,6 +172,9 @@ const genericSolutions = [
     status: "in_progress",
     progress: 48,
     phase: "Desarrollo",
+    stage: "Etapa actual",
+    startDate: "2026-08-10",
+    endDate: "2026-10-02",
     nextMilestone: "Primera versión demostrable",
     targetDate: "Por confirmar",
     scope: ["Configuración", "Flujo principal", "Pruebas", "Implementación"],
@@ -283,6 +289,9 @@ const projectFromDatabase = (record) => {
       status: item.status,
       progress: Number(item.progress_percentage || 0),
       phase: item.current_phase_name,
+      stage: item.stage_name,
+      startDate: item.start_date,
+      endDate: item.estimated_end_date,
       nextMilestone: item.next_milestone,
       targetDate: formatPortalDate(item.estimated_end_date),
       scope: item.scope_items || [],
@@ -447,7 +456,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
         project={project}
         tenantId={tenantId}
         companyName={companyName || t("phYourCompany")}
-        onBack={() => { setActiveSolutionId(""); setSection("solutions"); }}
+        onBack={() => { setActiveSolutionId(""); setSection("planning"); }}
         onReload={loadProject}
         onNotice={showPreviewNotice}
       /> : <>
@@ -471,7 +480,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
         </button>
       </header>
 
-      {section === "planning" ? <ProjectWorkboard project={project} tenantId={tenantId} onReload={loadProject} onNotice={showPreviewNotice} /> : null}
+      {section === "planning" ? <ProjectSolutionsPlan project={project} onOpenSolution={(solutionId) => { setSection("solutions"); setActiveSolutionId(solutionId); }} /> : null}
 
       {section === "solutions" ? (
         <section className="project-section-page project-solutions-page">

@@ -44,8 +44,9 @@ const smallIcon = (name) => {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 };
 
-export default function ProjectWorkboard({ project, tenantId = "", onReload, onNotice }) {
-  const [view, setView] = useState("gantt");
+export default function ProjectWorkboard({ project, tenantId = "", onReload, onNotice, mode = "project" }) {
+  const isSolutionMode = mode === "solution";
+  const [view, setView] = useState(isSolutionMode ? "kanban" : "gantt");
   const [objectiveId, setObjectiveId] = useState("all");
   const [tasks, setTasks] = useState(project.tasks || []);
   const [selectedTaskId, setSelectedTaskId] = useState("");
@@ -147,11 +148,11 @@ export default function ProjectWorkboard({ project, tenantId = "", onReload, onN
   return (
     <section className="project-workboard">
       <header className="project-workboard__header">
-        <div><h2>Plan de trabajo</h2><span>Actividades concretas organizadas por objetivo y fecha.</span></div>
-        <div className="project-workboard__view-toggle" role="group" aria-label="Vista del plan de trabajo">
+        <div><h2>{isSolutionMode ? "Actividades" : "Plan de trabajo"}</h2><span>{isSolutionMode ? "Trabajo operativo de esta solución, organizado por objetivo y estado." : "Actividades concretas organizadas por objetivo y fecha."}</span></div>
+        {!isSolutionMode ? <div className="project-workboard__view-toggle" role="group" aria-label="Vista del plan de trabajo">
           <button type="button" className={view === "gantt" ? "active" : ""} onClick={() => setView("gantt")}>{smallIcon("gantt")}Cronograma</button>
           <button type="button" className={view === "kanban" ? "active" : ""} onClick={() => setView("kanban")}>{smallIcon("kanban")}Tablero</button>
-        </div>
+        </div> : <div className="project-workboard__mode-badge">Kanban de la solución</div>}
       </header>
 
       <div className="project-objectives" aria-label="Objetivos por periodo">
@@ -170,7 +171,7 @@ export default function ProjectWorkboard({ project, tenantId = "", onReload, onN
         })}
       </div>
 
-      {view === "gantt" ? <GanttView tasks={filteredTasks} timeline={timeline} onOpen={setSelectedTaskId} /> : <KanbanView tasks={filteredTasks} onOpen={setSelectedTaskId} onDragStart={setDraggedTaskId} onDrop={dropTask} />}
+      {!isSolutionMode && view === "gantt" ? <GanttView tasks={filteredTasks} timeline={timeline} onOpen={setSelectedTaskId} /> : <KanbanView tasks={filteredTasks} onOpen={setSelectedTaskId} onDragStart={setDraggedTaskId} onDrop={dropTask} />}
 
       {selectedTask ? <TaskPanel
         task={selectedTask}
