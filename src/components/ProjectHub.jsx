@@ -7,6 +7,7 @@ const icon = (name) => {
   const paths = {
     overview: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
     planning: <><path d="M4 6h16M4 12h16M4 18h16" /><path d="M8 4v4M15 10v4M11 16v4" /></>,
+    sidebar: <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18M14 8l-3 4 3 4" /></>,
     roadmap: <><path d="M5 4v16" /><circle cx="5" cy="7" r="2" /><circle cx="5" cy="17" r="2" /><path d="M9 7h10M9 17h10" /></>,
     updates: <><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14l-4-3-4 3-4-3-4 3Z" /><path d="M8 7h8M8 11h5" /></>,
     deliverables: <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5M12 22V12" /></>,
@@ -260,6 +261,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
   const { t } = useLanguage();
   const portalTheme = theme === "dark" ? "dark" : "light";
   const [section, setSection] = useState("planning");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewNotice, setPreviewNotice] = useState("");
   const [databaseProject, setDatabaseProject] = useState(null);
   const [loading, setLoading] = useState(Boolean(tenantId));
@@ -341,7 +343,24 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
   };
 
   return (
-    <section className={`project-hub project-hub--${portalTheme}`} aria-label={t("projectHub")}>
+    <section className={`project-hub project-hub--${portalTheme}${sidebarCollapsed ? " project-hub--sidebar-collapsed" : ""}`} aria-label={t("projectHub")}>
+      <aside className="project-hub__sidebar">
+        <div className="project-hub__sidebar-head">
+          <div><span>Centro de proyecto</span><strong>Navegación</strong></div>
+          <button type="button" aria-label={sidebarCollapsed ? "Abrir navegación" : "Contraer navegación"} title={sidebarCollapsed ? "Abrir navegación" : "Contraer navegación"} onClick={() => setSidebarCollapsed((current) => !current)}>{icon("sidebar")}</button>
+        </div>
+        <nav className="project-hub__nav" aria-label={t("phSections")}>
+          {nav.map((item) => (
+            <button key={item} type="button" aria-label={t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`)} title={sidebarCollapsed ? t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`) : undefined} className={section === item ? "active" : ""} onClick={() => setSection(item)}>
+              {icon(item)}
+              <span className="project-hub__nav-label">{t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`)}</span>
+              {item === "approvals" && pendingApprovals ? <span className="project-hub__nav-count">{pendingApprovals}</span> : null}
+            </button>
+          ))}
+        </nav>
+        <footer><i /><span>Portal seguro</span></footer>
+      </aside>
+      <main className="project-hub__workspace">
       {!tenantId ? <div className="project-hub__preview" role="status">
         <span>{t("phPreviewLabel")}</span>
         <p>{t("phPreviewMessage")}</p>
@@ -365,16 +384,6 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
           {t("phViewContract")}
         </button>
       </header>
-
-      <nav className="project-hub__nav" aria-label={t("phSections")}>
-        {nav.map((item) => (
-          <button key={item} type="button" className={section === item ? "active" : ""} onClick={() => setSection(item)}>
-            {icon(item)}
-            {t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`)}
-            {item === "approvals" && pendingApprovals ? <span>{pendingApprovals}</span> : null}
-          </button>
-        ))}
-      </nav>
 
       {previewNotice ? <div className="project-hub__toast" role="status">{previewNotice}</div> : null}
 
@@ -502,6 +511,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
           {project.approvals.length ? <div className="project-approval-list">{project.approvals.map((approval) => <article className="project-approval" key={approval.title}><div><span className={`project-status project-status--${approval.status}`}>{statusLabel(approval.status, t)}</span><h3>{approval.title}</h3><p>{approval.description}</p><small>{t("phDueDate")} · {approval.dueDate}</small>{approval.clientComment ? <p className="project-approval__comment">{approval.clientComment}</p> : null}</div>{approval.status === "pending" ? <div className="project-approval__response"><textarea value={approvalComments[approval.id] || ""} onChange={(event) => setApprovalComments((current) => ({ ...current, [approval.id]: event.target.value }))} placeholder={t("phCommentPlaceholder")} maxLength={2000} /><div className="project-approval__actions"><button className="secondary-button" type="button" disabled={respondingApprovalId === approval.id} onClick={() => respondApproval(approval, "rejected")}>{t("phReject")}</button><button className="primary-button" type="button" disabled={respondingApprovalId === approval.id} onClick={() => respondApproval(approval, "approved")}>{respondingApprovalId === approval.id ? t("phSaving") : t("phApprove")}</button></div></div> : null}</article>)}</div> : <div className="project-empty project-empty--page"><i>{icon("check")}</i><strong>{t("phNothingPending")}</strong><p>{t("phNothingNeededHelp")}</p></div>}
         </section>
       ) : null}
+      </main>
     </section>
   );
 }

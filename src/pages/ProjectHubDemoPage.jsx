@@ -1,17 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import ProjectHub from "../components/ProjectHub";
 import NexorBrand from "../components/branding/NexorBrand";
 
-const tenants = [
-  { slug: "estuches-chavez", name: "Estuches Chávez" },
-  { slug: "vanguardia-joyera", name: "Vanguardia Joyera" },
-  { slug: "romea", name: "ROMEA" },
-];
+const tenant = { slug: "estuches-chavez", name: "Estuches Chávez" };
 
 export default function ProjectHubDemoPage() {
-  const [tenant, setTenant] = useState(tenants[0]);
-  const [theme, setTheme] = useState("light");
-
   useEffect(() => {
     const previousTitle = document.title;
     document.title = "[PRUEBAS] NEXOR IA · Centro de proyecto";
@@ -19,24 +12,11 @@ export default function ProjectHubDemoPage() {
   }, []);
 
   return (
-    <div className={`project-hub-demo-shell project-hub-demo-shell--${theme}`}>
+    <div className="project-hub-demo-shell project-hub-demo-shell--light">
       <header className="project-hub-demo-bar">
-        <NexorBrand compact subtitle="Centro de proyecto" />
-        <div className="project-hub-demo-bar__context">
-          <span><i />Nodo seguro</span>
-          <div className="project-hub-theme-toggle" role="group" aria-label="Tema del portal">
-            <button type="button" className={theme === "light" ? "active" : ""} aria-pressed={theme === "light"} onClick={() => setTheme("light")}>Claro</button>
-            <button type="button" className={theme === "dark" ? "active" : ""} aria-pressed={theme === "dark"} onClick={() => setTheme("dark")}>Oscuro</button>
-          </div>
-          <label>
-            Empresa
-            <select value={tenant.slug} onChange={(event) => setTenant(tenants.find((item) => item.slug === event.target.value) || tenants[0])}>
-              {tenants.map((item) => <option value={item.slug} key={item.slug}>{item.name}</option>)}
-            </select>
-          </label>
-        </div>
+        <NexorBrand />
       </header>
-      <ProjectHub tenantSlug={tenant.slug} companyName={tenant.name} theme={theme} />
+      <ProjectHub tenantSlug={tenant.slug} companyName={tenant.name} theme="light" />
     </div>
   );
 }
