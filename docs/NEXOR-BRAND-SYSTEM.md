@@ -48,7 +48,10 @@ No recrear el logo con texto plano `NEXOR IA` cuando haya espacio para usar el c
 
 ## Reglas de interfaz
 
+- NEXOR cuenta con tema claro y oscuro; el **tema claro es el predeterminado para clientes**.
+- Ambos temas deben conservar exactamente el mismo isotipo, tipografía, colores semánticos y jerarquía.
 - Superficies oscuras con bordes discretos; profundidad por contraste, no por sombras pesadas.
+- En el tema claro usar superficies blancas, fondo niebla y sombras muy contenidas.
 - Cian reservado para señales activas y acciones principales.
 - Azul reservado para navegación y elementos en progreso.
 - Amarillo únicamente para atención o decisiones pendientes.

@@ -1279,6 +1279,18 @@
   width: min(620px, 70vw);
 }
 
+.project-hub-demo-bar .nexor-brand__lockup > span {
+  color: inherit;
+}
+
+.project-hub-demo-bar .nexor-brand__lockup .nexor-brand__ia {
+  color: var(--nexor-signal);
+}
+
+.project-hub-demo-bar .nexor-brand__subtitle {
+  color: var(--nexor-muted-bright);
+}
+
 .project-hub-demo-bar__context {
   align-items: center;
   display: flex;
@@ -1961,5 +1973,240 @@
 
   .project-approval__actions {
     flex-direction: column;
+  }
+}
+
+/* Selector claro/oscuro. La experiencia del cliente abre en claro. */
+.project-hub-theme-toggle {
+  background: rgba(15, 26, 64, 0.72);
+  border: 1px solid var(--nexor-line);
+  border-radius: 10px;
+  display: inline-flex;
+  padding: 3px;
+}
+
+.project-hub-theme-toggle button {
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: var(--nexor-muted-bright);
+  cursor: pointer;
+  font-family: var(--nexor-text);
+  font-size: 11px;
+  font-weight: 600;
+  min-height: 30px;
+  padding: 0 11px;
+}
+
+.project-hub-theme-toggle button:hover {
+  color: var(--nexor-fog);
+}
+
+.project-hub-theme-toggle button.active {
+  background: var(--nexor-signal);
+  color: #06231f;
+}
+
+.project-hub-demo-shell--light {
+  --nexor-fog: #0b1330;
+  --nexor-muted-bright: #536184;
+  --nexor-line: rgba(30, 42, 84, 0.14);
+  background: #f5f7fc;
+  color: var(--nexor-ink);
+}
+
+.project-hub-demo-shell--light .project-hub-demo-bar {
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 30px rgba(11, 19, 48, 0.06);
+}
+
+.project-hub-demo-shell--light .project-hub-demo-bar__context > span {
+  color: #087e74;
+}
+
+.project-hub-demo-shell--light .project-hub-theme-toggle {
+  background: #eef2fb;
+}
+
+.project-hub-demo-shell--light .project-hub-theme-toggle button:hover {
+  color: var(--nexor-ink);
+}
+
+.project-hub-demo-shell--light .project-hub-demo-bar select {
+  background: #ffffff;
+  color: var(--nexor-ink);
+}
+
+.project-hub--light {
+  --nexor-fog: #0b1330;
+  --nexor-muted-bright: #5c698d;
+  --nexor-muted: #7884a8;
+  --nexor-card: #ffffff;
+  --nexor-card-raised: #f7f9fe;
+  --nexor-slate: #edf1fb;
+  --nexor-line: rgba(30, 42, 84, 0.13);
+  --nexor-signal-soft: rgba(20, 177, 163, 0.1);
+  --nexor-link-soft: rgba(79, 123, 255, 0.1);
+  background:
+    linear-gradient(rgba(30, 42, 84, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 42, 84, 0.035) 1px, transparent 1px),
+    #f5f7fc;
+  background-size: 42px 42px;
+  color: var(--nexor-ink);
+}
+
+.project-hub--light .project-hub__preview {
+  background: linear-gradient(90deg, rgba(79, 123, 255, 0.09), rgba(47, 227, 208, 0.06));
+  border-color: rgba(79, 123, 255, 0.2);
+}
+
+.project-hub--light .project-hub__preview span {
+  color: #ffffff;
+}
+
+.project-hub--light .project-hub__eyebrow,
+.project-hub--light .project-panel header span,
+.project-hub--light .project-section-page > header > p {
+  color: #087e74;
+}
+
+.project-hub--light .project-hub__active-badge {
+  color: #087e74;
+}
+
+.project-hub--light .project-hub__nav,
+.project-hub--light .project-hub__metric,
+.project-hub--light .project-panel,
+.project-hub--light .project-section-page,
+.project-hub--light .project-phase-card,
+.project-hub--light .project-deliverable,
+.project-hub--light .project-document,
+.project-hub--light .project-approval,
+.project-hub--light .project-hub-state,
+.project-hub--light .project-health {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: var(--nexor-line);
+  box-shadow: 0 18px 46px -36px rgba(11, 19, 48, 0.32), inset 0 1px 0 #ffffff;
+}
+
+.project-hub--light .project-hub__nav button {
+  color: #687394;
+}
+
+.project-hub--light .project-hub__nav button:hover {
+  color: var(--nexor-ink);
+}
+
+.project-hub--light .project-hub__nav button.active {
+  color: #087e74;
+}
+
+.project-hub--light .project-hub__title-row h1,
+.project-hub--light .project-panel header h2,
+.project-hub--light .project-section-page > header h2,
+.project-hub--light .project-hub__metric strong,
+.project-hub--light .project-phase-card h3,
+.project-hub--light .project-deliverable h3,
+.project-hub--light .project-document h3,
+.project-hub--light .project-approval h3,
+.project-hub--light .project-health__status strong,
+.project-hub--light .project-health__dates strong,
+.project-hub--light .project-week__item > span,
+.project-hub--light .project-update strong,
+.project-hub--light .project-approval-preview strong,
+.project-hub--light .project-empty strong {
+  color: var(--nexor-ink);
+}
+
+.project-hub--light .project-hub__metric--progress strong {
+  color: #087e74;
+}
+
+.project-hub--light .project-hub__metric--attention {
+  background: linear-gradient(150deg, #fff9ec, #fffdf8);
+  border-color: rgba(221, 151, 42, 0.38);
+}
+
+.project-hub--light .project-hub__metric--attention strong,
+.project-hub--light .project-hub__metric--attention > span,
+.project-hub--light .project-hub__metric--attention small {
+  color: #8a5a0a;
+}
+
+.project-hub--light .project-progress {
+  background: #e8ecf5;
+}
+
+.project-hub--light .project-health {
+  border-left-color: #14b1a3;
+}
+
+.project-hub--light .project-health--yellow {
+  border-left-color: #dd972a;
+}
+
+.project-hub--light .project-health--red {
+  border-left-color: #d94d63;
+}
+
+.project-hub--light .project-roadmap-preview__marker,
+.project-hub--light .project-phase-card__number,
+.project-hub--light .project-deliverable__icon,
+.project-hub--light .project-document__icon {
+  background: #f2f5fb;
+}
+
+.project-hub--light .project-roadmap-preview__step--completed .project-roadmap-preview__marker {
+  color: #06231f;
+}
+
+.project-hub--light .project-week__item--in_progress i {
+  box-shadow: inset 0 0 0 4px #ffffff;
+}
+
+.project-hub--light .project-timeline__item > i {
+  border-color: #ffffff;
+}
+
+.project-hub--light .project-needs--pending,
+.project-hub--light .project-approval {
+  border-color: var(--nexor-line);
+  border-left-color: #dd972a;
+}
+
+.project-hub--light .project-approval__response textarea {
+  background: #ffffff;
+  color: var(--nexor-ink);
+}
+
+.project-hub--light .project-approval__comment {
+  background: rgba(79, 123, 255, 0.06);
+}
+
+.project-hub--light .secondary-button {
+  background: #ffffff;
+  border-color: var(--nexor-line);
+  color: var(--nexor-ink);
+}
+
+.project-hub--light .secondary-button:hover:not(:disabled) {
+  background: #eef2fb;
+  border-color: rgba(79, 123, 255, 0.3);
+  color: #315dcc;
+}
+
+@media (max-width: 920px) {
+  .project-hub-demo-bar__context {
+    gap: 12px;
+  }
+
+  .project-hub-demo-bar__context > span {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .project-hub-theme-toggle {
+    align-self: flex-start;
   }
 }

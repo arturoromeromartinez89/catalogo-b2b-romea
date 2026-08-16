@@ -196,8 +196,9 @@ const projectFromDatabase = (record) => {
   };
 };
 
-export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName = "" }) {
+export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName = "", theme = "light" }) {
   const { t } = useLanguage();
+  const portalTheme = theme === "dark" ? "dark" : "light";
   const [section, setSection] = useState("overview");
   const [previewNotice, setPreviewNotice] = useState("");
   const [databaseProject, setDatabaseProject] = useState(null);
@@ -239,15 +240,15 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
   const project = tenantId ? projectFromDatabase(databaseProject) : demoProject;
 
   if (loading) {
-    return <section className="project-hub"><div className="project-hub-state"><span className="loading-spinner" /><strong>{t("phLoading")}</strong></div></section>;
+    return <section className={`project-hub project-hub--${portalTheme}`}><div className="project-hub-state"><span className="loading-spinner" /><strong>{t("phLoading")}</strong></div></section>;
   }
 
   if (loadError) {
-    return <section className="project-hub"><div className="project-hub-state project-hub-state--error"><strong>{t("phLoadError")}</strong><p>{loadError}</p><button className="secondary-button" type="button" onClick={loadProject}>{t("phRetry")}</button></div></section>;
+    return <section className={`project-hub project-hub--${portalTheme}`}><div className="project-hub-state project-hub-state--error"><strong>{t("phLoadError")}</strong><p>{loadError}</p><button className="secondary-button" type="button" onClick={loadProject}>{t("phRetry")}</button></div></section>;
   }
 
   if (!project) {
-    return <section className="project-hub"><div className="project-hub-state"><div className="project-empty project-empty--page"><i>{icon("roadmap")}</i><strong>{t("phNoPublishedProject")}</strong><p>{t("phNoPublishedProjectHelp")}</p></div></div></section>;
+    return <section className={`project-hub project-hub--${portalTheme}`}><div className="project-hub-state"><div className="project-empty project-empty--page"><i>{icon("roadmap")}</i><strong>{t("phNoPublishedProject")}</strong><p>{t("phNoPublishedProjectHelp")}</p></div></div></section>;
   }
 
   const nav = ["overview", "roadmap", "updates", "deliverables", "documents", "approvals"];
@@ -278,7 +279,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
   };
 
   return (
-    <section className="project-hub" aria-label={t("projectHub")}>
+    <section className={`project-hub project-hub--${portalTheme}`} aria-label={t("projectHub")}>
       {!tenantId ? <div className="project-hub__preview" role="status">
         <span>{t("phPreviewLabel")}</span>
         <p>{t("phPreviewMessage")}</p>

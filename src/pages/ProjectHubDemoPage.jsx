@@ -10,6 +10,7 @@ const tenants = [
 
 export default function ProjectHubDemoPage() {
   const [tenant, setTenant] = useState(tenants[0]);
+  const [theme, setTheme] = useState("light");
 
   useEffect(() => {
     const previousTitle = document.title;
@@ -18,11 +19,15 @@ export default function ProjectHubDemoPage() {
   }, []);
 
   return (
-    <div className="project-hub-demo-shell">
+    <div className={`project-hub-demo-shell project-hub-demo-shell--${theme}`}>
       <header className="project-hub-demo-bar">
         <NexorBrand compact subtitle="Centro de proyecto" />
         <div className="project-hub-demo-bar__context">
           <span><i />Nodo seguro</span>
+          <div className="project-hub-theme-toggle" role="group" aria-label="Tema del portal">
+            <button type="button" className={theme === "light" ? "active" : ""} aria-pressed={theme === "light"} onClick={() => setTheme("light")}>Claro</button>
+            <button type="button" className={theme === "dark" ? "active" : ""} aria-pressed={theme === "dark"} onClick={() => setTheme("dark")}>Oscuro</button>
+          </div>
           <label>
             Empresa
             <select value={tenant.slug} onChange={(event) => setTenant(tenants.find((item) => item.slug === event.target.value) || tenants[0])}>
@@ -31,7 +36,7 @@ export default function ProjectHubDemoPage() {
           </label>
         </div>
       </header>
-      <ProjectHub tenantSlug={tenant.slug} companyName={tenant.name} />
+      <ProjectHub tenantSlug={tenant.slug} companyName={tenant.name} theme={theme} />
     </div>
   );
 }
