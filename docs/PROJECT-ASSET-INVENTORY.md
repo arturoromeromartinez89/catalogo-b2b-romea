@@ -31,6 +31,26 @@ deben intercambiarse variables, credenciales ni datos de clientes. Los IDs de
 ambiente y el procedimiento seguro están documentados en
 `docs/ENVIRONMENTS-AND-RELEASE-POLICY.md`.
 
+Las tres URLs respondieron HTTP 200 durante esta revisión.
+
+## Respaldo administrado de los datos
+
+El 17 de agosto de 2026 se comprobó de forma únicamente informativa el estado
+de los respaldos administrados de Supabase:
+
+- Producción (`pyignizeoevafifzfnik`): proyecto saludable y siete respaldos
+  físicos diarios completados; el más reciente observado corresponde al 16 de
+  agosto de 2026 a las 07:24 UTC.
+- Staging (`vafqcvpzksjlrborxoos`): siete respaldos físicos diarios
+  completados; el más reciente observado corresponde al 16 de agosto de 2026
+  a las 08:14 UTC.
+- La recuperación a un punto exacto en el tiempo (PITR) aparece desactivada en
+  ambos ambientes. Activarla sería una mejora adicional de continuidad, no una
+  condición para este respaldo del código.
+
+No se restauró, descargó, alteró ni copió ningún registro de las bases durante
+esta comprobación.
+
 ## Información funcional valiosa ya presente
 
 El repositorio activo contiene, entre otros, estos dominios:
