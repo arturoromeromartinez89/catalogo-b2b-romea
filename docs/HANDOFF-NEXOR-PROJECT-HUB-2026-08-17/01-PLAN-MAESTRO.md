@@ -32,7 +32,7 @@ Puerta de salida: build aprobado, staging independiente y producción intacta.
 
 ## Fase 1 — Primera vertical funcional
 
-Estado: implementada; faltan correcciones de cierre y redeploy final.
+Estado: terminada y respaldada.
 
 - Inicio con avance confirmado, etapa, acciones, código y horas.
 - Cronograma de tres meses con soluciones desplegables.
@@ -145,13 +145,12 @@ Puerta de salida: auditoría de seguridad y recuperación satisfactoria antes de
 
 ## Secuencia inmediata recomendada
 
-1. Cerrar y respaldar Fase 1.
-2. Diseñar el recorrido interno mínimo de Fase 2.
-3. Implementar un proyecto real con una solución real como piloto.
-4. Completar el flujo de Fase 3 a partir de ese caso.
-5. Construir Documentos, Entregables y Decisiones del portal con los mismos registros.
-6. Generar el primer resumen de una hoja y SOW desde datos reales.
-7. Solo entonces priorizar integraciones automáticas.
+1. Diseñar el recorrido interno mínimo de Fase 2.
+2. Implementar un proyecto real con una solución real como piloto.
+3. Completar el flujo de Fase 3 a partir de ese caso.
+4. Construir Documentos, Entregables y Decisiones del portal con los mismos registros.
+5. Generar el primer resumen de una hoja y SOW desde datos reales.
+6. Solo entonces priorizar integraciones automáticas.
 
 ## Cómo se gobierna este plan
 

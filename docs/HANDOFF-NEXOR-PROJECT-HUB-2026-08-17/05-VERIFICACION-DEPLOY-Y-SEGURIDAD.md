@@ -37,14 +37,15 @@ El seed modifica staging y solo debe repetirse de manera intencional. Revisar pr
 - Auditoría verificada.
 - Navegación y aperturas principales verificadas en staging.
 - Screenshots guardados para escritorio y móvil.
+- Deployment final de staging listo: `dpl_F8gxhTmntF8w7djRWpyUh5qnBLpL`.
+- Actividad cancelada visible, negra, operable y excluida del avance.
+- Studio y portal consumen el mismo cálculo de avance confirmado.
+- QA público sin errores de consola y sin desbordamiento móvil.
 
 ## Pendientes de verificación
 
 - Repetir Supabase DB lint cuando exista `SUPABASE_DB_PASSWORD` en una sesión segura.
-- Redeplegar staging después de las siete correcciones finales.
-- Recapturar desktop y móvil después del deploy.
-- Confirmar una tarea cancelada visible y operable.
-- Confirmar que Studio y portal muestran el mismo avance confirmado.
+- Recapturar desktop y móvil cuando la API de screenshot vuelva a responder; los PNG actuales son del corte anterior.
 
 ## Definición de respaldo completo
 

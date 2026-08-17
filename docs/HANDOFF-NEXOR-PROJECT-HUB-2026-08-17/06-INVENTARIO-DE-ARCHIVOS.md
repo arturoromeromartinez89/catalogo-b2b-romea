@@ -3,7 +3,7 @@
 ## Documentación de producto y diseño
 
 - `PRODUCT.md`: contrato de producto, usuarios, principios, modelo operativo y estados.
-- `DESIGN.md`: sistema visual persistente; requiere la actualización indicada en el relevo.
+- `DESIGN.md`: sistema visual persistente actualizado al cronograma único.
 - `.impeccable/design.json`: tokens y metadatos del sistema visual.
 - `.impeccable/project-hub-surface-brief.md`: brief de la superficie.
 - `.impeccable/project-hub-quality-bar.md`: criterios de calidad.
@@ -18,6 +18,7 @@
 - `src/components/SolutionWorkspace.jsx`: detalle de la solución, ficha, entregables, criterios y decisiones.
 - `src/components/superadmin/ProjectHubManager.jsx`: administración interna en NEXOR Studio.
 - `src/services/projectHubService.js`: lectura, escritura, normalización y cálculos de datos del Project Hub.
+- `src/utils/projectHubModel.js`: fuente única del lenguaje de estados y de los cálculos ponderados de avance.
 - `src/i18n/translations.js`: textos traducibles.
 - `src/projectHub.css`: sistema visual y responsive del portal.
 
@@ -49,12 +50,16 @@ Migraciones históricas recuperadas para sincronizar el repositorio con staging:
 - `.impeccable/review/desktop-gantt.png`
 - `.impeccable/review/mobile-gantt.png`
 
+Los PNG corresponden al corte visual anterior. El cierre funcional se verificó en el staging público mediante DOM, estilos calculados, navegación y consola porque la API de captura agotó su tiempo de espera.
+
 ## Respaldo Git anterior
 
 - `a95bfde feat(project-hub): establish reviewed visual foundation`
 - `b331052 docs: record environment and backup inventory`
 - etiqueta `backup/project-hub-visual-2026-08-17`
 - etiqueta `backup/catalogo-b2b-ordered-2026-08-17`
+- `43b5ad6 feat(project-hub): add functional vertical and master handoff`
+- etiqueta `backup/project-hub-functional-handoff-2026-08-17`
 
 El avance funcional posterior debe aparecer en un commit y etiqueta adicionales. Consultar `git log --oneline --decorate -10` para obtener los identificadores definitivos después del checkpoint.
 

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { VISUAL_STATUS_LABELS } from "../utils/projectHubModel";
 
 const DAY_WIDTH = 22;
 const DAY_MS = 86400000;
@@ -6,14 +7,8 @@ const parseDate = (value) => value ? new Date(`${String(value).slice(0, 10)}T12:
 const isoDate = (date) => date.toISOString().slice(0, 10);
 const dateDiff = (start, end) => Math.round((end - start) / DAY_MS);
 
-const statusNames = {
-  planned: "Por iniciar",
-  in_progress: "En proceso",
-  waiting: "En espera",
-  overdue: "Atrasado",
-  completed: "Terminado",
-  cancelled: "Cancelado",
-};
+// Orden de lectura de la leyenda: gris, verde, naranja, rojo, azul y negro.
+const legendOrder = ["planned", "in_progress", "waiting", "overdue", "completed", "cancelled"];
 
 const planIcon = (name) => {
   const paths = {
@@ -47,9 +42,9 @@ export default function ProjectSolutionsPlan({ project, onOpenSolution, onOpenTa
 
   return <section className="project-workboard project-solutions-plan">
     <header className="project-workboard__header project-solutions-plan__header">
-      <div><p>Próximos 3 meses</p><h2>Cronograma de soluciones</h2><span>Despliega una solución para ver sus actividades. Cada actividad abre su detalle.</span></div>
+      <div><h2>Cronograma de soluciones</h2><span>Próximos 3 meses. Despliega una solución para ver sus actividades. Cada actividad abre su detalle.</span></div>
       <div className="project-status-legend" aria-label="Reglas de estado">
-        {Object.entries(statusNames).map(([status, label]) => <span className={`project-status project-status--${status}`} key={status}>{label}</span>)}
+        {legendOrder.map((status) => <span className={`project-status project-status--${status}`} key={status}>{VISUAL_STATUS_LABELS[status]}</span>)}
       </div>
     </header>
 
@@ -105,15 +100,18 @@ function MasterGantt({ solutions, tasks, timeline, expanded, onToggle, onOpenSol
       </div>
 
       {solutions.map((solution) => {
-        const solutionTasks = tasks.filter((task) => task.solutionId === solution.id && task.status !== "cancelled");
+        // Las canceladas se muestran, pero nunca se cuentan como trabajo comprometido.
+        const solutionTasks = tasks.filter((task) => task.solutionId === solution.id);
+        const activeTasks = solutionTasks.filter((task) => task.status !== "cancelled");
+        const cancelledCount = solutionTasks.length - activeTasks.length;
         const isExpanded = expanded.has(solution.id);
         const position = barPosition(solution.startDate, solution.endDate);
         const state = solution.visualStatus || "planned";
         return <div className="project-gantt__group" key={solution.id}>
-          <div className="project-gantt__row master-solutions-gantt__row">
+          <div className={`project-gantt__row master-solutions-gantt__row project-gantt__row--state-${state}`}>
             <div className="project-gantt__task project-gantt__solution-label">
               <button type="button" className="project-gantt__expand" aria-expanded={isExpanded} aria-label={`${isExpanded ? "Contraer" : "Desplegar"} ${solution.name}`} onClick={() => onToggle(solution.id)}>{planIcon(isExpanded ? "minus" : "plus")}</button>
-              <button type="button" className="project-gantt__task-link" onClick={() => onOpenSolution(solution.id)}><strong>{solution.name}</strong><small>{statusNames[state]} · {solutionTasks.length} actividades</small></button>
+              <button type="button" className="project-gantt__task-link" onClick={() => onOpenSolution(solution.id)}><strong>{solution.name}</strong><small><em className="project-gantt__state-text">{VISUAL_STATUS_LABELS[state]}</em> · {activeTasks.length} actividades{cancelledCount ? ` · ${cancelledCount} cancelada${cancelledCount === 1 ? "" : "s"}` : ""}</small></button>
             </div>
             <div className="project-gantt__track" style={{ width: timeline.width }}>
               {track(`solution-${solution.id}`)}
@@ -125,11 +123,11 @@ function MasterGantt({ solutions, tasks, timeline, expanded, onToggle, onOpenSol
             {solutionTasks.map((task) => {
               const taskPosition = barPosition(task.startDate, task.dueDate);
               const taskState = task.visualStatus || "planned";
-              return <div className="project-gantt__row project-gantt__row--task" key={task.id}>
-                <button type="button" className="project-gantt__task project-gantt__task--child" onClick={() => onOpenTask(solution.id, task.id)}><i /><span><strong>{task.title}</strong><small>{statusNames[taskState]} · {task.assignee || "Por asignar"}</small></span>{planIcon("arrow")}</button>
+              return <div className={`project-gantt__row project-gantt__row--task project-gantt__row--state-${taskState}`} key={task.id}>
+                <button type="button" className="project-gantt__task project-gantt__task--child" onClick={() => onOpenTask(solution.id, task.id)}><i /><span><strong>{task.title}</strong><small><em className="project-gantt__state-text">{VISUAL_STATUS_LABELS[taskState]}</em> · {task.assignee || "Por asignar"}</small></span>{planIcon("arrow")}</button>
                 <div className="project-gantt__track" style={{ width: timeline.width }}>
                   {track(`task-${task.id}`)}
-                  {taskPosition ? <button type="button" className={`project-gantt__bar project-gantt__bar--${taskState}`} style={taskPosition} onClick={() => onOpenTask(solution.id, task.id)} title={`${task.title}: ${statusNames[taskState]}`}><span>{task.status === "done" ? "100%" : ""}</span></button> : null}
+                  {taskPosition ? <button type="button" className={`project-gantt__bar project-gantt__bar--${taskState}`} style={taskPosition} onClick={() => onOpenTask(solution.id, task.id)} title={`${task.title}: ${VISUAL_STATUS_LABELS[taskState]}`}><span>{task.status === "done" ? "100%" : ""}</span></button> : null}
                 </div>
               </div>;
             })}

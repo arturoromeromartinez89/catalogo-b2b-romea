@@ -39,6 +39,8 @@ La demo sembrada produce, de forma rastreable:
 - 3 criterios de aceptación;
 - 10 tareas relacionadas.
 
+El demo público del frontend agrega una undécima actividad sintética cancelada para comprobar el estado negro y su exclusión del avance. El seed de base de datos conserva sus 10 tareas originales.
+
 Son datos sintéticos identificados como demostración, pero no números escritos arbitrariamente en componentes.
 
 ## Migraciones funcionales
@@ -67,6 +69,9 @@ También se incorporaron al repositorio diez migraciones remotas históricas que
 - Una solución se despliega in situ para revelar sus tareas.
 - Una tarea abre directamente su detalle.
 - En móvil el cronograma se transforma en una lista/accordion sin desplazamiento horizontal.
+- Los seis estados globales conservan color y texto en escritorio y móvil.
+- Las tareas canceladas aparecen en negro, abren su detalle y no cuentan en el avance.
+- Portal y NEXOR Studio comparten la misma regla de avance confirmado.
 - Aprobar y Solicitar cambios tienen jerarquía equilibrada.
 
 ## Validación ya realizada
@@ -76,14 +81,14 @@ También se incorporaron al repositorio diez migraciones remotas históricas que
 - Migraciones: aplicadas en staging.
 - Seed funcional: aplicado en staging.
 - QA de navegación: la placa desaparece fuera de Inicio, la solución abre y la tarea abre.
-- Capturas desktop y móvil: guardadas en `.impeccable/review/`.
+- QA público posterior al deploy: 12 filas de cronograma, actividad cancelada operable, cero errores de consola y sin desbordamiento móvil.
+- Staging canónico desplegado en Vercel con deployment `dpl_F8gxhTmntF8w7djRWpyUh5qnBLpL`.
+- Las capturas de referencia existentes permanecen en `.impeccable/review/`; la API de captura agotó su tiempo de espera en Chrome y en el navegador integrado, por lo que no se sobrescribieron con imágenes incompletas.
 
 El lint enlazado de Supabase no se pudo ejecutar porque la sesión no tenía `SUPABASE_DB_PASSWORD`. No es evidencia de error en las migraciones; debe repetirse cuando exista la credencial, sin escribirla en Git ni en esta documentación.
 
 ## Riesgos conocidos
 
-- `DESIGN.md` describe todavía un selector Cronograma/Tablero y un Gantt móvil horizontal que ya no corresponden al producto actual.
-- La semántica completa de estados no se conserva todavía en la lista móvil y algunos espacios internos.
-- Las tareas canceladas se excluyen visualmente del cronograma; deben mostrarse en negro aunque sigan fuera del cálculo.
-- El Studio puede mostrar un porcentaje diferente al portal si no se unifica el cálculo.
-- El despliegue actual de staging puede no contener el último ajuste de persistencia de `projectHubService.js`; debe redeplegarse después de las correcciones.
+- Supabase DB lint sigue pendiente hasta disponer de `SUPABASE_DB_PASSWORD` en una sesión segura.
+- Las capturas PNG deben regenerarse en un futuro pase de evidencia; la verificación actual se hizo contra DOM, estilos calculados, interacciones y consola del staging público.
+- `.impeccable/design.json` quedó anterior a la actualización de `DESIGN.md`. Debe refrescarse mediante el flujo `impeccable document` en una tarea de documentación dedicada, sin mezclarlo con trabajo funcional.

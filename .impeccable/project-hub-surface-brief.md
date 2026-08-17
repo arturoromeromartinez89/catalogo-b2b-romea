@@ -12,14 +12,15 @@
 ## Content and constraints
 
 - Keep the NEXOR and client identities together without competing.
-- Keep the current project summary, contract action, plan views, metrics, solution timeline and navigation.
+- Keep the current project summary, contract action, metrics, expandable solution timeline and navigation.
 - Light theme remains the client default; mobile must retain the same task hierarchy.
 
 ## Chosen direction
 
 - Briefing modular: an asymmetric executive briefing organized around “where we are”, “what is moving” and “what needs attention”.
-- Memorable moment: project progress and pending attention form one compact briefing plate before the plan-master evidence.
-- Signature interaction: switching between Cronograma and Tablero behaves like changing the briefing’s evidence view, with a short directional transition and no hidden content.
+- Memorable moment: project progress and pending attention form one compact briefing plate before the schedule evidence.
+- Signature interaction: each solution expands in place inside the single three-month schedule; selecting an activity opens its exact detail without duplicating the evidence in another view.
+- Mobile adaptation: the schedule becomes a vertical expandable list with explicit state labels and no horizontal timeline.
 
 ## Unresolved decisions
 

@@ -94,12 +94,6 @@ components:
     textColor: "{colors.vault-ink}"
     rounded: "{rounded.lg}"
     padding: "clamp(22px, 2.8vw, 32px)"
-  evidence-toggle-active:
-    backgroundColor: "{colors.vault-blue}"
-    textColor: "{colors.vault-paper}"
-    rounded: "{rounded.sm}"
-    padding: "9px 13px"
-    height: "38px"
 ---
 
 # Design System: NEXOR IA Project Hub
@@ -141,7 +135,7 @@ La paleta combina un suelo frío y papel blanco con tinta de bóveda; los acento
 ### Neutral
 
 - **Suelo de Bóveda:** Fondo frío del espacio de trabajo y soporte del campo de nodos.
-- **Papel de Evidencia:** Plan maestro, módulos claros y controles secundarios.
+- **Papel de Evidencia:** Cronograma, módulos claros y controles secundarios.
 - **Niebla de Bóveda:** Texto y marcas sobre tinta profunda.
 - **Silencio Operativo:** Metadatos, ayudas y etiquetas secundarias sobre superficies claras.
 
@@ -162,7 +156,7 @@ La paleta combina un suelo frío y papel blanco con tinta de bóveda; los acento
 ### Hierarchy
 
 - **Display** (700, escala fluida, 0.98): Nombre del proyecto dentro de la placa de briefing; balancear líneas y limitar su ancho para conservar el golpe editorial.
-- **Headline** (700, escala fluida, 1.1): Títulos de evidencia y secciones principales como Plan maestro.
+- **Headline** (700, escala fluida, 1.1): Títulos de evidencia y secciones principales como el cronograma de soluciones.
 - **Title** (700, 20px, 1.25): Nombres de solución, tarjetas operativas y encabezados secundarios.
 - **Body** (400, 14px, 1.62): Descripción del proyecto y ayudas; mantener una medida aproximada de 68 caracteres.
 - **Label** (800, 9px, 0.1em, mayúsculas): Hechos, estados y metadatos compactos; no usar para párrafos.
@@ -173,9 +167,9 @@ La paleta combina un suelo frío y papel blanco con tinta de bóveda; los acento
 
 ## Layout
 
-El espacio de trabajo usa un campo centrado de hasta 1240px sobre una trama de nodos de 30px. La portada es un grid asimétrico: la placa principal ocupa la columna dominante y dos módulos compactos apilan progreso y atención; el Plan maestro sigue inmediatamente como evidencia. El ritmo se apoya en pasos de 4px con separaciones recurrentes de 12px, 16px, 20px, 24px y 32px.
+El espacio de trabajo usa un campo centrado de hasta 1240px sobre una trama de nodos de 30px. La portada es un grid asimétrico: la placa principal ocupa la columna dominante y dos módulos compactos apilan progreso y atención; el cronograma sigue inmediatamente como evidencia. El ritmo se apoya en pasos de 4px con separaciones recurrentes de 12px, 16px, 20px, 24px y 32px.
 
-En anchos intermedios la columna de señales se estrecha sin perder su jerarquía. A 760px o menos, la placa ocupa todo el ancho y progreso/atención forman dos columnas en la fila siguiente; el Plan maestro conserva sus tres métricas en una franja desplazable y Cronograma/Tablero pasa a dos controles de igual ancho. La navegación lateral colapsa a iconos sin alterar el orden de lectura. No debe existir desbordamiento horizontal de la página en 390×844; solo los datos intrínsecamente panorámicos, como el Gantt o la franja métrica, pueden desplazarse dentro de su propio contenedor.
+En anchos intermedios la columna de señales se estrecha sin perder su jerarquía. A 760px o menos, la placa ocupa todo el ancho y progreso/atención forman dos columnas en la fila siguiente; la franja de resumen del cronograma conserva sus tres métricas en una banda desplazable. La navegación lateral colapsa a iconos sin alterar el orden de lectura. No debe existir desbordamiento horizontal de la página en 390×844; solo los datos intrínsecamente panorámicos, como la franja métrica, pueden desplazarse dentro de su propio contenedor.
 
 **The Briefing-Then-Evidence Rule.** La identidad, el estado, el movimiento y la atención se leen antes del detalle del plan; no insertar paneles equivalentes entre ambas capas.
 
@@ -187,7 +181,7 @@ El sistema usa profundidad ambiental: sombras largas, muy recortadas y de baja o
 
 - **Placa de briefing** (`0 24px 54px -38px rgba(7, 13, 34, .78)`): Ancla la gran superficie de tinta sin crear una tarjeta flotante pesada.
 - **Señal clara** (`0 20px 42px -34px rgba(11, 19, 48, .55)`): Separa progreso del suelo manteniendo una lectura plana.
-- **Plan de evidencia** (`0 28px 58px -46px rgba(11, 19, 48, .58)`): Da continuidad vertical al Plan maestro.
+- **Plan de evidencia** (`0 28px 58px -46px rgba(11, 19, 48, .58)`): Da continuidad vertical al cronograma de soluciones.
 
 **The Ambient Depth Rule.** Las sombras organizan capas y nunca decoran cada elemento; dentro de una superficie, preferir líneas tenues y contraste tonal.
 
@@ -231,16 +225,30 @@ La navegación lateral vive en tinta profunda y usa Inter semibold. El estado ac
 
 Es el componente firma: gradiente de tinta profunda, título Space Grotesk, estado activo, descripción, contexto, contrato y tres hechos clave. Un campo de nodos restringido ocupa solo la esquina inferior; jamás debe competir con el nombre del proyecto.
 
-### Evidence View Toggle
+### Cronograma de soluciones
 
-Cronograma y Tablero se presentan como dos vistas equivalentes de la misma evidencia. El control activo usa azul sólido y la transición de contenido entra en 320ms con desplazamiento corto y desenfoque que se anula por completo; `prefers-reduced-motion` reduce toda animación a duración prácticamente nula.
+Existe **un solo cronograma** en Inicio. No hay selector de vistas ni tablero paralelo: duplicar la misma evidencia con dos nombres rompe la fuente única de verdad.
+
+- Cubre los próximos tres meses; el horizonte se enuncia una sola vez, en el texto auxiliar del encabezado, nunca como kicker adicional.
+- Cada solución se despliega **in situ**, dentro del mismo cronograma, para revelar sus actividades; una actividad abre directamente su detalle.
+- La entrada de contenido usa 320ms con desplazamiento corto y desenfoque que se anula por completo; `prefers-reduced-motion` reduce toda animación a duración prácticamente nula.
+
+**Estados en el cronograma.** Solución y actividad muestran siempre su estado con color y palabra, según los seis estados globales. Las actividades canceladas se muestran en negro, conservan su detalle y quedan fuera de todo cálculo de avance; no se ocultan.
+
+### Cronograma en móvil
+
+A 760px o menos el cronograma se transforma en una **lista desplegable vertical**. No existe timeline horizontal, ni Gantt desplazable, ni scroll lateral de la página.
+
+- Se ocultan la cabecera de meses y las barras; la señal de estado viaja en el borde izquierdo de la fila y en una píldora con la palabra del estado.
+- Los seis colores —azul, verde, naranja, rojo, negro y gris— se conservan íntegros en solución y actividades.
+- La jerarquía solución → actividad se conserva por sangría y por el control de desplegar, no por posición temporal.
 
 ## Do's and Don'ts
 
 ### Do:
 
 - **Do** mantener juntos progreso y atención como señales compactas inmediatamente adyacentes a la placa principal.
-- **Do** hacer que el Plan maestro parezca evidencia de la síntesis ejecutiva, no una aplicación separada.
+- **Do** hacer que el cronograma parezca evidencia de la síntesis ejecutiva, no una aplicación separada.
 - **Do** usar etiquetas, cantidades y formas además del color para todos los estados.
 - **Do** preservar el orden de lectura y los valores de progreso y atención en el primer viewport móvil.
 - **Do** utilizar el lockup oficial de NEXOR cuando exista espacio y mantener clara la jerarquía con la marca del cliente.

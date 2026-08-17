@@ -2801,6 +2801,20 @@
   padding: 6px;
 }
 
+/* Read-only state signal for activities removed from scope: black plate plus its word. */
+.project-task-panel__meta .project-task-panel__state {
+  align-self: flex-start;
+  margin-bottom: 0;
+}
+
+.project-task-panel__meta .project-status--cancelled { color: #ffffff; }
+
+.project-task-panel__meta small {
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .project-task-panel__priority--critical { color: #d33f57 !important; }
 .project-task-panel__priority--high { color: #aa6c0e !important; }
 
@@ -4406,15 +4420,6 @@
 
 .project-solutions-plan__header { align-items: flex-start; }
 
-.project-solutions-plan__header p {
-  color: #4f7bff;
-  font-size: 9px;
-  font-weight: 850;
-  letter-spacing: .12em;
-  margin: 0 0 7px;
-  text-transform: uppercase;
-}
-
 .project-status-legend {
   display: flex;
   flex-wrap: wrap;
@@ -4588,6 +4593,16 @@
   padding: 18px 30px;
 }
 
+/* State modifiers carried by every schedule row so the mobile list keeps the six global colors. */
+.project-gantt__row--state-completed { --project-state-line: #356fe0; --project-state-tint: #e8efff; --project-state-ink: #2858c5; }
+.project-gantt__row--state-in_progress { --project-state-line: #15966d; --project-state-tint: #e3f7ef; --project-state-ink: #0b7858; }
+.project-gantt__row--state-waiting { --project-state-line: #e88a17; --project-state-tint: #fff0d5; --project-state-ink: #925700; }
+.project-gantt__row--state-overdue { --project-state-line: #d73d50; --project-state-tint: #ffe7e9; --project-state-ink: #b72d3e; }
+.project-gantt__row--state-cancelled { --project-state-line: #15171d; --project-state-tint: #15171d; --project-state-ink: #ffffff; }
+.project-gantt__row--state-planned { --project-state-line: #8b96aa; --project-state-tint: #edf0f5; --project-state-ink: #59657d; }
+
+.project-gantt__state-text { font-style: normal; }
+
 /* Global project state language: blue done, green active, orange waiting, red overdue, black cancelled, gray planned. */
 .project-status--completed,
 .project-status--done,
@@ -4754,6 +4769,23 @@
   .project-gantt__solution-label { border-right: 0; min-height: 68px; }
   .project-gantt__task--child { border-right: 0; padding-left: 25px; }
   .project-gantt__empty-child { border-right: 0; }
+  /* Without the horizontal track, the state travels in the row edge and the state word. */
+  .project-gantt--expandable .project-gantt__solution-label,
+  .project-gantt--expandable .project-gantt__task--child {
+    border-left: 3px solid var(--project-state-line, #cdd6e8);
+  }
+  .project-gantt--expandable .project-gantt__state-text {
+    background: var(--project-state-tint, #edf0f5);
+    border-radius: 999px;
+    color: var(--project-state-ink, #59657d);
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    margin-right: 2px;
+    padding: 3px 7px;
+    text-transform: uppercase;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

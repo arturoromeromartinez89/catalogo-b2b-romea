@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { statusLabel } from "../utils/projectHubModel";
 import ProjectWorkboard from "./ProjectWorkboard";
 
 const workspaceIcon = (name) => {
@@ -14,14 +15,6 @@ const workspaceIcon = (name) => {
     check: <path d="m5 12 4 4L19 6" />,
   };
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
-};
-
-const statusNames = {
-  completed: "Completado",
-  in_progress: "En curso",
-  pending: "Pendiente",
-  approved: "Aprobado",
-  rejected: "Requiere ajustes",
 };
 
 export default function SolutionWorkspace({ solution, project, tenantId = "", companyName = "", initialTaskId = "", onBack, onReload, onNotice }) {
@@ -44,16 +37,18 @@ export default function SolutionWorkspace({ solution, project, tenantId = "", co
   const files = solution.files || [];
   const users = solution.users || [];
   const pendingApprovals = approvals.filter((item) => item.status === "pending").length;
-  const completedTasks = solutionProject.tasks.filter((task) => task.status === "done").length;
+  // Las actividades canceladas siguen siendo visibles, pero no cuentan como trabajo comprometido.
+  const activeTasks = solutionProject.tasks.filter((task) => task.status !== "cancelled");
+  const completedTasks = activeTasks.filter((task) => task.status === "done").length;
 
   return (
     <section className="solution-workspace" aria-label={`Espacio de trabajo de ${solution.name}`}>
-      <button className="solution-workspace__back" type="button" onClick={onBack}>{workspaceIcon("back")}Plan maestro</button>
+      <button className="solution-workspace__back" type="button" onClick={onBack}>{workspaceIcon("back")}Volver a Inicio</button>
 
       <header className="solution-workspace__hero">
         <div>
           <p>Solución · {companyName}</p>
-          <div><h1>{solution.name}</h1><span className={`project-status project-status--${solution.status}`}>{statusNames[solution.status] || solution.status}</span></div>
+          <div><h1>{solution.name}</h1><span className={`project-status project-status--${solution.visualStatus || solution.status}`}>{statusLabel(solution.status)}</span></div>
           <span>{solution.description}</span>
         </div>
         <aside>
@@ -67,7 +62,7 @@ export default function SolutionWorkspace({ solution, project, tenantId = "", co
         <section className="solution-workspace__overview" aria-label="Resumen de la solución">
           <div className="solution-workspace__metrics">
             <article><span>Etapa actual</span><strong>{solution.phase || "Por iniciar"}</strong><small>Trabajo activo</small></article>
-            <article><span>Actividades</span><strong>{solutionProject.tasks.length}</strong><small>{completedTasks} {completedTasks === 1 ? "completada" : "completadas"}</small></article>
+            <article><span>Actividades</span><strong>{activeTasks.length}</strong><small>{completedTasks} {completedTasks === 1 ? "terminada" : "terminadas"}</small></article>
             <article><span>Aprobaciones</span><strong>{pendingApprovals}</strong><small>{pendingApprovals ? "Pendientes del cliente" : "Todo al día"}</small></article>
             <article><span>Fecha objetivo</span><strong>{solution.targetDate || "Por confirmar"}</strong><small>Siguiente entrega</small></article>
           </div>
@@ -79,7 +74,7 @@ export default function SolutionWorkspace({ solution, project, tenantId = "", co
             <article className="solution-sheet-card">
               <header><span>Siguiente</span><h2>{solution.nextMilestone || "Próximo hito por definir"}</h2></header>
               <p>Las siguientes actividades están ordenadas por prioridad y fecha.</p>
-              <ul>{solutionProject.tasks.filter((task) => task.status !== "done").slice(0, 3).map((task) => <li key={task.id}><i /><span><strong>{task.title}</strong><small>{task.assignee || "Por asignar"} · {task.dueDate || "Sin fecha"}</small></span></li>)}</ul>
+              <ul>{activeTasks.filter((task) => task.status !== "done").slice(0, 3).map((task) => <li key={task.id}><i /><span><strong>{task.title}</strong><small>{task.assignee || "Por asignar"} · {task.dueDate || "Sin fecha"}</small></span></li>)}</ul>
             </article>
           </div>
         </section>
@@ -90,7 +85,7 @@ export default function SolutionWorkspace({ solution, project, tenantId = "", co
 
         <section className="solution-sheet-page solution-workspace__sheet-section">
           <header><div><span>Aprobaciones</span><h2>Decisiones de la solución</h2><p>Revisa los puntos que necesitan confirmación para que el trabajo pueda avanzar.</p></div></header>
-          <div className="solution-approval-list">{approvals.map((approval) => <article key={approval.id || approval.title}><div><span className={`project-status project-status--${approval.status}`}>{statusNames[approval.status] || approval.status}</span><h3>{approval.title}</h3><p>{approval.description}</p><small>Fecha límite · {approval.dueDate || "Por confirmar"}</small></div><button type="button" onClick={() => onNotice?.("La aprobación se habilitará al conectar esta solución con el seguimiento real.")}>{approval.status === "pending" ? "Revisar" : "Ver detalle"}</button></article>)}</div>
+          <div className="solution-approval-list">{approvals.map((approval) => <article key={approval.id || approval.title}><div><span className={`project-status project-status--${approval.status}`}>{statusLabel(approval.status)}</span><h3>{approval.title}</h3><p>{approval.description}</p><small>Fecha límite · {approval.dueDate || "Por confirmar"}</small></div><button type="button" onClick={() => onNotice?.("La aprobación se habilitará al conectar esta solución con el seguimiento real.")}>{approval.status === "pending" ? "Revisar" : "Ver detalle"}</button></article>)}</div>
           {!approvals.length ? <div className="solution-sheet-empty">No hay aprobaciones pendientes en esta solución.</div> : null}
         </section>
 

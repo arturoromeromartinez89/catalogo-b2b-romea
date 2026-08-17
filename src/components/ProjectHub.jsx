@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { fetchPublishedProject, respondToProjectApproval } from "../services/projectHubService";
+import { confirmedProgress, statusLabel as globalStatusLabel, toVisualStatus, workProgress } from "../utils/projectHubModel";
 import ProjectSolutionsPlan from "./ProjectSolutionsPlan";
 import SolutionWorkspace from "./SolutionWorkspace";
 
@@ -107,6 +108,7 @@ const demoProjects = {
       { id: "task-3", solutionId: "inventory", deliverableId: "deliverable-brief", objectiveId: "obj-alcance", title: "Validar catálogo inicial", description: "Confirmar campos, familias y archivo de carga inicial.", status: "review", priority: "critical", startDate: "2026-08-17", dueDate: "2026-08-21", progress: 55, estimatedHours: 5, assignee: "Estuches Chávez", sortOrder: 30, comments: [], attachments: [] },
       { id: "task-4", solutionId: "inventory", deliverableId: "deliverable-mvp", objectiveId: "obj-mvp", title: "Construir catálogo de productos", description: "Alta, edición, búsqueda y clasificación de productos.", status: "todo", priority: "high", startDate: "2026-08-24", dueDate: "2026-08-28", progress: 0, estimatedHours: 18, assignee: "Desarrollo NEXOR", sortOrder: 40, comments: [], attachments: [] },
       { id: "task-5", solutionId: "inventory", deliverableId: "deliverable-mvp", objectiveId: "obj-mvp", title: "Programar existencias y movimientos", description: "Cálculo de stock e historial auditable por producto.", status: "backlog", priority: "critical", startDate: "2026-08-27", dueDate: "2026-09-02", progress: 0, estimatedHours: 28, assignee: "Desarrollo NEXOR", sortOrder: 50, comments: [], attachments: [] },
+      { id: "task-11", solutionId: "inventory", deliverableId: "deliverable-mvp", objectiveId: "obj-mvp", title: "Migrar historial anterior de existencias", description: "Se retiró del alcance: el historial previo se conservará en los archivos actuales y no se importará al nuevo inventario.", status: "cancelled", priority: "medium", startDate: "2026-08-31", dueDate: "2026-09-03", progress: 0, estimatedHours: 14, assignee: "Desarrollo NEXOR", sortOrder: 55, comments: [], attachments: [] },
       { id: "task-6", solutionId: "inventory", deliverableId: "deliverable-mvp", objectiveId: "obj-mvp", title: "Preparar ambiente de pruebas", description: "Instancia separada para revisión sin afectar la operación.", status: "in_progress", priority: "medium", startDate: "2026-08-24", dueDate: "2026-08-26", progress: 35, estimatedHours: 6, assignee: "NEXOR IA", sortOrder: 60, comments: [], attachments: [] },
       { id: "task-7", solutionId: "inventory", deliverableId: "deliverable-tests", objectiveId: "obj-validacion", title: "Cargar inventario inicial", description: "Importar y conciliar las existencias proporcionadas.", status: "todo", priority: "high", startDate: "2026-09-07", dueDate: "2026-09-09", progress: 0, estimatedHours: 8, assignee: "NEXOR IA", sortOrder: 70, comments: [], attachments: [] },
       { id: "task-8", solutionId: "inventory", deliverableId: "deliverable-tests", objectiveId: "obj-validacion", title: "Ejecutar pruebas con usuarios", description: "Sesión guiada y registro de hallazgos por prioridad.", status: "todo", priority: "high", startDate: "2026-09-10", dueDate: "2026-09-14", progress: 0, estimatedHours: 10, assignee: "Equipo conjunto", sortOrder: 80, comments: [], attachments: [] },
@@ -227,64 +229,34 @@ const statusLabel = (status, t) => ({
   completed: t("phCompleted"),
   in_progress: t("phInProgress"),
   pending: t("phPending"),
-  planned: "Por iniciar",
-  waiting: "En espera",
-  blocked: "En espera",
-  needs_changes: "Requiere cambios",
-  rejected: "Requiere cambios",
-  overdue: "Atrasado",
-  cancelled: "Cancelado",
   delivered: t("phDelivered"),
   approved: t("phApproved"),
-}[status] || status);
+}[status] || globalStatusLabel(status));
 
 const formatPortalDate = (date) => date ? new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${String(date).slice(0, 10)}T12:00:00`)) : "—";
 
-const isPastDue = (date, status) => {
-  if (!date || ["done", "completed", "delivered", "approved", "cancelled"].includes(status)) return false;
-  const due = new Date(`${String(date).slice(0, 10)}T23:59:59`);
-  return due < new Date();
-};
-
-const visibleStatus = (status, dueDate) => {
-  if (isPastDue(dueDate, status)) return "overdue";
-  if (["done", "completed", "delivered", "approved"].includes(status)) return "completed";
-  if (["in_progress", "active", "review"].includes(status)) return "in_progress";
-  if (["blocked", "waiting", "pending", "needs_changes", "rejected", "on_hold"].includes(status)) return "waiting";
-  if (status === "cancelled") return "cancelled";
-  return "planned";
-};
-
-const weightedPercentage = (items, isComplete) => {
-  const active = (items || []).filter((item) => item.status !== "cancelled");
-  const total = active.reduce((sum, item) => sum + Math.max(0.01, Number(item.weight ?? item.estimatedHours ?? 1)), 0);
-  if (!total) return 0;
-  const completed = active.reduce((sum, item) => sum + (isComplete(item) ? Math.max(0.01, Number(item.weight ?? item.estimatedHours ?? 1)) : 0), 0);
-  return Math.round((completed / total) * 100);
-};
-
 const enrichProject = (source) => {
   if (!source) return null;
-  const tasks = (source.tasks || []).map((task) => ({ ...task, visualStatus: visibleStatus(task.status, task.dueDate) }));
-  const deliverables = (source.deliverables || []).map((item) => ({ ...item, visualStatus: visibleStatus(item.status, item.rawDate || item.estimatedDeliveryDate) }));
+  const tasks = (source.tasks || []).map((task) => ({ ...task, visualStatus: toVisualStatus(task.status, task.dueDate) }));
+  const deliverables = (source.deliverables || []).map((item) => ({ ...item, visualStatus: toVisualStatus(item.status, item.rawDate || item.estimatedDeliveryDate) }));
   const solutions = (source.solutions || []).map((solution) => {
     const solutionTasks = tasks.filter((task) => task.solutionId === solution.id);
     const solutionDeliverables = deliverables.filter((item) => item.solutionId === solution.id);
     const progress = solutionTasks.length
-      ? weightedPercentage(solutionTasks, (task) => task.status === "done")
-      : weightedPercentage(solutionDeliverables, (item) => item.status === "approved");
+      ? workProgress(solutionTasks)
+      : confirmedProgress(solutionDeliverables);
     return {
       ...solution,
       progress,
-      visualStatus: visibleStatus(solution.status, solution.endDate),
+      visualStatus: toVisualStatus(solution.status, solution.endDate),
       taskCount: solutionTasks.length,
       completedTaskCount: solutionTasks.filter((task) => task.status === "done").length,
       approvals: (source.approvals || []).some((item) => item.solutionId === solution.id) ? source.approvals.filter((item) => item.solutionId === solution.id) : (solution.approvals || []),
       files: (source.documents || []).some((item) => item.solutionId === solution.id) ? source.documents.filter((item) => item.solutionId === solution.id) : (solution.files || []),
     };
   });
-  const acceptedProgress = weightedPercentage(deliverables, (item) => item.status === "approved");
-  const workProgress = weightedPercentage(tasks, (task) => task.status === "done");
+  const acceptedProgress = confirmedProgress(deliverables);
+  const currentWorkProgress = workProgress(tasks);
   const timeEntries = source.timeEntries || [];
   const developmentActivity = source.developmentActivity || [];
   const minutes = timeEntries.reduce((sum, item) => sum + Number(item.minutes || 0), 0);
@@ -301,7 +273,7 @@ const enrichProject = (source) => {
     developmentActivity,
     progress: acceptedProgress,
     acceptedProgress,
-    workProgress,
+    workProgress: currentWorkProgress,
     dedicatedMinutes: minutes,
     dedicatedHours: Math.round((minutes / 60) * 10) / 10,
     linesAdded,

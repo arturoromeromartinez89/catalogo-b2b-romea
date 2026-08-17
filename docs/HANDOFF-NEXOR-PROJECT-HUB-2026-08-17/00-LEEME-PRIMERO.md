@@ -40,6 +40,8 @@ El cliente no debe aprender gestión de proyectos ni lenguaje técnico para sabe
 - Migraciones de integridad, auditoría y marcas de tiempo aplicadas en staging.
 - Build de producción y build de staging aprobados.
 - Evidencia visual de escritorio y móvil guardada en `.impeccable/review/`.
+- Las siete correcciones de cierre fueron implementadas, verificadas y desplegadas en staging.
+- El lenguaje de estados y los cálculos de avance viven en una fuente compartida.
 
 Los datos que se ven en la demostración siguen siendo sintéticos, pero ya se calculan desde registros coherentes; no son porcentajes escritos arbitrariamente en la interfaz.
 
@@ -71,4 +73,6 @@ No cambiar de rama, no limpiar cambios locales y no usar comandos destructivos. 
 
 ## Estado de corte
 
-La primera vertical funcional está implementada y desplegada en staging. Una revisión final independiente pidió siete ajustes antes de considerarla cerrada. Están enumerados, en orden, en `04-INSTRUCCIONES-PARA-CLAUDE.md`. El siguiente responsable debe resolverlos, verificar, volver a desplegar staging y actualizar esta carpeta con el nuevo estado.
+La primera vertical funcional quedó cerrada y desplegada en staging el 17 de agosto de 2026. Las siete correcciones de `04-INSTRUCCIONES-PARA-CLAUDE.md` ya fueron ejecutadas y verificadas en la URL canónica. El siguiente bloque del plan maestro es la Fase 2: alta interna hipersimple de clientes y proyectos.
+
+Permanecen dos verificaciones no bloqueantes: regenerar las capturas PNG cuando la herramienta de captura vuelva a responder y ejecutar Supabase DB lint cuando exista `SUPABASE_DB_PASSWORD` en una sesión segura. Ninguna implica un defecto funcional conocido.

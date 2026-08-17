@@ -1,5 +1,7 @@
 # Instrucciones exactas para Claude
 
+> Estado: ejecutadas y verificadas el 17 de agosto de 2026. Se conservan como registro del cierre; no repetirlas salvo que una regresión lo requiera.
+
 ## Tu encargo
 
 Continúa la primera vertical funcional del Project Hub de NEXOR IA desde el estado existente. No rediseñes el concepto, no cambies contenido de negocio ni rompas funciones del catálogo. Tu objetivo inmediato es cerrar las correcciones de revisión, verificar staging y dejar un respaldo auditable.

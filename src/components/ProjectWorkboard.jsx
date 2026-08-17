@@ -5,6 +5,7 @@ import {
   moveProjectTask,
   uploadProjectTaskAttachment,
 } from "../services/projectHubService";
+import { statusLabel } from "../utils/projectHubModel";
 
 const DAY_WIDTH = 28;
 const DAY_MS = 86400000;
@@ -15,9 +16,7 @@ const columns = [
   { id: "blocked", label: "Bloqueadas", accepts: ["blocked"] },
   { id: "done", label: "Completadas", accepts: ["done"] },
 ];
-const statusNames = { backlog: "Backlog", todo: "Por hacer", in_progress: "En curso", review: "En revisión", blocked: "Bloqueada", done: "Completada" };
 const priorityNames = { low: "Baja", medium: "Media", high: "Alta", critical: "Crítica" };
-const objectiveStatusNames = { planned: "Programado", active: "En curso", completed: "Completado", at_risk: "En riesgo" };
 
 const parseDate = (value) => value ? new Date(`${String(value).slice(0, 10)}T12:00:00`) : null;
 const isoDate = (date) => date.toISOString().slice(0, 10);
@@ -166,7 +165,7 @@ export default function ProjectWorkboard({ project, tenantId = "", initialTaskId
             <strong>{objective.title}</strong>
             <p>{objective.description}</p>
             <div><i><b style={{ width: `${objective.progress}%` }} /></i><em>{objective.progress}%</em></div>
-            <small>{objectiveStatusNames[objective.status] || objective.status} · {count} actividades</small>
+            <small>{statusLabel(objective.status)} · {count} actividades</small>
           </button>;
         })}
       </div>
@@ -246,7 +245,9 @@ function TaskPanel({ task, objective, comments, attachments, comment, setComment
       <header><div><span>{objective?.periodLabel || "Actividad del proyecto"}</span><h2>{task.title}</h2></div><button type="button" aria-label="Cerrar actividad" onClick={onClose}>{smallIcon("close")}</button></header>
       <p className="project-task-panel__description">{task.description || "Sin descripción adicional."}</p>
       <div className="project-task-panel__meta">
-        <label>Estado<select value={task.status} disabled={saving} onChange={(event) => onStatus(event.target.value)}><option value="backlog">Backlog</option>{columns.map((column) => <option value={column.id} key={column.id}>{column.label}</option>)}</select></label>
+        {task.status === "cancelled"
+          ? <div><span>Estado</span><strong className="project-task-panel__state project-status project-status--cancelled">{statusLabel(task.status)}</strong><small>Retirada del alcance. No cuenta en el avance.</small></div>
+          : <label>Estado<select value={task.status} disabled={saving} onChange={(event) => onStatus(event.target.value)}><option value="backlog">Por iniciar</option>{columns.map((column) => <option value={column.id} key={column.id}>{column.label}</option>)}</select></label>}
         <div><span>Responsable</span><strong>{task.assignee || "Por asignar"}</strong></div>
         <div><span>Periodo</span><strong>{formatLongDate(task.startDate)} – {formatLongDate(task.dueDate)}</strong></div>
         <div><span>Prioridad</span><strong className={`project-task-panel__priority project-task-panel__priority--${task.priority}`}>{priorityNames[task.priority]}</strong></div>

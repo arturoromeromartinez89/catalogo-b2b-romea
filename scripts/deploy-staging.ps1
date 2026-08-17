@@ -1,6 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $expectedVercelProject = "catalogo-b2b-staging-security"
+$expectedVercelScope = "arturo-romeros-projects-20546c64"
 $expectedSupabaseRef = "vafqcvpzksjlrborxoos"
 
 if (-not (Test-Path ".vercel/project.json")) {
@@ -20,7 +21,7 @@ if ($supabaseRef -ne $expectedSupabaseRef) {
 npm run build:staging
 if ($LASTEXITCODE -ne 0) { throw "El build de staging fallo." }
 
-npx vercel --prod --yes
+npx vercel --prod --yes --scope $expectedVercelScope
 if ($LASTEXITCODE -ne 0) { throw "El despliegue de staging fallo." }
 
 Write-Host "PASS: staging desplegado sin tocar produccion."
