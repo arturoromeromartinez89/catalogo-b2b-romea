@@ -3,19 +3,37 @@ import { deleteProjectChild, fetchProjectsForTenant, saveProject, saveProjectChi
 import { confirmedProgress, statusLabel } from "../../utils/projectHubModel";
 
 const emptyProject = { name: "", description: "", status: "draft", health: "green", progress_percentage: 0, current_phase_name: "", start_date: "", estimated_end_date: "", internal_owner_name: "Equipo NEXOR IA", published: false };
-const sections = [
-  { id: "project_solutions", label: "Soluciones" },
-  { id: "project_solution_brief_versions", label: "Ficha de solución" },
-  { id: "project_deliverables", label: "Entregables" },
-  { id: "project_acceptance_criteria", label: "Criterios" },
-  { id: "project_tasks", label: "Tareas" },
-  { id: "project_time_entries", label: "Horas" },
-  { id: "project_development_activity", label: "Código" },
-  { id: "project_phases", label: "Etapas" },
-  { id: "project_approvals", label: "Decisiones" },
-  { id: "project_documents", label: "Documentos" },
-  { id: "project_updates", label: "Actualizaciones" },
-  { id: "project_objectives", label: "Periodos" },
+const workspaceViews = [
+  { id: "board", label: "Tablero", table: "project_tasks" },
+  { id: "plan", label: "Plan", table: "project_solutions" },
+  { id: "solutions", label: "Soluciones", table: "project_solutions" },
+  { id: "deliverables", label: "Entregables", table: "project_deliverables" },
+  { id: "approvals", label: "Decisiones", table: "project_approvals" },
+  { id: "documents", label: "Archivos", table: "project_documents" },
+];
+const secondaryViews = [
+  { id: "updates", label: "Actualizaciones", table: "project_updates" },
+  { id: "time", label: "Horas", table: "project_time_entries" },
+  { id: "development", label: "Código", table: "project_development_activity" },
+  { id: "settings", label: "Ajustes", table: null },
+];
+const viewCopy = {
+  board: ["Tablero de trabajo", "Mueve el trabajo por estado y abre una tarjeta solo cuando necesites detalle."],
+  plan: ["Plan maestro", "La ruta del proyecto se organiza por soluciones, no por tareas."],
+  solutions: ["Soluciones", "Los bloques funcionales que juntos forman el sistema del cliente."],
+  deliverables: ["Entregables", "Resultados verificables que confirman el avance del proyecto."],
+  approvals: ["Decisiones", "Puntos que necesitan aprobación o una definición del cliente."],
+  documents: ["Archivos", "Contratos, alcances, manuales y vínculos relevantes."],
+  updates: ["Actualizaciones", "Bitácora breve de avances, hitos y alertas."],
+  time: ["Horas", "Registro interno del tiempo dedicado al proyecto."],
+  development: ["Código", "Actividad técnica vinculada al desarrollo."],
+  settings: ["Ajustes del proyecto", "Información administrativa y visibilidad del portal."],
+};
+const taskColumns = [
+  { id: "todo", label: "Por hacer", statuses: ["backlog", "todo"] },
+  { id: "in_progress", label: "En proceso", statuses: ["in_progress", "blocked"] },
+  { id: "review", label: "Revisión", statuses: ["review"] },
+  { id: "done", label: "Terminado", statuses: ["done", "cancelled"] },
 ];
 const emptyChild = {
   project_solutions: { name: "", description: "", phase_id: "", status: "draft", stage_name: "", current_phase_name: "", next_milestone: "", scope_items: [], start_date: "", estimated_end_date: "", sort_order: 10, visible_to_client: true },
@@ -47,6 +65,9 @@ const childMeta = (item, table) => [
 ].filter(Boolean).join(" · ");
 // El avance confirmado usa la misma regla que el portal del cliente (src/utils/projectHubModel.js).
 const projectConfirmedProgress = (project) => confirmedProgress(project?.project_deliverables);
+const displayDate = (value) => value ? new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`)) : "Sin fecha";
+const healthLabel = { green: "En tiempo", yellow: "Atención", red: "En riesgo" };
+const priorityLabel = { low: "Baja", medium: "Media", high: "Alta", critical: "Crítica" };
 
 export default function ProjectHubManager({ tenants = [], profile, demoMode = false, demoProjectsByTenant = {}, initialTenantId = "", initialProjectId = "", onBack }) {
   const portalTenants = useMemo(() => tenants.filter((item) => ["vanguardia-joyera", "estuches-chavez", "romea"].includes(item.slug)), [tenants]);
@@ -54,8 +75,12 @@ export default function ProjectHubManager({ tenants = [], profile, demoMode = fa
   const [projects, setProjects] = useState([]);
   const [selectedId, setSelectedId] = useState("");
   const [projectDraft, setProjectDraft] = useState(emptyProject);
-  const [section, setSection] = useState("project_solutions");
-  const [childDraft, setChildDraft] = useState(emptyChild.project_solutions);
+  const [section, setSection] = useState("project_tasks");
+  const [workspaceView, setWorkspaceView] = useState("board");
+  const [childDraft, setChildDraft] = useState(emptyChild.project_tasks);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [draggedTaskId, setDraggedTaskId] = useState("");
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const selectedProject = useMemo(() => projects.find((item) => item.id === selectedId) || null, [projects, selectedId]);
@@ -92,9 +117,6 @@ export default function ProjectHubManager({ tenants = [], profile, demoMode = fa
   useEffect(() => { if (tenantId) load(tenantId, tenantId === initialTenantId ? initialProjectId : ""); }, [tenantId]);
   useEffect(() => { setChildDraft({ ...emptyChild[section] }); }, [section, selectedId]);
 
-  const selectProject = (project) => { setSelectedId(project.id); setProjectDraft(project); };
-  const newProject = () => { setSelectedId(""); setProjectDraft({ ...emptyProject }); };
-
   const handleProjectSave = async () => {
     if (demoMode) { setStatus("Vista previa: conecta el proyecto real para guardar cambios."); return; }
     if (!tenantId || !projectDraft.name.trim()) { setStatus("Selecciona una empresa y captura el nombre del proyecto."); return; }
@@ -115,6 +137,7 @@ export default function ProjectHubManager({ tenants = [], profile, demoMode = fa
       await saveProjectChild(section, childDraft, tenantId, selectedProject.id, profile?.id);
       setChildDraft({ ...emptyChild[section] });
       await load(tenantId, selectedProject.id);
+      setDrawerOpen(false);
       setStatus("Información del portal actualizada.");
     } catch (error) { setStatus(`No se pudo guardar: ${error.message}`); }
     finally { setSaving(false); }
@@ -128,42 +151,80 @@ export default function ProjectHubManager({ tenants = [], profile, demoMode = fa
     finally { setSaving(false); }
   };
 
-  const items = selectedProject?.[section] || [];
+  const openView = (view) => {
+    setWorkspaceView(view.id);
+    setMoreOpen(false);
+    if (view.table) setSection(view.table);
+  };
+  const openRecord = (table, item = null) => {
+    setSection(table);
+    setChildDraft(item ? { ...item } : { ...emptyChild[table] });
+    setDrawerOpen(true);
+  };
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    setChildDraft({ ...emptyChild[section] });
+  };
+  const moveTask = async (task, nextStatus) => {
+    if (!task || task.status === nextStatus) return;
+    if (demoMode) {
+      setProjects((current) => current.map((project) => project.id !== selectedProject.id ? project : {
+        ...project,
+        project_tasks: (project.project_tasks || []).map((item) => item.id === task.id ? { ...item, status: nextStatus } : item),
+      }));
+      setStatus("Vista previa: el movimiento se muestra solo durante esta sesión.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await saveProjectChild("project_tasks", { ...task, status: nextStatus }, tenantId, selectedProject.id, profile?.id);
+      await load(tenantId, selectedProject.id);
+      setStatus("Tarjeta movida.");
+    } catch (error) { setStatus(`No se pudo mover la tarjeta: ${error.message}`); }
+    finally { setSaving(false); }
+  };
+  const activeView = [...workspaceViews, ...secondaryViews].find((item) => item.id === workspaceView) || workspaceViews[0];
+  const items = selectedProject?.[activeView.table] || [];
+  const tasks = selectedProject?.project_tasks || [];
+  const solutionName = (solutionId) => selectedProject?.project_solutions?.find((item) => item.id === solutionId)?.name || "Proyecto general";
   return (
-    <section className="ph-manager">
-      <header className="ph-manager__header ph-manager__header--context">
-        <div>{onBack ? <button className="ph-studio__back" type="button" onClick={onBack}>← Volver a proyectos</button> : null}<strong>Espacio de trabajo</strong><span>Administra soluciones, entregables y decisiones de este proyecto.</span></div>
-        {initialTenantId ? <div className="ph-manager__context-client"><span>Cliente</span><strong>{activeTenant?.name || "Cliente"}</strong></div> : <label>Cliente<select value={tenantId} onChange={(event) => setTenantId(event.target.value)}><option value="">Seleccionar</option>{portalTenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}</select></label>}
+    <section className="ph-manager ph-workspace">
+      <header className="ph-workspace__crumbs">
+        {onBack ? <button className="ph-studio__back" type="button" onClick={onBack}>← Proyectos de {activeTenant?.name || "cliente"}</button> : null}
+        <span>{activeTenant?.name || "Cliente"}</span>
       </header>
       {status ? <p className="status info">{status}</p> : null}
-      <div className="ph-manager__layout">
-        <aside className="ph-manager__projects">
-          <div className="ph-manager__aside-head"><strong>Proyectos</strong><button className="secondary-button compact-action" type="button" onClick={newProject}>Nuevo</button></div>
-          {projects.map((project) => <button className={selectedId === project.id ? "active" : ""} type="button" key={project.id} onClick={() => selectProject(project)}><strong>{project.name}</strong><span>{statusLabel(project.status)} · {projectConfirmedProgress(project)}% confirmado</span><small>{project.published ? "Visible para cliente" : "Borrador interno"}</small></button>)}
-          {!projects.length ? <p className="muted">Aún no hay proyectos para {activeTenant?.name || "esta empresa"}.</p> : null}
-        </aside>
-        <div className="ph-manager__content">
-          <article className="ph-manager__card">
-            <div className="ph-manager__card-head"><div><span>Información principal</span><h3>{selectedId ? "Editar proyecto" : "Nuevo proyecto"}</h3></div><label className="ph-manager__publish"><input type="checkbox" checked={Boolean(projectDraft.published)} onChange={(event) => setProjectDraft((current) => ({ ...current, published: event.target.checked }))} /><span>{projectDraft.published ? "Publicado" : "Borrador"}</span></label></div>
-            <div className="ph-manager__form-grid">
-              <label className="ph-manager__span-2">Nombre<input value={projectDraft.name || ""} onChange={(event) => setProjectDraft((current) => ({ ...current, name: event.target.value }))} /></label>
-              <label className="ph-manager__span-2">Descripción<textarea value={projectDraft.description || ""} onChange={(event) => setProjectDraft((current) => ({ ...current, description: event.target.value }))} /></label>
-              <label>Estado<select value={projectDraft.status || "draft"} onChange={(event) => setProjectDraft((current) => ({ ...current, status: event.target.value }))}><option value="draft">Borrador</option><option value="active">Activo</option><option value="on_hold">En pausa</option><option value="completed">Completado</option><option value="cancelled">Cancelado</option></select></label>
-              <label>Salud<select value={projectDraft.health || "green"} onChange={(event) => setProjectDraft((current) => ({ ...current, health: event.target.value }))}><option value="green">En tiempo</option><option value="yellow">Requiere atención</option><option value="red">En riesgo</option></select></label>
-              <label>Avance confirmado<input value={`${projectConfirmedProgress(projectDraft)}% · calculado por entregables aceptados`} disabled /></label>
-              <label>Etapa actual<input value={projectDraft.current_phase_name || ""} onChange={(event) => setProjectDraft((current) => ({ ...current, current_phase_name: event.target.value }))} /></label>
-              <label>Fecha de inicio<input type="date" value={projectDraft.start_date || ""} onChange={(event) => setProjectDraft((current) => ({ ...current, start_date: event.target.value }))} /></label>
-              <label>Entrega estimada<input type="date" value={projectDraft.estimated_end_date || ""} onChange={(event) => setProjectDraft((current) => ({ ...current, estimated_end_date: event.target.value }))} /></label>
-              <label className="ph-manager__span-2">Responsable interno<input value={projectDraft.internal_owner_name || ""} onChange={(event) => setProjectDraft((current) => ({ ...current, internal_owner_name: event.target.value }))} /></label>
-            </div>
-            <div className="ph-manager__actions"><button className="primary-button" type="button" disabled={saving} onClick={handleProjectSave}>{saving ? "Guardando..." : "Guardar proyecto"}</button></div>
-          </article>
-          {selectedProject ? <article className="ph-manager__card">
-            <nav className="ph-manager__section-tabs">{sections.map((item) => <button type="button" className={section === item.id ? "active" : ""} key={item.id} onClick={() => setSection(item.id)}>{item.label}<span>{selectedProject[item.id]?.length || 0}</span></button>)}</nav>
-            <div className="ph-manager__child-layout"><div className="ph-manager__child-list">{items.map((item) => <div className="ph-manager__child-item" key={item.id}><div><strong>{childTitle(item, section)}</strong><span>{childMeta(item, section)}</span>{item.visible_to_client === false ? <small>Solo interno</small> : null}</div><div><button type="button" onClick={() => setChildDraft({ ...item })}>Editar</button><button type="button" className="danger" disabled={saving} onClick={() => removeChild(item)}>Eliminar</button></div></div>)}{!items.length ? <p className="muted">Aún no hay información en esta sección.</p> : null}</div><ChildForm table={section} draft={childDraft} setDraft={setChildDraft} project={selectedProject} saving={saving} onSave={handleChildSave} onCancel={() => setChildDraft({ ...emptyChild[section] })} /></div>
-          </article> : null}
-        </div>
-      </div>
+      {!selectedProject ? <div className="ph-workspace__empty">No hay un proyecto disponible.</div> : <>
+        <section className="ph-workspace__project-head">
+          <div className="ph-workspace__identity"><div className={`ph-workspace__health ph-workspace__health--${selectedProject.health || "green"}`}><i />{healthLabel[selectedProject.health] || "En tiempo"}</div><h2>{selectedProject.name}</h2><p>{selectedProject.description || "Proyecto sin descripción."}</p></div>
+          <dl className="ph-workspace__signals">
+            <div><dt>Avance confirmado</dt><dd>{projectConfirmedProgress(selectedProject)}%</dd></div>
+            <div><dt>Etapa actual</dt><dd>{selectedProject.current_phase_name || "Por definir"}</dd></div>
+            <div><dt>Entrega estimada</dt><dd>{displayDate(selectedProject.estimated_end_date)}</dd></div>
+            <div><dt>Responsable</dt><dd>{selectedProject.internal_owner_name || "Equipo NEXOR IA"}</dd></div>
+          </dl>
+        </section>
+
+        <nav className="ph-workspace__nav" aria-label="Vistas del proyecto">
+          {workspaceViews.map((view) => <button type="button" className={workspaceView === view.id ? "active" : ""} key={view.id} onClick={() => openView(view)}>{view.label}{view.table && view.id !== "plan" ? <span>{selectedProject[view.table]?.length || 0}</span> : null}</button>)}
+          <div className="ph-workspace__more"><button type="button" className={secondaryViews.some((view) => view.id === workspaceView) ? "active" : ""} aria-expanded={moreOpen} onClick={() => setMoreOpen((current) => !current)}>Más ···</button>{moreOpen ? <div className="ph-workspace__more-menu">{secondaryViews.map((view) => <button type="button" key={view.id} onClick={() => openView(view)}>{view.label}</button>)}</div> : null}</div>
+        </nav>
+
+        <section className="ph-workspace__view">
+          <header className="ph-workspace__view-head"><div><h3>{viewCopy[workspaceView][0]}</h3><p>{viewCopy[workspaceView][1]}</p></div>{activeView.table && workspaceView !== "plan" ? <button className="primary-button" type="button" onClick={() => openRecord(activeView.table)}>+ Agregar</button> : null}</header>
+
+          {workspaceView === "board" ? <div className="ph-board" aria-label="Tablero de tareas">
+            {taskColumns.map((column) => { const columnTasks = tasks.filter((task) => column.statuses.includes(task.status)); return <section className="ph-board__column" key={column.id} onDragOver={(event) => event.preventDefault()} onDrop={() => { const task = tasks.find((item) => item.id === draggedTaskId); moveTask(task, column.id); setDraggedTaskId(""); }}><header><strong>{column.label}</strong><span>{columnTasks.length}</span></header><div className="ph-board__cards">{columnTasks.map((task) => <article className="ph-board__card" key={task.id} draggable onDragStart={() => setDraggedTaskId(task.id)} onDragEnd={() => setDraggedTaskId("")}><button type="button" className="ph-board__card-main" onClick={() => openRecord("project_tasks", task)}><small>{solutionName(task.solution_id)}</small><strong>{task.title}</strong>{task.description ? <p>{task.description}</p> : null}<div className="ph-board__meta"><span className={`ph-board__priority ph-board__priority--${task.priority || "medium"}`}>{priorityLabel[task.priority] || "Media"}</span>{task.due_date ? <span>↗ {displayDate(task.due_date)}</span> : null}</div></button><label className="ph-board__move"><span>Mover</span><select aria-label={`Mover ${task.title}`} value={column.id} onChange={(event) => moveTask(task, event.target.value)}><option value="todo">Por hacer</option><option value="in_progress">En proceso</option><option value="review">Revisión</option><option value="done">Terminado</option></select></label></article>)}{!columnTasks.length ? <button className="ph-board__add" type="button" onClick={() => openRecord("project_tasks")}>+ Añadir tarjeta</button> : null}</div></section>; })}
+          </div> : null}
+
+          {workspaceView === "plan" ? <div className="ph-master-plan">{(selectedProject.project_solutions || []).map((solution, index) => { const related = (selectedProject.project_deliverables || []).filter((item) => item.solution_id === solution.id); const accepted = related.filter((item) => ["approved", "accepted"].includes(item.status)).length; const progress = related.length ? Math.round((accepted / related.length) * 100) : (solution.progress_percentage || 0); return <button type="button" key={solution.id} onClick={() => { setWorkspaceView("solutions"); openRecord("project_solutions", solution); }}><span className="ph-master-plan__index">{String(index + 1).padStart(2, "0")}</span><div><strong>{solution.name}</strong><small>{solution.current_phase_name || statusLabel(solution.status) || "Por definir"}</small></div><div className="ph-master-plan__bar"><i style={{ width: `${progress}%` }} /></div><b>{progress}%</b><time>{displayDate(solution.estimated_end_date)}</time></button>; })}{!selectedProject.project_solutions?.length ? <div className="ph-workspace__empty">Agrega la primera solución para construir el plan maestro.</div> : null}</div> : null}
+
+          {workspaceView === "settings" ? <div className="ph-workspace__settings"><div className="ph-manager__form-grid"><label className="ph-manager__span-2">Nombre<input value={projectDraft.name || ""} onChange={(event) => setProjectDraft((current) => ({ ...current, name: event.target.value }))} /></label><label className="ph-manager__span-2">Descripción<textarea value={projectDraft.description || ""} onChange={(event) => setProjectDraft((current) => ({ ...current, description: event.target.value }))} /></label><label>Estado<select value={projectDraft.status || "draft"} onChange={(event) => setProjectDraft((current) => ({ ...current, status: event.target.value }))}><option value="draft">Borrador</option><option value="active">Activo</option><option value="on_hold">En pausa</option><option value="completed">Completado</option><option value="cancelled">Cancelado</option></select></label><label>Salud<select value={projectDraft.health || "green"} onChange={(event) => setProjectDraft((current) => ({ ...current, health: event.target.value }))}><option value="green">En tiempo</option><option value="yellow">Requiere atención</option><option value="red">En riesgo</option></select></label><label>Etapa actual<input value={projectDraft.current_phase_name || ""} onChange={(event) => setProjectDraft((current) => ({ ...current, current_phase_name: event.target.value }))} /></label><label>Responsable interno<input value={projectDraft.internal_owner_name || ""} onChange={(event) => setProjectDraft((current) => ({ ...current, internal_owner_name: event.target.value }))} /></label><label>Fecha de inicio<input type="date" value={projectDraft.start_date || ""} onChange={(event) => setProjectDraft((current) => ({ ...current, start_date: event.target.value }))} /></label><label>Entrega estimada<input type="date" value={projectDraft.estimated_end_date || ""} onChange={(event) => setProjectDraft((current) => ({ ...current, estimated_end_date: event.target.value }))} /></label><label className="ph-manager__check ph-manager__span-2"><input type="checkbox" checked={Boolean(projectDraft.published)} onChange={(event) => setProjectDraft((current) => ({ ...current, published: event.target.checked }))} /><span>Visible en el portal del cliente</span></label></div><div className="ph-manager__actions"><button className="primary-button" type="button" disabled={saving} onClick={handleProjectSave}>{saving ? "Guardando..." : "Guardar cambios"}</button></div></div> : null}
+
+          {!["board", "plan", "settings"].includes(workspaceView) ? <div className="ph-workspace__records">{items.map((item) => <article className="ph-workspace__record" key={item.id}><button type="button" onClick={() => openRecord(activeView.table, item)}><div><strong>{childTitle(item, activeView.table)}</strong><span>{childMeta(item, activeView.table) || item.description || "Sin detalle"}</span></div><div className="ph-workspace__record-meta">{item.visible_to_client === false ? <small>Interno</small> : <small>Visible al cliente</small>}<b>→</b></div></button></article>)}{!items.length ? <div className="ph-workspace__empty">Aún no hay información. Usa “Agregar” para crear el primer registro.</div> : null}</div> : null}
+        </section>
+      </>}
+      {drawerOpen && selectedProject ? <><button className="ph-workspace__scrim" type="button" aria-label="Cerrar editor" onClick={closeDrawer} /><aside className="ph-workspace__drawer" role="dialog" aria-modal="true" aria-label={childDraft.id ? "Editar registro" : "Agregar registro"}><header><div><small>{viewCopy[workspaceView]?.[0] || "Proyecto"}</small><h3>{childDraft.id ? "Editar" : "Nuevo registro"}</h3></div><button type="button" aria-label="Cerrar" onClick={closeDrawer}>×</button></header><ChildForm table={section} draft={childDraft} setDraft={setChildDraft} project={selectedProject} saving={saving} onSave={handleChildSave} onCancel={closeDrawer} /></aside></> : null}
     </section>
   );
 }

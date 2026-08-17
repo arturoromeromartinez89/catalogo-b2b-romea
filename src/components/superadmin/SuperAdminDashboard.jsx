@@ -132,11 +132,11 @@ export default function SuperAdminDashboard({ profile, demoData = null }) {
 
         <main className="project-hub__workspace">
         <section className="project-section-page nexor-studio__page">
-          <header>
+          {!workspace ? <header>
             <p>{activePage.eyebrow}</p>
             <h2>{activePage.title}</h2>
             <span>{activePage.lead}</span>
-          </header>
+          </header> : null}
           {status ? <p className="status info">{status}</p> : null}
           {tab === "home" ? (
             <StudioHome tenants={tenants} projectsByTenant={projectsByTenant} onOpenClient={openClients} onOpenProject={openWorkspace} />

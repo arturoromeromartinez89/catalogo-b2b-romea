@@ -20,10 +20,19 @@ const demoProfiles = [
 const demoProjectsByTenant = {
   "demo-tenant-1": [{
     id: "demo-project-1", tenant_id: "demo-tenant-1", name: "Digitalización de operaciones", description: "Sistema adaptado a la operación de Estuches Chávez.", status: "active", health: "green", current_phase_name: "Diseño funcional", start_date: "2026-08-10", estimated_end_date: "2026-09-18", internal_owner_name: "Arturo Romero", published: true,
-    project_solutions: [{ id: "demo-solution-1", name: "Inventario", description: "Control de existencias, entradas y salidas.", status: "in_progress", stage_name: "Operación", current_phase_name: "Diseño funcional", next_milestone: "Aprobación del flujo", sort_order: 10, visible_to_client: true }],
-    project_deliverables: [{ id: "demo-deliverable-1", name: "Mapa operativo", status: "approved", weight: 1, visible_to_client: true }, { id: "demo-deliverable-2", name: "Prototipo de inventario", status: "in_progress", weight: 5, estimated_delivery_date: "2026-09-02", visible_to_client: true }],
-    project_approvals: [{ id: "demo-approval-1", title: "Aprobar flujo de entradas y salidas", status: "pending", due_date: "2026-08-21", visible_to_client: true }],
-    project_tasks: [{ id: "demo-task-1", title: "Diseñar recepción de mercancía", status: "in_progress", priority: "high", visible_to_client: true }],
+    project_solutions: [{ id: "demo-solution-1", name: "Inventario", description: "Control de existencias, entradas y salidas.", status: "in_progress", stage_name: "Operación", current_phase_name: "Diseño funcional", next_milestone: "Aprobación del flujo", estimated_end_date: "2026-09-18", sort_order: 10, visible_to_client: true }],
+    project_deliverables: [{ id: "demo-deliverable-1", solution_id: "demo-solution-1", name: "Mapa operativo", status: "approved", weight: 1, visible_to_client: true }, { id: "demo-deliverable-2", solution_id: "demo-solution-1", name: "Prototipo de inventario", status: "in_progress", weight: 5, estimated_delivery_date: "2026-09-02", visible_to_client: true }],
+    project_approvals: [{ id: "demo-approval-1", solution_id: "demo-solution-1", title: "Aprobar flujo de entradas y salidas", status: "pending", due_date: "2026-08-21", visible_to_client: true }],
+    project_documents: [{ id: "demo-document-1", name: "Alcance funcional v1", description: "Documento de trabajo acordado con el cliente.", document_type: "scope", visible_to_client: true }],
+    project_updates: [{ id: "demo-update-1", title: "Mapa operativo completado", description: "Se documentó el recorrido de entradas, ubicación y salidas.", update_type: "milestone", visible_to_client: true }],
+    project_tasks: [
+      { id: "demo-task-1", solution_id: "demo-solution-1", title: "Validar catálogo de productos", description: "Confirmar campos, familias y unidades de medida.", status: "todo", priority: "medium", due_date: "2026-08-20", visible_to_client: true },
+      { id: "demo-task-2", solution_id: "demo-solution-1", title: "Definir permisos por rol", status: "todo", priority: "low", due_date: "2026-08-22", visible_to_client: true },
+      { id: "demo-task-3", solution_id: "demo-solution-1", title: "Diseñar recepción de mercancía", description: "Construir el flujo desde orden de compra hasta ubicación.", status: "in_progress", priority: "high", due_date: "2026-08-19", assignee_name: "Daniel", visible_to_client: true },
+      { id: "demo-task-4", solution_id: "demo-solution-1", title: "Ajustar reglas de existencias", status: "blocked", priority: "high", visible_to_client: true },
+      { id: "demo-task-5", solution_id: "demo-solution-1", title: "Revisar prototipo de entradas", status: "review", priority: "medium", due_date: "2026-08-21", visible_to_client: true },
+      { id: "demo-task-6", solution_id: "demo-solution-1", title: "Documentar operación actual", status: "done", priority: "low", visible_to_client: true },
+    ],
     project_members: [{ id: "demo-member-1", profile_id: "demo-profile-1", project_role: "responsable" }, { id: "demo-member-2", profile_id: "demo-profile-2", project_role: "colaborador" }],
   }],
   "demo-tenant-2": [{

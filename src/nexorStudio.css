@@ -1034,3 +1034,255 @@
   .nexor-studio .ph-studio__client { grid-template-columns: minmax(0, 1fr); }
   .nexor-studio .ph-manager__context-client { min-width: 0; width: 100%; }
 }
+
+/* ---------- Proyecto: superficie de trabajo, no formulario de base de datos ---------- */
+
+.nexor-studio .ph-workspace {
+  --workspace-navy: #101d49;
+  --workspace-blue: #4f7bff;
+  --workspace-aqua: #2dd4c7;
+  --workspace-paper: rgba(255, 255, 255, .94);
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.nexor-studio .ph-workspace__crumbs {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-height: 30px;
+}
+
+.nexor-studio .ph-workspace__crumbs > span {
+  color: var(--nexor-muted-bright);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.nexor-studio .ph-workspace__project-head {
+  align-items: end;
+  background: var(--workspace-navy);
+  border-radius: 18px;
+  color: #fff;
+  display: grid;
+  gap: clamp(24px, 4vw, 52px);
+  grid-template-columns: minmax(280px, .85fr) minmax(520px, 1.15fr);
+  overflow: hidden;
+  padding: clamp(24px, 3.4vw, 38px);
+  position: relative;
+}
+
+.nexor-studio .ph-workspace__project-head::after {
+  background-image: radial-gradient(circle, rgba(45, 212, 199, .55) 1.4px, transparent 1.6px);
+  background-size: 28px 28px;
+  bottom: -44px;
+  content: "";
+  height: 160px;
+  opacity: .32;
+  position: absolute;
+  right: -20px;
+  transform: rotate(-7deg);
+  width: 420px;
+}
+
+.nexor-studio .ph-workspace__identity,
+.nexor-studio .ph-workspace__signals { position: relative; z-index: 1; }
+
+.nexor-studio .ph-workspace__health {
+  align-items: center;
+  color: #cbd5f5;
+  display: flex;
+  font-size: 9px;
+  font-weight: 800;
+  gap: 7px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.nexor-studio .ph-workspace__health i { background: var(--workspace-aqua); border-radius: 50%; height: 7px; width: 7px; }
+.nexor-studio .ph-workspace__health--yellow i { background: #f3c75f; }
+.nexor-studio .ph-workspace__health--red i { background: #ff7181; }
+
+.nexor-studio .ph-workspace__identity h2 {
+  color: #fff;
+  font-family: var(--nexor-display);
+  font-size: clamp(30px, 3.6vw, 50px);
+  letter-spacing: -.045em;
+  line-height: .98;
+  margin: 12px 0 10px;
+  max-width: 620px;
+  overflow-wrap: anywhere;
+}
+
+.nexor-studio .ph-workspace__identity p {
+  color: #cbd5f5;
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 520px;
+}
+
+.nexor-studio .ph-workspace__signals {
+  border-left: 1px solid rgba(255, 255, 255, .14);
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.nexor-studio .ph-workspace__signals div { min-width: 0; padding: 10px 18px; }
+.nexor-studio .ph-workspace__signals div:nth-child(2n) { border-left: 1px solid rgba(255, 255, 255, .12); }
+.nexor-studio .ph-workspace__signals div:nth-child(n + 3) { border-top: 1px solid rgba(255, 255, 255, .12); }
+.nexor-studio .ph-workspace__signals dt { color: #8799ce; font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.nexor-studio .ph-workspace__signals dd { color: #fff; font-family: var(--nexor-display); font-size: 13px; font-weight: 750; margin: 5px 0 0; overflow-wrap: anywhere; }
+
+.nexor-studio .ph-workspace__nav {
+  align-items: center;
+  align-self: start;
+  background: rgba(255, 255, 255, .94);
+  border: 1px solid var(--nexor-line);
+  border-radius: 13px;
+  box-shadow: 0 10px 28px rgba(16, 29, 73, .08);
+  display: flex;
+  gap: 3px;
+  margin: -2px auto 0;
+  max-width: calc(100% - 24px);
+  overflow: visible;
+  padding: 5px;
+  position: sticky;
+  top: 12px;
+  width: max-content;
+  z-index: 12;
+}
+
+.nexor-studio .ph-workspace__nav > button,
+.nexor-studio .ph-workspace__more > button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  color: #566485;
+  display: flex;
+  font-family: var(--nexor-text);
+  font-size: 11px;
+  font-weight: 750;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.nexor-studio .ph-workspace__nav button:hover { background: #f3f6fd; color: var(--workspace-navy); }
+.nexor-studio .ph-workspace__nav button.active { background: var(--workspace-navy); color: #fff; }
+.nexor-studio .ph-workspace__nav button span { align-items: center; background: #edf1fb; border-radius: 999px; color: #536180; display: inline-flex; font-size: 8px; height: 18px; justify-content: center; min-width: 18px; padding: 0 5px; }
+.nexor-studio .ph-workspace__nav button.active span { background: rgba(255, 255, 255, .16); color: #fff; }
+.nexor-studio .ph-workspace__more { position: relative; }
+.nexor-studio .ph-workspace__more-menu { background: #fff; border: 1px solid var(--nexor-line); border-radius: 12px; box-shadow: 0 14px 34px rgba(16, 29, 73, .14); display: grid; min-width: 170px; padding: 6px; position: absolute; right: 0; top: calc(100% + 8px); }
+.nexor-studio .ph-workspace__more-menu button { background: transparent; border: 0; border-radius: 8px; color: var(--workspace-navy); font-size: 11px; font-weight: 700; padding: 10px 12px; text-align: left; }
+
+.nexor-studio .ph-workspace__view {
+  background: var(--workspace-paper);
+  border: 1px solid var(--nexor-line);
+  border-radius: 18px;
+  min-width: 0;
+  padding: clamp(18px, 2.6vw, 28px);
+}
+
+.nexor-studio .ph-workspace__view-head { align-items: center; display: flex; gap: 20px; justify-content: space-between; margin-bottom: 22px; }
+.nexor-studio .ph-workspace__view-head h3 { color: var(--workspace-navy); font-family: var(--nexor-display); font-size: clamp(21px, 2.2vw, 28px); letter-spacing: -.035em; margin: 0; }
+.nexor-studio .ph-workspace__view-head p { color: var(--nexor-muted-bright); font-size: 11px; line-height: 1.5; margin: 5px 0 0; }
+.nexor-studio .ph-workspace__view-head .primary-button { flex: none; }
+
+.nexor-studio .ph-board { display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(205px, 1fr)); min-width: 860px; }
+.nexor-studio .ph-board__column { background: #f4f6fb; border: 1px solid #e1e6f1; border-radius: 12px; min-width: 0; padding: 10px; }
+.nexor-studio .ph-board__column > header { align-items: center; display: flex; justify-content: space-between; padding: 3px 4px 11px; }
+.nexor-studio .ph-board__column > header strong { color: var(--workspace-navy); font-family: var(--nexor-display); font-size: 11px; }
+.nexor-studio .ph-board__column > header span { align-items: center; background: #e7ebf4; border-radius: 999px; color: #65718d; display: flex; font-size: 9px; height: 20px; justify-content: center; min-width: 20px; }
+.nexor-studio .ph-board__cards { display: grid; gap: 8px; }
+.nexor-studio .ph-board__card { background: #fff; border: 1px solid #dde3ef; border-radius: 10px; box-shadow: 0 2px 5px rgba(16, 29, 73, .04); overflow: hidden; }
+.nexor-studio .ph-board__card:focus-within { border-color: var(--workspace-blue); box-shadow: 0 0 0 3px rgba(79, 123, 255, .12); }
+.nexor-studio .ph-board__card-main { background: transparent; border: 0; color: var(--workspace-navy); display: block; padding: 13px; text-align: left; width: 100%; }
+.nexor-studio .ph-board__card-main > small { color: #087e74; display: block; font-size: 8px; font-weight: 850; letter-spacing: .08em; margin-bottom: 7px; text-transform: uppercase; }
+.nexor-studio .ph-board__card-main > strong { display: block; font-family: var(--nexor-display); font-size: 12px; line-height: 1.35; }
+.nexor-studio .ph-board__card-main > p { color: #66718e; display: -webkit-box; font-size: 10px; line-height: 1.45; margin: 7px 0 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.nexor-studio .ph-board__meta { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.nexor-studio .ph-board__meta span { color: #64708d; font-size: 8px; font-weight: 750; }
+.nexor-studio .ph-board__priority { background: #eaf0ff; border-radius: 999px; color: #3154ad !important; padding: 4px 7px; }
+.nexor-studio .ph-board__priority--high, .nexor-studio .ph-board__priority--critical { background: #fff0f1; color: #ad3342 !important; }
+.nexor-studio .ph-board__priority--low { background: #e7f8f4; color: #08675f !important; }
+.nexor-studio .ph-board__move { align-items: center; border-top: 1px solid #edf0f6; display: flex; justify-content: space-between; padding: 7px 9px; }
+.nexor-studio .ph-board__move span { color: #7a849e; font-size: 8px; font-weight: 750; }
+.nexor-studio .ph-board__move select { appearance: none; background: transparent; border: 0; color: #536180; font-size: 8px; font-weight: 750; height: 24px; padding: 0 15px 0 5px; width: auto; }
+.nexor-studio .ph-board__add { background: transparent; border: 1px dashed #cbd3e3; border-radius: 9px; color: #64708d; font-size: 10px; min-height: 42px; width: 100%; }
+.nexor-studio .ph-board__add:hover { background: #fff; border-color: var(--workspace-aqua); color: #087e74; }
+
+.nexor-studio .ph-master-plan { border-bottom: 1px solid var(--nexor-line); border-top: 1px solid var(--nexor-line); }
+.nexor-studio .ph-master-plan > button { align-items: center; background: transparent; border: 0; border-bottom: 1px solid var(--nexor-line); color: var(--workspace-navy); display: grid; gap: 16px; grid-template-columns: 34px minmax(160px, 1fr) minmax(140px, 1.2fr) 44px 100px; min-height: 72px; padding: 10px 6px; text-align: left; width: 100%; }
+.nexor-studio .ph-master-plan > button:last-of-type { border-bottom: 0; }
+.nexor-studio .ph-master-plan > button:hover { background: #f7f9fd; }
+.nexor-studio .ph-master-plan__index { color: #8b96af; font-family: var(--nexor-display); font-size: 10px; }
+.nexor-studio .ph-master-plan strong { display: block; font-family: var(--nexor-display); font-size: 12px; }
+.nexor-studio .ph-master-plan small { color: var(--nexor-muted-bright); display: block; font-size: 9px; margin-top: 4px; }
+.nexor-studio .ph-master-plan__bar { background: #e7ebf4; border-radius: 999px; height: 5px; overflow: hidden; }
+.nexor-studio .ph-master-plan__bar i { background: linear-gradient(90deg, var(--workspace-aqua), var(--workspace-blue)); display: block; height: 100%; }
+.nexor-studio .ph-master-plan b { font-size: 11px; font-variant-numeric: tabular-nums; }
+.nexor-studio .ph-master-plan time { color: #66718e; font-size: 9px; }
+
+.nexor-studio .ph-workspace__records { border-top: 1px solid var(--nexor-line); }
+.nexor-studio .ph-workspace__record { border-bottom: 1px solid var(--nexor-line); }
+.nexor-studio .ph-workspace__record > button { align-items: center; background: transparent; border: 0; color: var(--workspace-navy); display: flex; gap: 20px; justify-content: space-between; min-height: 66px; padding: 10px 4px; text-align: left; width: 100%; }
+.nexor-studio .ph-workspace__record > button:hover { background: #f7f9fd; padding-left: 10px; padding-right: 10px; }
+.nexor-studio .ph-workspace__record strong { display: block; font-family: var(--nexor-display); font-size: 12px; }
+.nexor-studio .ph-workspace__record span { color: var(--nexor-muted-bright); display: block; font-size: 9.5px; margin-top: 4px; }
+.nexor-studio .ph-workspace__record-meta { align-items: center; display: flex; flex: none; gap: 14px; }
+.nexor-studio .ph-workspace__record-meta small { background: #eef2fa; border-radius: 999px; color: #5d6988; font-size: 8px; font-weight: 800; padding: 5px 8px; }
+.nexor-studio .ph-workspace__record-meta b { color: var(--workspace-blue); font-size: 17px; }
+.nexor-studio .ph-workspace__empty { color: var(--nexor-muted-bright); font-size: 11px; padding: 30px 12px; text-align: center; }
+
+.nexor-studio .ph-workspace__settings { max-width: 860px; }
+.nexor-studio .ph-workspace__settings .ph-manager__actions { margin-top: 20px; }
+.nexor-studio .ph-workspace__settings textarea { min-height: 90px; }
+
+.nexor-studio .ph-workspace__scrim { background: rgba(9, 17, 44, .32); border: 0; inset: 0; position: fixed; z-index: 40; }
+.nexor-studio .ph-workspace__drawer { background: #fff; border-left: 1px solid var(--nexor-line); box-shadow: -18px 0 48px rgba(16, 29, 73, .16); display: flex; flex-direction: column; height: 100dvh; max-width: 92vw; overflow-y: auto; padding: 0; position: fixed; right: 0; top: 0; width: 430px; z-index: 41; }
+.nexor-studio .ph-workspace__drawer > header { align-items: center; border-bottom: 1px solid var(--nexor-line); display: flex; justify-content: space-between; padding: 20px 22px; }
+.nexor-studio .ph-workspace__drawer > header small { color: #087e74; font-size: 8px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.nexor-studio .ph-workspace__drawer > header h3 { color: var(--workspace-navy); font-family: var(--nexor-display); font-size: 22px; letter-spacing: -.03em; margin: 4px 0 0; }
+.nexor-studio .ph-workspace__drawer > header > button { align-items: center; background: #f1f4fa; border: 0; border-radius: 50%; color: var(--workspace-navy); display: flex; font-size: 23px; height: 34px; justify-content: center; width: 34px; }
+.nexor-studio .ph-workspace__drawer .ph-manager__child-form { border: 0; border-radius: 0; display: grid; gap: 14px; padding: 22px; }
+.nexor-studio .ph-workspace__drawer .ph-manager__child-form > h4 { display: none; }
+.nexor-studio .ph-workspace__drawer .ph-manager__actions { background: #fff; border-top: 1px solid var(--nexor-line); bottom: 0; margin: 4px -22px -22px; padding: 14px 22px; position: sticky; }
+
+@media (max-width: 1100px) {
+  .nexor-studio .ph-workspace__project-head { align-items: stretch; grid-template-columns: minmax(0, 1fr); }
+  .nexor-studio .ph-workspace__signals { border-left: 0; border-top: 1px solid rgba(255, 255, 255, .14); padding-top: 8px; }
+  .nexor-studio .ph-workspace__view { overflow-x: auto; }
+}
+
+@media (max-width: 760px) {
+  .nexor-studio .ph-workspace { gap: 14px; }
+  .nexor-studio .ph-workspace__crumbs { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .nexor-studio .ph-workspace__project-head { border-radius: 14px; padding: 22px 18px; }
+  .nexor-studio .ph-workspace__identity h2 { font-size: 31px; }
+  .nexor-studio .ph-workspace__signals { grid-template-columns: minmax(0, 1fr); }
+  .nexor-studio .ph-workspace__signals div { border-left: 0 !important; padding: 9px 0; }
+  .nexor-studio .ph-workspace__signals div + div { border-top: 1px solid rgba(255, 255, 255, .12); }
+  .nexor-studio .ph-workspace__nav { justify-content: flex-start; margin-left: 0; max-width: 100%; overflow-x: auto; position: static; width: 100%; }
+  .nexor-studio .ph-workspace__nav { scrollbar-width: none; }
+  .nexor-studio .ph-workspace__nav::-webkit-scrollbar { display: none; }
+  .nexor-studio .ph-workspace__more { position: relative; }
+  .nexor-studio .ph-workspace__more-menu { position: fixed; right: 14px; top: 138px; }
+  .nexor-studio .ph-workspace__view { border-radius: 14px; padding: 17px 14px; }
+  .nexor-studio .ph-workspace__view-head { align-items: flex-start; }
+  .nexor-studio .ph-workspace__view-head p { max-width: 230px; }
+  .nexor-studio .ph-workspace__view-head .primary-button { min-height: 36px; padding: 0 12px; }
+  .nexor-studio .ph-master-plan { min-width: 620px; }
+  .nexor-studio .ph-workspace__drawer { max-width: none; width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nexor-studio .ph-workspace * { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
