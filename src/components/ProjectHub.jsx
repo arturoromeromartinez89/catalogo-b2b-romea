@@ -434,7 +434,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
         </div>
         <nav className="project-hub__nav" aria-label={t("phSections")}>
           {nav.map((item) => (
-            <button key={item} type="button" aria-label={t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`)} title={sidebarCollapsed ? t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`) : undefined} className={section === item ? "active" : ""} onClick={() => { setActiveSolutionId(""); setSection(item); }}>
+            <button key={item} type="button" aria-current={section === item ? "page" : undefined} aria-label={t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`)} title={sidebarCollapsed ? t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`) : undefined} className={section === item ? "active" : ""} onClick={() => { setActiveSolutionId(""); setSection(item); }}>
               {icon(item)}
               <span className="project-hub__nav-label">{t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`)}</span>
               {item === "approvals" && pendingApprovals ? <span className="project-hub__nav-count">{pendingApprovals}</span> : null}
@@ -461,22 +461,44 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
         onNotice={showPreviewNotice}
       /> : <>
 
-      <header className="project-hub__header">
-        <div className="project-hub__heading">
-          <p className="project-hub__eyebrow">Proyecto · {companyName || t("phYourCompany")}</p>
-          <div className="project-hub__title-row">
-            <h1>{project.name}</h1>
-            <span className="project-hub__active-badge">{t("phActive")}</span>
+      <header className="project-hub__briefing">
+        <div className="project-hub__briefing-main">
+          <div className="project-hub__heading">
+            <div className="project-hub__title-row">
+              <h1>{project.name}</h1>
+              <span className="project-hub__active-badge">{t("phActive")}</span>
+            </div>
+            <p>{project.description}</p>
+            <div className="project-hub__briefing-context">
+              <span>Proyecto · {companyName || t("phYourCompany")}</span>
+              <span className={`project-hub__health-signal project-hub__health-signal--${project.health}`}><i />{healthLabel}</span>
+            </div>
           </div>
-          <p>{project.description}</p>
+          <button className="secondary-button project-hub__contract" type="button" onClick={() => {
+            const contract = project.documents.find((item) => item.type === "contract" && item.externalUrl);
+            if (contract) window.open(contract.externalUrl, "_blank", "noopener,noreferrer");
+            else showPreviewNotice(t("phContractUnavailable"));
+          }}>
+            {icon("documents")}
+            {t("phViewContract")}
+          </button>
+          <dl className="project-hub__briefing-facts">
+            <div><dt>{t("phCurrentPhase")}</dt><dd>{project.phase}</dd></div>
+            <div><dt>{t("phEstimatedDelivery")}</dt><dd>{project.endDate}</dd></div>
+            <div><dt>{t("phRemainingDays")}</dt><dd>{remaining ?? "—"}</dd></div>
+          </dl>
         </div>
-        <button className="secondary-button project-hub__contract" type="button" onClick={() => {
-          const contract = project.documents.find((item) => item.type === "contract" && item.externalUrl);
-          if (contract) window.open(contract.externalUrl, "_blank", "noopener,noreferrer");
-          else showPreviewNotice(t("phContractUnavailable"));
-        }}>
-          {icon("documents")}
-          {t("phViewContract")}
+        <aside className="project-hub__briefing-progress" aria-label={t("phProgressAria", project.progress)}>
+          <span>{t("phOverallProgress")}</span>
+          <strong>{project.progress}%</strong>
+          <div className="project-progress"><i style={{ width: `${project.progress}%` }} /></div>
+          <small>{t("phUpdatedToday")}</small>
+        </aside>
+        <button className={`project-hub__briefing-attention${pendingApprovals ? " project-hub__briefing-attention--pending" : ""}`} type="button" onClick={() => setSection("approvals")}>
+          <span>{t("phClientPending")}</span>
+          <strong>{pendingApprovals}</strong>
+          <small>{pendingApprovals ? t("phNeedsReview") : t("phNothingPending")}</small>
+          {icon("arrow")}
         </button>
       </header>
 

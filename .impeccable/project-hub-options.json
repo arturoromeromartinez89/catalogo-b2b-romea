@@ -1,0 +1,79 @@
+{
+  "title": "Jerarquía del Project Hub",
+  "question": "Elige la estructura que organizará la pantalla compartida. Las tres conservan la identidad NEXOR, el contenido y todas las funciones actuales.",
+  "options": [
+    {
+      "id": "decision-route",
+      "label": "Ruta de decisiones",
+      "kicker": "THE ROLL",
+      "lineage": "Señalización ejecutiva por puntos de decisión",
+      "thesis": "La pantalla siempre deja claro dónde está el proyecto, qué requiere atención y cuál es el siguiente paso.",
+      "palette": ["#F5F7FC", "#FFFFFF", "#0B1330", "#2FE3D0", "#4F7BFF"],
+      "materials": ["retícula Nodo", "bandas ejecutivas", "paneles de bóveda clara"],
+      "viewport": "Barra lateral compacta, identidad del proyecto arriba, una banda de próxima decisión y el plan maestro dominando el resto del viewport.",
+      "risk": "Debe seguir sintiéndose completa cuando no haya aprobaciones pendientes.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 10,
+        "regions": [
+          {"label": "navegación", "x": 0, "y": 0, "w": 2, "h": 10, "accent": true},
+          {"label": "marca + cliente", "x": 2, "y": 0, "w": 10, "h": 1},
+          {"label": "identidad proyecto", "x": 2, "y": 1, "w": 7, "h": 2},
+          {"label": "próxima decisión", "x": 9, "y": 1, "w": 3, "h": 2, "accent": true},
+          {"label": "pulso ejecutivo", "x": 2, "y": 3, "w": 10, "h": 2},
+          {"label": "plan maestro", "x": 2, "y": 5, "w": 10, "h": 5}
+        ]
+      },
+      "comp": ".impeccable/mocks/decision/project-hub-decision-route.png"
+    },
+    {
+      "id": "decision-inbox",
+      "label": "Bandeja de decisiones",
+      "lineage": "Centro de revisión orientado a acciones",
+      "thesis": "Las decisiones y pendientes del cliente conducen la lectura; el progreso y el cronograma explican su contexto.",
+      "palette": ["#F5F7FC", "#FFFFFF", "#0B1330", "#FFCF71", "#4F7BFF"],
+      "materials": ["bandeja de revisión", "estados inequívocos", "tarjetas de evidencia"],
+      "viewport": "Resumen del proyecto a la izquierda, bandeja de decisiones a la derecha y plan maestro como superficie de trabajo inmediatamente debajo.",
+      "risk": "Podría hacer que el portal parezca vacío cuando el cliente no tenga acciones abiertas.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 10,
+        "regions": [
+          {"label": "navegación", "x": 0, "y": 0, "w": 2, "h": 10, "accent": true},
+          {"label": "marca + cliente", "x": 2, "y": 0, "w": 10, "h": 1},
+          {"label": "resumen proyecto", "x": 2, "y": 1, "w": 6, "h": 3},
+          {"label": "decisiones", "x": 8, "y": 1, "w": 4, "h": 3, "accent": true},
+          {"label": "métricas", "x": 2, "y": 4, "w": 10, "h": 2},
+          {"label": "plan maestro", "x": 2, "y": 6, "w": 10, "h": 4}
+        ]
+      },
+      "comp": ".impeccable/mocks/decision/project-hub-decision-inbox.png"
+    },
+    {
+      "id": "control-desk",
+      "label": "Mesa de control",
+      "lineage": "Instrumento operativo de lectura continua",
+      "thesis": "Proyecto, avance, salud y calendario se leen como un solo instrumento, sin saltar entre resúmenes desconectados.",
+      "palette": ["#F5F7FC", "#FFFFFF", "#0B1330", "#2FE3D0", "#4F7BFF"],
+      "materials": ["cinta de estado", "módulos operativos", "controles de precisión"],
+      "viewport": "Una cinta horizontal conecta estado, fase, avance y entrega; debajo, el cronograma ocupa el centro con sus controles integrados.",
+      "risk": "La densidad debe bajar con cuidado en móvil para no sentirse como un panel interno.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 10,
+        "regions": [
+          {"label": "navegación", "x": 0, "y": 0, "w": 2, "h": 10, "accent": true},
+          {"label": "marca + cliente", "x": 2, "y": 0, "w": 10, "h": 1},
+          {"label": "proyecto", "x": 2, "y": 1, "w": 10, "h": 2},
+          {"label": "cinta de estado", "x": 2, "y": 3, "w": 10, "h": 2, "accent": true},
+          {"label": "cronograma", "x": 2, "y": 5, "w": 8, "h": 5},
+          {"label": "controles", "x": 10, "y": 5, "w": 2, "h": 5}
+        ]
+      },
+      "comp": ".impeccable/mocks/decision/project-hub-control-desk.png"
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "code", "toggle": true},
+  "steer": true
+}

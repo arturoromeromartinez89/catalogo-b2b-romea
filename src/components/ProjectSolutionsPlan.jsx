@@ -52,8 +52,8 @@ export default function ProjectSolutionsPlan({ project, onOpenSolution }) {
     <header className="project-workboard__header">
       <div><h2>Plan maestro</h2><span>El cronograma muestra las soluciones completas que forman este proyecto.</span></div>
       <div className="project-workboard__view-toggle" role="group" aria-label="Vista del plan maestro">
-        <button type="button" className={view === "gantt" ? "active" : ""} onClick={() => setView("gantt")}>{planIcon("gantt")}Cronograma</button>
-        <button type="button" className={view === "board" ? "active" : ""} onClick={() => setView("board")}>{planIcon("board")}Tablero</button>
+        <button type="button" aria-pressed={view === "gantt"} className={view === "gantt" ? "active" : ""} onClick={() => setView("gantt")}>{planIcon("gantt")}Cronograma</button>
+        <button type="button" aria-pressed={view === "board"} className={view === "board" ? "active" : ""} onClick={() => setView("board")}>{planIcon("board")}Tablero</button>
       </div>
     </header>
 

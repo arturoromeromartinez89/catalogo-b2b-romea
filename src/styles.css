@@ -3109,21 +3109,22 @@ dd {
 }
 
 .environment-banner {
-  position: fixed;
-  right: 12px;
-  bottom: 12px;
+  position: relative;
   z-index: 10000;
-  max-width: calc(100vw - 24px);
-  padding: 7px 10px;
-  border: 1px solid #111827;
-  border-radius: 4px;
+  display: flex;
+  min-height: 26px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  border-bottom: 1px solid #111827;
   background: #facc15;
   color: #111827;
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0;
+  letter-spacing: 0.04em;
   line-height: 1.2;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  text-align: center;
 }
 
 .admin-product-card.enabled {

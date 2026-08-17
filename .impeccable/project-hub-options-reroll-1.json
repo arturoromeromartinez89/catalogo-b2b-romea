@@ -1,0 +1,74 @@
+{
+  "title": "Jerarquía audaz del Project Hub",
+  "question": "Esta nueva ronda lleva más lejos la composición sin cambiar la identidad NEXOR, los textos ni las funciones del portal.",
+  "options": [
+    {
+      "id": "signal-board",
+      "label": "Panel de señales",
+      "kicker": "THE ROLL",
+      "lineage": "Tablero vivo de estado y secuencia",
+      "thesis": "El proyecto se lee como una secuencia viva: cada cambio, hito y decisión ocupa una línea inequívoca dentro del mismo pulso.",
+      "palette": ["#F5F7FC", "#FFFFFF", "#0B1330", "#2FE3D0", "#4F7BFF"],
+      "materials": ["filas de señal", "marcadores de estado", "tipografía tabular"],
+      "viewport": "El nombre del proyecto y su progreso forman una cabecera monumental; una secuencia de señales conecta estado, fase, solución activa y próxima decisión antes del cronograma.",
+      "risk": "La lectura tabular debe conservar calidez y claridad para clientes no técnicos.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 10,
+        "regions": [
+          {"label": "navegación", "x": 0, "y": 0, "w": 2, "h": 10, "accent": true},
+          {"label": "proyecto 28%", "x": 2, "y": 0, "w": 10, "h": 3},
+          {"label": "señales activas", "x": 2, "y": 3, "w": 10, "h": 2, "accent": true},
+          {"label": "plan maestro", "x": 2, "y": 5, "w": 10, "h": 5}
+        ]
+      },
+      "comp": ".impeccable/mocks/decision/project-hub-signal-board.png"
+    },
+    {
+      "id": "progress-horizon",
+      "label": "Horizonte de avance",
+      "lineage": "Panorama continuo del presente al objetivo",
+      "thesis": "La interfaz convierte el avance en un horizonte continuo: lo completado queda atrás, el trabajo actual ocupa el centro y la entrega permanece visible adelante.",
+      "palette": ["#070D22", "#0B1330", "#F5F7FC", "#2FE3D0", "#4F7BFF"],
+      "materials": ["horizonte de progreso", "campo de nodos", "capas de profundidad"],
+      "viewport": "Una franja panorámica conecta pasado, presente y entrega; las métricas viven dentro de ella y el cronograma se despliega como su extensión natural.",
+      "risk": "La profundidad visual no puede reducir el contraste ni competir con los datos.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 10,
+        "regions": [
+          {"label": "navegación", "x": 0, "y": 0, "w": 2, "h": 10, "accent": true},
+          {"label": "identidad proyecto", "x": 2, "y": 0, "w": 10, "h": 2},
+          {"label": "pasado · ahora · entrega", "x": 2, "y": 2, "w": 10, "h": 4, "accent": true},
+          {"label": "cronograma continuo", "x": 2, "y": 6, "w": 10, "h": 4}
+        ]
+      },
+      "comp": ".impeccable/mocks/decision/project-hub-progress-horizon.png"
+    },
+    {
+      "id": "project-briefing",
+      "label": "Briefing modular",
+      "lineage": "Informe ejecutivo por escenas operativas",
+      "thesis": "Cada bloque responde una pregunta del cliente —dónde estamos, qué se mueve y qué necesita de mí— dentro de una composición editorial fuerte.",
+      "palette": ["#F5F7FC", "#FFFFFF", "#0B1330", "#2FE3D0", "#FFCF71"],
+      "materials": ["placas de briefing", "cortes editoriales", "marcadores de decisión"],
+      "viewport": "Una placa grande resume el proyecto; dos módulos asimétricos muestran movimiento y atención; el plan maestro cierra el viewport como evidencia.",
+      "risk": "La asimetría debe seguir sintiéndose operativa y no como una página promocional.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 10,
+        "regions": [
+          {"label": "navegación", "x": 0, "y": 0, "w": 2, "h": 10, "accent": true},
+          {"label": "briefing proyecto", "x": 2, "y": 0, "w": 7, "h": 4},
+          {"label": "28%", "x": 9, "y": 0, "w": 3, "h": 2, "accent": true},
+          {"label": "requiere atención", "x": 9, "y": 2, "w": 3, "h": 2},
+          {"label": "plan maestro", "x": 2, "y": 4, "w": 10, "h": 6}
+        ]
+      },
+      "comp": ".impeccable/mocks/decision/project-hub-project-briefing.png"
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "code", "toggle": true},
+  "steer": true
+}

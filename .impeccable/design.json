@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-17T04:46:22.2282790Z",
+  "title": "Design System: NEXOR IA Project Hub",
+  "extensions": {
+    "colorMeta": {
+      "vault-ink": { "role": "primary", "displayName": "Tinta de Bóveda", "canonical": "#0b1330", "tonalRamp": ["oklch(15% 0.055 266)", "oklch(25% 0.055 266)", "oklch(36% 0.055 266)", "oklch(48% 0.055 266)", "oklch(60% 0.055 266)", "oklch(72% 0.045 266)", "oklch(84% 0.028 266)", "oklch(95% 0.012 266)"] },
+      "vault-ink-deep": { "role": "primary", "displayName": "Tinta Profunda", "canonical": "#070d22", "tonalRamp": ["oklch(15% 0.048 266)", "oklch(25% 0.048 266)", "oklch(36% 0.048 266)", "oklch(48% 0.048 266)", "oklch(60% 0.045 266)", "oklch(72% 0.038 266)", "oklch(84% 0.024 266)", "oklch(95% 0.010 266)"] },
+      "vault-blue": { "role": "secondary", "displayName": "Azul de Progreso", "canonical": "#4f7bff", "tonalRamp": ["oklch(15% 0.18 264)", "oklch(25% 0.20 264)", "oklch(36% 0.21 264)", "oklch(48% 0.22 264)", "oklch(60% 0.21 264)", "oklch(72% 0.16 264)", "oklch(84% 0.09 264)", "oklch(95% 0.025 264)"] },
+      "live-cyan": { "role": "primary", "displayName": "Cian Vivo", "canonical": "#2fe3d0", "tonalRamp": ["oklch(15% 0.10 183)", "oklch(25% 0.12 183)", "oklch(36% 0.14 183)", "oklch(48% 0.16 183)", "oklch(60% 0.17 183)", "oklch(72% 0.15 183)", "oklch(84% 0.10 183)", "oklch(95% 0.035 183)"] },
+      "live-cyan-strong": { "role": "primary", "displayName": "Cian Operativo", "canonical": "#17b9ab", "tonalRamp": ["oklch(15% 0.09 183)", "oklch(25% 0.11 183)", "oklch(36% 0.13 183)", "oklch(48% 0.15 183)", "oklch(60% 0.15 183)", "oklch(72% 0.12 183)", "oklch(84% 0.075 183)", "oklch(95% 0.025 183)"] },
+      "live-cyan-hover": { "role": "primary", "displayName": "Cian Elevado", "canonical": "#6df3e5", "tonalRamp": ["oklch(15% 0.08 183)", "oklch(25% 0.10 183)", "oklch(36% 0.12 183)", "oklch(48% 0.14 183)", "oklch(60% 0.14 183)", "oklch(72% 0.13 183)", "oklch(84% 0.085 183)", "oklch(95% 0.03 183)"] },
+      "attention-yellow": { "role": "tertiary", "displayName": "Amarillo de Atención", "canonical": "#ffcf71", "tonalRamp": ["oklch(15% 0.08 80)", "oklch(25% 0.10 80)", "oklch(36% 0.12 80)", "oklch(48% 0.14 80)", "oklch(60% 0.15 80)", "oklch(72% 0.14 80)", "oklch(84% 0.10 80)", "oklch(95% 0.035 80)"] },
+      "attention-soft": { "role": "tertiary", "displayName": "Atención Suave", "canonical": "#fff4d9", "tonalRamp": ["oklch(15% 0.05 80)", "oklch(25% 0.06 80)", "oklch(36% 0.07 80)", "oklch(48% 0.08 80)", "oklch(60% 0.085 80)", "oklch(72% 0.075 80)", "oklch(84% 0.05 80)", "oklch(95% 0.02 80)"] },
+      "vault-ground": { "role": "neutral", "displayName": "Suelo de Bóveda", "canonical": "#f2f5fa", "tonalRamp": ["oklch(15% 0.014 260)", "oklch(25% 0.014 260)", "oklch(36% 0.014 260)", "oklch(48% 0.014 260)", "oklch(60% 0.014 260)", "oklch(72% 0.012 260)", "oklch(84% 0.009 260)", "oklch(95% 0.005 260)"] },
+      "vault-paper": { "role": "neutral", "displayName": "Papel de Evidencia", "canonical": "#ffffff", "tonalRamp": ["oklch(15% 0 0)", "oklch(25% 0 0)", "oklch(36% 0 0)", "oklch(48% 0 0)", "oklch(60% 0 0)", "oklch(72% 0 0)", "oklch(84% 0 0)", "oklch(95% 0 0)"] },
+      "vault-fog": { "role": "neutral", "displayName": "Niebla de Bóveda", "canonical": "#eaf0ff", "tonalRamp": ["oklch(15% 0.025 264)", "oklch(25% 0.025 264)", "oklch(36% 0.025 264)", "oklch(48% 0.025 264)", "oklch(60% 0.024 264)", "oklch(72% 0.020 264)", "oklch(84% 0.014 264)", "oklch(95% 0.006 264)"] },
+      "operational-muted": { "role": "neutral", "displayName": "Silencio Operativo", "canonical": "#71809f", "tonalRamp": ["oklch(15% 0.035 260)", "oklch(25% 0.04 260)", "oklch(36% 0.045 260)", "oklch(48% 0.05 260)", "oklch(60% 0.05 260)", "oklch(72% 0.04 260)", "oklch(84% 0.025 260)", "oklch(95% 0.008 260)"] },
+      "operational-muted-dark": { "role": "neutral", "displayName": "Texto de Apoyo", "canonical": "#52627f", "tonalRamp": ["oklch(15% 0.035 260)", "oklch(25% 0.04 260)", "oklch(36% 0.045 260)", "oklch(48% 0.05 260)", "oklch(60% 0.048 260)", "oklch(72% 0.038 260)", "oklch(84% 0.022 260)", "oklch(95% 0.007 260)"] },
+      "danger-signal": { "role": "tertiary", "displayName": "Señal de Riesgo", "canonical": "#ff7c88", "tonalRamp": ["oklch(15% 0.12 18)", "oklch(25% 0.15 18)", "oklch(36% 0.18 18)", "oklch(48% 0.20 18)", "oklch(60% 0.20 18)", "oklch(72% 0.16 18)", "oklch(84% 0.10 18)", "oklch(95% 0.03 18)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Briefing Display", "purpose": "Nombre del proyecto dentro de la placa ejecutiva." },
+      "headline": { "displayName": "Evidence Headline", "purpose": "Títulos de Plan maestro y secciones principales." },
+      "title": { "displayName": "Operational Title", "purpose": "Soluciones, tarjetas y encabezados secundarios." },
+      "body": { "displayName": "Client Body", "purpose": "Descripción, ayuda y contenido operativo en español." },
+      "label": { "displayName": "Signal Label", "purpose": "Estados, hechos y metadatos compactos en mayúsculas." }
+    },
+    "shadows": [
+      { "name": "briefing-ambient", "value": "0 24px 54px -38px rgba(7, 13, 34, .78)", "purpose": "Ancla la placa de briefing sobre el suelo frío." },
+      { "name": "signal-ambient", "value": "0 20px 42px -34px rgba(11, 19, 48, .55)", "purpose": "Separa los módulos claros de progreso y atención." },
+      { "name": "evidence-ambient", "value": "0 28px 58px -46px rgba(11, 19, 48, .58)", "purpose": "Relaciona el Plan maestro con la síntesis ejecutiva." }
+    ],
+    "motion": [
+      { "name": "state-standard", "value": "180ms ease", "purpose": "Hover de módulos y controles compactos." },
+      { "name": "evidence-enter", "value": "320ms cubic-bezier(.16, 1, .3, 1)", "purpose": "Cambio direccional entre Cronograma y Tablero." },
+      { "name": "reduced-motion", "value": ".01ms linear", "purpose": "Sustituye transiciones y animaciones cuando el usuario solicita menos movimiento." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "760px" },
+      { "name": "briefing-compact", "value": "1080px" },
+      { "name": "content-max", "value": "1240px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal cian para aprobar o avanzar un estado.",
+      "html": "<button class=\"ds-btn-primary\">APROBAR</button>",
+      "css": ".ds-btn-primary { background:#2fe3d0; border:1px solid #2fe3d0; border-radius:10px; color:#070d22; cursor:pointer; font:600 14px/1 Inter,system-ui,sans-serif; min-height:40px; padding:8px 16px; transition:background 180ms ease,border-color 180ms ease,transform 180ms ease; } .ds-btn-primary:hover { background:#6df3e5; border-color:#6df3e5; } .ds-btn-primary:focus-visible { outline:3px solid rgba(79,123,255,.38); outline-offset:3px; } .ds-btn-primary:active { transform:translateY(1px); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Acción secundaria de papel para documentos y opciones reversibles.",
+      "html": "<button class=\"ds-btn-secondary\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M6 2h9l3 3v17H6zM14 2v5h5M9 12h6M9 16h6\"/></svg>VER CONTRATO</button>",
+      "css": ".ds-btn-secondary { align-items:center; background:#fff; border:1px solid rgba(120,140,210,.18); border-radius:10px; color:#0b1330; cursor:pointer; display:inline-flex; gap:8px; font:600 14px/1 Inter,system-ui,sans-serif; min-height:40px; padding:8px 16px; transition:background 180ms ease,border-color 180ms ease,color 180ms ease; } .ds-btn-secondary svg { fill:none; height:18px; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.8; width:18px; } .ds-btn-secondary:hover { background:#eef2fb; border-color:rgba(79,123,255,.3); color:#315dcc; } .ds-btn-secondary:focus-visible { outline:3px solid rgba(79,123,255,.38); outline-offset:3px; }"
+    },
+    {
+      "name": "Active Navigation Item",
+      "kind": "nav",
+      "description": "Estado activo de la navegación lateral de la bóveda.",
+      "html": "<button class=\"ds-nav-active\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 5h16M4 12h10M4 19h16\"/></svg><span>PLAN MAESTRO</span></button>",
+      "css": ".ds-nav-active { align-items:center; background:linear-gradient(90deg,rgba(47,227,208,.15),rgba(79,123,255,.1)); border:0; border-left:2px solid #2fe3d0; border-radius:9px; color:#fff; cursor:pointer; display:grid; font:650 12px/1 Inter,system-ui,sans-serif; gap:11px; grid-template-columns:22px 1fr; min-height:44px; padding:0 12px; text-align:left; } .ds-nav-active svg { fill:none; height:19px; stroke:#2fe3d0; stroke-linecap:round; stroke-width:1.8; width:19px; } .ds-nav-active:hover { background:linear-gradient(90deg,rgba(47,227,208,.2),rgba(79,123,255,.14)); } .ds-nav-active:focus-visible { outline:3px solid rgba(79,123,255,.5); outline-offset:3px; }"
+    },
+    {
+      "name": "Active Status Badge",
+      "kind": "chip",
+      "description": "Estado explícito de proyecto activo, nunca una señal cromática aislada.",
+      "html": "<span class=\"ds-status-active\">ACTIVO</span>",
+      "css": ".ds-status-active { background:rgba(47,227,208,.12); border:1px solid rgba(47,227,208,.32); border-radius:9999px; color:#78f3e5; display:inline-flex; font:700 11px/1 Inter,system-ui,sans-serif; letter-spacing:.04em; padding:4px 12px; text-transform:uppercase; }"
+    },
+    {
+      "name": "Briefing Plate",
+      "kind": "custom",
+      "refersTo": "briefing-plate",
+      "description": "Componente firma que sintetiza identidad, estado y hechos del proyecto.",
+      "html": "<article class=\"ds-briefing\"><div><span class=\"ds-briefing-label\">PROYECTO · CLIENTE</span><h2>Transformación operativa</h2><p>Una visión ejecutiva del estado, el movimiento y las próximas decisiones.</p></div><dl><div><dt>FASE ACTUAL</dt><dd>Implementación</dd></div><div><dt>ENTREGA</dt><dd>30 SEP</dd></div><div><dt>DÍAS RESTANTES</dt><dd>44</dd></div></dl></article>",
+      "css": ".ds-briefing { background:radial-gradient(circle at 92% 4%,rgba(79,123,255,.16),transparent 31%),linear-gradient(135deg,#0b1330,#101f47 72%,#132b5c); border-radius:16px; box-shadow:0 24px 54px -38px rgba(7,13,34,.78); color:#eaf0ff; font-family:Inter,system-ui,sans-serif; overflow:hidden; padding:32px; } .ds-briefing-label { color:#91a1cc; font-size:9px; font-weight:800; letter-spacing:.1em; } .ds-briefing h2 { color:#fff; font:700 clamp(32px,4.2vw,58px)/.98 \"Space Grotesk\",Inter,sans-serif; letter-spacing:-.035em; margin:12px 0 14px; max-width:720px; } .ds-briefing p { color:#aebbe0; font-size:14px; line-height:1.62; margin:0; max-width:68ch; } .ds-briefing dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin:26px 0 0; } .ds-briefing dl div { border-top:1px solid rgba(164,181,228,.18); padding:16px 18px 0 0; } .ds-briefing dt { color:#7f91c0; font-size:9px; font-weight:800; letter-spacing:.1em; } .ds-briefing dd { color:#eef3ff; font-size:13px; font-weight:700; margin:7px 0 0; } .ds-briefing:focus-within { outline:3px solid rgba(79,123,255,.38); outline-offset:3px; }"
+    },
+    {
+      "name": "Attention Module",
+      "kind": "card",
+      "refersTo": "attention-module",
+      "description": "Señal accionable para revisiones pendientes del cliente.",
+      "html": "<button class=\"ds-attention\"><span>PENDIENTES DEL CLIENTE</span><strong>2</strong><small>Requieren tu revisión</small><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></button>",
+      "css": ".ds-attention { background:#fff4d9; border:0; border-radius:16px; color:#0b1330; cursor:pointer; display:block; min-height:113px; padding:18px; position:relative; text-align:left; transition:background 180ms ease,transform 180ms ease; width:100%; } .ds-attention>span { color:#71809f; display:block; font:800 9px/1.25 Inter,system-ui,sans-serif; letter-spacing:.1em; } .ds-attention>strong { display:block; font:700 32px/1 \"Space Grotesk\",Inter,sans-serif; letter-spacing:-.035em; margin:10px 0; } .ds-attention>small { color:#7583a0; font:400 10px/1.35 Inter,system-ui,sans-serif; } .ds-attention svg { fill:none; height:17px; position:absolute; right:16px; stroke:#4f7bff; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.8; top:16px; width:17px; } .ds-attention:hover { background:#ffedbf; transform:translateY(-2px); } .ds-attention:focus-visible { outline:3px solid rgba(79,123,255,.38); outline-offset:3px; }"
+    },
+    {
+      "name": "Evidence View Toggle",
+      "kind": "button",
+      "refersTo": "evidence-toggle-active",
+      "description": "Selector binario entre Cronograma y Tablero como vistas de la misma evidencia.",
+      "html": "<div class=\"ds-toggle\" role=\"group\" aria-label=\"Vista del plan maestro\"><button class=\"ds-toggle-active\" aria-pressed=\"true\">CRONOGRAMA</button><button aria-pressed=\"false\">TABLERO</button></div>",
+      "css": ".ds-toggle { background:#eef2f8; border-radius:12px; display:inline-flex; gap:4px; padding:4px; } .ds-toggle button { background:transparent; border:0; border-radius:10px; color:#71809f; cursor:pointer; font:700 13px/1 Inter,system-ui,sans-serif; min-height:38px; padding:9px 13px; } .ds-toggle .ds-toggle-active { background:#4f7bff; box-shadow:0 7px 20px -12px #4f7bff; color:#fff; } .ds-toggle button:hover { color:#0b1330; } .ds-toggle button:focus-visible { outline:3px solid rgba(79,123,255,.38); outline-offset:2px; }"
+    },
+    {
+      "name": "Plan Container",
+      "kind": "card",
+      "refersTo": "plan-container",
+      "description": "Superficie de papel que convierte el plan operativo en evidencia del briefing.",
+      "html": "<section class=\"ds-plan\"><header><div><h2>Plan maestro</h2><p>Las soluciones completas que forman este proyecto.</p></div></header><div class=\"ds-plan-summary\"><article><span>SOLUCIONES</span><strong>4</strong><small>Alcance total</small></article><article><span>EN CURSO</span><strong>2</strong><small>Trabajo activo</small></article><article><span>PROGRESO</span><strong>28%</strong><small>Avance consolidado</small></article></div></section>",
+      "css": ".ds-plan { background:#fff; border-radius:16px; box-shadow:0 28px 58px -46px rgba(11,19,48,.58); color:#0b1330; font-family:Inter,system-ui,sans-serif; padding:28px; } .ds-plan header { border-bottom:1px solid #e6eaf2; padding-bottom:22px; } .ds-plan h2 { font:700 clamp(26px,3vw,38px)/1.1 \"Space Grotesk\",Inter,sans-serif; letter-spacing:-.035em; margin:0; } .ds-plan header p { color:#697795; font-size:12px; margin:7px 0 0; } .ds-plan-summary { background:#0b1330; border-radius:14px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:22px; overflow:hidden; } .ds-plan-summary article { min-height:90px; padding:17px 20px; } .ds-plan-summary article+article { border-left:1px solid rgba(173,190,232,.16); } .ds-plan-summary span,.ds-plan-summary small { color:#8293c0; display:block; font-size:10px; } .ds-plan-summary strong { color:#fff; display:block; font:700 24px/1 \"Space Grotesk\",Inter,sans-serif; margin:8px 0; } .ds-plan:focus-within { outline:3px solid rgba(79,123,255,.38); outline-offset:3px; }"
+    },
+    {
+      "name": "Approval Textarea",
+      "kind": "input",
+      "description": "Campo claro para que el cliente documente una aprobación o rechazo.",
+      "html": "<label class=\"ds-field\"><span>COMENTARIO</span><textarea placeholder=\"Añade el contexto de tu decisión\"></textarea></label>",
+      "css": ".ds-field { color:#52627f; display:flex; flex-direction:column; font:800 9px/1.25 Inter,system-ui,sans-serif; gap:8px; letter-spacing:.1em; } .ds-field textarea { background:#fff; border:1px solid rgba(120,140,210,.24); border-radius:10px; color:#0b1330; font:400 14px/1.5 Inter,system-ui,sans-serif; min-height:84px; padding:12px; resize:vertical; } .ds-field textarea:hover { border-color:rgba(79,123,255,.36); } .ds-field textarea:focus-visible { border-color:#4f7bff; outline:3px solid rgba(79,123,255,.38); outline-offset:3px; } .ds-field textarea::placeholder { color:#71809f; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La Bóveda de Briefing",
+    "overview": "Project Hub se siente como una bóveda clara que ha abierto una placa de briefing ejecutivo: la información decisiva queda protegida por tinta profunda y aparece antes que la evidencia operativa. La composición modular responde, en este orden, dónde está el proyecto, qué se está moviendo y qué requiere atención del cliente. El resultado debe ser serio, preciso y técnico sin exigir vocabulario de gestión de proyectos.\n\nLa luz fría, el campo de nodos restringido y la asimetría editorial forman el mundo NEXOR sin convertir la superficie en una pieza promocional. Cian, azul y amarillo son señales escasas con funciones distintas; el resto de la interfaz permanece calmado para que progreso, navegación y decisiones no compitan entre sí. La dirección project-briefing, semilla afbec59f, superó la revisión final con disposición ship y es la autoridad durable para futuras superficies cliente del hub.",
+    "keyCharacteristics": [
+      "Briefing ejecutivo antes que detalle operativo.",
+      "Bóveda luminosa con una placa central de tinta profunda.",
+      "Asimetría modular legible, no una cuadrícula de tarjetas equivalentes.",
+      "Cian para señal viva y acción principal; azul para navegación y progreso; amarillo para atención.",
+      "Campo de nodos tenue y profundidad ambiental, nunca ornamental.",
+      "Tipografía de display compacta y datos con numerales tabulares."
+    ],
+    "rules": [
+      { "name": "The Three Signals Rule", "body": "Cian significa actividad o acción principal, azul significa navegación o progreso y amarillo significa atención; no intercambiar sus funciones.", "section": "colors" },
+      { "name": "The Signal Rarity Rule", "body": "Mantener los acentos fuera de superficies extensas: su escasez es lo que hace visibles los estados y decisiones.", "section": "colors" },
+      { "name": "The Executive Compression Rule", "body": "Reservar Space Grotesk y el tracking negativo para identidad, cifras y títulos; la lectura operativa permanece en Inter.", "section": "typography" },
+      { "name": "The Briefing-Then-Evidence Rule", "body": "La identidad, el estado, el movimiento y la atención se leen antes del detalle del plan; no insertar paneles equivalentes entre ambas capas.", "section": "layout" },
+      { "name": "The Ambient Depth Rule", "body": "Las sombras organizan capas y nunca decoran cada elemento; dentro de una superficie, preferir líneas tenues y contraste tonal.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do mantener juntos progreso y atención como señales compactas inmediatamente adyacentes a la placa principal.",
+      "Do hacer que el Plan maestro parezca evidencia de la síntesis ejecutiva, no una aplicación separada.",
+      "Do usar etiquetas, cantidades y formas además del color para todos los estados.",
+      "Do preservar el orden de lectura y los valores de progreso y atención en el primer viewport móvil.",
+      "Do utilizar el lockup oficial de NEXOR cuando exista espacio y mantener clara la jerarquía con la marca del cliente."
+    ],
+    "donts": [
+      "Don't convertir la superficie en una cuadrícula uniforme de tarjetas de dashboard.",
+      "Don't ampliar el campo de nodos hasta competir con texto, datos o controles.",
+      "Don't usar fondos crema cálidos, grises slate genéricos o un tema oscuro como experiencia cliente predeterminada.",
+      "Don't intercambiar cian, azul y amarillo ni comunicar estado únicamente con color.",
+      "Don't introducir claims, métricas comerciales o ventajas competitivas que no estén confirmadas por el producto."
+    ]
+  }
+}
