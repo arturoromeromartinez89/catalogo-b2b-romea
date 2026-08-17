@@ -96,7 +96,7 @@ export default function SuperAdminDashboard({ profile, demoData = null }) {
           </div>
           <nav className="project-hub__nav" aria-label="Secciones de NEXOR Studio">
             {tabs.map((item) => (
-              <button className={tab === item.id ? "active" : ""} key={item.id} type="button" aria-current={tab === item.id ? "page" : undefined} onClick={() => setTab(item.id)}>
+              <button aria-label={item.label} className={tab === item.id ? "active" : ""} key={item.id} type="button" aria-current={tab === item.id ? "page" : undefined} onClick={() => setTab(item.id)}>
                 {studioIcon(item.icon)}
                 <span className="project-hub__nav-label">{item.label}</span>
               </button>
