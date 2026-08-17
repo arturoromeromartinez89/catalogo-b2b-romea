@@ -48,9 +48,9 @@ const childMeta = (item, table) => [
 // El avance confirmado usa la misma regla que el portal del cliente (src/utils/projectHubModel.js).
 const projectConfirmedProgress = (project) => confirmedProgress(project?.project_deliverables);
 
-export default function ProjectHubManager({ tenants = [], profile, demoMode = false }) {
+export default function ProjectHubManager({ tenants = [], profile, demoMode = false, demoProjectsByTenant = {}, initialTenantId = "", initialProjectId = "", onBack }) {
   const portalTenants = useMemo(() => tenants.filter((item) => ["vanguardia-joyera", "estuches-chavez", "romea"].includes(item.slug)), [tenants]);
-  const [tenantId, setTenantId] = useState("");
+  const [tenantId, setTenantId] = useState(initialTenantId);
   const [projects, setProjects] = useState([]);
   const [selectedId, setSelectedId] = useState("");
   const [projectDraft, setProjectDraft] = useState(emptyProject);
@@ -64,9 +64,11 @@ export default function ProjectHubManager({ tenants = [], profile, demoMode = fa
   const load = async (nextTenantId = tenantId, keepSelected = selectedId) => {
     if (!nextTenantId) return;
     if (demoMode) {
-      setProjects([]);
-      setSelectedId("");
-      setProjectDraft({ ...emptyProject });
+      const next = demoProjectsByTenant[nextTenantId] || [];
+      const nextSelected = next.find((item) => item.id === keepSelected) || next[0] || null;
+      setProjects(next);
+      setSelectedId(nextSelected?.id || "");
+      setProjectDraft(nextSelected || { ...emptyProject });
       setStatus("");
       return;
     }
@@ -87,7 +89,7 @@ export default function ProjectHubManager({ tenants = [], profile, demoMode = fa
       setTenantId(estuches?.id || portalTenants[0].id);
     }
   }, [portalTenants, tenantId]);
-  useEffect(() => { if (tenantId) load(tenantId, ""); }, [tenantId]);
+  useEffect(() => { if (tenantId) load(tenantId, tenantId === initialTenantId ? initialProjectId : ""); }, [tenantId]);
   useEffect(() => { setChildDraft({ ...emptyChild[section] }); }, [section, selectedId]);
 
   const selectProject = (project) => { setSelectedId(project.id); setProjectDraft(project); };
@@ -119,6 +121,7 @@ export default function ProjectHubManager({ tenants = [], profile, demoMode = fa
   };
 
   const removeChild = async (item) => {
+    if (demoMode) { setStatus("Vista previa: conecta el proyecto real para eliminar registros."); return; }
     setSaving(true);
     try { await deleteProjectChild(section, item.id); await load(tenantId, selectedProject.id); setStatus("Registro eliminado."); }
     catch (error) { setStatus(`No se pudo eliminar: ${error.message}`); }
@@ -129,8 +132,8 @@ export default function ProjectHubManager({ tenants = [], profile, demoMode = fa
   return (
     <section className="ph-manager">
       <header className="ph-manager__header ph-manager__header--context">
-        <div><strong>Editor del portal</strong><span>Selecciona una empresa para administrar sus proyectos y registros.</span></div>
-        <label>Empresa<select value={tenantId} onChange={(event) => setTenantId(event.target.value)}><option value="">Seleccionar</option>{portalTenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}</select></label>
+        <div>{onBack ? <button className="ph-studio__back" type="button" onClick={onBack}>← Volver a proyectos</button> : null}<strong>Espacio de trabajo</strong><span>Administra soluciones, entregables y decisiones de este proyecto.</span></div>
+        {initialTenantId ? <div className="ph-manager__context-client"><span>Cliente</span><strong>{activeTenant?.name || "Cliente"}</strong></div> : <label>Cliente<select value={tenantId} onChange={(event) => setTenantId(event.target.value)}><option value="">Seleccionar</option>{portalTenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}</select></label>}
       </header>
       {status ? <p className="status info">{status}</p> : null}
       <div className="ph-manager__layout">

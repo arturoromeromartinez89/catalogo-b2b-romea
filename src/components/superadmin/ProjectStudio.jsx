@@ -61,8 +61,8 @@ const studioIcon = (name) => {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 };
 
-export default function ProjectStudio({ tenants = [], profiles = [], profile, onRefreshTenants }) {
-  const [clientId, setClientId] = useState("");
+export default function ProjectStudio({ tenants = [], profiles = [], profile, initialClientId = "", projectsByTenant = {}, demoMode = false, onRefreshTenants, onOpenWorkspace }) {
+  const [clientId, setClientId] = useState(initialClientId);
   const [clientDraft, setClientDraft] = useState(null);
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -82,7 +82,7 @@ export default function ProjectStudio({ tenants = [], profiles = [], profile, on
     setLoading(true);
     setStatus("");
     try {
-      const next = await fetchProjectsForTenant(tenantId);
+      const next = demoMode ? (projectsByTenant[tenantId] || []) : await fetchProjectsForTenant(tenantId);
       setProjects(next);
       const keep = next.find((item) => item.id === keepProjectId);
       setSelectedProjectId(keep?.id || "");
@@ -111,6 +111,7 @@ export default function ProjectStudio({ tenants = [], profiles = [], profile, on
   };
 
   const persistClient = async (draft) => {
+    if (demoMode) { setStatus("Vista previa: conecta el cliente real para guardar cambios."); return; }
     if (!String(draft.name || "").trim()) { setStatus("Escribe el nombre del cliente."); return; }
     setSaving(true);
     try {
@@ -131,6 +132,7 @@ export default function ProjectStudio({ tenants = [], profiles = [], profile, on
   };
 
   const toggleClientStatus = async (tenant) => {
+    if (demoMode) { setStatus("Vista previa: conecta el cliente real para cambiar su estado."); return; }
     setSaving(true);
     try {
       await saveTenant({ id: tenant.id, name: tenant.name, slug: tenant.slug, status: tenant.status === "active" ? "paused" : "active" });
@@ -157,6 +159,7 @@ export default function ProjectStudio({ tenants = [], profiles = [], profile, on
   };
 
   const persistProject = async () => {
+    if (demoMode) { setStatus("Vista previa: conecta el proyecto real para guardar cambios."); return; }
     if (!clientId) return;
     if (!String(projectDraft.name || "").trim()) { setStatus("El proyecto necesita un nombre."); return; }
     setSaving(true);
@@ -174,6 +177,7 @@ export default function ProjectStudio({ tenants = [], profiles = [], profile, on
   };
 
   const addMember = async () => {
+    if (demoMode) { setStatus("Vista previa: conecta el proyecto real para modificar el equipo."); return; }
     if (!selectedProject || !newMember.profileId) { setStatus("Elige a la persona que quieres agregar."); return; }
     setSaving(true);
     try {
@@ -189,6 +193,7 @@ export default function ProjectStudio({ tenants = [], profiles = [], profile, on
   };
 
   const dropMember = async (member) => {
+    if (demoMode) { setStatus("Vista previa: conecta el proyecto real para modificar el equipo."); return; }
     setSaving(true);
     try {
       await removeProjectMember(member.id);
@@ -226,6 +231,7 @@ export default function ProjectStudio({ tenants = [], profiles = [], profile, on
             <strong>{tenant.name}</strong>
             <small>{tenant.slug}</small>
           </div>
+          <div className="ph-studio__client-projects"><strong>{(projectsByTenant[tenant.id] || []).length}</strong><small>proyectos</small></div>
           <span className={`project-status project-status--${tenant.status === "active" ? "in_progress" : "waiting"}`}>{clientStatusLabel(tenant.status)}</span>
           <div className="ph-studio__client-actions">
             <button className="secondary-button compact-action" type="button" onClick={() => setClientDraft({ id: tenant.id, name: tenant.name, slug: tenant.slug, status: tenant.status })}>Editar</button>
@@ -287,6 +293,7 @@ export default function ProjectStudio({ tenants = [], profiles = [], profile, on
           </div>
 
           <div className="ph-manager__actions">
+            {selectedProject ? <button className="secondary-button" type="button" onClick={() => onOpenWorkspace?.(clientId, selectedProject.id)}>Abrir espacio de trabajo {studioIcon("arrow")}</button> : null}
             <button className="primary-button" type="button" disabled={saving} onClick={persistProject}>{saving ? "Guardando..." : selectedProjectId ? "Guardar cambios" : "Crear proyecto"}</button>
           </div>
         </article>

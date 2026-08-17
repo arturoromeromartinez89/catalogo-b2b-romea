@@ -874,3 +874,163 @@
   .nexor-studio .studio-activity-row:nth-child(even) { border-left: 0; }
   .nexor-studio .studio-activity-row:nth-child(2) { border-top: 1px solid var(--nexor-line); }
 }
+
+/* ---------- Centro de control: NEXOR mide entregas, no la operación del cliente ---------- */
+
+.nexor-studio .studio-project-list,
+.nexor-studio .studio-home__client-list,
+.nexor-studio .studio-home__decision-list { border-top: 1px solid var(--nexor-line); }
+
+.nexor-studio .studio-project-row {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--nexor-fog);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(210px, 1.3fr) 82px minmax(150px, .75fr) 72px 120px 18px;
+  min-height: 76px;
+  padding: 13px 20px;
+  text-align: left;
+  width: 100%;
+}
+
+.nexor-studio .studio-project-row + .studio-project-row { border-top: 1px solid var(--nexor-line); }
+.nexor-studio .studio-project-row:hover { background: var(--nexor-card-raised); }
+
+.nexor-studio .studio-project-row__identity strong,
+.nexor-studio .studio-project-row__date strong,
+.nexor-studio .studio-project-row__signal strong {
+  color: var(--nexor-fog);
+  display: block;
+  font-family: var(--nexor-display);
+  font-size: 12px;
+}
+
+.nexor-studio .studio-project-row__identity small,
+.nexor-studio .studio-project-row__date small,
+.nexor-studio .studio-project-row__signal small,
+.nexor-studio .studio-project-row__progress small {
+  color: var(--nexor-muted-bright);
+  display: block;
+  font-size: 9px;
+  margin-top: 3px;
+}
+
+.nexor-studio .studio-project-row__progress > div {
+  background: #edf0f7;
+  border-radius: 999px;
+  height: 5px;
+  overflow: hidden;
+}
+
+.nexor-studio .studio-project-row__progress > div span {
+  background: linear-gradient(90deg, var(--live-cyan, #2fe3d0), #4f7bff);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
+.nexor-studio .studio-project-row__arrow { color: #2c59bd; font-size: 16px; }
+
+.nexor-studio .studio-state--risk {
+  background: rgba(209, 56, 74, .11);
+  color: #a22637;
+}
+
+.nexor-studio .studio-home__lower {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.nexor-studio .studio-home__client-list button,
+.nexor-studio .studio-home__decision-list > div {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--nexor-fog);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  min-height: 58px;
+  padding: 11px 18px;
+  text-align: left;
+  width: 100%;
+}
+
+.nexor-studio .studio-home__client-list button + button,
+.nexor-studio .studio-home__decision-list > div + div { border-top: 1px solid var(--nexor-line); }
+.nexor-studio .studio-home__client-list button:hover { background: var(--nexor-card-raised); }
+
+.nexor-studio .studio-home__client-list strong,
+.nexor-studio .studio-home__decision-list strong {
+  color: var(--nexor-fog);
+  display: block;
+  font-family: var(--nexor-display);
+  font-size: 12px;
+}
+
+.nexor-studio .studio-home__client-list small,
+.nexor-studio .studio-home__decision-list small {
+  color: var(--nexor-muted-bright);
+  display: block;
+  font-size: 9.5px;
+  margin-top: 3px;
+}
+
+.nexor-studio .ph-studio__client {
+  grid-template-columns: minmax(0, 1fr) 72px 88px auto;
+}
+
+.nexor-studio .ph-studio__client-projects strong {
+  color: var(--nexor-fog);
+  display: block;
+  font-family: var(--nexor-display);
+  font-size: 13px;
+}
+
+.nexor-studio .ph-studio__client-projects small {
+  color: var(--nexor-muted-bright);
+  display: block;
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+.nexor-studio .ph-manager__context-client {
+  background: var(--nexor-card-raised);
+  border: 1px solid var(--nexor-line);
+  border-radius: 10px;
+  min-width: 190px;
+  padding: 9px 12px;
+}
+
+.nexor-studio .ph-manager__context-client > span {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.nexor-studio .ph-manager__header--context .ph-studio__back { margin-bottom: 8px; }
+
+@media (max-width: 1100px) {
+  .nexor-studio .studio-project-row { grid-template-columns: minmax(190px, 1.2fr) 82px minmax(130px, .7fr) 100px 18px; }
+  .nexor-studio .studio-project-row__signal { display: none; }
+  .nexor-studio .ph-studio__client { grid-template-columns: minmax(0, 1fr) 72px 88px auto; }
+}
+
+@media (max-width: 900px) {
+  .nexor-studio .ph-studio__client { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 760px) {
+  .nexor-studio .studio-project-row { align-items: stretch; gap: 10px; grid-template-columns: minmax(0, 1fr) auto; padding: 15px 16px; }
+  .nexor-studio .studio-project-row__identity { grid-column: 1 / -1; }
+  .nexor-studio .studio-project-row__progress { grid-column: 1 / -1; }
+  .nexor-studio .studio-project-row__date { grid-column: 1; }
+  .nexor-studio .studio-project-row__arrow { align-self: center; grid-column: 2; grid-row: 4; }
+  .nexor-studio .studio-home__lower { grid-template-columns: minmax(0, 1fr); }
+  .nexor-studio .ph-studio__client { grid-template-columns: minmax(0, 1fr); }
+  .nexor-studio .ph-manager__context-client { min-width: 0; width: 100%; }
+}
