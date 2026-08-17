@@ -1,0 +1,436 @@
+/* NEXOR Studio — la cara interna del mismo mundo del portal del cliente.
+   No imita el diseño del portal: reutiliza sus clases y sus tokens.
+   El shell (barra superior, barra lateral de tinta y suelo claro con nodos) viene de
+   .project-hub-demo-shell, .project-hub__sidebar y .project-hub__workspace.
+   Aquí solo se viste el contenido interno, y siempre con variables, para que herede
+   el tema claro de .project-hub--light sin valores fijos. */
+
+/* ---------- Barra superior ---------- */
+
+.nexor-studio__identity {
+  border-left: 1px solid rgba(30, 42, 84, .14);
+  line-height: 1.3;
+  padding-left: 18px;
+}
+
+.nexor-studio__identity strong {
+  color: var(--project-ink, #0b1330);
+  display: block;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.nexor-studio__identity small {
+  color: #5c698d;
+  display: block;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+
+/* El portal apila en columna todo div hijo de su barra, porque ahí solo vive el logo del
+   cliente. Aquí la barra lleva controles, así que se restituye la fila. */
+.nexor-studio-shell .project-hub-demo-bar__context {
+  align-items: center;
+  flex-direction: row;
+  gap: 16px;
+}
+
+/* ---------- Página de la sección ---------- */
+
+.nexor-studio__page {
+  background: transparent;
+  padding: 0;
+}
+
+.nexor-studio__page > header {
+  border-bottom: 1px solid rgba(30, 42, 84, .12);
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+}
+
+.nexor-studio .status.info {
+  background: rgba(79, 123, 255, .09);
+  border: 1px solid rgba(79, 123, 255, .22);
+  border-radius: 12px;
+  color: #2c4a9e;
+  font-size: 12px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+}
+
+/* Una sola jerarquía por pantalla: el encabezado de la sección manda y la barra de
+   acciones no repite el título. */
+.nexor-studio .ph-studio__toolbar {
+  align-items: center;
+  border-bottom: 0;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 0;
+}
+
+.nexor-studio .ph-studio__toolbar > span {
+  color: var(--nexor-muted-bright);
+  font-size: 12px;
+}
+
+/* ---------- Placas y paneles heredados, en papel de evidencia ---------- */
+
+/* La elevacion se declara una sola vez: borde, no borde mas sombra. */
+.nexor-studio .admin-soft-panel,
+.nexor-studio .compact-panel {
+  background: var(--nexor-card);
+  border: 1px solid var(--nexor-line);
+  border-radius: 16px;
+  box-shadow: none;
+  color: var(--nexor-fog);
+  display: grid;
+  gap: 14px;
+  padding: clamp(16px, 2.4vw, 24px);
+}
+
+.nexor-studio .superadmin-panel-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.nexor-studio .tool-eyebrow {
+  color: #087e74;
+  font-family: var(--nexor-display);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.nexor-studio h2,
+.nexor-studio h3,
+.nexor-studio h4 {
+  color: var(--nexor-fog);
+  font-family: var(--nexor-display);
+  letter-spacing: -.02em;
+}
+
+.nexor-studio .muted { color: var(--nexor-muted-bright); }
+
+/* ---------- Formularios ---------- */
+
+.nexor-studio label {
+  color: var(--nexor-muted-bright);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.nexor-studio .form-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.nexor-studio input,
+.nexor-studio select,
+.nexor-studio textarea {
+  background: var(--nexor-card);
+  border: 1px solid var(--nexor-line);
+  border-radius: 10px;
+  color: var(--nexor-fog);
+  font-family: var(--nexor-text);
+  font-size: 13px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.nexor-studio input::placeholder,
+.nexor-studio textarea::placeholder { color: var(--nexor-muted); }
+
+.nexor-studio input:focus-visible,
+.nexor-studio select:focus-visible,
+.nexor-studio textarea:focus-visible {
+  border-color: rgba(79, 123, 255, .45);
+  outline: 3px solid var(--project-link, #4f7bff);
+  outline-offset: 2px;
+}
+
+.nexor-studio input:disabled,
+.nexor-studio select:disabled { color: var(--nexor-muted); opacity: .8; }
+
+/* ---------- Botones: cian para la acción principal, papel para la secundaria ---------- */
+
+.nexor-studio .primary-button,
+.nexor-studio-shell .project-hub-demo-bar .primary-button {
+  background: var(--live-cyan, #2fe3d0);
+  border: 0;
+  border-radius: 10px;
+  color: #070d22;
+  font-weight: 700;
+  min-height: 40px;
+}
+
+.nexor-studio .primary-button:hover:not(:disabled) { background: #6df3e5; }
+
+.nexor-studio .secondary-button,
+.nexor-studio-shell .project-hub-demo-bar .secondary-button {
+  background: #ffffff;
+  border: 1px solid var(--nexor-line, rgba(30, 42, 84, .13));
+  border-radius: 10px;
+  color: var(--project-ink, #0b1330);
+  font-weight: 600;
+  min-height: 40px;
+}
+
+.nexor-studio .secondary-button:hover:not(:disabled),
+.nexor-studio-shell .project-hub-demo-bar .secondary-button:hover:not(:disabled) {
+  background: #f2f5fa;
+}
+
+.nexor-studio .primary-button:disabled,
+.nexor-studio .secondary-button:disabled,
+.nexor-studio-shell .project-hub-demo-bar .secondary-button:disabled { cursor: progress; opacity: .6; }
+
+.nexor-studio .compact-action,
+.nexor-studio-shell .project-hub-demo-bar .compact-action { font-size: 12px; min-height: 34px; padding: 0 13px; }
+
+/* ---------- Tablas ---------- */
+
+.nexor-studio .responsive-table {
+  background: transparent;
+  border: 1px solid var(--nexor-line);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.nexor-studio table.simple-admin-table {
+  background: transparent;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 640px;
+  width: 100%;
+}
+
+.nexor-studio table.simple-admin-table thead tr,
+.nexor-studio table.simple-admin-table tbody tr { background: transparent; }
+
+.nexor-studio table.simple-admin-table th {
+  background: var(--nexor-slate);
+  border-bottom: 1px solid var(--nexor-line);
+  color: var(--nexor-muted-bright);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  padding: 11px 13px;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.nexor-studio table.simple-admin-table td {
+  background: transparent;
+  border-bottom: 1px solid var(--nexor-line);
+  color: var(--nexor-fog);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  padding: 11px 13px;
+  vertical-align: middle;
+}
+
+.nexor-studio table.simple-admin-table tbody tr:last-child td { border-bottom: 0; }
+
+.nexor-studio table.simple-admin-table tbody tr:hover,
+.nexor-studio table.simple-admin-table tbody tr:hover td { background: var(--nexor-link-soft); }
+
+.nexor-studio table.simple-admin-table td small,
+.nexor-studio table.simple-admin-table small { color: var(--nexor-muted-bright); }
+.nexor-studio table.simple-admin-table td strong,
+.nexor-studio table.simple-admin-table td b { color: var(--nexor-fog); }
+.nexor-studio table.simple-admin-table td a { color: var(--project-link, #4f7bff); }
+.nexor-studio table.simple-admin-table select { min-width: 130px; padding: 7px 9px; }
+
+.nexor-studio .client-name-cell span {
+  background: var(--nexor-link-soft);
+  color: #2c4a9e;
+}
+
+.nexor-studio .catalog-metric-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.nexor-studio .catalog-metric-row div {
+  background: var(--nexor-card-raised);
+  border: 1px solid var(--nexor-line);
+  border-radius: 12px;
+}
+
+/* El gris tenue del mundo Romea no alcanza el contraste sobre papel blanco. */
+.nexor-studio .catalog-metric-row span { color: var(--nexor-muted-bright); }
+.nexor-studio .catalog-metric-row strong { color: var(--nexor-fog); font-variant-numeric: tabular-nums; }
+
+.nexor-studio .eyebrow {
+  color: #087e74;
+  font-family: var(--nexor-display);
+  letter-spacing: .16em;
+}
+
+/* ---------- El alta de clientes y proyectos vive en el mismo papel ---------- */
+
+.nexor-studio .ph-manager {
+  background: transparent;
+  border: 0;
+  color: var(--nexor-fog);
+  padding: 0;
+}
+
+.nexor-studio .ph-manager__projects,
+.nexor-studio .ph-manager__card,
+.nexor-studio .ph-manager__child-list,
+.nexor-studio .ph-manager__child-form {
+  background: var(--nexor-card);
+  border: 1px solid var(--nexor-line);
+  box-shadow: none;
+}
+
+.nexor-studio .ph-manager__projects > button:not(.secondary-button),
+.nexor-studio .ph-manager__child-item,
+.nexor-studio .ph-studio__member {
+  background: var(--nexor-card-raised);
+  border-color: var(--nexor-line);
+  color: var(--nexor-fog);
+}
+
+/* Sobre el tinte cian claro hace falta un verde mas profundo para sostener el contraste. */
+.nexor-studio .ph-manager__projects > button.active,
+.nexor-studio .ph-manager__section-tabs button.active {
+  background: var(--nexor-signal-soft);
+  border-color: rgba(20, 177, 163, .35);
+  color: #05564f;
+}
+
+.nexor-studio .ph-manager__projects > button.active strong { color: var(--nexor-fog); }
+
+.nexor-studio .ph-manager__section-tabs {
+  background: var(--nexor-card-raised);
+  border-color: var(--nexor-line);
+}
+
+.nexor-studio .ph-studio__back { color: #087e74; }
+
+/* Directorio de clientes: una lista, no una cuadricula de tarjetas dentro de otra tarjeta.
+   Las filas se alinean en las mismas columnas, asi que nada se parte ni queda disparejo. */
+.nexor-studio .ph-studio__clients {
+  border: 1px solid var(--nexor-line);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+.nexor-studio .ph-studio__client {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) 88px auto;
+  min-height: 60px;
+  padding: 12px 16px;
+}
+
+.nexor-studio .ph-studio__client + .ph-studio__client { border-top: 1px solid var(--nexor-line); }
+.nexor-studio .ph-studio__client:hover { background: var(--nexor-card-raised); }
+.nexor-studio .ph-studio__client--paused .ph-studio__client-id strong { color: var(--nexor-muted-bright); }
+
+.nexor-studio .ph-studio__client-id strong {
+  color: var(--nexor-fog);
+  display: block;
+  font-family: var(--nexor-display);
+  font-size: 14px;
+  letter-spacing: -.01em;
+  overflow-wrap: anywhere;
+}
+
+.nexor-studio .ph-studio__client-id small {
+  color: var(--nexor-muted-bright);
+  display: block;
+  font-size: 10.5px;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+.nexor-studio .ph-studio__client > .project-status {
+  justify-self: start;
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+.nexor-studio .ph-studio__client-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.nexor-studio .ph-studio__client-actions button { flex: none; white-space: nowrap; }
+
+.nexor-studio .ph-studio__member > i {
+  background: var(--nexor-link-soft);
+  color: #2c4a9e;
+}
+
+.nexor-studio .ph-studio__member > span {
+  background: var(--nexor-signal-soft);
+  color: #05564f;
+}
+
+.nexor-studio .ph-studio__member button { color: #b72d3e; }
+.nexor-studio .ph-manager__child-item button.danger { color: #b72d3e; }
+
+/* ---------- Salida ---------- */
+
+.nexor-studio-signout .signout-card {
+  border-radius: 16px;
+  font-family: var(--nexor-text);
+}
+
+.nexor-studio-signout .signout-card strong { font-family: var(--nexor-display); }
+
+/* ---------- Responsive: mismo comportamiento que el portal ---------- */
+
+@media (max-width: 900px) {
+  .nexor-studio .superadmin-panel-grid { grid-template-columns: minmax(0, 1fr); }
+  .nexor-studio__identity { display: none; }
+
+  /* La fila se convierte en bloque: nombre, estado y acciones, uno debajo de otro. */
+  .nexor-studio .ph-studio__client {
+    align-items: stretch;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px;
+  }
+
+  /* Sin ancho para tres controles: la accion principal toma su propio renglon
+     y las secundarias se reparten el de arriba. Nada se comprime. */
+  .nexor-studio .ph-studio__client-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .nexor-studio .ph-studio__client-actions .secondary-button { flex: 1 1 0; justify-content: center; }
+  .nexor-studio .ph-studio__client-actions .primary-button { flex: 1 1 100%; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nexor-studio *,
+  .nexor-studio *::before,
+  .nexor-studio *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}

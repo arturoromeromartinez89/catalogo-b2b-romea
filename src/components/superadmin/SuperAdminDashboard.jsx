@@ -4,29 +4,45 @@ import CompaniesPanel from "./CompaniesPanel";
 import MetricsPanel from "./MetricsPanel";
 import UsersPanel from "./UsersPanel";
 import ProjectHubManager from "./ProjectHubManager";
+import ProjectStudio from "./ProjectStudio";
+import nexorLockupUrl from "../../assets/nexor-ia_lockup_dark-on-transparent.svg";
 import { supabase } from "../../lib/supabaseClient";
 import { fastSignOut } from "../../services/authService";
 import { fetchProfiles, fetchTenantMetrics, fetchTenants } from "../../services/tenantService";
 import { useImpersonation } from "../../contexts/ImpersonationContext";
 
+const studioIcon = (name) => {
+  const paths = {
+    projects: <><path d="M4 6h16v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" /><path d="M9 3h6v3H9zM8 11h8M8 15h5" /></>,
+    companies: <><path d="M3 21V7l9-4 9 4v14" /><path d="M9 21v-6h6v6" /></>,
+    users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /></>,
+    advanced: <><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="9" cy="6" r="2" /><circle cx="15" cy="12" r="2" /><circle cx="11" cy="18" r="2" /></>,
+    metrics: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>,
+  };
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
+};
+
 const tabs = [
-  { id: "companies", label: "Empresas" },
-  { id: "users", label: "Usuarios" },
-  { id: "projectHub", label: "Project Hub" },
-  { id: "metrics", label: "Métricas" },
+  { id: "projects", label: "Proyectos", icon: "projects", title: "Proyectos", eyebrow: "Sistema de proyectos", lead: "Clientes, proyectos y su avance verificable." },
+  { id: "companies", label: "Empresas", icon: "companies", title: "Empresas", eyebrow: "Plataforma", lead: "Cuentas que operan un catálogo dentro de NEXOR IA." },
+  { id: "users", label: "Usuarios", icon: "users", title: "Usuarios", eyebrow: "Accesos", lead: "Quién entra, con qué papel y a qué empresa." },
+  { id: "projectHub", label: "Detalle avanzado", icon: "advanced", title: "Detalle avanzado", eyebrow: "Registros", lead: "Captura fina de cada registro del proyecto." },
+  { id: "metrics", label: "Métricas", icon: "metrics", title: "Métricas", eyebrow: "Operación", lead: "Volumen y uso por empresa." },
 ];
 
-export default function SuperAdminDashboard({ profile }) {
+// demoData permite abrir la misma pantalla con información sintética y sin sesión,
+// únicamente en staging, para poder revisar y corregir el diseño de verdad.
+export default function SuperAdminDashboard({ profile, demoData = null }) {
   const impersonation = useImpersonation();
-  const [tab, setTab] = useState("companies");
-  const [tenants, setTenants] = useState([]);
-  const [profiles, setProfiles] = useState([]);
-  const [metrics, setMetrics] = useState({});
-  const [status, setStatus] = useState("Cargando panel SaaS...");
+  const [tab, setTab] = useState("projects");
+  const [tenants, setTenants] = useState(demoData?.tenants || []);
+  const [profiles, setProfiles] = useState(demoData?.profiles || []);
+  const [metrics, setMetrics] = useState(demoData?.metrics || {});
+  const [status, setStatus] = useState(demoData ? "" : "Cargando panel SaaS...");
   const [signingOut, setSigningOut] = useState(false);
 
   const handleSignOut = async () => {
-    if (signingOut) return;
+    if (signingOut || demoData) return;
     setSigningOut(true);
     try {
       await fastSignOut(supabase);
@@ -37,6 +53,7 @@ export default function SuperAdminDashboard({ profile }) {
   };
 
   const load = async () => {
+    if (demoData) return;
     try {
       setStatus("Cargando panel SaaS...");
       const nextTenants = await fetchTenants();
@@ -57,46 +74,44 @@ export default function SuperAdminDashboard({ profile }) {
     load();
   }, []);
 
+  const activeTab = tabs.find((item) => item.id === tab) || tabs[0];
+
   return (
-    <div className="superadmin-shell">
-      <aside className="superadmin-sidebar">
-        <div className="brand-block">
-          <div className="saas-mark" aria-hidden="true">SaaS</div>
-          <p>Panel SaaS</p>
-        </div>
-        <section className="sidebar-section sidebar-menu-section">
-          <h3>Superadmin</h3>
-          <div className="admin-nav-list">
-            {tabs.map((item) => (
-              <button className={tab === item.id ? "active" : ""} key={item.id} type="button" onClick={() => setTab(item.id)}>
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </section>
-        <div className="sidebar-bottom-actions superadmin-sidebar-actions">
-          <button className="sidebar-logout" type="button" onClick={handleSignOut} disabled={signingOut}>
+    <div className="project-hub-demo-shell project-hub-demo-shell--light nexor-studio-shell">
+      <header className="project-hub-demo-bar">
+        <img className="project-hub-demo-logo" src={nexorLockupUrl} alt="NEXOR IA" />
+        <div className="project-hub-demo-bar__context">
+          <LanguageToggle />
+          <div className="nexor-studio__identity"><strong>{profile?.email}</strong><small>Superadmin</small></div>
+          <button className="secondary-button compact-action" type="button" onClick={handleSignOut} disabled={signingOut}>
             {signingOut ? "Saliendo..." : "Salir"}
           </button>
         </div>
-      </aside>
+      </header>
 
-      <main className="superadmin-main">
-        <header className="admin-catalog-header">
-          <div>
-            <p className="eyebrow">Plataforma SaaS</p>
-            <h1>Administración global</h1>
-            <span>{profile?.email} · no estás operando ningún catálogo de empresa.</span>
+      <section className="project-hub project-hub--light nexor-studio" aria-label="NEXOR Studio">
+        <aside className="project-hub__sidebar">
+          <div className="project-hub__sidebar-head">
+            <div><strong>Studio</strong></div>
           </div>
-          <div className="admin-header-actions">
-            <LanguageToggle />
-            <button className="header-logout-button" type="button" onClick={handleSignOut} disabled={signingOut}>
-              {signingOut ? "Saliendo..." : "Salir"}
-            </button>
-          </div>
-        </header>
+          <nav className="project-hub__nav" aria-label="Secciones de NEXOR Studio">
+            {tabs.map((item) => (
+              <button className={tab === item.id ? "active" : ""} key={item.id} type="button" aria-current={tab === item.id ? "page" : undefined} onClick={() => setTab(item.id)}>
+                {studioIcon(item.icon)}
+                <span className="project-hub__nav-label">{item.label}</span>
+              </button>
+            ))}
+          </nav>
+          <footer><i /><span>Sistema interno</span></footer>
+        </aside>
 
-        <section className="admin-workspace">
+        <main className="project-hub__workspace">
+        <section className="project-section-page nexor-studio__page">
+          <header>
+            <p>{activeTab.eyebrow}</p>
+            <h2>{activeTab.title}</h2>
+            <span>{activeTab.lead}</span>
+          </header>
           {status ? <p className="status info">{status}</p> : null}
           {tab === "companies" ? (
             <CompaniesPanel
@@ -112,13 +127,17 @@ export default function SuperAdminDashboard({ profile }) {
           {tab === "metrics" ? (
             <MetricsPanel tenants={tenants} metrics={metrics} />
           ) : null}
+          {tab === "projects" ? (
+            <ProjectStudio tenants={tenants} profiles={profiles} profile={profile} onRefreshTenants={load} />
+          ) : null}
           {tab === "projectHub" ? (
             <ProjectHubManager tenants={tenants} profile={profile} />
           ) : null}
         </section>
-      </main>
+        </main>
+      </section>
       {signingOut ? (
-        <div className="signout-overlay" role="status" aria-live="assertive">
+        <div className="signout-overlay nexor-studio-signout" role="status" aria-live="assertive">
           <div className="signout-card">
             <span className="loading-spinner" aria-hidden="true" />
             <strong>Saliendo...</strong>

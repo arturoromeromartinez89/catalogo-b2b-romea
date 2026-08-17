@@ -1819,6 +1819,208 @@
   color: var(--nexor-muted-bright);
 }
 
+/* NEXOR Studio · alta de clientes y proyectos.
+   Un solo recorrido: Clientes → Proyectos. Nada de vocabulario de base de datos. */
+.ph-studio__back {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--nexor-signal);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: var(--nexor-text);
+  font-size: 11px;
+  font-weight: 700;
+  gap: 6px;
+  letter-spacing: .04em;
+  margin-bottom: 8px;
+  padding: 0;
+  text-transform: uppercase;
+}
+
+.ph-studio__back svg { height: 14px; width: 14px; }
+.ph-studio__back:hover { color: var(--nexor-signal-hover, #6df3e5); }
+
+.ph-studio__clients {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.ph-studio__client {
+  background: linear-gradient(150deg, rgba(20, 36, 92, .84), rgba(15, 26, 64, .94));
+  border: 1px solid var(--nexor-line);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+}
+
+.ph-studio__client--paused { opacity: .78; }
+
+.ph-studio__client header {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+}
+
+.ph-studio__client header i {
+  align-items: center;
+  background: rgba(47, 227, 208, .12);
+  border-radius: 11px;
+  color: var(--nexor-signal);
+  display: flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.ph-studio__client header i svg { height: 19px; width: 19px; }
+
+.ph-studio__client header strong {
+  color: var(--nexor-fog);
+  display: block;
+  font-family: var(--nexor-display);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.ph-studio__client header small {
+  color: var(--nexor-muted-bright);
+  display: block;
+  font-size: 10px;
+  margin-top: 3px;
+}
+
+.ph-studio__client-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ph-studio__client-actions button { flex: none; }
+
+.ph-studio__client-form { margin-bottom: 4px; }
+
+.ph-studio__list-field { min-height: 92px; }
+
+.ph-manager label small {
+  color: var(--nexor-muted-bright);
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  margin-top: 5px;
+  text-transform: none;
+}
+
+.ph-studio__team {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ph-studio__member {
+  align-items: center;
+  background: rgba(7, 13, 34, .42);
+  border: 1px solid var(--nexor-line);
+  border-radius: 12px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
+  padding: 10px 13px;
+}
+
+.ph-studio__member > i {
+  align-items: center;
+  background: rgba(79, 123, 255, .18);
+  border-radius: 50%;
+  color: #cddcff;
+  display: flex;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.ph-studio__member strong {
+  color: var(--nexor-fog);
+  display: block;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.ph-studio__member small {
+  color: var(--nexor-muted-bright);
+  display: block;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.ph-studio__member > span {
+  background: rgba(47, 227, 208, .12);
+  border-radius: 999px;
+  color: var(--nexor-signal);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  padding: 4px 9px;
+  text-transform: uppercase;
+}
+
+.ph-studio__member button {
+  background: transparent;
+  border: 0;
+  color: #ff9aa4;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 4px;
+}
+
+.ph-studio__team-add {
+  align-items: flex-end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  margin-top: 14px;
+}
+
+.ph-studio__summary dl {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  margin: 0;
+}
+
+.ph-studio__summary dt {
+  color: var(--nexor-muted-bright);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.ph-studio__summary dd {
+  color: var(--nexor-fog);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  margin: 6px 0 0;
+}
+
+@media (max-width: 700px) {
+  .ph-studio__clients { grid-template-columns: minmax(0, 1fr); }
+  .ph-studio__client header { grid-template-columns: 34px minmax(0, 1fr); }
+  .ph-studio__client header > span { grid-column: 2; justify-self: start; }
+  .ph-studio__client-actions button { flex: 1 1 auto; justify-content: center; }
+  .ph-studio__member { grid-template-columns: 34px minmax(0, 1fr); }
+  .ph-studio__member > span,
+  .ph-studio__member > button { grid-column: 2; justify-self: start; }
+  .ph-studio__team-add { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (max-width: 700px) {
   .project-hub-demo-bar {
     gap: 16px;

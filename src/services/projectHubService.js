@@ -62,6 +62,7 @@ const projectSelection = `
   project_time_entries(*),
   project_development_activity(*),
   project_objectives(*),
+  project_members(*),
   project_tasks(*, project_task_comments(*), project_task_attachments(*))
 `;
 
@@ -90,11 +91,23 @@ export const fetchProjectsForTenant = async (tenantId) => {
   return (data || []).map(sortProjectChildren);
 };
 
+const textList = (value) => {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  return String(value || "")
+    .split(/\r?\n/)
+    .map((item) => item.replace(/^[-•*]\s*/, "").trim())
+    .filter(Boolean);
+};
+
 export const saveProject = async (project, tenantId, userId = null) => {
   const payload = {
     tenant_id: tenantId,
     name: String(project.name || "").trim(),
     description: String(project.description || "").trim(),
+    objective: String(project.objective || "").trim(),
+    goal: String(project.goal || "").trim(),
+    included_scope: textList(project.included_scope),
+    excluded_scope: textList(project.excluded_scope),
     status: project.status || "draft",
     health: project.health || "green",
     // Legacy column retained for compatibility. Client progress is calculated from accepted deliverables.
@@ -141,6 +154,25 @@ export const saveProjectChild = async (table, item, tenantId, projectId, userId 
   const { data, error } = await supabase.from(table).upsert(payload).select("*").single();
   if (error) throw error;
   return data;
+};
+
+// Equipo interno del proyecto. Apunta a public.profiles: no existe un segundo sistema de usuarios.
+export const saveProjectMember = async ({ tenantId, projectId, profileId, projectRole = "colaborador", id = null }) => {
+  if (!profileId) throw new Error("Selecciona a la persona del equipo.");
+  const payload = { tenant_id: tenantId, project_id: projectId, profile_id: profileId, project_role: projectRole, active: true };
+  if (id) payload.id = id;
+  const { data, error } = await supabase
+    .from("project_members")
+    .upsert(payload, { onConflict: "project_id,profile_id" })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const removeProjectMember = async (memberId) => {
+  const { error } = await supabase.from("project_members").delete().eq("id", memberId);
+  if (error) throw error;
 };
 
 export const deleteProjectChild = async (table, id) => {
