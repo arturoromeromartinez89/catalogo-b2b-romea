@@ -41,7 +41,11 @@ export default function SuperAdminDashboard({ profile, demoData = null }) {
   const [signingOut, setSigningOut] = useState(false);
 
   const handleSignOut = async () => {
-    if (signingOut || demoData) return;
+    if (signingOut) return;
+    if (demoData) {
+      window.location.assign(`${import.meta.env.BASE_URL}demo/project-hub`);
+      return;
+    }
     setSigningOut(true);
     try {
       await fastSignOut(supabase);
@@ -109,7 +113,7 @@ export default function SuperAdminDashboard({ profile, demoData = null }) {
           <LanguageToggle />
           <div className="nexor-studio__identity"><strong>{profile?.email}</strong><small>Superadmin</small></div>
           <button className="secondary-button compact-action" type="button" onClick={handleSignOut} disabled={signingOut}>
-            {signingOut ? "Saliendo..." : "Salir"}
+            {signingOut ? "Saliendo..." : demoData ? "Ver Client Portal" : "Salir"}
           </button>
         </div>
       </header>
