@@ -4,7 +4,6 @@ import { confirmedProgress, statusLabel } from "../../utils/projectHubModel";
 
 const emptyProject = { name: "", description: "", status: "draft", health: "green", progress_percentage: 0, current_phase_name: "", start_date: "", estimated_end_date: "", internal_owner_name: "Equipo NEXOR IA", published: false };
 const workspaceViews = [
-  { id: "board", label: "Tablero", table: "project_tasks" },
   { id: "plan", label: "Plan", table: "project_solutions" },
   { id: "solutions", label: "Soluciones", table: "project_solutions" },
   { id: "deliverables", label: "Entregables", table: "project_deliverables" },
@@ -12,6 +11,7 @@ const workspaceViews = [
   { id: "documents", label: "Archivos", table: "project_documents" },
 ];
 const secondaryViews = [
+  { id: "tasks", label: "Actividades", table: "project_tasks" },
   { id: "updates", label: "Actualizaciones", table: "project_updates" },
   { id: "time", label: "Horas", table: "project_time_entries" },
   { id: "development", label: "Código", table: "project_development_activity" },
@@ -27,6 +27,7 @@ const viewCopy = {
   updates: ["Actualizaciones", "Bitácora breve de avances, hitos y alertas."],
   time: ["Horas", "Registro interno del tiempo dedicado al proyecto."],
   development: ["Código", "Actividad técnica vinculada al desarrollo."],
+  tasks: ["Actividades", "Administración interna de las tareas que el cliente opera desde su portal."],
   settings: ["Ajustes del proyecto", "Información administrativa y visibilidad del portal."],
 };
 const taskColumns = [
@@ -75,9 +76,9 @@ export default function ProjectHubManager({ tenants = [], profile, demoMode = fa
   const [projects, setProjects] = useState([]);
   const [selectedId, setSelectedId] = useState("");
   const [projectDraft, setProjectDraft] = useState(emptyProject);
-  const [section, setSection] = useState("project_tasks");
-  const [workspaceView, setWorkspaceView] = useState("board");
-  const [childDraft, setChildDraft] = useState(emptyChild.project_tasks);
+  const [section, setSection] = useState("project_solutions");
+  const [workspaceView, setWorkspaceView] = useState("plan");
+  const [childDraft, setChildDraft] = useState(emptyChild.project_solutions);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [draggedTaskId, setDraggedTaskId] = useState("");

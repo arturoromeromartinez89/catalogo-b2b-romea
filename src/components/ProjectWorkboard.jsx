@@ -240,28 +240,34 @@ function KanbanView({ tasks, onOpen, onDragStart, onDrop }) {
 }
 
 function TaskPanel({ task, objective, comments, attachments, comment, setComment, saving, onClose, onStatus, onComment, onUpload, onOpenAttachment }) {
+  const [panelTab, setPanelTab] = useState("updates");
+  const assigneeInitials = (task.assignee || "NEXOR").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   return <div className="project-task-panel-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <aside className="project-task-panel" role="dialog" aria-modal="true" aria-label={`Detalle de ${task.title}`}>
-      <header><div><span>{objective?.periodLabel || "Actividad del proyecto"}</span><h2>{task.title}</h2></div><button type="button" aria-label="Cerrar actividad" onClick={onClose}>{smallIcon("close")}</button></header>
-      <p className="project-task-panel__description">{task.description || "Sin descripción adicional."}</p>
-      <div className="project-task-panel__meta">
-        {task.status === "cancelled"
-          ? <div><span>Estado</span><strong className="project-task-panel__state project-status project-status--cancelled">{statusLabel(task.status)}</strong><small>Retirada del alcance. No cuenta en el avance.</small></div>
-          : <label>Estado<select value={task.status} disabled={saving} onChange={(event) => onStatus(event.target.value)}><option value="backlog">Por iniciar</option>{columns.map((column) => <option value={column.id} key={column.id}>{column.label}</option>)}</select></label>}
-        <div><span>Responsable</span><strong>{task.assignee || "Por asignar"}</strong></div>
-        <div><span>Periodo</span><strong>{formatLongDate(task.startDate)} – {formatLongDate(task.dueDate)}</strong></div>
-        <div><span>Prioridad</span><strong className={`project-task-panel__priority project-task-panel__priority--${task.priority}`}>{priorityNames[task.priority]}</strong></div>
+      <header className="project-task-panel__head"><div><h2>{task.title}</h2><span>{objective?.title || "Proyecto"} · {objective?.periodLabel || "Actividad"}</span></div><button type="button" aria-label="Cerrar actividad" onClick={onClose}>{smallIcon("close")}</button></header>
+      <div className="project-task-panel__body">
+        <section className="project-task-panel__details" aria-label="Datos de la actividad">
+          <div className="project-task-field"><span>Grupo</span><strong><i className="project-task-field__dot" />{objective?.title || "Plan de trabajo"}</strong></div>
+          <div className="project-task-field"><span>Responsable</span><strong className="project-task-field__person"><i>{assigneeInitials}</i>{task.assignee || "Por asignar"}</strong></div>
+          <div className="project-task-field"><span>Estado</span>{task.status === "cancelled" ? <strong className="project-task-field__status project-task-field__status--cancelled">{statusLabel(task.status)}</strong> : <select className={`project-task-field__status project-task-field__status--${task.status}`} value={task.status} disabled={saving} onChange={(event) => onStatus(event.target.value)}><option value="backlog">Por iniciar</option>{columns.map((column) => <option value={column.id} key={column.id}>{column.label}</option>)}</select>}</div>
+          <div className="project-task-field"><span>Vencimiento</span><strong>{formatLongDate(task.dueDate)}</strong></div>
+          <div className="project-task-field"><span>Prioridad</span><strong className={`project-task-field__priority project-task-field__priority--${task.priority}`}>{priorityNames[task.priority]}</strong></div>
+          <div className="project-task-field"><span>Archivos</span><button type="button" onClick={() => setPanelTab("files")}>{attachments.length ? `${attachments.length} adjunto${attachments.length === 1 ? "" : "s"}` : "Agregar archivo"}</button></div>
+          <div className="project-task-field"><span>Cronograma</span><strong className="project-task-field__timeline"><i style={{ width: `${task.progress}%` }} /><b>{formatShortDate(task.startDate)} – {formatShortDate(task.dueDate)}</b></strong></div>
+          <div className="project-task-field"><span>Avance</span><strong>{task.progress}%</strong></div>
+          <div className="project-task-panel__brief"><span>Descripción</span><p>{task.description || "Sin descripción adicional."}</p></div>
+        </section>
+
+        <section className="project-task-panel__activity">
+          <nav className="project-task-panel__tabs" aria-label="Contenido de la actividad"><button className={panelTab === "updates" ? "active" : ""} type="button" onClick={() => setPanelTab("updates")}>Actualizaciones <span>{comments.length}</span></button><button className={panelTab === "files" ? "active" : ""} type="button" onClick={() => setPanelTab("files")}>Archivos <span>{attachments.length}</span></button><button className={panelTab === "history" ? "active" : ""} type="button" onClick={() => setPanelTab("history")}>Actividad</button></nav>
+
+          {panelTab === "updates" ? <div className="project-task-panel__tab-content"><div className="project-task-comment-form project-task-comment-form--primary"><textarea value={comment} onChange={(event) => setComment(event.target.value)} maxLength={4000} placeholder="Escribe una actualización, menciona a alguien o comparte una decisión..." /><div><span>Los participantes del proyecto recibirán la actualización.</span><button className="primary-button" type="button" disabled={saving || !comment.trim()} onClick={onComment}>{saving ? "Guardando..." : "Actualizar"}</button></div></div><div className="project-task-comments">{comments.map((item) => <article key={item.id}><div><strong>{item.author || "Equipo del proyecto"}</strong><small>{item.createdAt ? formatLongDate(item.createdAt) : ""}</small></div><p>{item.body}</p></article>)}{!comments.length ? <div className="project-task-panel__blank"><i>✦</i><strong>Aún no hay actualizaciones</strong><p>Comparte el progreso, una duda o una decisión para mantener el trabajo en movimiento.</p></div> : null}</div></div> : null}
+
+          {panelTab === "files" ? <div className="project-task-panel__tab-content"><label className="project-task-panel__upload">{smallIcon("upload")}Adjuntar archivo<input type="file" disabled={saving} accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.xls,.xlsx,.doc,.docx,.ppt,.pptx" onChange={(event) => { const file = event.target.files?.[0]; if (file) onUpload(file); event.target.value = ""; }} /></label><div className="project-task-files">{attachments.map((attachment) => <button type="button" key={attachment.id} onClick={() => onOpenAttachment(attachment)}>{smallIcon("paperclip")}<span><strong>{attachment.fileName}</strong><small>{formatBytes(attachment.fileSize)}</small></span></button>)}{!attachments.length ? <div className="project-task-panel__blank"><i>⌁</i><strong>Sin archivos adjuntos</strong><p>Agrega propuestas, capturas, hojas de cálculo o evidencia de esta actividad.</p></div> : null}</div></div> : null}
+
+          {panelTab === "history" ? <div className="project-task-panel__tab-content"><ol className="project-task-history"><li><i /><div><strong>Estado actual: {statusLabel(task.status) || "Sin estado"}</strong><span>La actividad se encuentra en {(statusLabel(task.status) || "sin estado").toLowerCase()}.</span></div></li><li><i /><div><strong>Avance registrado: {task.progress}%</strong><span>Periodo {formatShortDate(task.startDate)} – {formatShortDate(task.dueDate)}.</span></div></li></ol></div> : null}
+        </section>
       </div>
-      <section className="project-task-panel__section"><header><div><span>Avance</span><strong>{task.progress}%</strong></div></header><div className="project-progress"><i style={{ width: `${task.progress}%` }} /></div></section>
-      <section className="project-task-panel__section">
-        <header><div><span>Archivos</span><strong>{attachments.length}</strong></div><label className="project-task-panel__upload">{smallIcon("upload")}Adjuntar<input type="file" disabled={saving} accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.xls,.xlsx,.doc,.docx,.ppt,.pptx" onChange={(event) => { const file = event.target.files?.[0]; if (file) onUpload(file); event.target.value = ""; }} /></label></header>
-        <div className="project-task-files">{attachments.map((attachment) => <button type="button" key={attachment.id} onClick={() => onOpenAttachment(attachment)}>{smallIcon("paperclip")}<span><strong>{attachment.fileName}</strong><small>{formatBytes(attachment.fileSize)}</small></span></button>)}{!attachments.length ? <p>Adjunta propuestas, capturas, hojas de cálculo o evidencia de esta actividad.</p> : null}</div>
-      </section>
-      <section className="project-task-panel__section project-task-panel__comments">
-        <header><div><span>Conversación</span><strong>{comments.length}</strong></div></header>
-        <div className="project-task-comments">{comments.map((item) => <article key={item.id}><div><strong>{item.author || "Equipo del proyecto"}</strong><small>{item.createdAt ? formatLongDate(item.createdAt) : ""}</small></div><p>{item.body}</p></article>)}{!comments.length ? <p>Aún no hay comentarios en esta actividad.</p> : null}</div>
-        <div className="project-task-comment-form"><textarea value={comment} onChange={(event) => setComment(event.target.value)} maxLength={4000} placeholder="Escribe una actualización, duda o decisión..." /><button className="primary-button" type="button" disabled={saving || !comment.trim()} onClick={onComment}>{saving ? "Guardando..." : "Comentar"}</button></div>
-      </section>
     </aside>
   </div>;
 }
