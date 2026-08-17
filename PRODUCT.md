@@ -61,11 +61,40 @@ La diferenciación frente a otras herramientas de gestión aún no está confirm
 
 ## Product Principles
 
-1. Explicar el proyecto con claridad ejecutiva antes de exponer complejidad operativa.
-2. Convertir avances, pendientes y decisiones en información visible y accionable.
-3. Mantener una separación inequívoca entre datos demostrativos, borradores internos e información publicada al cliente.
-4. Transmitir seguridad y control mediante comportamiento consistente, trazabilidad y estados comprensibles.
-5. Respetar la identidad de cada cliente dentro del sistema maestro de NEXOR IA.
+1. Regla madre: máximo rigor interno, mínimo esfuerzo visible. Todo proceso debe ser hipersimple de entender y operar.
+2. Explicar el proyecto con claridad ejecutiva antes de exponer complejidad operativa.
+3. Convertir avances, pendientes y decisiones en información visible y accionable.
+4. Ninguna métrica presentada como real puede ser arbitraria: debe poder rastrearse a entregables aceptados, tareas, horas o actividad registrada.
+5. Mantener una separación inequívoca entre datos demostrativos, borradores internos e información publicada al cliente.
+6. Transmitir seguridad y control mediante comportamiento consistente, trazabilidad y estados comprensibles.
+7. Respetar la identidad de cada cliente dentro del sistema maestro de NEXOR IA.
+
+## Operating Model
+
+- Jerarquía: cliente → proyecto → etapas → soluciones → entregables → tareas o actividades.
+- Un proyecto puede pertenecer a un cliente nuevo o existente y se considera concluido cuando sus soluciones y entregables comprometidos han sido aceptados.
+- Cada solución comienza con una **Ficha de solución**. Ese nombre debe conservarse en toda la interfaz, los documentos y los procesos.
+- La Ficha de solución registra problema, objetivo, proceso, alcance incluido y excluido, usuarios, permisos, afectaciones, riesgos, criterios de aceptación y aprobación.
+- Flujo visible de una solución: crear → completar ficha → enviar a aprobación → planear trabajo → entregar y cerrar.
+- Las etapas son bloques de tiempo y comunicación. No agregan peso artificial al cálculo de avance.
+- El avance confirmado se calcula con entregables aceptados; el avance de trabajo se calcula con tareas ejecutadas. Ambos deben distinguirse.
+- Las horas dedicadas provienen de registros de tiempo. Las líneas de código provienen de actividad de desarrollo registrada y deben mostrar su fecha de actualización.
+- El feed de actualizaciones es una comunicación curada; la bitácora de auditoría es un registro técnico separado.
+
+## Global Status Language
+
+- Azul: terminado, entregado o aprobado.
+- Verde: en proceso.
+- Naranja: en espera, bloqueado, pausado, pendiente o requiere cambios.
+- Rojo: atrasado.
+- Negro: cancelado.
+- Gris: borrador o no iniciado.
+
+El texto y el icono siempre acompañan al color. Estas reglas aplican de forma uniforme a proyectos, soluciones, entregables, tareas, decisiones y cronogramas.
+
+## Client Navigation
+
+La navegación principal del portal del cliente se limita a: Inicio, Soluciones, Entregables, Documentos y Decisiones. Inicio presenta primero avance confirmado, etapa actual, acciones del cliente, líneas de código, horas dedicadas y el cronograma desplegable de los próximos tres meses.
 
 ## Accessibility & Inclusion
 

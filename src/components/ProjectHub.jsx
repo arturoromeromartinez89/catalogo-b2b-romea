@@ -31,7 +31,6 @@ const demoProjects = {
   "estuches-chavez": {
     name: "Digitalización de operaciones",
     description: "Diseño e implementación del sistema adaptado a la operación de Estuches Chávez.",
-    progress: 28,
     health: "green",
     phase: "Diseño funcional",
     startDate: "2026-08-10",
@@ -43,7 +42,6 @@ const demoProjects = {
         name: "Inventario",
         description: "Control de productos, existencias, entradas, salidas y trazabilidad en una sola operación.",
         status: "in_progress",
-        progress: 28,
         phase: "Diseño funcional",
         stage: "Etapa 1 · Operación",
         startDate: "2026-08-10",
@@ -85,10 +83,10 @@ const demoProjects = {
       { title: "Preparación del ambiente de pruebas", text: "El desarrollo se validará en un ambiente separado antes de habilitarse en la operación real.", date: "13 ago 2026", type: "information" },
     ],
     deliverables: [
-      { name: "Definición funcional", status: "in_progress", date: "21 ago 2026", description: "Flujos, reglas y alcance aprobado de la solución." },
-      { name: "Primera versión de Inventario", status: "pending", date: "04 sep 2026", description: "Productos, existencias, entradas, salidas e historial." },
-      { name: "Pruebas con usuarios", status: "pending", date: "14 sep 2026", description: "Validación guiada y registro de ajustes finales." },
-      { name: "Entrega inicial", status: "pending", date: "18 sep 2026", description: "Versión aprobada y habilitada para Estuches Chávez." },
+      { id: "deliverable-brief", solutionId: "inventory", name: "Ficha de solución", status: "approved", date: "12 ago 2026", description: "Flujos, reglas, alcance y criterios aceptados.", weight: 1 },
+      { id: "deliverable-mvp", solutionId: "inventory", name: "Primera versión de Inventario", status: "in_progress", date: "04 sep 2026", description: "Productos, existencias, entradas, salidas e historial.", weight: 2 },
+      { id: "deliverable-tests", solutionId: "inventory", name: "Pruebas con usuarios", status: "pending", date: "14 sep 2026", description: "Validación guiada y registro de ajustes finales.", weight: 1 },
+      { id: "deliverable-release", solutionId: "inventory", name: "Entrega inicial", status: "pending", date: "18 sep 2026", description: "Versión aprobada y habilitada para Estuches Chávez.", weight: 2 },
     ],
     documents: [
       { name: "Resumen de alcance", type: "scope", date: "12 ago 2026", status: "available" },
@@ -104,16 +102,25 @@ const demoProjects = {
       { id: "obj-validacion", title: "Validar y preparar entrega", description: "Probar con usuarios, resolver ajustes y dejar lista la primera liberación.", periodLabel: "7–18 septiembre", periodStart: "2026-09-07", periodEnd: "2026-09-18", status: "planned", progress: 0 },
     ],
     tasks: [
-      { id: "task-1", objectiveId: "obj-alcance", title: "Mapear movimientos de inventario", description: "Documentar entradas, salidas, ajustes y responsables.", status: "done", priority: "high", startDate: "2026-08-10", dueDate: "2026-08-12", progress: 100, assignee: "NEXOR IA", sortOrder: 10, comments: [], attachments: [] },
-      { id: "task-2", objectiveId: "obj-alcance", title: "Diseñar entradas y salidas", description: "Prototipo del flujo operativo para revisión del cliente.", status: "in_progress", priority: "high", startDate: "2026-08-13", dueDate: "2026-08-18", progress: 65, assignee: "Diseño NEXOR", sortOrder: 20, comments: [{ id: "comment-demo", body: "El flujo inicial ya contempla ajuste por merma y devolución.", author: "Equipo NEXOR IA", createdAt: "2026-08-15" }], attachments: [] },
-      { id: "task-3", objectiveId: "obj-alcance", title: "Validar catálogo inicial", description: "Confirmar campos, familias y archivo de carga inicial.", status: "review", priority: "critical", startDate: "2026-08-17", dueDate: "2026-08-21", progress: 55, assignee: "Estuches Chávez", sortOrder: 30, comments: [], attachments: [] },
-      { id: "task-4", objectiveId: "obj-mvp", title: "Construir catálogo de productos", description: "Alta, edición, búsqueda y clasificación de productos.", status: "todo", priority: "high", startDate: "2026-08-24", dueDate: "2026-08-28", progress: 0, assignee: "Desarrollo NEXOR", sortOrder: 40, comments: [], attachments: [] },
-      { id: "task-5", objectiveId: "obj-mvp", title: "Programar existencias y movimientos", description: "Cálculo de stock e historial auditable por producto.", status: "backlog", priority: "critical", startDate: "2026-08-27", dueDate: "2026-09-02", progress: 0, assignee: "Desarrollo NEXOR", sortOrder: 50, comments: [], attachments: [] },
-      { id: "task-6", objectiveId: "obj-mvp", title: "Preparar ambiente de pruebas", description: "Instancia separada para revisión sin afectar la operación.", status: "in_progress", priority: "medium", startDate: "2026-08-24", dueDate: "2026-08-26", progress: 35, assignee: "NEXOR IA", sortOrder: 60, comments: [], attachments: [] },
-      { id: "task-7", objectiveId: "obj-validacion", title: "Cargar inventario inicial", description: "Importar y conciliar las existencias proporcionadas.", status: "todo", priority: "high", startDate: "2026-09-07", dueDate: "2026-09-09", progress: 0, assignee: "NEXOR IA", sortOrder: 70, comments: [], attachments: [] },
-      { id: "task-8", objectiveId: "obj-validacion", title: "Ejecutar pruebas con usuarios", description: "Sesión guiada y registro de hallazgos por prioridad.", status: "todo", priority: "high", startDate: "2026-09-10", dueDate: "2026-09-14", progress: 0, assignee: "Equipo conjunto", sortOrder: 80, comments: [], attachments: [] },
-      { id: "task-9", objectiveId: "obj-validacion", title: "Resolver ajustes de aceptación", description: "Corregir hallazgos críticos antes de liberar.", status: "backlog", priority: "medium", startDate: "2026-09-15", dueDate: "2026-09-17", progress: 0, assignee: "Desarrollo NEXOR", sortOrder: 90, comments: [], attachments: [] },
-      { id: "task-10", objectiveId: "obj-validacion", title: "Autorizar entrega inicial", description: "Confirmar la versión aprobada y fecha de activación.", status: "backlog", priority: "critical", startDate: "2026-09-18", dueDate: "2026-09-18", progress: 0, assignee: "Estuches Chávez", sortOrder: 100, comments: [], attachments: [] },
+      { id: "task-1", solutionId: "inventory", deliverableId: "deliverable-brief", objectiveId: "obj-alcance", title: "Mapear movimientos de inventario", description: "Documentar entradas, salidas, ajustes y responsables.", status: "done", priority: "high", startDate: "2026-08-10", dueDate: "2026-08-12", progress: 100, estimatedHours: 8, assignee: "NEXOR IA", sortOrder: 10, comments: [], attachments: [] },
+      { id: "task-2", solutionId: "inventory", deliverableId: "deliverable-brief", objectiveId: "obj-alcance", title: "Diseñar entradas y salidas", description: "Prototipo del flujo operativo para revisión del cliente.", status: "in_progress", priority: "high", startDate: "2026-08-13", dueDate: "2026-08-18", progress: 65, estimatedHours: 12, assignee: "Diseño NEXOR", sortOrder: 20, comments: [{ id: "comment-demo", body: "El flujo inicial ya contempla ajuste por merma y devolución.", author: "Equipo NEXOR IA", createdAt: "2026-08-15" }], attachments: [] },
+      { id: "task-3", solutionId: "inventory", deliverableId: "deliverable-brief", objectiveId: "obj-alcance", title: "Validar catálogo inicial", description: "Confirmar campos, familias y archivo de carga inicial.", status: "review", priority: "critical", startDate: "2026-08-17", dueDate: "2026-08-21", progress: 55, estimatedHours: 5, assignee: "Estuches Chávez", sortOrder: 30, comments: [], attachments: [] },
+      { id: "task-4", solutionId: "inventory", deliverableId: "deliverable-mvp", objectiveId: "obj-mvp", title: "Construir catálogo de productos", description: "Alta, edición, búsqueda y clasificación de productos.", status: "todo", priority: "high", startDate: "2026-08-24", dueDate: "2026-08-28", progress: 0, estimatedHours: 18, assignee: "Desarrollo NEXOR", sortOrder: 40, comments: [], attachments: [] },
+      { id: "task-5", solutionId: "inventory", deliverableId: "deliverable-mvp", objectiveId: "obj-mvp", title: "Programar existencias y movimientos", description: "Cálculo de stock e historial auditable por producto.", status: "backlog", priority: "critical", startDate: "2026-08-27", dueDate: "2026-09-02", progress: 0, estimatedHours: 28, assignee: "Desarrollo NEXOR", sortOrder: 50, comments: [], attachments: [] },
+      { id: "task-6", solutionId: "inventory", deliverableId: "deliverable-mvp", objectiveId: "obj-mvp", title: "Preparar ambiente de pruebas", description: "Instancia separada para revisión sin afectar la operación.", status: "in_progress", priority: "medium", startDate: "2026-08-24", dueDate: "2026-08-26", progress: 35, estimatedHours: 6, assignee: "NEXOR IA", sortOrder: 60, comments: [], attachments: [] },
+      { id: "task-7", solutionId: "inventory", deliverableId: "deliverable-tests", objectiveId: "obj-validacion", title: "Cargar inventario inicial", description: "Importar y conciliar las existencias proporcionadas.", status: "todo", priority: "high", startDate: "2026-09-07", dueDate: "2026-09-09", progress: 0, estimatedHours: 8, assignee: "NEXOR IA", sortOrder: 70, comments: [], attachments: [] },
+      { id: "task-8", solutionId: "inventory", deliverableId: "deliverable-tests", objectiveId: "obj-validacion", title: "Ejecutar pruebas con usuarios", description: "Sesión guiada y registro de hallazgos por prioridad.", status: "todo", priority: "high", startDate: "2026-09-10", dueDate: "2026-09-14", progress: 0, estimatedHours: 10, assignee: "Equipo conjunto", sortOrder: 80, comments: [], attachments: [] },
+      { id: "task-9", solutionId: "inventory", deliverableId: "deliverable-release", objectiveId: "obj-validacion", title: "Resolver ajustes de aceptación", description: "Corregir hallazgos críticos antes de liberar.", status: "backlog", priority: "medium", startDate: "2026-09-15", dueDate: "2026-09-17", progress: 0, estimatedHours: 12, assignee: "Desarrollo NEXOR", sortOrder: 90, comments: [], attachments: [] },
+      { id: "task-10", solutionId: "inventory", deliverableId: "deliverable-release", objectiveId: "obj-validacion", title: "Autorizar entrega inicial", description: "Confirmar la versión aprobada y fecha de activación.", status: "backlog", priority: "critical", startDate: "2026-09-18", dueDate: "2026-09-18", progress: 0, estimatedHours: 2, assignee: "Estuches Chávez", sortOrder: 100, comments: [], attachments: [] },
+    ],
+    timeEntries: [
+      { id: "time-1", workDate: "2026-08-10", minutes: 330, description: "Entrevista y levantamiento de movimientos" },
+      { id: "time-2", workDate: "2026-08-12", minutes: 420, description: "Documentación de la Ficha de solución" },
+      { id: "time-3", workDate: "2026-08-15", minutes: 285, description: "Prototipo funcional de entradas y salidas" },
+    ],
+    developmentActivity: [
+      { id: "dev-1", activityDate: "2026-08-14", linesAdded: 1842, linesDeleted: 216, commitsCount: 9, repositoryLabel: "inventario" },
+      { id: "dev-2", activityDate: "2026-08-16", linesAdded: 1260, linesDeleted: 184, commitsCount: 6, repositoryLabel: "inventario" },
     ],
   },
   "vanguardia-joyera": {
@@ -220,11 +227,89 @@ const statusLabel = (status, t) => ({
   completed: t("phCompleted"),
   in_progress: t("phInProgress"),
   pending: t("phPending"),
+  planned: "Por iniciar",
+  waiting: "En espera",
+  blocked: "En espera",
+  needs_changes: "Requiere cambios",
+  rejected: "Requiere cambios",
+  overdue: "Atrasado",
+  cancelled: "Cancelado",
   delivered: t("phDelivered"),
   approved: t("phApproved"),
 }[status] || status);
 
 const formatPortalDate = (date) => date ? new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${String(date).slice(0, 10)}T12:00:00`)) : "—";
+
+const isPastDue = (date, status) => {
+  if (!date || ["done", "completed", "delivered", "approved", "cancelled"].includes(status)) return false;
+  const due = new Date(`${String(date).slice(0, 10)}T23:59:59`);
+  return due < new Date();
+};
+
+const visibleStatus = (status, dueDate) => {
+  if (isPastDue(dueDate, status)) return "overdue";
+  if (["done", "completed", "delivered", "approved"].includes(status)) return "completed";
+  if (["in_progress", "active", "review"].includes(status)) return "in_progress";
+  if (["blocked", "waiting", "pending", "needs_changes", "rejected", "on_hold"].includes(status)) return "waiting";
+  if (status === "cancelled") return "cancelled";
+  return "planned";
+};
+
+const weightedPercentage = (items, isComplete) => {
+  const active = (items || []).filter((item) => item.status !== "cancelled");
+  const total = active.reduce((sum, item) => sum + Math.max(0.01, Number(item.weight ?? item.estimatedHours ?? 1)), 0);
+  if (!total) return 0;
+  const completed = active.reduce((sum, item) => sum + (isComplete(item) ? Math.max(0.01, Number(item.weight ?? item.estimatedHours ?? 1)) : 0), 0);
+  return Math.round((completed / total) * 100);
+};
+
+const enrichProject = (source) => {
+  if (!source) return null;
+  const tasks = (source.tasks || []).map((task) => ({ ...task, visualStatus: visibleStatus(task.status, task.dueDate) }));
+  const deliverables = (source.deliverables || []).map((item) => ({ ...item, visualStatus: visibleStatus(item.status, item.rawDate || item.estimatedDeliveryDate) }));
+  const solutions = (source.solutions || []).map((solution) => {
+    const solutionTasks = tasks.filter((task) => task.solutionId === solution.id);
+    const solutionDeliverables = deliverables.filter((item) => item.solutionId === solution.id);
+    const progress = solutionTasks.length
+      ? weightedPercentage(solutionTasks, (task) => task.status === "done")
+      : weightedPercentage(solutionDeliverables, (item) => item.status === "approved");
+    return {
+      ...solution,
+      progress,
+      visualStatus: visibleStatus(solution.status, solution.endDate),
+      taskCount: solutionTasks.length,
+      completedTaskCount: solutionTasks.filter((task) => task.status === "done").length,
+      approvals: (source.approvals || []).some((item) => item.solutionId === solution.id) ? source.approvals.filter((item) => item.solutionId === solution.id) : (solution.approvals || []),
+      files: (source.documents || []).some((item) => item.solutionId === solution.id) ? source.documents.filter((item) => item.solutionId === solution.id) : (solution.files || []),
+    };
+  });
+  const acceptedProgress = weightedPercentage(deliverables, (item) => item.status === "approved");
+  const workProgress = weightedPercentage(tasks, (task) => task.status === "done");
+  const timeEntries = source.timeEntries || [];
+  const developmentActivity = source.developmentActivity || [];
+  const minutes = timeEntries.reduce((sum, item) => sum + Number(item.minutes || 0), 0);
+  const linesAdded = developmentActivity.reduce((sum, item) => sum + Number(item.linesAdded || 0), 0);
+  const linesDeleted = developmentActivity.reduce((sum, item) => sum + Number(item.linesDeleted || 0), 0);
+  const commits = developmentActivity.reduce((sum, item) => sum + Number(item.commitsCount || 0), 0);
+  const lastDevelopmentDate = developmentActivity.map((item) => item.activityDate).filter(Boolean).sort().at(-1) || null;
+  return {
+    ...source,
+    tasks,
+    deliverables,
+    solutions,
+    timeEntries,
+    developmentActivity,
+    progress: acceptedProgress,
+    acceptedProgress,
+    workProgress,
+    dedicatedMinutes: minutes,
+    dedicatedHours: Math.round((minutes / 60) * 10) / 10,
+    linesAdded,
+    linesDeleted,
+    commits,
+    lastDevelopmentDate,
+  };
+};
 
 const projectFromDatabase = (record) => {
   if (!record) return null;
@@ -235,7 +320,6 @@ const projectFromDatabase = (record) => {
     id: record.id,
     name: record.name,
     description: record.description,
-    progress: record.progress_percentage,
     health: record.health,
     phase: record.current_phase_name || phases.find((item) => item.status === "in_progress")?.name || "Por iniciar",
     startDate: record.start_date,
@@ -261,9 +345,12 @@ const projectFromDatabase = (record) => {
       id: item.id,
       name: item.name,
       status: item.status,
+      rawDate: item.estimated_delivery_date,
       date: formatPortalDate(item.estimated_delivery_date),
       description: item.description,
       externalUrl: item.external_url,
+      solutionId: item.solution_id,
+      weight: Number(item.weight || 1),
     })),
     documents: (record.project_documents || []).filter((item) => item.visible_to_client !== false).map((item) => ({
       id: item.id,
@@ -272,6 +359,7 @@ const projectFromDatabase = (record) => {
       date: formatPortalDate(item.created_at),
       status: item.external_url ? "available" : "pending",
       externalUrl: item.external_url,
+      solutionId: item.solution_id,
     })),
     approvals: (record.project_approvals || []).filter((item) => item.visible_to_client !== false).map((item) => ({
       id: item.id,
@@ -295,6 +383,7 @@ const projectFromDatabase = (record) => {
       nextMilestone: item.next_milestone,
       targetDate: formatPortalDate(item.estimated_end_date),
       scope: item.scope_items || [],
+      brief: item.project_solution_brief_versions?.[0] || null,
       approvals: item.project_solution_approvals || [],
       files: item.project_solution_files || [],
       users: item.project_solution_users || [],
@@ -315,6 +404,7 @@ const projectFromDatabase = (record) => {
       objectiveId: item.objective_id,
       phaseId: item.phase_id,
       solutionId: item.solution_id,
+      deliverableId: item.deliverable_id,
       title: item.title,
       description: item.description,
       status: item.status,
@@ -322,10 +412,36 @@ const projectFromDatabase = (record) => {
       startDate: item.start_date,
       dueDate: item.due_date,
       progress: Number(item.progress_percentage || 0),
+      estimatedHours: item.estimated_hours == null ? null : Number(item.estimated_hours),
       assignee: item.assignee_name,
       sortOrder: Number(item.sort_order || 0),
       comments: (item.project_task_comments || []).filter((comment) => comment.visible_to_client !== false).map((comment) => ({ id: comment.id, body: comment.body, createdAt: comment.created_at, author: "Equipo del proyecto" })),
       attachments: (item.project_task_attachments || []).filter((attachment) => attachment.visible_to_client !== false).map((attachment) => ({ id: attachment.id, fileName: attachment.file_name, storagePath: attachment.storage_path, mimeType: attachment.mime_type, fileSize: attachment.file_size, createdAt: attachment.created_at })),
+    })),
+    acceptanceCriteria: (record.project_acceptance_criteria || []).filter((item) => item.visible_to_client !== false).map((item) => ({
+      id: item.id,
+      solutionId: item.solution_id,
+      deliverableId: item.deliverable_id,
+      description: item.description,
+      status: item.status,
+      sortOrder: Number(item.sort_order || 0),
+    })),
+    timeEntries: (record.project_time_entries || []).filter((item) => item.visible_to_client !== false).map((item) => ({
+      id: item.id,
+      solutionId: item.solution_id,
+      taskId: item.task_id,
+      workDate: item.work_date,
+      minutes: Number(item.minutes || 0),
+      description: item.description,
+    })),
+    developmentActivity: (record.project_development_activity || []).filter((item) => item.visible_to_client !== false).map((item) => ({
+      id: item.id,
+      solutionId: item.solution_id,
+      activityDate: item.activity_date,
+      repositoryLabel: item.repository_label,
+      linesAdded: Number(item.lines_added || 0),
+      linesDeleted: Number(item.lines_deleted || 0),
+      commitsCount: Number(item.commits_count || 0),
     })),
   };
 };
@@ -336,6 +452,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
   const [section, setSection] = useState("planning");
   const [selectedSolutionId, setSelectedSolutionId] = useState("");
   const [activeSolutionId, setActiveSolutionId] = useState("");
+  const [activeTaskId, setActiveTaskId] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewNotice, setPreviewNotice] = useState("");
   const [databaseProject, setDatabaseProject] = useState(null);
@@ -379,10 +496,12 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
       solutions,
       objectives: base.objectives || genericObjectives,
       tasks,
+      timeEntries: base.timeEntries || [],
+      developmentActivity: base.developmentActivity || [],
     };
   }, [tenantSlug, companyName]);
 
-  const project = tenantId ? projectFromDatabase(databaseProject) : demoProject;
+  const project = enrichProject(tenantId ? projectFromDatabase(databaseProject) : demoProject);
 
   if (loading) {
     return <section className={`project-hub project-hub--${portalTheme}`}><div className="project-hub-state"><span className="loading-spinner" /><strong>{t("phLoading")}</strong></div></section>;
@@ -434,7 +553,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
         </div>
         <nav className="project-hub__nav" aria-label={t("phSections")}>
           {nav.map((item) => (
-            <button key={item} type="button" aria-current={section === item ? "page" : undefined} aria-label={t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`)} title={sidebarCollapsed ? t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`) : undefined} className={section === item ? "active" : ""} onClick={() => { setActiveSolutionId(""); setSection(item); }}>
+            <button key={item} type="button" aria-current={section === item ? "page" : undefined} aria-label={t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`)} title={sidebarCollapsed ? t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`) : undefined} className={section === item ? "active" : ""} onClick={() => { setActiveSolutionId(""); setActiveTaskId(""); setSection(item); }}>
               {icon(item)}
               <span className="project-hub__nav-label">{t(`phNav${item.charAt(0).toUpperCase()}${item.slice(1)}`)}</span>
               {item === "approvals" && pendingApprovals ? <span className="project-hub__nav-count">{pendingApprovals}</span> : null}
@@ -454,13 +573,15 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
       {activeSolution ? <SolutionWorkspace
         solution={activeSolution}
         project={project}
+        initialTaskId={activeTaskId}
         tenantId={tenantId}
         companyName={companyName || t("phYourCompany")}
-        onBack={() => { setActiveSolutionId(""); setSection("planning"); }}
+        onBack={() => { setActiveSolutionId(""); setActiveTaskId(""); setSection("planning"); }}
         onReload={loadProject}
         onNotice={showPreviewNotice}
       /> : <>
 
+      {section === "planning" ? <>
       <header className="project-hub__briefing">
         <div className="project-hub__briefing-main">
           <div className="project-hub__heading">
@@ -489,10 +610,10 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
           </dl>
         </div>
         <aside className="project-hub__briefing-progress" aria-label={t("phProgressAria", project.progress)}>
-          <span>{t("phOverallProgress")}</span>
-          <strong>{project.progress}%</strong>
-          <div className="project-progress"><i style={{ width: `${project.progress}%` }} /></div>
-          <small>{t("phUpdatedToday")}</small>
+          <span>Avance confirmado</span>
+          <strong>{project.acceptedProgress}%</strong>
+          <div className="project-progress"><i style={{ width: `${project.acceptedProgress}%` }} /></div>
+          <small>Entregables aceptados por el cliente</small>
         </aside>
         <button className={`project-hub__briefing-attention${pendingApprovals ? " project-hub__briefing-attention--pending" : ""}`} type="button" onClick={() => setSection("approvals")}>
           <span>{t("phClientPending")}</span>
@@ -502,7 +623,19 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
         </button>
       </header>
 
-      {section === "planning" ? <ProjectSolutionsPlan project={project} onOpenSolution={(solutionId) => { setSection("solutions"); setActiveSolutionId(solutionId); }} /> : null}
+      <section className="project-home-metrics" aria-label="Indicadores verificables del proyecto">
+        <article><span>Etapa actual</span><strong>{project.phase}</strong><small>Bloque de tiempo predefinido</small></article>
+        <article><span>Avance del trabajo</span><strong>{project.workProgress}%</strong><small>Tareas terminadas según su estimación</small></article>
+        <article><span>Líneas de código</span><strong>{new Intl.NumberFormat("es-MX").format(project.linesAdded)}</strong><small>{project.commits} cambios registrados · al {formatPortalDate(project.lastDevelopmentDate)}</small></article>
+        <article><span>Horas dedicadas</span><strong>{new Intl.NumberFormat("es-MX", { maximumFractionDigits: 1 }).format(project.dedicatedHours)}</strong><small>{project.timeEntries.length} registros de trabajo</small></article>
+      </section>
+
+      <ProjectSolutionsPlan
+        project={project}
+        onOpenSolution={(solutionId) => { setSection("solutions"); setActiveSolutionId(solutionId); }}
+        onOpenTask={(solutionId, taskId) => { setSection("solutions"); setActiveTaskId(taskId); setActiveSolutionId(solutionId); }}
+      />
+      </> : null}
 
       {section === "solutions" ? (
         <section className="project-section-page project-solutions-page">
@@ -532,7 +665,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
                 <div><dt>Fecha objetivo</dt><dd>{selectedSolution.targetDate || "Por confirmar"}</dd></div>
               </dl>
               {selectedSolution.scope?.length ? <div className="project-solution-detail__scope"><span>Incluye</span><div>{selectedSolution.scope.map((item) => <i key={item}>{item}</i>)}</div></div> : null}
-              <button className="project-solution-detail__open" type="button" onClick={() => { setSection("solutions"); setActiveSolutionId(selectedSolution.id); }}>Abrir espacio de trabajo{icon("arrow")}</button>
+              <button className="project-solution-detail__open" type="button" onClick={() => { setSection("solutions"); setActiveTaskId(""); setActiveSolutionId(selectedSolution.id); }}>Abrir espacio de trabajo{icon("arrow")}</button>
             </article> : null}
           </div> : <div className="project-empty project-empty--page"><i>{icon("solutions")}</i><strong>Aún no hay soluciones publicadas</strong><p>Cuando una solución sea definida aparecerá aquí.</p></div>}
         </section>

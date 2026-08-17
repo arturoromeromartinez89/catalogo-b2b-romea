@@ -4350,12 +4350,80 @@
   flex: 0 0 auto;
 }
 
+.project-home-metrics {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0 auto;
+  max-width: 1240px;
+  width: 100%;
+}
+
+.project-home-metrics article {
+  background: #fff;
+  border: 1px solid #e4e9f3;
+  border-radius: 14px;
+  box-shadow: 0 18px 36px -34px rgba(11, 19, 48, .55);
+  min-height: 118px;
+  padding: 18px;
+}
+
+.project-home-metrics span,
+.project-home-metrics strong,
+.project-home-metrics small { display: block; }
+
+.project-home-metrics span {
+  color: #71809f;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.project-home-metrics strong {
+  color: var(--project-ink);
+  font-family: var(--nexor-display);
+  font-size: clamp(23px, 2.4vw, 32px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.025em;
+  line-height: 1.05;
+  margin: 14px 0 9px;
+  overflow-wrap: anywhere;
+}
+
+.project-home-metrics small {
+  color: #7a87a2;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
 .project-workboard__header {
   align-items: flex-end;
   border-bottom: 1px solid #e6eaf2;
   margin-bottom: 0;
   padding-bottom: 22px;
 }
+
+.project-solutions-plan__header { align-items: flex-start; }
+
+.project-solutions-plan__header p {
+  color: #4f7bff;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .12em;
+  margin: 0 0 7px;
+  text-transform: uppercase;
+}
+
+.project-status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  max-width: 470px;
+}
+
+.project-status-legend .project-status { white-space: nowrap; }
 
 .project-workboard__header h2 {
   color: var(--project-ink);
@@ -4406,12 +4474,198 @@
   animation: project-evidence-in .32s cubic-bezier(.16, 1, .3, 1) both;
 }
 
+.project-gantt--expandable {
+  grid-template-columns: 310px var(--gantt-width);
+  min-width: calc(310px + var(--gantt-width));
+}
+
+.project-gantt__group,
+.project-gantt__children { display: contents; }
+
+.project-gantt__dates--months > div {
+  align-items: flex-start;
+  min-height: 57px;
+  padding: 10px 12px;
+  text-transform: none;
+}
+
+.project-gantt__dates--months > div strong {
+  font-size: 11px;
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.project-gantt__dates--months > div small {
+  color: #8b96ad;
+  font-size: 9px;
+  margin-top: 4px;
+}
+
+.project-gantt__solution-label {
+  align-items: center;
+  display: grid !important;
+  gap: 10px;
+  grid-template-columns: 30px minmax(0, 1fr) !important;
+  padding: 11px 14px;
+}
+
+.project-gantt__expand {
+  align-items: center;
+  background: #edf2ff;
+  border: 1px solid #d8e2fb;
+  border-radius: 8px;
+  color: #3159bc;
+  cursor: pointer;
+  display: flex;
+  height: 30px;
+  justify-content: center;
+  padding: 0;
+  width: 30px;
+}
+
+.project-gantt__expand:hover { background: #e1e9ff; }
+.project-gantt__expand svg { height: 15px; width: 15px; }
+
+.project-gantt__task-link {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.project-gantt__task-link strong,
+.project-gantt__task-link small { display: block; }
+.project-gantt__task-link small { color: #7d89a2; font-size: 10px; margin-top: 5px; }
+
+.project-gantt__grid {
+  display: flex;
+  inset: 0;
+  position: absolute;
+}
+
+.project-gantt__grid > i {
+  border-right: 1px solid var(--color-border-subtle, var(--color-border-default));
+  flex: none;
+}
+
+.project-gantt__grid > i.weekend { background: rgba(120, 133, 166, .07); }
+
+.project-gantt__children .project-gantt__task,
+.project-gantt__children .project-gantt__track { background: #f8faff; }
+
+.project-gantt__row--task .project-gantt__task,
+.project-gantt__row--task .project-gantt__track { min-height: 60px; }
+
+.project-gantt__task--child {
+  align-items: center;
+  grid-template-columns: 8px minmax(0, 1fr) 18px;
+  padding-left: 30px;
+}
+
+.project-gantt__task--child > i {
+  background: #bcc7dc;
+  border-radius: 50%;
+  height: 6px;
+  width: 6px;
+}
+
+.project-gantt__task--child > span { min-width: 0; }
+.project-gantt__task--child strong,
+.project-gantt__task--child small { display: block; grid-column: auto; }
+.project-gantt__task--child svg { color: #7186bc; height: 15px; width: 15px; }
+.project-gantt__row--task .project-gantt__bar { height: 20px; top: 20px; }
+.project-gantt__row--task .project-gantt__bar > span { top: 4px; }
+
+.project-gantt__empty-child {
+  background: #f8faff;
+  border-bottom: 1px solid #e4e9f3;
+  color: #7c89a4;
+  font-size: 11px;
+  grid-column: 1 / -1;
+  padding: 18px 30px;
+}
+
+/* Global project state language: blue done, green active, orange waiting, red overdue, black cancelled, gray planned. */
+.project-status--completed,
+.project-status--done,
+.project-status--delivered,
+.project-status--approved {
+  background: #e8efff;
+  color: #2858c5;
+}
+
+.project-status--in_progress,
+.project-status--active,
+.project-status--review {
+  background: #e3f7ef;
+  color: #0b7858;
+}
+
+.project-status--waiting,
+.project-status--pending,
+.project-status--blocked,
+.project-status--needs_changes,
+.project-status--rejected,
+.project-status--on_hold {
+  background: #fff0d5;
+  color: #925700;
+}
+
+.project-status--overdue,
+.project-status--at_risk {
+  background: #ffe7e9;
+  color: #b72d3e;
+}
+
+.project-status--cancelled {
+  background: #15171d;
+  color: #fff;
+}
+
+.project-status--planned,
+.project-status--draft,
+.project-status--backlog,
+.project-status--todo {
+  background: #edf0f5;
+  color: #59657d;
+}
+
+.project-gantt__bar--completed,
+.project-gantt__bar--done,
+.project-gantt__bar--delivered,
+.project-gantt__bar--approved { background: #356fe0; }
+.project-gantt__bar--in_progress,
+.project-gantt__bar--active,
+.project-gantt__bar--review { background: #15966d; }
+.project-gantt__bar--waiting,
+.project-gantt__bar--pending,
+.project-gantt__bar--blocked,
+.project-gantt__bar--needs_changes { background: #e88a17; }
+.project-gantt__bar--overdue,
+.project-gantt__bar--at_risk { background: #d73d50; }
+.project-gantt__bar--cancelled { background: #15171d; }
+.project-gantt__bar--planned,
+.project-gantt__bar--draft,
+.project-gantt__bar--backlog,
+.project-gantt__bar--todo { background: #8b96aa; }
+
+.master-solutions-gantt .project-gantt__bar--completed { background: #356fe0; }
+.master-solutions-gantt .project-gantt__bar--in_progress { background: #15966d; }
+.master-solutions-gantt .project-gantt__bar--waiting { background: #e88a17; }
+.master-solutions-gantt .project-gantt__bar--overdue { background: #d73d50; }
+.master-solutions-gantt .project-gantt__bar--cancelled { background: #15171d; }
+.master-solutions-gantt .project-gantt__bar--planned { background: #8b96aa; }
+
 @keyframes project-evidence-in {
   from { clip-path: inset(0 0 10% 0); filter: blur(3px); transform: translateY(8px); }
   to { clip-path: inset(0); filter: blur(0); transform: translateY(0); }
 }
 
 @media (max-width: 1080px) {
+  .project-home-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .project-hub__briefing {
     grid-template-columns: minmax(0, 1fr) minmax(190px, .32fr);
   }
@@ -4477,11 +4731,29 @@
   .project-hub__briefing-attention > strong { font-size: 27px; margin: 8px 0; }
   .project-workboard.project-solutions-plan { padding: 19px 16px; }
   .project-workboard__header { align-items: stretch; }
+  .project-home-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .project-home-metrics article { min-height: 108px; padding: 14px; }
+  .project-home-metrics strong { font-size: 22px; }
+  .project-status-legend { justify-content: flex-start; max-width: none; }
   .project-workboard__view-toggle { align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; }
   .project-solutions-plan__summary { grid-template-columns: repeat(3, minmax(100px, 1fr)); overflow-x: auto; }
   .project-solutions-plan__summary article { min-height: 82px; padding: 14px 12px; }
   .project-solutions-plan__summary strong { font-size: 22px; }
   .project-solutions-plan__summary small { font-size: 9px; }
+  .master-solutions-gantt { overflow: visible; }
+  .project-gantt--expandable {
+    display: block;
+    min-width: 0;
+  }
+  .project-gantt--expandable .project-gantt__corner,
+  .project-gantt--expandable .project-gantt__dates,
+  .project-gantt--expandable .project-gantt__track { display: none; }
+  .project-gantt--expandable .project-gantt__group,
+  .project-gantt--expandable .project-gantt__children { display: block; }
+  .project-gantt--expandable .project-gantt__task { position: static; width: 100%; }
+  .project-gantt__solution-label { border-right: 0; min-height: 68px; }
+  .project-gantt__task--child { border-right: 0; padding-left: 25px; }
+  .project-gantt__empty-child { border-right: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

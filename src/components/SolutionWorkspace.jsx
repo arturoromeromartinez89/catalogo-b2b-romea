@@ -24,7 +24,7 @@ const statusNames = {
   rejected: "Requiere ajustes",
 };
 
-export default function SolutionWorkspace({ solution, project, tenantId = "", companyName = "", onBack, onReload, onNotice }) {
+export default function SolutionWorkspace({ solution, project, tenantId = "", companyName = "", initialTaskId = "", onBack, onReload, onNotice }) {
   const solutionProject = useMemo(() => {
     const tasks = (project.tasks || []).filter((task) => task.solutionId === solution.id);
     const objectiveIds = new Set(tasks.map((task) => task.objectiveId).filter(Boolean));
@@ -85,7 +85,7 @@ export default function SolutionWorkspace({ solution, project, tenantId = "", co
         </section>
 
         <section id="solution-activities" className="solution-workspace__sheet-section" aria-label="Actividades de la solución">
-          <ProjectWorkboard project={solutionProject} tenantId={tenantId} onReload={onReload} onNotice={onNotice} mode="solution" />
+          <ProjectWorkboard project={solutionProject} tenantId={tenantId} initialTaskId={initialTaskId} onReload={onReload} onNotice={onNotice} mode="solution" />
         </section>
 
         <section className="solution-sheet-page solution-workspace__sheet-section">

@@ -44,12 +44,12 @@ const smallIcon = (name) => {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 };
 
-export default function ProjectWorkboard({ project, tenantId = "", onReload, onNotice, mode = "project" }) {
+export default function ProjectWorkboard({ project, tenantId = "", initialTaskId = "", onReload, onNotice, mode = "project" }) {
   const isSolutionMode = mode === "solution";
   const [view, setView] = useState(isSolutionMode ? "kanban" : "gantt");
   const [objectiveId, setObjectiveId] = useState("all");
   const [tasks, setTasks] = useState(project.tasks || []);
-  const [selectedTaskId, setSelectedTaskId] = useState("");
+  const [selectedTaskId, setSelectedTaskId] = useState(initialTaskId);
   const [draggedTaskId, setDraggedTaskId] = useState("");
   const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);

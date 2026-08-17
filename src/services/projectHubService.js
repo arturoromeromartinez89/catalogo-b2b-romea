@@ -6,6 +6,11 @@ const childTables = new Set([
   "project_deliverables",
   "project_documents",
   "project_approvals",
+  "project_solutions",
+  "project_solution_brief_versions",
+  "project_acceptance_criteria",
+  "project_time_entries",
+  "project_development_activity",
   "project_objectives",
   "project_tasks",
 ]);
@@ -23,6 +28,16 @@ const sortProjectChildren = (project) => {
     project_deliverables: [...(project.project_deliverables || [])].sort((a, b) => String(a.estimated_delivery_date || "9999").localeCompare(String(b.estimated_delivery_date || "9999"))),
     project_documents: [...(project.project_documents || [])].sort((a, b) => String(a.document_type).localeCompare(String(b.document_type))),
     project_approvals: [...(project.project_approvals || [])].sort((a, b) => String(a.due_date || "9999").localeCompare(String(b.due_date || "9999"))),
+    project_solutions: [...(project.project_solutions || [])]
+      .map((solution) => ({
+        ...solution,
+        project_solution_brief_versions: [...(solution.project_solution_brief_versions || [])].sort((a, b) => Number(b.version_number) - Number(a.version_number)),
+      }))
+      .sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || String(a.start_date || "9999").localeCompare(String(b.start_date || "9999"))),
+    project_solution_brief_versions: [...(project.project_solution_brief_versions || [])].sort((a, b) => Number(b.version_number) - Number(a.version_number)),
+    project_acceptance_criteria: [...(project.project_acceptance_criteria || [])].sort((a, b) => Number(a.sort_order) - Number(b.sort_order)),
+    project_time_entries: [...(project.project_time_entries || [])].sort((a, b) => String(b.work_date).localeCompare(String(a.work_date))),
+    project_development_activity: [...(project.project_development_activity || [])].sort((a, b) => String(b.activity_date).localeCompare(String(a.activity_date))),
     project_objectives: [...(project.project_objectives || [])].sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || String(a.period_start).localeCompare(String(b.period_start))),
     project_tasks: [...(project.project_tasks || [])]
       .map((task) => ({
@@ -41,6 +56,11 @@ const projectSelection = `
   project_deliverables(*),
   project_documents(*),
   project_approvals(*),
+  project_solutions(*, project_solution_brief_versions(*)),
+  project_solution_brief_versions(*),
+  project_acceptance_criteria(*),
+  project_time_entries(*),
+  project_development_activity(*),
   project_objectives(*),
   project_tasks(*, project_task_comments(*), project_task_attachments(*))
 `;
@@ -77,7 +97,8 @@ export const saveProject = async (project, tenantId, userId = null) => {
     description: String(project.description || "").trim(),
     status: project.status || "draft",
     health: project.health || "green",
-    progress_percentage: Math.max(0, Math.min(100, Number(project.progress_percentage || 0))),
+    // Legacy column retained for compatibility. Client progress is calculated from accepted deliverables.
+    progress_percentage: 0,
     current_phase_name: String(project.current_phase_name || "").trim(),
     start_date: project.start_date || null,
     estimated_end_date: project.estimated_end_date || null,
@@ -98,17 +119,25 @@ export const saveProjectChild = async (table, item, tenantId, projectId, userId 
   delete payload.created_at;
   delete payload.updated_at;
   Object.keys(payload).forEach((key) => {
+    if (key.startsWith("project_") && Array.isArray(payload[key])) delete payload[key];
+  });
+  Object.keys(payload).forEach((key) => {
     if ((key.endsWith("_date") || key.endsWith("_at")) && payload[key] === "") payload[key] = null;
   });
   if (payload.period_start === "") payload.period_start = null;
   if (payload.period_end === "") payload.period_end = null;
   if (payload.objective_id === "") payload.objective_id = null;
   if (payload.phase_id === "") payload.phase_id = null;
+  if (payload.solution_id === "") payload.solution_id = null;
+  if (payload.deliverable_id === "") payload.deliverable_id = null;
+  if (payload.task_id === "") payload.task_id = null;
   if (payload.external_url === "") payload.external_url = null;
+  if (payload.summary_pdf_url === "") payload.summary_pdf_url = null;
   if (!payload.id) delete payload.id;
   if (["project_updates", "project_documents"].includes(table) && !payload.id && userId) payload.created_by = userId;
   if (table === "project_approvals" && !payload.id && userId) payload.requested_by = userId;
   if (table === "project_tasks" && !payload.id && userId) payload.created_by = userId;
+  if (["project_solution_brief_versions", "project_time_entries", "project_development_activity"].includes(table) && !payload.id && userId) payload.created_by = userId;
   const { data, error } = await supabase.from(table).upsert(payload).select("*").single();
   if (error) throw error;
   return data;
