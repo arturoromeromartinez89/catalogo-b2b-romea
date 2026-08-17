@@ -48,7 +48,7 @@ const childMeta = (item, table) => [
 // El avance confirmado usa la misma regla que el portal del cliente (src/utils/projectHubModel.js).
 const projectConfirmedProgress = (project) => confirmedProgress(project?.project_deliverables);
 
-export default function ProjectHubManager({ tenants = [], profile }) {
+export default function ProjectHubManager({ tenants = [], profile, demoMode = false }) {
   const portalTenants = useMemo(() => tenants.filter((item) => ["vanguardia-joyera", "estuches-chavez", "romea"].includes(item.slug)), [tenants]);
   const [tenantId, setTenantId] = useState("");
   const [projects, setProjects] = useState([]);
@@ -63,6 +63,13 @@ export default function ProjectHubManager({ tenants = [], profile }) {
 
   const load = async (nextTenantId = tenantId, keepSelected = selectedId) => {
     if (!nextTenantId) return;
+    if (demoMode) {
+      setProjects([]);
+      setSelectedId("");
+      setProjectDraft({ ...emptyProject });
+      setStatus("");
+      return;
+    }
     setStatus("Cargando proyectos...");
     try {
       const next = await fetchProjectsForTenant(nextTenantId);
@@ -87,6 +94,7 @@ export default function ProjectHubManager({ tenants = [], profile }) {
   const newProject = () => { setSelectedId(""); setProjectDraft({ ...emptyProject }); };
 
   const handleProjectSave = async () => {
+    if (demoMode) { setStatus("Vista previa: conecta el proyecto real para guardar cambios."); return; }
     if (!tenantId || !projectDraft.name.trim()) { setStatus("Selecciona una empresa y captura el nombre del proyecto."); return; }
     setSaving(true);
     try {
@@ -98,6 +106,7 @@ export default function ProjectHubManager({ tenants = [], profile }) {
   };
 
   const handleChildSave = async () => {
+    if (demoMode) { setStatus("Vista previa: conecta el proyecto real para guardar cambios."); return; }
     if (!selectedProject) return;
     setSaving(true);
     try {
@@ -119,8 +128,8 @@ export default function ProjectHubManager({ tenants = [], profile }) {
   const items = selectedProject?.[section] || [];
   return (
     <section className="ph-manager">
-      <header className="ph-manager__header">
-        <div><p className="eyebrow">NEXOR Studio</p><h2>Project Hub</h2><span>Publica el avance que verá cada empresa en su Client Portal.</span></div>
+      <header className="ph-manager__header ph-manager__header--context">
+        <div><strong>Editor del portal</strong><span>Selecciona una empresa para administrar sus proyectos y registros.</span></div>
         <label>Empresa<select value={tenantId} onChange={(event) => setTenantId(event.target.value)}><option value="">Seleccionar</option>{portalTenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}</select></label>
       </header>
       {status ? <p className="status info">{status}</p> : null}

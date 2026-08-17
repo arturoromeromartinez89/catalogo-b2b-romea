@@ -206,7 +206,7 @@ export default function ProjectStudio({ tenants = [], profiles = [], profile, on
   const availableStaff = staff.filter((person) => !members.some((member) => member.profile_id === person.id));
 
   if (!clientId) {
-    return <section className="ph-manager ph-studio">
+    return <section className="ph-manager ph-studio ph-studio--directory">
       <header className="ph-manager__header ph-studio__toolbar">
         <button className="primary-button" type="button" onClick={() => setClientDraft({ ...emptyClient })}>{studioIcon("plus")}Nuevo cliente</button>
       </header>

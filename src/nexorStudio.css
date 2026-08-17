@@ -40,15 +40,30 @@
 
 /* ---------- Página de la sección ---------- */
 
-.nexor-studio__page {
+.nexor-studio .nexor-studio__page {
   background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
   padding: 0;
 }
 
-.nexor-studio__page > header {
-  border-bottom: 1px solid rgba(30, 42, 84, .12);
-  margin-bottom: 20px;
-  padding-bottom: 18px;
+.nexor-studio .nexor-studio__page > header {
+  border: 0;
+  margin-bottom: 22px;
+  padding: 0 2px;
+}
+
+.nexor-studio .nexor-studio__page > header h2 {
+  font-size: clamp(27px, 2.6vw, 38px);
+  letter-spacing: -.04em;
+  line-height: 1.05;
+  margin: 5px 0 7px;
+}
+
+.nexor-studio .nexor-studio__page > header > span {
+  font-size: 12px;
 }
 
 .nexor-studio .status.info {
@@ -65,15 +80,26 @@
    acciones no repite el título. */
 .nexor-studio .ph-studio__toolbar {
   align-items: center;
+  background: var(--nexor-card);
+  border: 1px solid var(--nexor-line);
   border-bottom: 0;
+  border-radius: 16px 16px 0 0;
   gap: 16px;
-  margin-bottom: 16px;
-  padding-bottom: 0;
+  justify-content: flex-end;
+  margin-bottom: 0;
+  padding: 14px 16px;
 }
 
 .nexor-studio .ph-studio__toolbar > span {
   color: var(--nexor-muted-bright);
   font-size: 12px;
+}
+
+.nexor-studio .ph-studio--directory { gap: 0; }
+
+.nexor-studio .ph-studio--directory .status.info {
+  border-radius: 0;
+  margin: 0;
 }
 
 /* ---------- Placas y paneles heredados, en papel de evidencia ---------- */
@@ -323,12 +349,39 @@
 /* Directorio de clientes: una lista, no una cuadricula de tarjetas dentro de otra tarjeta.
    Las filas se alinean en las mismas columnas, asi que nada se parte ni queda disparejo. */
 .nexor-studio .ph-studio__clients {
+  background: var(--nexor-card);
   border: 1px solid var(--nexor-line);
-  border-radius: 14px;
+  border-radius: 0 0 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 0;
   overflow: hidden;
+}
+
+.nexor-studio .ph-studio__toolbar + .status + .ph-studio__clients,
+.nexor-studio .ph-studio__toolbar + .ph-studio__clients,
+.nexor-studio .ph-studio__toolbar + .ph-studio__client-form + .ph-studio__clients {
+  border-top: 0;
+}
+
+.nexor-studio .ph-manager__header--context {
+  align-items: center;
+  background: var(--nexor-card);
+  border: 1px solid var(--nexor-line);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.nexor-studio .ph-manager__header--context strong {
+  color: var(--nexor-fog);
+  display: block;
+  font-family: var(--nexor-display);
+  font-size: 14px;
+}
+
+.nexor-studio .ph-manager__header--context span {
+  font-size: 11px;
+  margin-top: 3px;
 }
 
 .nexor-studio .ph-studio__client {

@@ -26,7 +26,7 @@ const tabs = [
   { id: "projects", label: "Proyectos", icon: "projects", title: "Proyectos", eyebrow: "Sistema de proyectos", lead: "Clientes, proyectos y su avance verificable." },
   { id: "companies", label: "Empresas", icon: "companies", title: "Empresas", eyebrow: "Plataforma", lead: "Cuentas que operan un catálogo dentro de NEXOR IA." },
   { id: "users", label: "Usuarios", icon: "users", title: "Usuarios", eyebrow: "Accesos", lead: "Quién entra, con qué papel y a qué empresa." },
-  { id: "projectHub", label: "Detalle avanzado", icon: "advanced", title: "Detalle avanzado", eyebrow: "Registros", lead: "Captura fina de cada registro del proyecto." },
+  { id: "projectHub", label: "Detalle avanzado", icon: "advanced", title: "Project Hub", eyebrow: "Gestión avanzada", lead: "Publica y administra la información que verá cada cliente." },
   { id: "metrics", label: "Métricas", icon: "metrics", title: "Métricas", eyebrow: "Operación", lead: "Volumen y uso por empresa." },
 ];
 
@@ -131,7 +131,7 @@ export default function SuperAdminDashboard({ profile, demoData = null }) {
             <ProjectStudio tenants={tenants} profiles={profiles} profile={profile} onRefreshTenants={load} />
           ) : null}
           {tab === "projectHub" ? (
-            <ProjectHubManager tenants={tenants} profile={profile} />
+            <ProjectHubManager tenants={tenants} profile={profile} demoMode={Boolean(demoData)} />
           ) : null}
         </section>
         </main>
