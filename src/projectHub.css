@@ -5236,3 +5236,117 @@
   .project-task-comment-form--primary > div > span { display: none; }
   .project-task-comment-form--primary > div { justify-content: flex-end; }
 }
+
+/* NEXOR IA · contexto persistente y escala tipográfica del portal */
+.project-hub-client-context {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.project-hub-client-context .project-hub-client-logo {
+  border-right: 1px solid rgba(30, 42, 84, .13);
+  flex: none;
+  min-width: 0;
+  padding-right: 18px;
+}
+
+.nexor-top-location {
+  display: grid;
+  gap: 3px;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.nexor-top-location small {
+  color: #008b84;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.nexor-top-location strong {
+  color: #101d49;
+  font-family: var(--nexor-display);
+  font-size: 14px;
+  font-weight: 750;
+  max-width: min(350px, 31vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-hub--light {
+  --nexor-ui-caption: 10px;
+  --nexor-ui-body: 12px;
+  --nexor-ui-title: 14px;
+  --nexor-ui-heading: clamp(28px, 2.7vw, 34px);
+  font-size: var(--nexor-ui-body);
+}
+
+.project-hub--light .project-hub__sidebar-head strong,
+.project-hub--light .project-gantt__solution-label strong {
+  font-size: var(--nexor-ui-title);
+  font-weight: 750;
+}
+
+.project-hub--light .project-hub__nav button,
+.project-hub--light .project-gantt__task--child strong,
+.project-hub--light .project-gantt__corner span,
+.project-hub--light .project-gantt__dates--months > div strong {
+  font-size: var(--nexor-ui-body);
+  font-weight: 700;
+}
+
+.project-hub--light .project-hub__sidebar > footer,
+.project-hub--light .project-status,
+.project-hub--light .project-solutions-plan__summary span,
+.project-hub--light .project-solutions-plan__summary small,
+.project-hub--light .project-gantt__corner small,
+.project-hub--light .project-gantt__dates--months > div small,
+.project-hub--light .project-gantt__task-link small,
+.project-hub--light .project-gantt__task--child small,
+.project-hub--light .project-gantt__bar > span {
+  font-size: var(--nexor-ui-caption);
+}
+
+.project-hub--light .project-workboard__header h2 {
+  font-size: var(--nexor-ui-heading);
+  font-weight: 750;
+  line-height: 1.08;
+}
+
+.project-hub--light .project-workboard__header > div > span {
+  font-size: var(--nexor-ui-body);
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+.project-hub--light .project-solutions-plan__summary strong {
+  font-family: var(--nexor-display);
+  font-size: 26px;
+  font-weight: 750;
+}
+
+.project-hub--light .project-solutions-plan__summary span {
+  font-weight: 750;
+  letter-spacing: .08em;
+}
+
+.project-hub--light .project-gantt__task-link small,
+.project-hub--light .project-gantt__task--child small {
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .project-hub-client-context { gap: 10px; }
+  .project-hub-client-context .project-hub-client-logo { max-width: 105px; padding-right: 10px; }
+  .project-hub-client-context .project-hub-client-logo img { max-width: 95px; }
+  .nexor-top-location small { font-size: 9px; }
+  .nexor-top-location strong { font-size: 12px; max-width: 150px; }
+  .project-hub--light { --nexor-ui-heading: 27px; }
+}

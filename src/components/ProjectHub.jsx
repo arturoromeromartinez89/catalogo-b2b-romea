@@ -431,7 +431,7 @@ const projectFromDatabase = (record) => {
   };
 };
 
-export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName = "", theme = "light" }) {
+export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName = "", theme = "light", onContextChange = null }) {
   const { t } = useLanguage();
   const portalTheme = theme === "dark" ? "dark" : "light";
   const [section, setSection] = useState("planning");
@@ -487,6 +487,11 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
   }, [tenantSlug, companyName]);
 
   const project = enrichProject(tenantId ? projectFromDatabase(databaseProject) : demoProject);
+  const contextSolution = project?.solutions?.find((item) => item.id === activeSolutionId) || null;
+
+  useEffect(() => {
+    onContextChange?.({ projectName: project?.name || "", solutionName: contextSolution?.name || "" });
+  }, [onContextChange, project?.name, contextSolution?.name]);
 
   if (loading) {
     return <section className={`project-hub project-hub--${portalTheme}`}><div className="project-hub-state"><span className="loading-spinner" /><strong>{t("phLoading")}</strong></div></section>;
@@ -505,7 +510,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
   const pendingApprovals = project.approvals.filter((item) => item.status === "pending").length;
   const healthLabel = project.health === "green" ? t("phOnTrack") : project.health === "yellow" ? t("phAttention") : t("phAtRisk");
   const selectedSolution = project.solutions?.find((item) => item.id === selectedSolutionId) || project.solutions?.[0] || null;
-  const activeSolution = project.solutions?.find((item) => item.id === activeSolutionId) || null;
+  const activeSolution = contextSolution;
 
   const showPreviewNotice = (message) => {
     setPreviewNotice(message);
