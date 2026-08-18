@@ -22,14 +22,16 @@ export default function SolutionWorkspace({ solution, project, tenantId = "", co
     const tasks = (project.tasks || []).filter((task) => task.solutionId === solution.id);
     const objectiveIds = new Set(tasks.map((task) => task.objectiveId).filter(Boolean));
     const objectives = (project.objectives || []).filter((objective) => objectiveIds.has(objective.id));
+    const deliverables = (project.deliverables || []).filter((item) => item.solutionId === solution.id);
     return {
       ...project,
       name: solution.name,
       description: solution.description,
       progress: solution.progress,
-      phase: solution.phase,
       tasks,
       objectives,
+      deliverables,
+      solutionId: solution.id,
     };
   }, [project, solution]);
 
@@ -37,7 +39,9 @@ export default function SolutionWorkspace({ solution, project, tenantId = "", co
   const files = solution.files || [];
   const users = solution.users || [];
   const pendingApprovals = approvals.filter((item) => item.status === "pending").length;
-  // Las actividades canceladas siguen siendo visibles, pero no cuentan como trabajo comprometido.
+  const deliverables = solutionProject.deliverables || [];
+  const acceptedDeliverables = deliverables.filter((item) => ["approved", "accepted"].includes(item.status)).length;
+  // Las tareas canceladas siguen siendo visibles, pero no cuentan como trabajo comprometido.
   const activeTasks = solutionProject.tasks.filter((task) => task.status !== "cancelled");
   const completedTasks = activeTasks.filter((task) => task.status === "done").length;
 
@@ -61,10 +65,14 @@ export default function SolutionWorkspace({ solution, project, tenantId = "", co
       <div className="solution-workspace__single-sheet">
         <section className="solution-workspace__overview" aria-label="Resumen de la solución">
           <div className="solution-workspace__metrics">
-            <article><span>Etapa actual</span><strong>{solution.phase || "Por iniciar"}</strong><small>Trabajo activo</small></article>
-            <article><span>Actividades</span><strong>{activeTasks.length}</strong><small>{completedTasks} {completedTasks === 1 ? "terminada" : "terminadas"}</small></article>
+            <article><span>Tareas</span><strong>{completedTasks} de {activeTasks.length}</strong><small>Completadas</small></article>
+            <article><span>Entregables</span><strong>{acceptedDeliverables} de {deliverables.length}</strong><small>Aceptados por el cliente</small></article>
             <article><span>Aprobaciones</span><strong>{pendingApprovals}</strong><small>{pendingApprovals ? "Pendientes del cliente" : "Todo al día"}</small></article>
             <article><span>Fecha objetivo</span><strong>{solution.targetDate || "Por confirmar"}</strong><small>Siguiente entrega</small></article>
+          </div>
+          <div className="solution-workspace__definition">
+            <article><span>Objetivo</span><h2>{solution.objective || solution.brief?.objective || "Definir el resultado operativo de esta solución."}</h2></article>
+            <article><span>Meta</span><h2>{solution.goal || solution.nextMilestone || "Meta por definir"}</h2></article>
           </div>
           <div className="solution-workspace__overview-grid">
             <article className="solution-sheet-card">
@@ -72,14 +80,17 @@ export default function SolutionWorkspace({ solution, project, tenantId = "", co
               <div className="solution-sheet-card__scope">{(solution.scope || []).map((item) => <span key={item}>{workspaceIcon("check")}{item}</span>)}</div>
             </article>
             <article className="solution-sheet-card">
-              <header><span>Siguiente</span><h2>{solution.nextMilestone || "Próximo hito por definir"}</h2></header>
-              <p>Las siguientes actividades están ordenadas por prioridad y fecha.</p>
-              <ul>{activeTasks.filter((task) => task.status !== "done").slice(0, 3).map((task) => <li key={task.id}><i /><span><strong>{task.title}</strong><small>{task.assignee || "Por asignar"} · {task.dueDate || "Sin fecha"}</small></span></li>)}</ul>
+              <header><span>Limitaciones</span><h2>Qué queda fuera o condicionado</h2></header>
+              <div className="solution-sheet-card__limits">{(solution.limitations || solution.brief?.excluded_scope || []).map((item) => <span key={item}>{item}</span>)}</div>
             </article>
           </div>
+          <article className="solution-sheet-card solution-sheet-card--deliverables">
+            <header><span>Entregables</span><h2>Resultados verificables de la solución</h2></header>
+            <div>{deliverables.map((item) => <span key={item.id || item.name}><strong>{item.name}</strong><small>{statusLabel(item.status)} · {item.date || "Sin fecha"}</small></span>)}</div>
+          </article>
         </section>
 
-        <section id="solution-activities" className="solution-workspace__sheet-section" aria-label="Actividades de la solución">
+        <section id="solution-tasks" className="solution-workspace__sheet-section" aria-label="Tareas de la solución">
           <ProjectWorkboard project={solutionProject} tenantId={tenantId} initialTaskId={initialTaskId} onReload={onReload} onNotice={onNotice} mode="solution" />
         </section>
 

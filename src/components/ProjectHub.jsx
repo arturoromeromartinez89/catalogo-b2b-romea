@@ -42,6 +42,9 @@ const demoProjects = {
         id: "inventory",
         name: "Inventario",
         description: "Control de productos, existencias, entradas, salidas y trazabilidad en una sola operación.",
+        objective: "Centralizar el control del inventario para conocer existencias y movimientos con información confiable.",
+        goal: "Dejar operativa una primera versión validada por Estuches Chávez antes del 18 de septiembre.",
+        limitations: ["No incluye la migración del historial anterior", "La carga inicial depende del catálogo aprobado por el cliente"],
         status: "in_progress",
         phase: "Diseño funcional",
         stage: "Etapa 1 · Operación",
@@ -106,14 +109,14 @@ const demoProjects = {
       { id: "task-1", solutionId: "inventory", deliverableId: "deliverable-brief", objectiveId: "obj-alcance", title: "Mapear movimientos de inventario", description: "Documentar entradas, salidas, ajustes y responsables.", status: "done", priority: "high", startDate: "2026-08-10", dueDate: "2026-08-12", progress: 100, estimatedHours: 8, assignee: "NEXOR IA", sortOrder: 10, comments: [], attachments: [] },
       { id: "task-2", solutionId: "inventory", deliverableId: "deliverable-brief", objectiveId: "obj-alcance", title: "Diseñar entradas y salidas", description: "Prototipo del flujo operativo para revisión del cliente.", status: "in_progress", priority: "high", startDate: "2026-08-13", dueDate: "2026-08-18", progress: 65, estimatedHours: 12, assignee: "Diseño NEXOR", sortOrder: 20, comments: [{ id: "comment-demo", body: "El flujo inicial ya contempla ajuste por merma y devolución.", author: "Equipo NEXOR IA", createdAt: "2026-08-15" }], attachments: [] },
       { id: "task-3", solutionId: "inventory", deliverableId: "deliverable-brief", objectiveId: "obj-alcance", title: "Validar catálogo inicial", description: "Confirmar campos, familias y archivo de carga inicial.", status: "review", priority: "critical", startDate: "2026-08-17", dueDate: "2026-08-21", progress: 55, estimatedHours: 5, assignee: "Estuches Chávez", sortOrder: 30, comments: [], attachments: [] },
-      { id: "task-4", solutionId: "inventory", deliverableId: "deliverable-mvp", objectiveId: "obj-mvp", title: "Construir catálogo de productos", description: "Alta, edición, búsqueda y clasificación de productos.", status: "todo", priority: "high", startDate: "2026-08-24", dueDate: "2026-08-28", progress: 0, estimatedHours: 18, assignee: "Desarrollo NEXOR", sortOrder: 40, comments: [], attachments: [] },
-      { id: "task-5", solutionId: "inventory", deliverableId: "deliverable-mvp", objectiveId: "obj-mvp", title: "Programar existencias y movimientos", description: "Cálculo de stock e historial auditable por producto.", status: "backlog", priority: "critical", startDate: "2026-08-27", dueDate: "2026-09-02", progress: 0, estimatedHours: 28, assignee: "Desarrollo NEXOR", sortOrder: 50, comments: [], attachments: [] },
+      { id: "task-4", solutionId: "inventory", deliverableId: "deliverable-mvp", objectiveId: "obj-mvp", title: "Construir catálogo de productos", description: "Alta, edición, búsqueda y clasificación de productos.", status: "todo", priority: "high", startDate: "2026-08-24", dueDate: "2026-08-28", progress: 0, estimatedHours: 18, assignee: "Desarrollo NEXOR", sortOrder: 40, repositoryLabel: "nexor/inventario", repositoryUrl: "https://github.com/nexor-ia/inventario", branchName: "feature/catalogo-productos", comments: [], attachments: [] },
+      { id: "task-5", solutionId: "inventory", deliverableId: "deliverable-mvp", objectiveId: "obj-mvp", title: "Programar existencias y movimientos", description: "Cálculo de stock e historial auditable por producto.", status: "backlog", priority: "critical", startDate: "2026-08-27", dueDate: "2026-09-02", progress: 0, estimatedHours: 28, assignee: "Desarrollo NEXOR", sortOrder: 50, dependsOnTaskId: "task-4", repositoryLabel: "nexor/inventario", repositoryUrl: "https://github.com/nexor-ia/inventario", branchName: "feature/movimientos", comments: [], attachments: [] },
       { id: "task-11", solutionId: "inventory", deliverableId: "deliverable-mvp", objectiveId: "obj-mvp", title: "Migrar historial anterior de existencias", description: "Se retiró del alcance: el historial previo se conservará en los archivos actuales y no se importará al nuevo inventario.", status: "cancelled", priority: "medium", startDate: "2026-08-31", dueDate: "2026-09-03", progress: 0, estimatedHours: 14, assignee: "Desarrollo NEXOR", sortOrder: 55, comments: [], attachments: [] },
       { id: "task-6", solutionId: "inventory", deliverableId: "deliverable-mvp", objectiveId: "obj-mvp", title: "Preparar ambiente de pruebas", description: "Instancia separada para revisión sin afectar la operación.", status: "in_progress", priority: "medium", startDate: "2026-08-24", dueDate: "2026-08-26", progress: 35, estimatedHours: 6, assignee: "NEXOR IA", sortOrder: 60, comments: [], attachments: [] },
-      { id: "task-7", solutionId: "inventory", deliverableId: "deliverable-tests", objectiveId: "obj-validacion", title: "Cargar inventario inicial", description: "Importar y conciliar las existencias proporcionadas.", status: "todo", priority: "high", startDate: "2026-09-07", dueDate: "2026-09-09", progress: 0, estimatedHours: 8, assignee: "NEXOR IA", sortOrder: 70, comments: [], attachments: [] },
-      { id: "task-8", solutionId: "inventory", deliverableId: "deliverable-tests", objectiveId: "obj-validacion", title: "Ejecutar pruebas con usuarios", description: "Sesión guiada y registro de hallazgos por prioridad.", status: "todo", priority: "high", startDate: "2026-09-10", dueDate: "2026-09-14", progress: 0, estimatedHours: 10, assignee: "Equipo conjunto", sortOrder: 80, comments: [], attachments: [] },
+      { id: "task-7", solutionId: "inventory", deliverableId: "deliverable-tests", objectiveId: "obj-validacion", title: "Cargar inventario inicial", description: "Importar y conciliar las existencias proporcionadas.", status: "todo", priority: "high", startDate: "2026-09-07", dueDate: "2026-09-09", progress: 0, estimatedHours: 8, assignee: "NEXOR IA", sortOrder: 70, dependsOnTaskId: "task-5", comments: [], attachments: [] },
+      { id: "task-8", solutionId: "inventory", deliverableId: "deliverable-tests", objectiveId: "obj-validacion", title: "Ejecutar pruebas con usuarios", description: "Sesión guiada y registro de hallazgos por prioridad.", status: "todo", priority: "high", startDate: "2026-09-10", dueDate: "2026-09-14", progress: 0, estimatedHours: 10, assignee: "Equipo conjunto", sortOrder: 80, dependsOnTaskId: "task-7", comments: [], attachments: [] },
       { id: "task-9", solutionId: "inventory", deliverableId: "deliverable-release", objectiveId: "obj-validacion", title: "Resolver ajustes de aceptación", description: "Corregir hallazgos críticos antes de liberar.", status: "backlog", priority: "medium", startDate: "2026-09-15", dueDate: "2026-09-17", progress: 0, estimatedHours: 12, assignee: "Desarrollo NEXOR", sortOrder: 90, comments: [], attachments: [] },
-      { id: "task-10", solutionId: "inventory", deliverableId: "deliverable-release", objectiveId: "obj-validacion", title: "Autorizar entrega inicial", description: "Confirmar la versión aprobada y fecha de activación.", status: "backlog", priority: "critical", startDate: "2026-09-18", dueDate: "2026-09-18", progress: 0, estimatedHours: 2, assignee: "Estuches Chávez", sortOrder: 100, comments: [], attachments: [] },
+      { id: "task-10", solutionId: "inventory", deliverableId: "deliverable-release", objectiveId: "obj-validacion", title: "Autorizar entrega inicial", description: "Confirmar la versión aprobada y fecha de activación.", status: "backlog", priority: "critical", startDate: "2026-09-18", dueDate: "2026-09-18", progress: 0, estimatedHours: 2, assignee: "Estuches Chávez", sortOrder: 100, dependsOnTaskId: "task-9", comments: [], attachments: [] },
     ],
     timeEntries: [
       { id: "time-1", workDate: "2026-08-10", minutes: 330, description: "Entrevista y levantamiento de movimientos" },
@@ -271,7 +274,7 @@ const enrichProject = (source) => {
     solutions,
     timeEntries,
     developmentActivity,
-    progress: acceptedProgress,
+    progress: currentWorkProgress,
     acceptedProgress,
     workProgress: currentWorkProgress,
     dedicatedMinutes: minutes,
@@ -346,6 +349,9 @@ const projectFromDatabase = (record) => {
       id: item.id,
       name: item.name,
       description: item.description,
+      objective: item.objective,
+      goal: item.goal,
+      limitations: item.limitations || [],
       status: item.status,
       progress: Number(item.progress_percentage || 0),
       phase: item.current_phase_name,
@@ -387,12 +393,18 @@ const projectFromDatabase = (record) => {
       estimatedHours: item.estimated_hours == null ? null : Number(item.estimated_hours),
       assignee: item.assignee_name,
       sortOrder: Number(item.sort_order || 0),
+      dependsOnTaskId: item.depends_on_task_id,
+      repositoryUrl: item.repository_url,
+      repositoryLabel: item.repository_label,
+      branchName: item.branch_name,
+      pullRequestUrl: item.pull_request_url,
       comments: (item.project_task_comments || []).filter((comment) => comment.visible_to_client !== false).map((comment) => ({ id: comment.id, body: comment.body, createdAt: comment.created_at, author: "Equipo del proyecto" })),
       attachments: (item.project_task_attachments || []).filter((attachment) => attachment.visible_to_client !== false).map((attachment) => ({ id: attachment.id, fileName: attachment.file_name, storagePath: attachment.storage_path, mimeType: attachment.mime_type, fileSize: attachment.file_size, createdAt: attachment.created_at })),
     })),
     acceptanceCriteria: (record.project_acceptance_criteria || []).filter((item) => item.visible_to_client !== false).map((item) => ({
       id: item.id,
       solutionId: item.solution_id,
+      taskId: item.task_id,
       deliverableId: item.deliverable_id,
       description: item.description,
       status: item.status,
@@ -409,6 +421,7 @@ const projectFromDatabase = (record) => {
     developmentActivity: (record.project_development_activity || []).filter((item) => item.visible_to_client !== false).map((item) => ({
       id: item.id,
       solutionId: item.solution_id,
+      taskId: item.task_id,
       activityDate: item.activity_date,
       repositoryLabel: item.repository_label,
       linesAdded: Number(item.lines_added || 0),
@@ -576,16 +589,16 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
             {t("phViewContract")}
           </button>
           <dl className="project-hub__briefing-facts">
-            <div><dt>{t("phCurrentPhase")}</dt><dd>{project.phase}</dd></div>
+            <div><dt>Soluciones</dt><dd>{project.solutions.length}</dd></div>
             <div><dt>{t("phEstimatedDelivery")}</dt><dd>{project.endDate}</dd></div>
             <div><dt>{t("phRemainingDays")}</dt><dd>{remaining ?? "—"}</dd></div>
           </dl>
         </div>
         <aside className="project-hub__briefing-progress" aria-label={t("phProgressAria", project.progress)}>
-          <span>Avance confirmado</span>
-          <strong>{project.acceptedProgress}%</strong>
-          <div className="project-progress"><i style={{ width: `${project.acceptedProgress}%` }} /></div>
-          <small>Entregables aceptados por el cliente</small>
+          <span>Avance general</span>
+          <strong>{project.progress}%</strong>
+          <div className="project-progress"><i style={{ width: `${project.progress}%` }} /></div>
+          <small>Calculado por el avance ponderado de las tareas</small>
         </aside>
         <button className={`project-hub__briefing-attention${pendingApprovals ? " project-hub__briefing-attention--pending" : ""}`} type="button" onClick={() => setSection("approvals")}>
           <span>{t("phClientPending")}</span>
@@ -596,9 +609,9 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
       </header>
 
       <section className="project-home-metrics" aria-label="Indicadores verificables del proyecto">
-        <article><span>Etapa actual</span><strong>{project.phase}</strong><small>Bloque de tiempo predefinido</small></article>
-        <article><span>Avance del trabajo</span><strong>{project.workProgress}%</strong><small>Tareas terminadas según su estimación</small></article>
-        <article><span>Líneas de código</span><strong>{new Intl.NumberFormat("es-MX").format(project.linesAdded)}</strong><small>{project.commits} cambios registrados · al {formatPortalDate(project.lastDevelopmentDate)}</small></article>
+        <article><span>Tareas completadas</span><strong>{project.tasks.filter((task) => task.status === "done").length} de {project.tasks.filter((task) => task.status !== "cancelled").length}</strong><small>Unidad real de trabajo del proyecto</small></article>
+        <article><span>Entregables aceptados</span><strong>{project.deliverables.filter((item) => ["approved", "accepted"].includes(item.status)).length} de {project.deliverables.length}</strong><small>Confirmaciones del cliente, sin duplicar el avance</small></article>
+        <article><span>Cambios de código</span><strong>{project.commits}</strong><small>{new Set(project.developmentActivity.map((item) => item.repositoryLabel).filter(Boolean)).size} repositorio vinculado · al {formatPortalDate(project.lastDevelopmentDate)}</small></article>
         <article><span>Horas dedicadas</span><strong>{new Intl.NumberFormat("es-MX", { maximumFractionDigits: 1 }).format(project.dedicatedHours)}</strong><small>{project.timeEntries.length} registros de trabajo</small></article>
       </section>
 
@@ -617,7 +630,7 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
               {project.solutions.map((solution) => (
                 <button key={solution.id} type="button" className={selectedSolution?.id === solution.id ? "active" : ""} onClick={() => setSelectedSolutionId(solution.id)}>
                   <span className="project-solutions__glyph">{icon("solutions")}</span>
-                  <span><strong>{solution.name}</strong><small>{solution.phase || "Por iniciar"}</small></span>
+                  <span><strong>{solution.name}</strong><small>{solution.taskCount} tareas · {solution.completedTaskCount} terminadas</small></span>
                   <b>{solution.progress}%</b>
                   {icon("arrow")}
                 </button>
@@ -632,8 +645,8 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
               <p>{selectedSolution.description}</p>
               <div className="project-progress" aria-label={`Avance de ${selectedSolution.name}: ${selectedSolution.progress}%`}><i style={{ width: `${selectedSolution.progress}%` }} /></div>
               <dl>
-                <div><dt>Ahora</dt><dd>{selectedSolution.phase || "Por iniciar"}</dd></div>
-                <div><dt>Siguiente hito</dt><dd>{selectedSolution.nextMilestone || "Por definir"}</dd></div>
+                <div><dt>Tareas</dt><dd>{selectedSolution.completedTaskCount} de {selectedSolution.taskCount} terminadas</dd></div>
+                <div><dt>Meta</dt><dd>{selectedSolution.goal || selectedSolution.nextMilestone || "Por definir"}</dd></div>
                 <div><dt>Fecha objetivo</dt><dd>{selectedSolution.targetDate || "Por confirmar"}</dd></div>
               </dl>
               {selectedSolution.scope?.length ? <div className="project-solution-detail__scope"><span>Incluye</span><div>{selectedSolution.scope.map((item) => <i key={item}>{item}</i>)}</div></div> : null}
@@ -653,9 +666,9 @@ export default function ProjectHub({ tenantId = "", tenantSlug = "", companyName
               <small>{t("phUpdatedToday")}</small>
             </article>
             <article className="project-hub__metric">
-              <span>{t("phCurrentPhase")}</span>
-              <strong className="project-hub__metric-text">{project.phase}</strong>
-              <small>{t("phWorkInProgress")}</small>
+              <span>Tareas completadas</span>
+              <strong className="project-hub__metric-text">{project.tasks.filter((task) => task.status === "done").length} de {project.tasks.filter((task) => task.status !== "cancelled").length}</strong>
+              <small>El avance general se calcula con todas las tareas activas</small>
             </article>
             <article className="project-hub__metric">
               <span>{t("phRemainingDays")}</span>

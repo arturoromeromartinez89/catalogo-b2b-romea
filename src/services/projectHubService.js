@@ -201,6 +201,29 @@ export const moveProjectTask = async (taskId, status, sortOrder = 0) => {
   return data;
 };
 
+export const createProjectTask = async ({ tenantId, projectId, solutionId, task }) => {
+  const { data, error } = await supabase.rpc("create_project_task", {
+    p_tenant_id: tenantId,
+    p_project_id: projectId,
+    p_solution_id: solutionId,
+    p_title: String(task.title || "").trim(),
+    p_description: String(task.description || "").trim(),
+    p_assignee_name: String(task.assignee || "").trim(),
+    p_status: task.status || "todo",
+    p_priority: task.priority || "medium",
+    p_start_date: task.startDate || null,
+    p_due_date: task.dueDate || null,
+    p_estimated_hours: task.estimatedHours === "" ? null : Number(task.estimatedHours || 0),
+    p_deliverable_id: task.deliverableId || null,
+    p_depends_on_task_id: task.dependsOnTaskId || null,
+    p_repository_url: String(task.repositoryUrl || "").trim() || null,
+    p_repository_label: String(task.repositoryLabel || "").trim() || null,
+    p_branch_name: String(task.branchName || "").trim() || null,
+  });
+  if (error) throw error;
+  return data;
+};
+
 const currentUserId = async () => {
   const { data, error } = await supabase.auth.getUser();
   if (error) throw error;

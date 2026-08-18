@@ -42,7 +42,7 @@ export default function ProjectSolutionsPlan({ project, onOpenSolution, onOpenTa
 
   return <section className="project-workboard project-solutions-plan">
     <header className="project-workboard__header project-solutions-plan__header">
-      <div><h2>Cronograma de soluciones</h2><span>Próximos 3 meses. Despliega una solución para ver sus actividades. Cada actividad abre su detalle.</span></div>
+      <div><h2>Plan general del proyecto</h2><span>La solución es el bloque principal. Despliégala para ver las tareas que producen el resultado.</span></div>
       <div className="project-status-legend" aria-label="Reglas de estado">
         {legendOrder.map((status) => <span className={`project-status project-status--${status}`} key={status}>{VISUAL_STATUS_LABELS[status]}</span>)}
       </div>
@@ -50,7 +50,7 @@ export default function ProjectSolutionsPlan({ project, onOpenSolution, onOpenTa
 
     <div className="project-solutions-plan__summary">
       <article><span>Soluciones</span><strong>{solutions.length}</strong><small>Alcance publicado</small></article>
-      <article><span>Actividades</span><strong>{project.tasks?.filter((task) => task.status !== "cancelled").length || 0}</strong><small>Trabajo verificable</small></article>
+      <article><span>Tareas</span><strong>{project.tasks?.filter((task) => task.status !== "cancelled").length || 0}</strong><small>Trabajo verificable</small></article>
       <article><span>Terminadas</span><strong>{project.tasks?.filter((task) => task.status === "done").length || 0}</strong><small>No incluye canceladas</small></article>
     </div>
 
@@ -94,7 +94,7 @@ function MasterGantt({ solutions, tasks, timeline, expanded, onToggle, onOpenSol
 
   return <div className="project-gantt-shell master-solutions-gantt">
     <div className="project-gantt project-gantt--expandable" style={{ "--gantt-width": `${timeline.width}px` }}>
-      <div className="project-gantt__corner"><span>Solución / actividad</span><small>Haz clic para abrir el detalle</small></div>
+      <div className="project-gantt__corner"><span>Solución / tarea</span><small>Jerarquía del trabajo</small></div>
       <div className="project-gantt__dates project-gantt__dates--months" style={{ width: timeline.width }}>
         {months.map((month) => <div style={{ width: month.days * DAY_WIDTH }} key={month.key}><strong>{new Intl.DateTimeFormat("es-MX", { month: "long", year: "numeric" }).format(month.date)}</strong><small>{month.days} días</small></div>)}
       </div>
@@ -111,7 +111,7 @@ function MasterGantt({ solutions, tasks, timeline, expanded, onToggle, onOpenSol
           <div className={`project-gantt__row master-solutions-gantt__row project-gantt__row--state-${state}`}>
             <div className="project-gantt__task project-gantt__solution-label">
               <button type="button" className="project-gantt__expand" aria-expanded={isExpanded} aria-label={`${isExpanded ? "Contraer" : "Desplegar"} ${solution.name}`} onClick={() => onToggle(solution.id)}>{planIcon(isExpanded ? "minus" : "plus")}</button>
-              <button type="button" className="project-gantt__task-link" onClick={() => onOpenSolution(solution.id)}><strong>{solution.name}</strong><small><em className="project-gantt__state-text">{VISUAL_STATUS_LABELS[state]}</em> · {activeTasks.length} actividades{cancelledCount ? ` · ${cancelledCount} cancelada${cancelledCount === 1 ? "" : "s"}` : ""}</small></button>
+              <button type="button" className="project-gantt__task-link" onClick={() => onOpenSolution(solution.id)}><strong>{solution.name}</strong><small><em className="project-gantt__state-text">{VISUAL_STATUS_LABELS[state]}</em> · {activeTasks.length} tareas{cancelledCount ? ` · ${cancelledCount} cancelada${cancelledCount === 1 ? "" : "s"}` : ""}</small></button>
             </div>
             <div className="project-gantt__track" style={{ width: timeline.width }}>
               {track(`solution-${solution.id}`)}
@@ -124,14 +124,14 @@ function MasterGantt({ solutions, tasks, timeline, expanded, onToggle, onOpenSol
               const taskPosition = barPosition(task.startDate, task.dueDate);
               const taskState = task.visualStatus || "planned";
               return <div className={`project-gantt__row project-gantt__row--task project-gantt__row--state-${taskState}`} key={task.id}>
-                <button type="button" className="project-gantt__task project-gantt__task--child" onClick={() => onOpenTask(solution.id, task.id)}><i /><span><strong>{task.title}</strong><small><em className="project-gantt__state-text">{VISUAL_STATUS_LABELS[taskState]}</em> · {task.assignee || "Por asignar"}</small></span>{planIcon("arrow")}</button>
+                <button type="button" className="project-gantt__task project-gantt__task--child" onClick={() => onOpenTask(solution.id, task.id)}><i /><span><strong>{task.title}</strong><small><em className="project-gantt__state-text">{VISUAL_STATUS_LABELS[taskState]}</em> · {task.assignee || "Por asignar"}{task.dependsOnTaskId ? ` · Depende de: ${tasks.find((item) => item.id === task.dependsOnTaskId)?.title || "otra tarea"}` : ""}</small></span>{planIcon("arrow")}</button>
                 <div className="project-gantt__track" style={{ width: timeline.width }}>
                   {track(`task-${task.id}`)}
                   {taskPosition ? <button type="button" className={`project-gantt__bar project-gantt__bar--${taskState}`} style={taskPosition} onClick={() => onOpenTask(solution.id, task.id)} title={`${task.title}: ${VISUAL_STATUS_LABELS[taskState]}`}><span>{task.status === "done" ? "100%" : ""}</span></button> : null}
                 </div>
               </div>;
             })}
-            {!solutionTasks.length ? <div className="project-gantt__empty-child">Esta solución todavía no tiene actividades publicadas.</div> : null}
+            {!solutionTasks.length ? <div className="project-gantt__empty-child">Esta solución todavía no tiene tareas publicadas.</div> : null}
           </div> : null}
         </div>;
       })}

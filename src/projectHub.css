@@ -5139,6 +5139,73 @@
 
 .project-task-panel__activity .project-task-comments { margin-top: 18px; }
 .project-task-panel__activity .project-task-comments article { border: 1px solid var(--color-border-default); }
+
+/* Proyecto → Solución → Tarea: jerarquía única y creación rápida. */
+.project-solutions-plan__header > div:first-child { max-width: 660px; }
+.master-solutions-gantt .master-solutions-gantt__row {
+  background: linear-gradient(90deg, #eef3ff 0, #f8fbff 380px, #fff 100%);
+  border-top: 1px solid #cbd7f4;
+  border-bottom: 1px solid #cbd7f4;
+  min-height: 64px;
+}
+.master-solutions-gantt .project-gantt__solution-label strong { color: #0b1b46; font-size: 15px; }
+.master-solutions-gantt .project-gantt__children { position: relative; background: #fff; }
+.master-solutions-gantt .project-gantt__children::before { content: ""; position: absolute; inset: 0 auto 0 30px; width: 2px; background: #d8e1f4; z-index: 2; }
+.master-solutions-gantt .project-gantt__row--task { min-height: 54px; background: #fff; }
+.master-solutions-gantt .project-gantt__task--child { padding-left: 46px; }
+.master-solutions-gantt .project-gantt__task--child > i { position: absolute; left: 29px; width: 14px; height: 2px; background: #9caed3; }
+.master-solutions-gantt .project-gantt__task--child small { white-space: normal; line-height: 1.35; }
+
+.solution-workspace__definition { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0 12px; }
+.solution-workspace__definition article { min-height: 132px; padding: 22px; border: 1px solid #dce3f0; border-radius: 18px; background: #fff; }
+.solution-workspace__definition span,
+.solution-sheet-card--deliverables header > span { display: block; margin-bottom: 10px; color: #008c87; font-size: 10px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+.solution-workspace__definition h2 { margin: 0; color: #091638; font-size: clamp(18px, 2vw, 25px); line-height: 1.2; letter-spacing: -.025em; }
+.solution-sheet-card__limits { display: grid; gap: 8px; }
+.solution-sheet-card__limits span { padding: 11px 13px; border-radius: 10px; background: #fff3e2; color: #68420c; font-size: 13px; }
+.solution-sheet-card__limits:empty::before { content: "Sin limitaciones registradas"; padding: 12px; color: #63708d; background: #f5f7fb; border-radius: 10px; }
+.solution-sheet-card--deliverables { margin-top: 12px; }
+.solution-sheet-card--deliverables > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.solution-sheet-card--deliverables > div > span { display: flex; justify-content: space-between; gap: 16px; padding: 13px; border: 1px solid #e0e6f1; border-radius: 12px; background: #fff; }
+.solution-sheet-card--deliverables small { color: #63708d; text-align: right; }
+
+.project-workboard__actions { display: flex; align-items: center; gap: 10px; }
+.project-workboard__add { min-height: 38px; padding-inline: 16px; white-space: nowrap; }
+.project-workboard__solution-summary { display: grid; grid-template-columns: minmax(180px, 1fr) auto minmax(160px, 300px) auto; align-items: center; gap: 14px; margin: 0 0 14px; padding: 14px 16px; border: 1px solid #d9e2f1; border-radius: 14px; background: #f8faff; }
+.project-workboard__solution-summary strong { color: #0b1b46; }
+.project-workboard__solution-summary span { color: #63708d; font-size: 12px; }
+.project-workboard__solution-summary b { color: #4e78ff; }
+
+.project-task-creator-backdrop { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 24px; background: rgba(7, 17, 45, .58); backdrop-filter: blur(3px); }
+.project-task-creator { width: min(760px, 100%); max-height: calc(100vh - 48px); overflow: auto; border: 1px solid #d7deec; border-radius: 18px; background: #fff; box-shadow: 0 28px 80px rgba(5, 16, 48, .28); }
+.project-task-creator > header { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; padding: 20px 24px 16px; border-bottom: 1px solid #e1e6ef; background: rgba(255, 255, 255, .96); }
+.project-task-creator > header span { color: #008c87; font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.project-task-creator > header h2 { margin: 3px 0 0; color: #0b1636; font-size: 24px; }
+.project-task-creator > header button { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 9px; background: #f1f4f9; color: #273758; }
+.project-task-creator > header svg { width: 18px; }
+.project-task-creator__form { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 22px 24px; }
+.project-task-creator__form label { display: grid; gap: 7px; color: #405071; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.project-task-creator__form label.wide { grid-column: 1 / -1; }
+.project-task-creator__form input,
+.project-task-creator__form select,
+.project-task-creator__form textarea { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid #ced7e7; border-radius: 10px; background: #fbfcff; color: #0b1636; font: inherit; font-size: 14px; font-weight: 500; line-height: 1.35; text-transform: none; letter-spacing: normal; }
+.project-task-creator__form textarea { min-height: 80px; resize: vertical; }
+.project-task-creator__form small { color: #75819b; font-size: 11px; font-weight: 500; letter-spacing: normal; text-transform: none; }
+.project-task-creator > footer { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 10px; padding: 15px 24px; border-top: 1px solid #e1e6ef; background: rgba(255, 255, 255, .96); }
+.project-task-field a { overflow: hidden; color: #315ddc; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.project-task-field__dependency { color: #9a5e05 !important; }
+.project-task-field__dependency.done { color: #087b61 !important; }
+
+@media (max-width: 760px) {
+  .solution-workspace__definition,
+  .solution-sheet-card--deliverables > div,
+  .project-task-creator__form { grid-template-columns: 1fr; }
+  .project-task-creator__form label.wide { grid-column: auto; }
+  .project-workboard__header,
+  .project-workboard__actions { align-items: stretch; flex-direction: column; }
+  .project-workboard__solution-summary { grid-template-columns: 1fr auto; }
+  .project-workboard__solution-summary .project-progress { grid-column: 1 / 2; }
+}
 .project-task-panel__blank { align-items: center; color: var(--color-text-secondary); display: flex; flex-direction: column; justify-content: center; min-height: 230px; padding: 30px; text-align: center; }
 .project-task-panel__blank > i { align-items: center; background: rgba(79, 123, 255, .11); border-radius: 12px; color: #4f7bff; display: flex; font-size: 24px; font-style: normal; height: 54px; justify-content: center; margin-bottom: 15px; width: 54px; }
 .project-task-panel__blank strong { color: var(--color-text-primary); font-size: 14px; }

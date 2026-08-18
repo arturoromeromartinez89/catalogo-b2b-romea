@@ -84,8 +84,22 @@ export const weightedPercentage = (items, isComplete) => {
   return Math.round((complete / total) * 100);
 };
 
+// Avance operativo único: promedia el porcentaje real de cada tarea según sus horas
+// estimadas. Una tarea terminada vale 100%; una cancelada o interna no participa.
+export const taskProgress = (tasks) => {
+  const active = (tasks || []).filter(countsForProgress);
+  const total = active.reduce((sum, task) => sum + itemWeight(task), 0);
+  if (!total) return 0;
+  const earned = active.reduce((sum, task) => {
+    const raw = task.status === "done" ? 100 : Number(task.progress ?? task.progress_percentage ?? 0);
+    const progress = Number.isFinite(raw) ? Math.min(100, Math.max(0, raw)) : 0;
+    return sum + itemWeight(task) * progress;
+  }, 0);
+  return Math.round(earned / total);
+};
+
 // Avance confirmado: entregables aceptados por el cliente, ponderados por su peso.
 export const confirmedProgress = (deliverables) => weightedPercentage(deliverables, (item) => item.status === "approved");
 
-// Avance de trabajo: tareas terminadas, ponderadas por su estimación.
-export const workProgress = (tasks) => weightedPercentage(tasks, (task) => task.status === "done");
+// Avance de trabajo: porcentaje de las tareas activas ponderado por su estimación.
+export const workProgress = taskProgress;
