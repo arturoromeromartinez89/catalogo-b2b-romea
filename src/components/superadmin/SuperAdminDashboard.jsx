@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import LanguageToggle from "../LanguageToggle";
 import UsersPanel from "./UsersPanel";
 import ProjectHubManager from "./ProjectHubManager";
 import ProjectStudio from "./ProjectStudio";
@@ -110,12 +109,10 @@ export default function SuperAdminDashboard({ profile, demoData = null }) {
       <header className="project-hub-demo-bar">
         <img className="project-hub-demo-logo" src={nexorLockupUrl} alt="NEXOR IA" />
         <div className="project-hub-demo-bar__context">
-          <div className="nexor-top-location nexor-top-location--admin" aria-label={`Superadmin, ${activePage.title}`}>
-            <small>NEXOR IA · SUPERADMIN</small>
-            <strong>{activePage.title}</strong>
+          <div className="nexor-workplace nexor-workplace--admin" aria-label="Superadmin">
+            <i aria-hidden="true" />
+            <strong>Superadmin</strong>
           </div>
-          <LanguageToggle />
-          <div className="nexor-studio__identity"><strong>{profile?.email}</strong><small>Cuenta NEXOR</small></div>
           {!demoData ? <button className="secondary-button compact-action" type="button" onClick={handleSignOut} disabled={signingOut}>
             {signingOut ? "Saliendo..." : "Salir"}
           </button> : null}

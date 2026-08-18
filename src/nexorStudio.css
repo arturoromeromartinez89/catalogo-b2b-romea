@@ -1452,35 +1452,13 @@
   .nexor-studio .ph-studio-project-editor { max-width: none; width: 100%; }
 }
 
-/* NEXOR IA · ubicación persistente del área interna */
+/* NEXOR IA · el área interna usa el mismo contenedor que el portal del cliente */
 .nexor-studio-shell .project-hub-demo-bar__context {
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
 }
 
-.nexor-studio-shell .nexor-top-location--admin {
-  border-right: 1px solid rgba(30, 42, 84, .13);
-  padding-right: 18px;
-}
-
-.nexor-studio-shell .nexor-top-location--admin strong {
-  max-width: min(290px, 25vw);
-}
-
-.nexor-studio__identity {
-  padding-left: 16px;
-}
-
-.nexor-studio__identity strong {
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.nexor-studio__identity small {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .08em;
-}
+.nexor-studio-shell .nexor-workplace--admin { max-width: none; }
 
 /* Cuatro niveles repetibles: rótulo 10, texto 12, título 14 y encabezado 28–34. */
 .nexor-studio {
@@ -1518,12 +1496,6 @@
   font-size: var(--nexor-ui-caption);
 }
 
-@media (max-width: 900px) {
-  .nexor-studio-shell .nexor-top-location--admin strong { max-width: 230px; }
-}
-
 @media (max-width: 620px) {
-  .nexor-studio-shell .project-hub-demo-bar__context { gap: 9px; }
-  .nexor-studio-shell .nexor-top-location--admin { border-right: 0; padding-right: 0; }
-  .nexor-studio-shell .nexor-top-location--admin strong { max-width: 125px; }
+  .nexor-studio-shell .project-hub-demo-bar__context { gap: 8px; }
 }

@@ -5237,46 +5237,75 @@
   .project-task-comment-form--primary > div { justify-content: flex-end; }
 }
 
-/* NEXOR IA · contexto persistente y escala tipográfica del portal */
-.project-hub-client-context {
+/* NEXOR IA · un solo patrón de ubicación para todos los portales */
+.nexor-workplace {
   align-items: center;
-  display: flex;
-  gap: 18px;
-  justify-content: flex-end;
-  min-width: 0;
-}
-
-.project-hub-client-context .project-hub-client-logo {
-  border-right: 1px solid rgba(30, 42, 84, .13);
-  flex: none;
-  min-width: 0;
-  padding-right: 18px;
-}
-
-.nexor-top-location {
-  display: grid;
-  gap: 3px;
-  line-height: 1.15;
-  min-width: 0;
-}
-
-.nexor-top-location small {
-  color: #008b84;
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: .09em;
-  text-transform: uppercase;
-}
-
-.nexor-top-location strong {
+  background: #f8faff;
+  border: 1px solid #dde4f0;
+  border-radius: 12px;
+  box-sizing: border-box;
   color: #101d49;
+  display: flex;
+  gap: 12px;
+  height: 44px;
+  justify-content: flex-end;
+  max-width: min(620px, 58vw);
+  min-width: 0;
+  padding: 7px 12px;
+}
+
+.project-hub-demo-bar > .nexor-workplace {
+  align-items: center;
+  flex-direction: row;
+  gap: 12px;
+}
+
+.nexor-workplace .project-hub-client-logo {
+  flex: none;
+  height: 28px;
+  justify-content: center;
+  min-width: 0;
+  width: auto;
+}
+
+.nexor-workplace .project-hub-client-logo img {
+  max-height: 28px;
+  max-width: 150px;
+}
+
+.nexor-workplace__divider {
+  background: #d9e0ec;
+  flex: none;
+  height: 24px;
+  width: 1px;
+}
+
+.nexor-workplace > strong {
   font-family: var(--nexor-display);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 750;
-  max-width: min(350px, 31vw);
+  letter-spacing: .01em;
+  line-height: 1.2;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.nexor-workplace > strong > span { color: #008b84; }
+
+.nexor-workplace--admin {
+  justify-content: flex-start;
+  min-width: 142px;
+}
+
+.nexor-workplace--admin > i {
+  background: #2dd4c7;
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px rgba(45, 212, 199, .13);
+  flex: none;
+  height: 8px;
+  width: 8px;
 }
 
 .project-hub--light {
@@ -5343,10 +5372,12 @@
 }
 
 @media (max-width: 760px) {
-  .project-hub-client-context { gap: 10px; }
-  .project-hub-client-context .project-hub-client-logo { max-width: 105px; padding-right: 10px; }
-  .project-hub-client-context .project-hub-client-logo img { max-width: 95px; }
-  .nexor-top-location small { font-size: 9px; }
-  .nexor-top-location strong { font-size: 12px; max-width: 150px; }
+  .nexor-workplace { gap: 8px; height: 40px; max-width: 68vw; padding: 6px 9px; }
+  .project-hub-demo-bar > .nexor-workplace { gap: 8px; }
+  .nexor-workplace .project-hub-client-logo { height: 24px; }
+  .nexor-workplace .project-hub-client-logo img { max-height: 24px; max-width: 82px; }
+  .nexor-workplace__divider { height: 20px; }
+  .nexor-workplace > strong { font-size: 11px; }
+  .nexor-workplace--admin { min-width: 124px; }
   .project-hub--light { --nexor-ui-heading: 27px; }
 }

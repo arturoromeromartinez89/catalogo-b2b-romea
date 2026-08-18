@@ -22,14 +22,12 @@ export default function ProjectHubDemoPage() {
     <div className="project-hub-demo-shell project-hub-demo-shell--light">
       <header className="project-hub-demo-bar">
         <img className="project-hub-demo-logo" src={nexorLogoUrl} alt="NEXOR IA" />
-        <div className="project-hub-client-context">
+        <div className="nexor-workplace nexor-workplace--client" aria-label={`${tenant.name}, proyecto ${portalContext.projectName}`}>
           <div className="project-hub-client-logo" data-client-logo-slot="true">
             <img src={tenant.logoUrl} alt={tenant.name} />
           </div>
-          <div className="nexor-top-location nexor-top-location--client" aria-label={`${tenant.name}, proyecto ${portalContext.projectName}`}>
-            <small>{portalContext.solutionName ? `Solución · ${portalContext.solutionName}` : "Portal del cliente"}</small>
-            <strong>{portalContext.projectName || "Proyecto"}</strong>
-          </div>
+          <span className="nexor-workplace__divider" aria-hidden="true" />
+          <strong><span>Proyecto:</span> {portalContext.projectName || "Por definir"}</strong>
         </div>
       </header>
       <ProjectHub tenantSlug={tenant.slug} companyName={tenant.name} theme="light" onContextChange={setPortalContext} />
