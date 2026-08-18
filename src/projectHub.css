@@ -5254,11 +5254,57 @@
   padding: 7px 12px;
 }
 
-.project-hub-demo-bar > .nexor-workplace {
+.project-hub-demo-bar > .nexor-workplace,
+.project-hub-demo-bar__portal-actions > .nexor-workplace {
   align-items: center;
   flex-direction: row;
   gap: 12px;
 }
+
+.project-hub-demo-bar__portal-actions {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  min-width: 0;
+}
+
+.project-hub-client-logo__name {
+  color: #101d49 !important;
+  font-family: var(--nexor-display);
+  font-size: 12px !important;
+  font-weight: 800;
+  letter-spacing: .08em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.project-hub-exit-client {
+  align-items: center;
+  background: #101d49;
+  border: 1px solid #101d49;
+  border-radius: 11px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  font-family: var(--nexor-text);
+  font-size: 12px;
+  font-weight: 750;
+  gap: 8px;
+  height: 44px;
+  padding: 0 14px;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.project-hub-exit-client svg {
+  height: 17px;
+  width: 17px;
+}
+
+.project-hub-exit-client > span { color: inherit; font-size: inherit; }
+.project-hub-exit-client:hover { background: #17275e; border-color: #17275e; transform: translateY(-1px); }
+.project-hub-exit-client:focus-visible { outline: 3px solid rgba(0, 139, 132, .28); outline-offset: 2px; }
 
 .nexor-workplace .project-hub-client-logo {
   flex: none;
@@ -5373,11 +5419,16 @@
 
 @media (max-width: 760px) {
   .nexor-workplace { gap: 8px; height: 40px; max-width: 68vw; padding: 6px 9px; }
-  .project-hub-demo-bar > .nexor-workplace { gap: 8px; }
+  .project-hub-demo-bar > .nexor-workplace,
+  .project-hub-demo-bar__portal-actions > .nexor-workplace { gap: 8px; max-width: calc(100vw - 154px); }
+  .project-hub-demo-bar__portal-actions { gap: 7px; }
   .nexor-workplace .project-hub-client-logo { height: 24px; }
   .nexor-workplace .project-hub-client-logo img { max-height: 24px; max-width: 82px; }
+  .project-hub-client-logo__name { font-size: 9px !important; letter-spacing: .045em; }
   .nexor-workplace__divider { height: 20px; }
   .nexor-workplace > strong { font-size: 11px; }
+  .project-hub-exit-client { height: 40px; justify-content: center; padding: 0; width: 40px; }
+  .project-hub-exit-client > span { display: none; }
   .nexor-workplace--admin { min-width: 124px; }
   .project-hub--light { --nexor-ui-heading: 27px; }
 }
