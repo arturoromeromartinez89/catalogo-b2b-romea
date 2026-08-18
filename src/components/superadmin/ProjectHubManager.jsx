@@ -37,7 +37,7 @@ const taskColumns = [
   { id: "done", label: "Terminado", statuses: ["done", "cancelled"] },
 ];
 const emptyChild = {
-  project_solutions: { name: "", description: "", objective: "", goal: "", limitations: [], status: "draft", next_milestone: "", scope_items: [], start_date: "", estimated_end_date: "", sort_order: 10, visible_to_client: true },
+  project_solutions: { name: "", description: "", objective: "", goal: "", limitations: [], status: "draft", next_milestone: "", scope_items: [], start_date: "", estimated_end_date: "", weight: 1, sort_order: 10, visible_to_client: true },
   project_solution_brief_versions: { solution_id: "", version_number: 1, status: "draft", problem: "", objective: "", current_process: "", proposed_process: "", included_scope: [], excluded_scope: [], users_and_permissions: "", impacts: "", assumptions_and_risks: "", summary_pdf_url: "", visible_to_client: false },
   project_acceptance_criteria: { solution_id: "", deliverable_id: "", description: "", status: "pending", sort_order: 10, visible_to_client: true },
   project_time_entries: { solution_id: "", task_id: "", work_date: "", minutes: 60, description: "", contributor_name: "", visible_to_client: true },
@@ -225,13 +225,79 @@ export default function ProjectHubManager({ tenants = [], profile, demoMode = fa
           {!["board", "plan", "settings"].includes(workspaceView) ? <div className="ph-workspace__records">{items.map((item) => <article className="ph-workspace__record" key={item.id}><button type="button" onClick={() => openRecord(activeView.table, item)}><div><strong>{childTitle(item, activeView.table)}</strong><span>{childMeta(item, activeView.table) || item.description || "Sin detalle"}</span></div><div className="ph-workspace__record-meta">{item.visible_to_client === false ? <small>Interno</small> : <small>Visible al cliente</small>}<b>→</b></div></button></article>)}{!items.length ? <div className="ph-workspace__empty">Aún no hay información. Usa “Agregar” para crear el primer registro.</div> : null}</div> : null}
         </section>
       </>}
-      {drawerOpen && selectedProject ? <><button className="ph-workspace__scrim" type="button" aria-label="Cerrar editor" onClick={closeDrawer} /><aside className="ph-workspace__drawer" role="dialog" aria-modal="true" aria-label={childDraft.id ? "Editar registro" : "Agregar registro"}><header><div><small>{viewCopy[workspaceView]?.[0] || "Proyecto"}</small><h3>{childDraft.id ? "Editar" : "Nuevo registro"}</h3></div><button type="button" aria-label="Cerrar" onClick={closeDrawer}>×</button></header><ChildForm table={section} draft={childDraft} setDraft={setChildDraft} project={selectedProject} saving={saving} onSave={handleChildSave} onCancel={closeDrawer} /></aside></> : null}
+      {drawerOpen && selectedProject ? <><button className="ph-workspace__scrim" type="button" aria-label="Cerrar editor" onClick={closeDrawer} /><aside className={`ph-workspace__drawer${section === "project_solutions" ? " ph-workspace__drawer--solution" : ""}`} role="dialog" aria-modal="true" aria-label={section === "project_solutions" ? (childDraft.id ? "Editar solución" : "Nueva solución") : (childDraft.id ? "Editar registro" : "Agregar registro")}><header><div><small>{section === "project_solutions" ? `Solución · ${selectedProject.name}` : (viewCopy[workspaceView]?.[0] || "Proyecto")}</small><h3>{section === "project_solutions" ? (childDraft.id ? "Editar solución" : "Nueva solución") : (childDraft.id ? "Editar registro" : "Nuevo registro")}</h3></div><button type="button" aria-label="Cerrar" onClick={closeDrawer}>×</button></header><ChildForm table={section} draft={childDraft} setDraft={setChildDraft} project={selectedProject} saving={saving} onSave={handleChildSave} onCancel={closeDrawer} /></aside></> : null}
     </section>
   );
 }
 
+function SolutionForm({ draft, update, project, saving, onSave, onCancel }) {
+  const updateList = (key, value) => update(key, value.split(",").map((item) => item.trim()).filter(Boolean));
+  const relatedDeliverables = draft.id ? (project?.project_deliverables || []).filter((item) => item.solution_id === draft.id) : [];
+  const relatedTasks = draft.id ? (project?.project_tasks || []).filter((item) => item.solution_id === draft.id && item.status !== "cancelled") : [];
+  const state = statusLabel(draft.status) || "Borrador";
+
+  return <div className="ph-solution-editor">
+    <aside className="ph-solution-editor__preview" aria-label="Vista previa de la tarjeta de solución">
+      <span>Vista previa</span>
+      <div className="ph-solution-preview-card">
+        <header><i className={`ph-solution-preview-card__state ph-solution-preview-card__state--${draft.status || "draft"}`}>{state}</i><b>{draft.visible_to_client === false ? "Interna" : "Portal del cliente"}</b></header>
+        <h4>{draft.name || "Nombre de la solución"}</h4>
+        <p>{draft.description || "Describe brevemente qué parte de la operación resolverá esta solución."}</p>
+        <dl>
+          <div><dt>Objetivo</dt><dd>{draft.objective || "Por definir"}</dd></div>
+          <div><dt>Meta</dt><dd>{draft.goal || "Por definir"}</dd></div>
+        </dl>
+        <div className="ph-solution-preview-card__scope">{(draft.scope_items || []).slice(0, 4).map((item) => <span key={item}>{item}</span>)}{!draft.scope_items?.length ? <small>El alcance aparecerá aquí</small> : null}</div>
+        <footer><span><strong>{relatedTasks.length}</strong> tareas</span><span><strong>{relatedDeliverables.length}</strong> entregables</span><time>{displayDate(draft.estimated_end_date)}</time></footer>
+      </div>
+    </aside>
+
+    <div className="ph-solution-editor__content">
+      <section className="ph-solution-form-section">
+        <header><span>01</span><div><h4>Identidad de la solución</h4><p>Nombre claro y explicación breve para el cliente.</p></div></header>
+        <div className="ph-solution-form-grid">
+          <label className="wide">Nombre<input autoFocus value={draft.name || ""} onChange={(event) => update("name", event.target.value)} placeholder="Ej. Inventario" /></label>
+          <label className="wide">Descripción<textarea value={draft.description || ""} onChange={(event) => update("description", event.target.value)} placeholder="Qué resuelve y para quién" /></label>
+          <label>Estado<select value={draft.status || "draft"} onChange={(event) => update("status", event.target.value)}><option value="draft">Borrador</option><option value="planned">Por iniciar</option><option value="in_progress">En proceso</option><option value="waiting">En espera</option><option value="needs_changes">Requiere cambios</option><option value="completed">Terminada</option><option value="cancelled">Cancelada</option></select></label>
+          <label className="ph-solution-form-toggle"><span>Visibilidad</span><button type="button" className={draft.visible_to_client === false ? "" : "active"} onClick={() => update("visible_to_client", draft.visible_to_client === false)}><i />{draft.visible_to_client === false ? "Solo NEXOR" : "Visible al cliente"}</button></label>
+        </div>
+      </section>
+
+      <section className="ph-solution-form-section">
+        <header><span>02</span><div><h4>Resultado esperado</h4><p>Define la razón de existir y el resultado medible.</p></div></header>
+        <div className="ph-solution-form-grid ph-solution-form-grid--two">
+          <label>Objetivo<textarea value={draft.objective || ""} onChange={(event) => update("objective", event.target.value)} placeholder="Qué cambio operativo queremos lograr" /></label>
+          <label>Meta<textarea value={draft.goal || ""} onChange={(event) => update("goal", event.target.value)} placeholder="Qué resultado demostrará que funcionó" /></label>
+        </div>
+      </section>
+
+      <section className="ph-solution-form-section">
+        <header><span>03</span><div><h4>Alcance y límites</h4><p>Evita expectativas ambiguas desde el primer día.</p></div></header>
+        <div className="ph-solution-form-grid ph-solution-form-grid--two">
+          <label>Incluye<textarea value={(draft.scope_items || []).join(", ")} onChange={(event) => updateList("scope_items", event.target.value)} placeholder="Productos, existencias, entradas y salidas" /><small>Separa cada punto con una coma.</small></label>
+          <label>Limitaciones<textarea value={(draft.limitations || []).join(", ")} onChange={(event) => updateList("limitations", event.target.value)} placeholder="No incluye historial anterior, depende del catálogo aprobado" /><small>Exclusiones, condiciones o dependencias externas.</small></label>
+        </div>
+      </section>
+
+      <section className="ph-solution-form-section">
+        <header><span>04</span><div><h4>Entrega y control</h4><p>Fechas, siguiente resultado visible y peso en el proyecto.</p></div></header>
+        <div className="ph-solution-form-grid ph-solution-form-grid--three">
+          <label>Inicio<input type="date" value={draft.start_date || ""} onChange={(event) => update("start_date", event.target.value)} /></label>
+          <label>Fecha objetivo<input type="date" value={draft.estimated_end_date || ""} onChange={(event) => update("estimated_end_date", event.target.value)} /></label>
+          <label>Peso en el proyecto<input type="number" min="0.01" step="0.25" value={draft.weight || 1} onChange={(event) => update("weight", Number(event.target.value))} /></label>
+          <label className="wide">Siguiente resultado visible<input value={draft.next_milestone || ""} onChange={(event) => update("next_milestone", event.target.value)} placeholder="Ej. Primera versión disponible para pruebas" /></label>
+          <label>Orden<input type="number" min="0" step="10" value={draft.sort_order ?? 10} onChange={(event) => update("sort_order", Number(event.target.value))} /></label>
+        </div>
+      </section>
+
+      <footer className="ph-solution-editor__actions"><button className="secondary-button" type="button" onClick={onCancel}>Cancelar</button><div><small>{draft.id ? "Los cambios actualizarán el portal del cliente." : "Después podrás agregar entregables y tareas."}</small><button className="primary-button" type="button" disabled={saving || !draft.name?.trim()} onClick={onSave}>{saving ? "Guardando..." : (draft.id ? "Guardar solución" : "Crear solución")}</button></div></footer>
+    </div>
+  </div>;
+}
+
 function ChildForm({ table, draft, setDraft, project, saving, onSave, onCancel }) {
   const update = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
+  if (table === "project_solutions") return <SolutionForm draft={draft} update={update} project={project} saving={saving} onSave={onSave} onCancel={onCancel} />;
   const hasTitle = ["project_updates", "project_approvals", "project_objectives", "project_tasks"].includes(table);
   const hasName = ["project_solutions", "project_phases", "project_deliverables", "project_documents"].includes(table);
   const solutions = project?.project_solutions || [];
