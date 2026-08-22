@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import ProjectHub from "./ProjectHub";
-import nexorLogoUrl from "../assets/nexor-ia_lockup_dark-on-transparent.svg";
+import nexorStudioLogoUrl from "../assets/nexoria-studio_lockup_dark-on-transparent.svg";
+import nexorStudioMarkUrl from "../assets/nexoria-studio_isotipo_on-white.svg";
 import { supabase } from "../lib/supabaseClient";
 import { fastSignOut } from "../services/authService";
 
@@ -27,7 +28,7 @@ export default function ClientPortalShell({
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = `${companyName} · NEXOR IA`;
+    document.title = `${companyName} · NEXOR IA Studio`;
     return () => { document.title = previousTitle; };
   }, [companyName]);
 
@@ -46,7 +47,10 @@ export default function ClientPortalShell({
   return (
     <div className="project-hub-demo-shell project-hub-demo-shell--light">
       <header className="project-hub-demo-bar">
-        <img className="project-hub-demo-logo" src={nexorLogoUrl} alt="NEXOR IA" />
+        <picture className="project-hub-demo-brand">
+          <source media="(max-width: 620px)" srcSet={nexorStudioMarkUrl} />
+          <img className="project-hub-demo-logo" src={nexorStudioLogoUrl} alt="NEXOR IA Studio" />
+        </picture>
         <div className="project-hub-demo-bar__portal-actions">
           <div className="nexor-workplace nexor-workplace--client" aria-label={`${companyName}, proyecto ${portalContext.projectName}`}>
             <div className="project-hub-client-logo" data-client-logo-slot="true">

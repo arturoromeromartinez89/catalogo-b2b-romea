@@ -3129,12 +3129,19 @@
   width: min(760px, 72vw);
 }
 
+.project-hub-demo-brand {
+  display: block;
+  flex: 0 0 auto;
+  line-height: 0;
+  width: clamp(190px, 18vw, 238px);
+}
+
 .project-hub-demo-logo {
   display: block;
-  height: 48px;
+  height: auto;
   object-fit: contain;
   object-position: left center;
-  width: auto;
+  width: 100%;
 }
 
 .project-hub-client-logo {
@@ -4204,7 +4211,8 @@
 @media (max-width: 760px) {
   .project-hub-demo-shell { grid-template-rows: 58px minmax(0, 1fr); }
   .project-hub-demo-bar { min-height: 58px; padding: 7px 14px; }
-  .project-hub-demo-logo { height: 38px; }
+  .project-hub-demo-brand { width: 38px; }
+  .project-hub-demo-logo { height: auto; width: 38px; }
   .project-hub-client-logo { height: 38px; min-width: 80px; }
   .project-hub-client-logo img { max-height: 26px; max-width: 38vw; }
   .project-hub,
@@ -4902,7 +4910,8 @@
     flex-direction: row;
     justify-content: space-between;
   }
-  .project-hub-demo-logo { height: 34px; }
+  .project-hub-demo-brand { width: 34px; }
+  .project-hub-demo-logo { height: auto; width: 34px; }
   .project-hub-client-logo {
     align-items: center;
     flex-direction: row;

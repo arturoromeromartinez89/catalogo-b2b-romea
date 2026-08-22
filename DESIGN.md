@@ -1,6 +1,6 @@
 ---
-name: "NEXOR IA Project Hub"
-description: "Bóveda clara de briefing ejecutivo para el seguimiento seguro de proyectos."
+name: "NEXOR IA Studio"
+description: "Sistema visual de bóveda clara para accesos, operación y seguimiento seguro de proyectos."
 colors:
   vault-ink: "#0b1330"
   vault-ink-deep: "#070d22"
@@ -96,7 +96,7 @@ components:
     padding: "clamp(22px, 2.8vw, 32px)"
 ---
 
-# Design System: NEXOR IA Project Hub
+# Design System: NEXOR IA Studio
 
 ## Overview
 
@@ -114,6 +114,16 @@ La luz fría, el campo de nodos restringido y la asimetría editorial forman el 
 - Cian para señal viva y acción principal; azul para navegación y progreso; amarillo para atención.
 - Campo de nodos tenue y profundidad ambiental, nunca ornamental.
 - Tipografía de display compacta y datos con numerales tabulares.
+
+## Identidad NEXOR IA Studio
+
+El logotipo oficial con la palabra `studio` es la marca maestra de producto en acceso, portal cliente y Superadmin. En superficies claras se usa `nexoria-studio_lockup_dark-on-transparent.svg`; sobre tinta profunda se usa `nexoria-studio_lockup_transparent.svg`. No se alteran curvas, colores, proporción ni línea base del archivo oficial.
+
+El lockup completo nunca se muestra por debajo de 160px de ancho. En encabezados móviles se sustituye por `nexoria-studio_isotipo_on-white.svg`, conservando así legibilidad y jerarquía. La identidad del cliente es contexto de su espacio de trabajo y nunca reemplaza a NEXOR IA Studio como marca del sistema.
+
+**The Master Brand Rule.** NEXOR IA Studio identifica el producto; el logotipo y nombre del cliente identifican el espacio al que se entra. Mostrar ambos niveles con claridad y sin fusionarlos en un logotipo inventado.
+
+**The Secure Threshold Rule.** El acceso debe sentirse como el umbral de una bóveda operativa: marca y contexto en tinta profunda, formulario directo sobre suelo claro, una sola acción cian y cero elementos que distraigan del inicio de sesión.
 
 ## Colors
 

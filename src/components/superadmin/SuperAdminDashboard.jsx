@@ -3,7 +3,8 @@ import UsersPanel from "./UsersPanel";
 import ProjectHubManager from "./ProjectHubManager";
 import ProjectStudio from "./ProjectStudio";
 import StudioHome from "./StudioHome";
-import nexorLockupUrl from "../../assets/nexor-ia_lockup_dark-on-transparent.svg";
+import nexorStudioLogoUrl from "../../assets/nexoria-studio_lockup_dark-on-transparent.svg";
+import nexorStudioMarkUrl from "../../assets/nexoria-studio_isotipo_on-white.svg";
 import { supabase } from "../../lib/supabaseClient";
 import { fastSignOut } from "../../services/authService";
 import { fetchProfiles, fetchTenants } from "../../services/tenantService";
@@ -122,7 +123,10 @@ export default function SuperAdminDashboard({ profile, demoData = null, onOpenCl
   return (
     <div className="project-hub-demo-shell project-hub-demo-shell--light nexor-studio-shell">
       <header className="project-hub-demo-bar">
-        <img className="project-hub-demo-logo" src={nexorLockupUrl} alt="NEXOR IA" />
+        <picture className="project-hub-demo-brand">
+          <source media="(max-width: 620px)" srcSet={nexorStudioMarkUrl} />
+          <img className="project-hub-demo-logo" src={nexorStudioLogoUrl} alt="NEXOR IA Studio" />
+        </picture>
         <div className="project-hub-demo-bar__context">
           <div className="nexor-workplace nexor-workplace--admin" aria-label="Superadmin">
             <i aria-hidden="true" />
