@@ -123,7 +123,7 @@ El lockup completo nunca se muestra por debajo de 160px de ancho. En encabezados
 
 **The Master Brand Rule.** NEXOR IA Studio identifica el producto y es la única marca del acceso. El logotipo y nombre del cliente identifican su espacio únicamente después de iniciar sesión. Nunca fusionar ambos niveles en un logotipo inventado.
 
-**The Secure Threshold Rule.** El acceso debe sentirse como el umbral de una bóveda operativa: marca y contexto en tinta profunda, formulario directo sobre suelo claro, una sola acción cian y cero elementos que distraigan del inicio de sesión.
+**The Secure Threshold Rule.** El acceso debe sentirse como el umbral de una bóveda operativa: logotipo dominante y promesa breve sobre tinta profunda, formulario directo sobre suelo claro y una sola acción cian. El isotipo del formulario funciona como núcleo vivo: señales laterales convergen en sus nodos, un pulso confirma actividad y `prefers-reduced-motion` conserva la composición sin desplazamiento.
 
 ## Colors
 

@@ -158,11 +158,22 @@ function AuthBrandPanel() {
         <img className="login-studio-lockup" src={nexorStudioLight} alt="NEXOR IA Studio" />
         <div className="login-brand-statement">
           <h1>Desarrollos creativos, soluciones para ti <span>(usamos IA)</span></h1>
-          <p>NEXOR IA Studio transforma ideas en herramientas claras, útiles y hechas alrededor de tu operación.</p>
         </div>
-        <div className="login-brand-signature" aria-hidden="true"><i /><span>Diseño</span><i /><span>Software</span><i /><span>Inteligencia aplicada</span></div>
+        <div className="login-brand-signature" aria-label="Sistemas, software, inteligencia artificial"><i aria-hidden="true" /><span>Sistemas</span><i aria-hidden="true" /><span>Software</span><i aria-hidden="true" /><span>Inteligencia artificial</span></div>
       </div>
     </aside>
+  );
+}
+
+function AuthIntelligenceSignal() {
+  return (
+    <div className="login-intelligence-signal" aria-hidden="true">
+      <span className="login-intelligence-signal__rail login-intelligence-signal__rail--left"><i /><i /><i /></span>
+      <span className="login-intelligence-signal__rail login-intelligence-signal__rail--right"><i /><i /><i /></span>
+      <span className="login-intelligence-signal__pulse" />
+      <img src={nexorStudioAppIcon} alt="" />
+      <span className="login-intelligence-signal__orbit"><i /><i /><i /><i /></span>
+    </div>
   );
 }
 
@@ -469,8 +480,10 @@ export default function AuthGate({ children }) {
               <AuthFooter />
             </form>
           ) : (
-            <form className="login-form-card" onSubmit={submit}>
-              <AuthFormHeader title="Acceso seguro" help="Ingresa con la cuenta asignada a tu organización." />
+            <form className="login-form-card" onSubmit={submit} aria-label="Iniciar sesión">
+              <h2 className="login-visually-hidden">Iniciar sesión</h2>
+              <AuthIntelligenceSignal />
+              <p className="login-form-instruction">Ingresa con la cuenta asignada a tu organización.</p>
               <label>
                 {text.email}
                 <div className="login-input-wrap">
