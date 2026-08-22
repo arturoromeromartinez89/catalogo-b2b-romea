@@ -5,7 +5,6 @@ import { isAuthLocked } from "../lib/authLock";
 import { getSessionAndProfile } from "../services/supabaseCatalog";
 import { getAppUrl } from "../utils/basePath";
 import nexorStudioLight from "../assets/nexoria-studio_lockup_transparent.svg";
-import nexorStudioAppIcon from "../assets/nexoria-studio_app-icon.svg";
 
 const copy = {
   es: {
@@ -165,14 +164,35 @@ function AuthBrandPanel() {
   );
 }
 
+function NexorInstitutionalMark({ compact = false }) {
+  return (
+    <svg
+      className={`nexor-auth-mark${compact ? " nexor-auth-mark--compact" : ""}`}
+      viewBox="60 60 160 160"
+      focusable="false"
+      aria-hidden="true"
+    >
+      <path
+        className="nexor-auth-mark__links"
+        d="M140 140 88 88M140 140l52-52M140 140l-52 52M140 140l52 52"
+        fill="none"
+        stroke="#8893B8"
+        strokeWidth="10"
+        strokeLinecap="round"
+      />
+      <circle className="nexor-auth-mark__node nexor-auth-mark__node--one" cx="88" cy="88" r="16" fill="#2FE3D0" />
+      <circle className="nexor-auth-mark__node nexor-auth-mark__node--two" cx="192" cy="88" r="16" fill="#4F7BFF" />
+      <circle className="nexor-auth-mark__node nexor-auth-mark__node--three" cx="88" cy="192" r="16" fill="#4F7BFF" />
+      <circle className="nexor-auth-mark__node nexor-auth-mark__node--four" cx="192" cy="192" r="16" fill="#2FE3D0" />
+      <circle className="nexor-auth-mark__core" cx="140" cy="140" r="24" fill="#1F335F" />
+    </svg>
+  );
+}
+
 function AuthIntelligenceSignal() {
   return (
     <div className="login-intelligence-signal" aria-hidden="true">
-      <span className="login-intelligence-signal__rail login-intelligence-signal__rail--left"><i /><i /><i /></span>
-      <span className="login-intelligence-signal__rail login-intelligence-signal__rail--right"><i /><i /><i /></span>
-      <span className="login-intelligence-signal__pulse" />
-      <img src={nexorStudioAppIcon} alt="" />
-      <span className="login-intelligence-signal__orbit"><i /><i /><i /><i /></span>
+      <NexorInstitutionalMark />
     </div>
   );
 }
@@ -180,7 +200,7 @@ function AuthIntelligenceSignal() {
 function AuthFormHeader({ title, help }) {
   return (
     <div className="login-form-heading">
-      <img src={nexorStudioAppIcon} alt="" aria-hidden="true" />
+      <NexorInstitutionalMark compact />
       <div>
         <h2>{title}</h2>
         <p>{help}</p>
