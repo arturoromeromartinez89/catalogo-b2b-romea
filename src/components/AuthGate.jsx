@@ -4,7 +4,6 @@ import { isSupabaseConfigured, supabase } from "../lib/supabaseClient";
 import { isAuthLocked } from "../lib/authLock";
 import { getSessionAndProfile } from "../services/supabaseCatalog";
 import { getAppUrl } from "../utils/basePath";
-import { resolvePublicPortalBrand } from "../config/publicPortalBranding";
 import nexorStudioLight from "../assets/nexoria-studio_lockup_transparent.svg";
 import nexorStudioAppIcon from "../assets/nexoria-studio_app-icon.svg";
 
@@ -62,6 +61,8 @@ const copy = {
     savePassword: "Guardar nueva contraseña",
     passwordSaved: "Contraseña actualizada correctamente. Ya puedes iniciar sesión.",
     saving: "Guardando...",
+    showPassword: "Mostrar contraseña",
+    hidePassword: "Ocultar contraseña",
   },
   en: {
     timeout: "Supabase took too long to respond. Check that the SQL ran completely.",
@@ -116,6 +117,8 @@ const copy = {
     savePassword: "Save new password",
     passwordSaved: "Password updated successfully. You can now sign in.",
     saving: "Saving...",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
   },
 };
 
@@ -131,6 +134,8 @@ const authIcon = (name) => {
   const paths = {
     email: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></>,
     password: <><rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2" /></>,
+    eye: <><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.6" /></>,
+    eyeOff: <><path d="m3 3 18 18M10.6 6.2A10.5 10.5 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-2.2 2.9M6.3 6.3C3.9 8 2.5 12 2.5 12s3.5 6 9.5 6c1.5 0 2.9-.4 4.1-1" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></>,
   };
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -139,7 +144,7 @@ const authIcon = (name) => {
   );
 };
 
-function AuthBrandPanel({ portalBrand, portalTagline, portalLogo, portalFeatures }) {
+function AuthBrandPanel() {
   return (
     <aside className="login-brand-panel login-brand-panel--studio">
       <div className="login-vault-map" aria-hidden="true">
@@ -152,22 +157,10 @@ function AuthBrandPanel({ portalBrand, portalTagline, portalLogo, portalFeatures
       <div className="login-brand-content login-brand-content--studio">
         <img className="login-studio-lockup" src={nexorStudioLight} alt="NEXOR IA Studio" />
         <div className="login-brand-statement">
-          <h1>Proyectos, decisiones y operación en un solo lugar.</h1>
-          <p>Un espacio seguro para entender qué avanza, qué requiere atención y cuál es el siguiente paso.</p>
+          <h1>Desarrollos creativos, soluciones para ti <span>(usamos IA)</span></h1>
+          <p>NEXOR IA Studio transforma ideas en herramientas claras, útiles y hechas alrededor de tu operación.</p>
         </div>
-
-        <div className="login-client-context">
-          {portalLogo ? <img className="login-client-logo" src={portalLogo} alt="" /> : null}
-          <div>
-            <span>Espacio de trabajo</span>
-            <strong>{portalBrand}</strong>
-            <small>{portalTagline}</small>
-          </div>
-        </div>
-
-        <ul className="login-capability-list">
-          {portalFeatures.map((feature) => <li key={feature}><i aria-hidden="true" />{feature}</li>)}
-        </ul>
+        <div className="login-brand-signature" aria-hidden="true"><i /><span>Diseño</span><i /><span>Software</span><i /><span>Inteligencia aplicada</span></div>
       </div>
     </aside>
   );
@@ -185,28 +178,20 @@ function AuthFormHeader({ title, help }) {
   );
 }
 
-function AuthFooter({ portalCopyright }) {
-  return <small className="login-powered-by">Protegido por NEXOR IA Studio <span aria-hidden="true">·</span> {portalCopyright} © 2026</small>;
+function AuthFooter() {
+  return <small className="login-powered-by">Acceso protegido por NEXOR IA Studio <span aria-hidden="true">·</span> © 2026</small>;
 }
 
 export default function AuthGate({ children }) {
   const { language, t } = useLanguage();
   const text = copy[language] || copy.es;
-  const publicBrand = resolvePublicPortalBrand({
-    hostname: window.location.hostname,
-    pathname: window.location.pathname,
-  });
-  const portalBrand = publicBrand?.title || import.meta.env.VITE_PORTAL_BRAND_NAME || text.loginProductName;
-  const portalTagline = publicBrand?.tagline || import.meta.env.VITE_PORTAL_TAGLINE || text.loginProductHelp;
-  const portalLogo = publicBrand?.logoUrl || import.meta.env.VITE_PORTAL_LOGO_URL || "";
-  const portalFeatures = publicBrand?.features || [text.loginFeature1, text.loginFeature2, text.loginFeature3, text.loginFeature4];
-  const portalCopyright = publicBrand?.copyright || text.appCopyright;
   // modos: "signin" | "reset" | "new-password"
   const [mode, setMode] = useState("signin");
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState({ email: "", password: "" });
   const [newPasswordForm, setNewPasswordForm] = useState({ password: "", confirm: "" });
+  const [passwordVisibility, setPasswordVisibility] = useState({ signin: false, new: false, confirm: false });
   const [loading, setLoading] = useState(true);
   const [showSlowHint, setShowSlowHint] = useState(false);
   const [message, setMessage] = useState("");
@@ -215,8 +200,8 @@ export default function AuthGate({ children }) {
   const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
-    document.title = `${portalBrand} | NEXOR IA Studio`;
-  }, [portalBrand]);
+    document.title = "NEXOR IA Studio";
+  }, []);
 
   useEffect(() => {
     if (!loading) { setShowSlowHint(false); return undefined; }
@@ -391,7 +376,7 @@ export default function AuthGate({ children }) {
   if (mode === "new-password") {
     return (
       <section className="login-shell login-shell--nexor">
-        <AuthBrandPanel portalBrand={portalBrand} portalTagline={portalTagline} portalLogo={portalLogo} portalFeatures={portalFeatures} />
+        <AuthBrandPanel />
         <main className="login-form-panel">
           <form className="login-form-card" onSubmit={saveNewPassword}>
             <AuthFormHeader title={text.newPasswordTitle} help={text.newPasswordHelp} />
@@ -400,12 +385,21 @@ export default function AuthGate({ children }) {
               <div className="login-input-wrap">
                 <span>{authIcon("password")}</span>
                 <input
-                  type="password"
+                  type={passwordVisibility.new ? "text" : "password"}
                   value={newPasswordForm.password}
                   onChange={(event) => setNewPasswordForm({ ...newPasswordForm, password: event.target.value })}
                   required
                   minLength={6}
                 />
+                <button
+                  className="login-password-toggle"
+                  type="button"
+                  aria-label={passwordVisibility.new ? text.hidePassword : text.showPassword}
+                  aria-pressed={passwordVisibility.new}
+                  onClick={() => setPasswordVisibility((current) => ({ ...current, new: !current.new }))}
+                >
+                  {authIcon(passwordVisibility.new ? "eyeOff" : "eye")}
+                </button>
               </div>
             </label>
             <label>
@@ -413,19 +407,28 @@ export default function AuthGate({ children }) {
               <div className="login-input-wrap">
                 <span>{authIcon("password")}</span>
                 <input
-                  type="password"
+                  type={passwordVisibility.confirm ? "text" : "password"}
                   value={newPasswordForm.confirm}
                   onChange={(event) => setNewPasswordForm({ ...newPasswordForm, confirm: event.target.value })}
                   required
                   minLength={6}
                 />
+                <button
+                  className="login-password-toggle"
+                  type="button"
+                  aria-label={passwordVisibility.confirm ? text.hidePassword : text.showPassword}
+                  aria-pressed={passwordVisibility.confirm}
+                  onClick={() => setPasswordVisibility((current) => ({ ...current, confirm: !current.confirm }))}
+                >
+                  {authIcon(passwordVisibility.confirm ? "eyeOff" : "eye")}
+                </button>
               </div>
             </label>
             {message ? <p className="status info">{message}</p> : null}
             <button className="primary-button full login-submit" type="submit" disabled={savingPassword}>
               {savingPassword ? text.saving : text.savePassword}
             </button>
-            <AuthFooter portalCopyright={portalCopyright} />
+            <AuthFooter />
           </form>
         </main>
       </section>
@@ -435,7 +438,7 @@ export default function AuthGate({ children }) {
   if (!session) {
     return (
       <section className="login-shell login-shell--nexor">
-        <AuthBrandPanel portalBrand={portalBrand} portalTagline={portalTagline} portalLogo={portalLogo} portalFeatures={portalFeatures} />
+        <AuthBrandPanel />
 
         <main className="login-form-panel">
           {mode === "reset" ? (
@@ -463,7 +466,7 @@ export default function AuthGate({ children }) {
               <button className="link-button" type="button" onClick={() => goToMode("signin")}>
                 {text.backToLogin}
               </button>
-              <AuthFooter portalCopyright={portalCopyright} />
+              <AuthFooter />
             </form>
           ) : (
             <form className="login-form-card" onSubmit={submit}>
@@ -479,7 +482,16 @@ export default function AuthGate({ children }) {
                 {text.password}
                 <div className="login-input-wrap">
                   <span>{authIcon("password")}</span>
-                  <input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />
+                  <input type={passwordVisibility.signin ? "text" : "password"} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />
+                  <button
+                    className="login-password-toggle"
+                    type="button"
+                    aria-label={passwordVisibility.signin ? text.hidePassword : text.showPassword}
+                    aria-pressed={passwordVisibility.signin}
+                    onClick={() => setPasswordVisibility((current) => ({ ...current, signin: !current.signin }))}
+                  >
+                    {authIcon(passwordVisibility.signin ? "eyeOff" : "eye")}
+                  </button>
                 </div>
               </label>
               {message ? <p className="status info">{message}</p> : null}
@@ -489,7 +501,7 @@ export default function AuthGate({ children }) {
               <button className="link-button" type="button" onClick={() => goToMode("reset")}>
                 {text.forgotPassword}
               </button>
-              <AuthFooter portalCopyright={portalCopyright} />
+              <AuthFooter />
             </form>
           )}
         </main>

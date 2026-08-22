@@ -3212,12 +3212,42 @@ dd {
   max-width: 560px;
 }
 
+.login-shell--nexor .login-brand-statement h1 span {
+  color: var(--login-cyan);
+  display: block;
+  font-size: .48em;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  line-height: 1.35;
+  margin-top: 12px;
+}
+
 .login-shell--nexor .login-brand-statement p {
   color: rgba(234, 240, 255, .72);
   font-size: 15px;
   line-height: 1.68;
   margin: 18px 0 0;
   max-width: 505px;
+}
+
+.login-shell--nexor .login-brand-signature {
+  align-items: center;
+  color: rgba(234, 240, 255, .68);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 10px;
+  font-weight: 700;
+  gap: 9px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.login-shell--nexor .login-brand-signature i {
+  background: var(--login-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(47, 227, 208, .1);
+  height: 5px;
+  width: 5px;
 }
 
 .login-shell--nexor .login-client-context {
@@ -3480,6 +3510,39 @@ dd {
   padding: 0 16px 0 0;
 }
 
+.login-shell--nexor .login-password-toggle {
+  align-items: center;
+  align-self: stretch;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: #7180a6;
+  cursor: pointer;
+  display: flex;
+  flex: 0 0 48px;
+  justify-content: center;
+  margin: 4px;
+  padding: 0;
+  transition: background .16s ease, color .16s ease;
+}
+
+.login-shell--nexor .login-password-toggle:hover {
+  background: var(--login-fog);
+  color: var(--login-ink);
+}
+
+.login-shell--nexor .login-password-toggle:focus-visible {
+  background: var(--login-fog);
+  color: var(--login-ink);
+  outline: 2px solid var(--login-link);
+  outline-offset: -2px;
+}
+
+.login-shell--nexor .login-password-toggle svg {
+  height: 19px;
+  width: 19px;
+}
+
 .login-shell--nexor .login-submit.primary-button {
   background: var(--login-cyan);
   border: 1px solid var(--login-cyan);
@@ -3549,8 +3612,7 @@ dd {
   .login-shell--nexor .login-studio-lockup { width: 220px; }
   .login-shell--nexor .login-brand-statement h1 { font-size: clamp(30px, 7vw, 42px); max-width: 520px; }
   .login-shell--nexor .login-brand-statement p { margin-top: 12px; }
-  .login-shell--nexor .login-client-context { max-width: 640px; }
-  .login-shell--nexor .login-capability-list { display: none; }
+  .login-shell--nexor .login-brand-signature { margin-top: -2px; }
 
   .login-shell--nexor .login-form-panel {
     min-height: 0;
@@ -3563,9 +3625,7 @@ dd {
   .login-shell--nexor .login-studio-lockup { width: 190px; }
   .login-shell--nexor .login-brand-statement h1 { font-size: 30px; }
   .login-shell--nexor .login-brand-statement p { font-size: 13px; }
-  .login-shell--nexor .login-client-context { gap: 12px; grid-template-columns: 92px minmax(0, 1fr); padding: 12px; }
-  .login-shell--nexor .login-client-context .login-client-logo { height: 52px; padding: 8px; }
-  .login-shell--nexor .login-client-context small { display: none; }
+  .login-shell--nexor .login-brand-signature { gap: 7px; letter-spacing: .035em; }
   .login-shell--nexor .login-form-panel { padding: 40px 20px 56px; }
   .login-shell--nexor .login-form-heading { align-items: flex-start; grid-template-columns: 44px minmax(0, 1fr); }
   .login-shell--nexor .login-form-heading img { border-radius: 12px; height: 44px; width: 44px; }
