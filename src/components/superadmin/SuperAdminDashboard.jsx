@@ -17,6 +17,8 @@ const studioIcon = (name) => {
     users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /></>,
     advanced: <><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="9" cy="6" r="2" /><circle cx="15" cy="12" r="2" /><circle cx="11" cy="18" r="2" /></>,
     metrics: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>,
+    preview: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16M9 10h12" /></>,
+    logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5M21 12H9" /></>,
   };
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 };
@@ -29,7 +31,7 @@ const tabs = [
 
 // demoData permite abrir la misma pantalla con información sintética y sin sesión,
 // únicamente en staging, para poder revisar y corregir el diseño de verdad.
-export default function SuperAdminDashboard({ profile, demoData = null }) {
+export default function SuperAdminDashboard({ profile, demoData = null, onOpenClientView = null }) {
   const [tab, setTab] = useState("home");
   const [tenants, setTenants] = useState(demoData?.tenants || []);
   const [profiles, setProfiles] = useState(demoData?.profiles || []);
@@ -41,10 +43,6 @@ export default function SuperAdminDashboard({ profile, demoData = null }) {
 
   const handleSignOut = async () => {
     if (signingOut) return;
-    if (demoData) {
-      window.location.assign(`${import.meta.env.BASE_URL}demo/project-hub`);
-      return;
-    }
     setSigningOut(true);
     try {
       await fastSignOut(supabase);
@@ -104,6 +102,23 @@ export default function SuperAdminDashboard({ profile, demoData = null }) {
     setTab(nextTab);
   };
 
+  const openClientView = (tenant) => {
+    if (!tenant) {
+      setStatus("Selecciona un cliente para abrir su portal.");
+      openClients();
+      return;
+    }
+    if (demoData) {
+      window.location.assign(`${import.meta.env.BASE_URL}demo/project-hub?cliente=${encodeURIComponent(tenant.slug)}`);
+      return;
+    }
+    if (onOpenClientView) {
+      onOpenClientView(tenant);
+      return;
+    }
+    setStatus("No se pudo abrir la vista del cliente. Recarga la página e intenta de nuevo.");
+  };
+
   return (
     <div className="project-hub-demo-shell project-hub-demo-shell--light nexor-studio-shell">
       <header className="project-hub-demo-bar">
@@ -113,9 +128,10 @@ export default function SuperAdminDashboard({ profile, demoData = null }) {
             <i aria-hidden="true" />
             <strong>Superadmin</strong>
           </div>
-          {!demoData ? <button className="secondary-button compact-action" type="button" onClick={handleSignOut} disabled={signingOut}>
-            {signingOut ? "Saliendo..." : "Salir"}
-          </button> : null}
+          <div className="nexor-header-actions" role="group" aria-label="Navegación de cuenta">
+            {workspaceTenant ? <button className="nexor-header-action nexor-header-action--primary" type="button" onClick={() => openClientView(workspaceTenant)}>{studioIcon("preview")}<span>Vista cliente</span></button> : null}
+            <button className="nexor-header-action nexor-header-action--logout" type="button" onClick={handleSignOut} disabled={signingOut}>{studioIcon("logout")}<span>{signingOut ? "Saliendo..." : "Salir"}</span></button>
+          </div>
         </div>
       </header>
 
@@ -150,10 +166,10 @@ export default function SuperAdminDashboard({ profile, demoData = null }) {
             <UsersPanel profiles={profiles} tenants={tenants} onRefresh={load} />
           ) : null}
           {tab === "clients" && !workspace ? (
-            <ProjectStudio tenants={tenants} profiles={profiles} profile={profile} initialClientId={initialClientId} projectsByTenant={projectsByTenant} demoMode={Boolean(demoData)} onRefreshTenants={load} onOpenWorkspace={openWorkspace} />
+            <ProjectStudio tenants={tenants} profiles={profiles} profile={profile} initialClientId={initialClientId} projectsByTenant={projectsByTenant} demoMode={Boolean(demoData)} onRefreshTenants={load} onOpenWorkspace={openWorkspace} onOpenClientView={openClientView} />
           ) : null}
           {tab === "clients" && workspace ? (
-            <ProjectHubManager key={`${workspace.tenantId}-${workspace.projectId}`} tenants={tenants} profile={profile} demoMode={Boolean(demoData)} demoProjectsByTenant={projectsByTenant} initialTenantId={workspace.tenantId} initialProjectId={workspace.projectId} onBack={() => openClients(workspace.tenantId)} />
+            <ProjectHubManager key={`${workspace.tenantId}-${workspace.projectId}`} tenants={tenants} profile={profile} demoMode={Boolean(demoData)} demoProjectsByTenant={projectsByTenant} initialTenantId={workspace.tenantId} initialProjectId={workspace.projectId} onBack={() => openClients(workspace.tenantId)} onOpenClientView={() => openClientView(workspaceTenant)} />
           ) : null}
         </section>
         </main>

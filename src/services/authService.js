@@ -16,15 +16,18 @@ const clearSupabaseAuthStorage = () => {
 const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 export const fastSignOut = async (supabase) => {
-  const signOut = supabase.auth
-    .signOut({ scope: "local" })
-    .then(({ error }) => ({ error }))
-    .catch((error) => ({ error }));
+  if (supabase?.auth?.signOut) {
+    const signOut = supabase.auth
+      .signOut({ scope: "local" })
+      .then(({ error }) => ({ error }))
+      .catch((error) => ({ error }));
 
-  const result = await Promise.race([signOut, wait(1200).then(() => ({ timedOut: true }))]);
+    await Promise.race([signOut, wait(1200).then(() => ({ timedOut: true }))]);
+  }
 
-  if (result?.error) throw result.error;
-  if (result?.timedOut) clearSupabaseAuthStorage();
+  // El cierre local es la garantía final: aun sin red o sin Supabase configurado,
+  // el usuario no debe quedar atrapado ni conservar credenciales en el navegador.
+  clearSupabaseAuthStorage();
 
   window.setTimeout(() => {
     window.location.replace(withBasePath());

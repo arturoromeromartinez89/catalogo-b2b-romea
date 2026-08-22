@@ -5261,7 +5261,7 @@
   gap: 12px;
 }
 
-.project-hub-demo-bar__portal-actions {
+.project-hub-demo-bar > .project-hub-demo-bar__portal-actions {
   align-items: center;
   display: flex;
   flex-direction: row;
@@ -5279,32 +5279,69 @@
   white-space: nowrap;
 }
 
-.project-hub-exit-client {
+.nexor-header-actions {
   align-items: center;
-  background: #101d49;
-  border: 1px solid #101d49;
-  border-radius: 11px;
-  color: #fff;
+  background: #f8faff;
+  border: 1px solid #dde4f0;
+  border-radius: 12px;
+  display: flex;
+  flex: none;
+  height: 44px;
+  overflow: hidden;
+  padding: 3px;
+}
+
+.nexor-header-action {
+  align-items: center;
+  align-self: stretch;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: #52627f;
   cursor: pointer;
   display: inline-flex;
-  flex: none;
+  font-family: var(--nexor-text);
+  font-size: 11px;
+  font-weight: 750;
+  gap: 7px;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 10px;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.nexor-header-action svg { height: 16px; width: 16px; }
+.nexor-header-action > span { color: inherit !important; font-size: inherit !important; white-space: nowrap; }
+.nexor-header-action--primary { background: #eaf0ff; color: #3157bd; }
+.nexor-header-action--primary:hover { background: #dce6ff; color: #24479f; }
+.nexor-header-action--logout:hover { background: #eef1f7; color: #101d49; }
+.nexor-header-action:focus-visible { outline: 3px solid rgba(79, 123, 255, .24); outline-offset: -1px; }
+.nexor-header-action:disabled { cursor: wait; opacity: .58; }
+
+.nexor-session-error {
+  align-items: center;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 12px;
+  box-shadow: 0 18px 40px -28px rgba(121, 24, 42, .5);
+  color: #9f1239;
+  display: flex;
   font-family: var(--nexor-text);
   font-size: 12px;
-  font-weight: 750;
-  gap: 8px;
-  height: 44px;
-  padding: 0 14px;
-  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+  gap: 16px;
+  justify-content: space-between;
+  left: 50%;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 12px 14px;
+  position: fixed;
+  top: 84px;
+  transform: translateX(-50%);
+  width: max-content;
+  z-index: 80;
 }
 
-.project-hub-exit-client svg {
-  height: 17px;
-  width: 17px;
-}
-
-.project-hub-exit-client > span { color: inherit; font-size: inherit; }
-.project-hub-exit-client:hover { background: #17275e; border-color: #17275e; transform: translateY(-1px); }
-.project-hub-exit-client:focus-visible { outline: 3px solid rgba(0, 139, 132, .28); outline-offset: 2px; }
+.nexor-session-error button { background: transparent; border: 0; color: inherit; cursor: pointer; font: inherit; font-weight: 800; padding: 4px; }
+.nexor-session-error button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 
 .nexor-workplace .project-hub-client-logo {
   flex: none;
@@ -5420,15 +5457,18 @@
 @media (max-width: 760px) {
   .nexor-workplace { gap: 8px; height: 40px; max-width: 68vw; padding: 6px 9px; }
   .project-hub-demo-bar > .nexor-workplace,
-  .project-hub-demo-bar__portal-actions > .nexor-workplace { gap: 8px; max-width: calc(100vw - 154px); }
-  .project-hub-demo-bar__portal-actions { gap: 7px; }
+  .project-hub-demo-bar__portal-actions > .nexor-workplace { gap: 8px; max-width: 124px; }
+  .project-hub-demo-bar > .project-hub-demo-bar__portal-actions { gap: 7px; }
   .nexor-workplace .project-hub-client-logo { height: 24px; }
   .nexor-workplace .project-hub-client-logo img { max-height: 24px; max-width: 82px; }
-  .project-hub-client-logo__name { font-size: 9px !important; letter-spacing: .045em; }
+  .project-hub-client-logo__name { font-size: 9px !important; letter-spacing: .045em; max-width: 104px; overflow: hidden; text-overflow: ellipsis; }
+  .nexor-workplace--client .nexor-workplace__divider,
+  .nexor-workplace--client > strong { display: none; }
   .nexor-workplace__divider { height: 20px; }
   .nexor-workplace > strong { font-size: 11px; }
-  .project-hub-exit-client { height: 40px; justify-content: center; padding: 0; width: 40px; }
-  .project-hub-exit-client > span { display: none; }
+  .nexor-header-actions { height: 40px; }
+  .nexor-header-action { padding: 0 8px; }
+  .nexor-header-action > span { display: none; }
   .nexor-workplace--admin { min-width: 124px; }
   .project-hub--light { --nexor-ui-heading: 27px; }
 }

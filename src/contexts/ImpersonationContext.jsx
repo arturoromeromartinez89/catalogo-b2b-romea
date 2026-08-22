@@ -11,9 +11,11 @@ export function ImpersonationProvider({ children }) {
     impersonating: Boolean(context?.tenantId),
     tenantId: context?.tenantId || "",
     tenantName: context?.tenantName || "",
+    tenantSlug: context?.tenantSlug || "",
     startImpersonation: (tenant) => setContext({
       tenantId: tenant.id,
       tenantName: tenant.name,
+      tenantSlug: tenant.slug || "",
     }),
     stopImpersonation: () => setContext(null),
   }), [context]);

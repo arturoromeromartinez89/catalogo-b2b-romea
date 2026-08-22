@@ -58,11 +58,12 @@ const studioIcon = (name) => {
     plus: <><path d="M12 5v14M5 12h14" /></>,
     client: <><path d="M3 21V7l9-4 9 4v14" /><path d="M9 21v-6h6v6" /></>,
     project: <><path d="M4 6h16v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" /><path d="M9 3h6v3H9zM8 11h8M8 15h5" /></>,
+    preview: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16M9 10h12" /></>,
   };
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 };
 
-export default function ProjectStudio({ tenants = [], profiles = [], profile, initialClientId = "", projectsByTenant = {}, demoMode = false, onRefreshTenants, onOpenWorkspace }) {
+export default function ProjectStudio({ tenants = [], profiles = [], profile, initialClientId = "", projectsByTenant = {}, demoMode = false, onRefreshTenants, onOpenWorkspace, onOpenClientView }) {
   const [clientId, setClientId] = useState(initialClientId);
   const [clientDraft, setClientDraft] = useState(null);
   const [projects, setProjects] = useState([]);
@@ -240,6 +241,7 @@ export default function ProjectStudio({ tenants = [], profiles = [], profile, in
           <div className="ph-studio__client-projects"><strong>{(projectsByTenant[tenant.id] || []).length}</strong><small>proyectos</small></div>
           <span className={`project-status project-status--${tenant.status === "active" ? "in_progress" : "waiting"}`}>{clientStatusLabel(tenant.status)}</span>
           <div className="ph-studio__client-actions">
+            <button className="secondary-button compact-action" type="button" onClick={() => onOpenClientView?.(tenant)}>{studioIcon("preview")}Vista cliente</button>
             <button className="secondary-button compact-action" type="button" onClick={() => setClientDraft({ id: tenant.id, name: tenant.name, slug: tenant.slug, status: tenant.status })}>Editar</button>
             <button className="secondary-button compact-action" type="button" disabled={saving} title={tenant.status === "active" ? "Deja de operarse. Conserva toda su información." : "Vuelve a operarse."} onClick={() => toggleClientStatus(tenant)}>{tenant.status === "active" ? "Pausar" : "Activar"}</button>
             <button className="primary-button compact-action" type="button" onClick={() => openClient(tenant)}>Abrir proyectos{studioIcon("arrow")}</button>
@@ -267,7 +269,7 @@ export default function ProjectStudio({ tenants = [], profiles = [], profile, in
           <time>{formatDate(project.estimated_end_date)}</time>
           <em>{project.published ? "Portal activo" : "Solo interno"}</em>
         </button>
-        <div className="ph-studio-project-row__actions"><button className="secondary-button compact-action" type="button" onClick={() => selectProject(project)}>Editar</button><button className="primary-button compact-action" type="button" onClick={() => onOpenWorkspace?.(clientId, project.id)}>Abrir{studioIcon("arrow")}</button></div>
+        <div className="ph-studio-project-row__actions"><button className="secondary-button compact-action" type="button" onClick={() => onOpenClientView?.(activeClient)}>{studioIcon("preview")}Vista cliente</button><button className="secondary-button compact-action" type="button" onClick={() => selectProject(project)}>Editar</button><button className="primary-button compact-action" type="button" onClick={() => onOpenWorkspace?.(clientId, project.id)}>Abrir{studioIcon("arrow")}</button></div>
       </article>)}
       {!loading && !projects.length ? <div className="ph-studio-projects__empty">Este cliente todavía no tiene proyectos.<button className="primary-button" type="button" onClick={startNewProject}>Crear proyecto</button></div> : null}
     </div>

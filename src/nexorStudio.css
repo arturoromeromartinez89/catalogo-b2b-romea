@@ -1062,6 +1062,18 @@
   text-transform: uppercase;
 }
 
+.nexor-studio .ph-workspace__crumb-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.nexor-studio .ph-workspace__crumb-actions > span {
+  color: var(--nexor-muted-bright);
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .nexor-studio .ph-workspace__project-head {
   align-items: end;
   background: var(--workspace-navy);
@@ -1454,6 +1466,8 @@
 
 /* NEXOR IA · el área interna usa el mismo contenedor que el portal del cliente */
 .nexor-studio-shell .project-hub-demo-bar__context {
+  align-items: center;
+  flex-direction: row;
   gap: 10px;
   min-width: 0;
 }
@@ -1498,4 +1512,5 @@
 
 @media (max-width: 620px) {
   .nexor-studio-shell .project-hub-demo-bar__context { gap: 8px; }
+  .nexor-studio-shell .nexor-workplace--admin { min-width: 0; }
 }

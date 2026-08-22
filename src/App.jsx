@@ -2,6 +2,7 @@ import { useState } from "react";
 import AuthGate from "./components/AuthGate";
 import AdminDashboard from "./components/AdminDashboard";
 import ClientCatalogApp from "./components/ClientCatalogApp";
+import ClientPortalShell from "./components/ClientPortalShell";
 import SuperAdminDashboard from "./components/superadmin/SuperAdminDashboard";
 import QuotePage from "./pages/QuotePage";
 import ProjectHubDemoPage from "./pages/ProjectHubDemoPage";
@@ -37,18 +38,23 @@ function AuthenticatedApp() {
   return (
     <AuthGate>
       {({ profile }) => {
-        if (isSuperAdmin(profile) && !impersonation.impersonating) {
-          return <SuperAdminDashboard profile={profile} />;
+        if (isSuperAdmin(profile)) {
+          if (impersonation.impersonating) {
+            return <ClientPortalShell
+              tenantId={impersonation.tenantId}
+              tenantSlug={impersonation.tenantSlug}
+              companyName={impersonation.tenantName}
+              initialProjectName="Proyecto del cliente"
+              onReturnToStudio={impersonation.stopImpersonation}
+            />;
+          }
+          return <SuperAdminDashboard profile={profile} onOpenClientView={impersonation.startImpersonation} />;
         }
 
         if (isAdminRole(profile?.role)) {
           return (
             <AdminDashboard
               profile={profile}
-              tenantOverride={impersonation.impersonating ? impersonation.tenantId : ""}
-              supportMode={impersonation.impersonating}
-              supportTenantName={impersonation.tenantName}
-              onExitSupport={impersonation.stopImpersonation}
             />
           );
         }

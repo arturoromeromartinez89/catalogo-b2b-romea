@@ -70,7 +70,7 @@ const displayDate = (value) => value ? new Intl.DateTimeFormat("es-MX", { day: "
 const healthLabel = { green: "En tiempo", yellow: "Atención", red: "En riesgo" };
 const priorityLabel = { low: "Baja", medium: "Media", high: "Alta", critical: "Crítica" };
 
-export default function ProjectHubManager({ tenants = [], profile, demoMode = false, demoProjectsByTenant = {}, initialTenantId = "", initialProjectId = "", onBack }) {
+export default function ProjectHubManager({ tenants = [], profile, demoMode = false, demoProjectsByTenant = {}, initialTenantId = "", initialProjectId = "", onBack, onOpenClientView }) {
   const portalTenants = useMemo(() => tenants.filter((item) => ["vanguardia-joyera", "estuches-chavez", "romea"].includes(item.slug)), [tenants]);
   const [tenantId, setTenantId] = useState(initialTenantId);
   const [projects, setProjects] = useState([]);
@@ -192,7 +192,7 @@ export default function ProjectHubManager({ tenants = [], profile, demoMode = fa
     <section className="ph-manager ph-workspace">
       <header className="ph-workspace__crumbs">
         {onBack ? <button className="ph-studio__back" type="button" onClick={onBack}>← Proyectos de {activeTenant?.name || "cliente"}</button> : null}
-        <span>{activeTenant?.name || "Cliente"}</span>
+        <div className="ph-workspace__crumb-actions"><span>{activeTenant?.name || "Cliente"}</span>{onOpenClientView ? <button className="secondary-button compact-action" type="button" onClick={onOpenClientView}>Vista cliente</button> : null}</div>
       </header>
       {status ? <p className="status info">{status}</p> : null}
       {!selectedProject ? <div className="ph-workspace__empty">No hay un proyecto disponible.</div> : <>
