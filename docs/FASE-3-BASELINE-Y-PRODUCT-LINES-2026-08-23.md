@@ -77,3 +77,29 @@ No promover `supabase/rollouts/product_lines_contract.sql` hasta completar:
 3. comprobacion con dos tenants;
 4. periodo de observacion sin conflictos por `codigo`;
 5. autorizacion separada antes de cualquier cambio productivo.
+
+## Validacion con dos tenants
+
+Se ejecuto `product_lines_two_tenant_acceptance.sql` exclusivamente en staging
+con dos tenants y dos administradores sinteticos. La prueba comprobo en ambos
+sentidos:
+
+- lectura de la linea propia;
+- invisibilidad de la linea ajena;
+- bloqueo de INSERT, UPDATE y DELETE cruzados;
+- limpieza completa de usuarios, tenants y lineas de prueba.
+
+El postflight conservo 37 lineas, cero `tenant_id` nulos y cero duplicados
+`(tenant_id,codigo)`.
+
+La validacion desde la interfaz autenticada llego correctamente a
+`Actualizar lineas`, pero staging devolvio:
+
+```text
+duplicate key value violates unique constraint "product_lines_codigo_key"
+```
+
+Esto confirma que el indice compuesto y el aislamiento RLS funcionan, pero la
+restriccion global heredada impide que dos empresas compartan un codigo. El
+rollout `product_lines_contract.sql` es necesario en staging antes de repetir
+la sincronizacion. No se aplico durante esta validacion.
