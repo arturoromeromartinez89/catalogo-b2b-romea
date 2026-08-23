@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 import { resolveImageUrl } from "../utils/formatters";
-import { getTenantId, withTenant } from "./tenantUtils";
+import { getTenantId, requireTenantId, withTenant } from "./tenantUtils";
 import { normalizeText } from "../utils/textNormalizer";
 import { getAppUrl } from "../utils/basePath";
 
@@ -293,7 +293,11 @@ export const fetchAdminData = async (profile) => {
 };
 
 export const upsertProducts = async (products, tenantId = "") => {
-  const rows = await preserveExistingImages(products.map((product) => productToDb(product, tenantId)), tenantId);
+  const resolvedTenantId = requireTenantId(tenantId, "guardar productos");
+  const rows = await preserveExistingImages(
+    products.map((product) => productToDb(product, resolvedTenantId)),
+    resolvedTenantId
+  );
   if (!rows.length) return [];
   const savedRows = [];
 
@@ -301,14 +305,14 @@ export const upsertProducts = async (products, tenantId = "") => {
     const batch = rows.slice(index, index + UPSERT_BATCH_SIZE);
     let result = await supabase
       .from("products")
-      .upsert(batch, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" })
+      .upsert(batch, { onConflict: "tenant_id,codigo" })
       .select("*");
 
     if (result.error && String(result.error.message || "").toLowerCase().includes("proveedor")) {
       const fallbackRows = batch.map(({ proveedor, ...row }) => row);
       result = await supabase
         .from("products")
-        .upsert(fallbackRows, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" })
+        .upsert(fallbackRows, { onConflict: "tenant_id,codigo" })
         .select("*");
     }
 
@@ -320,8 +324,12 @@ export const upsertProducts = async (products, tenantId = "") => {
 };
 
 export const deleteProduct = async (id, tenantId = "") => {
-  let query = supabase.from("products").delete().eq("id", id);
-  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const resolvedTenantId = requireTenantId(tenantId, "borrar el producto");
+  const query = supabase
+    .from("products")
+    .delete()
+    .eq("id", id)
+    .eq("tenant_id", resolvedTenantId);
   throwIfError(await query);
 };
 
