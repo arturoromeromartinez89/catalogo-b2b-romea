@@ -14,6 +14,7 @@
     "check:design-policy": "node scripts/check-design-policy.mjs",
     "check:environment": "node scripts/check-environment.mjs",
     "check:baseline": "node scripts/check-production-baseline.mjs",
+    "check:staging-deployment": "node scripts/check-staging-deployment.mjs",
     "test:tenant-isolation": "node supabase/tests/product_lines_tenant_contract.test.mjs",
     "seed:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/seed-staging.ps1",
     "deploy:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-staging.ps1",

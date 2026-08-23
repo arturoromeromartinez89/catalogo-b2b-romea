@@ -1,0 +1,50 @@
+name: Quality gate
+
+on:
+  pull_request:
+    branches:
+      - main
+      - codex/project-hub-staging
+  push:
+    branches:
+      - codex/project-hub-staging
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Build and tenant checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci
+
+      - name: Verify production baseline manifest
+        run: npm run check:baseline
+
+      - name: Verify tenant isolation contract
+        run: npm run test:tenant-isolation
+
+      - name: Verify design policy
+        run: npm run check:design-policy
+
+      - name: Build staging artifact
+        run: npm run build:staging
+
