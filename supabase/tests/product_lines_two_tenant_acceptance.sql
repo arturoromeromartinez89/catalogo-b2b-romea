@@ -32,8 +32,8 @@ begin
     active = true;
 
   insert into public.product_lines (tenant_id, codigo, descripcion, mo_base, activa) values
-    (v_tenant_a, 'NEXOR-LINE-A', 'Linea privada A', 10, true),
-    (v_tenant_b, 'NEXOR-LINE-B', 'Linea privada B', 20, true);
+    (v_tenant_a, 'NEXOR-SHARED-LINE', 'Linea privada A', 10, true),
+    (v_tenant_b, 'NEXOR-SHARED-LINE', 'Linea privada B', 20, true);
 
   perform set_config('request.jwt.claim.sub', v_admin_a::text, true);
   perform set_config('request.jwt.claim.role', 'authenticated', true);
@@ -66,6 +66,16 @@ begin
   end;
   if not v_blocked then raise exception 'FAIL: tenant A inserted into tenant B'; end if;
   raise notice 'PASS: tenant A cannot insert into tenant B';
+
+  v_blocked := false;
+  begin
+    insert into public.product_lines (tenant_id, codigo, descripcion)
+    values (v_tenant_a, 'NEXOR-SHARED-LINE', 'DUPLICATE');
+  exception when unique_violation then
+    v_blocked := true;
+  end;
+  if not v_blocked then raise exception 'FAIL: tenant A duplicated its own code'; end if;
+  raise notice 'PASS: tenant A cannot duplicate its own code';
 
   reset role;
   perform set_config('request.jwt.claim.sub', v_admin_b::text, true);

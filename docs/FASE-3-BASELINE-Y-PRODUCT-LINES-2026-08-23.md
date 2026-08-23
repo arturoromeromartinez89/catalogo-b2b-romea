@@ -17,7 +17,8 @@
   `vafqcvpzksjlrborxoos`.
 - Frontend desplegado exclusivamente en Vercel staging y verificado en
   `https://catalogo-b2b-staging-security.vercel.app/catalogo/`.
-- Fase contract preparada fuera de migraciones automaticas y no aplicada.
+- Fase contract promovida y aplicada exclusivamente en Supabase staging como
+  `20260823144500_product_lines_tenant_unique_contract.sql`.
 
 ## Evidencia de staging
 
@@ -68,15 +69,15 @@ Advertencias no introducidas por esta fase:
 - `sin_piedra.test.mjs` no resuelve un import ESM sin extension bajo Node 22;
 - Vite conserva advertencia de chunk principal mayor a 500 kB.
 
-## Condiciones para contract
+## Condiciones antes de produccion
 
-No promover `supabase/rollouts/product_lines_contract.sql` hasta completar:
+No promover el contract a produccion hasta completar:
 
-1. deploy del frontend nuevo a staging;
-2. importacion y sincronizacion de lineas con tenant activo;
-3. comprobacion con dos tenants;
-4. periodo de observacion sin conflictos por `codigo`;
-5. autorizacion separada antes de cualquier cambio productivo.
+1. nuevo preflight sobre la base productiva;
+2. confirmacion de que todas las escrituras productivas usan tenant activo;
+3. revision del periodo de observacion en staging;
+4. plan de horario y rollback;
+5. autorizacion separada y explicita.
 
 ## Validacion con dos tenants
 
@@ -99,7 +100,21 @@ La validacion desde la interfaz autenticada llego correctamente a
 duplicate key value violates unique constraint "product_lines_codigo_key"
 ```
 
-Esto confirma que el indice compuesto y el aislamiento RLS funcionan, pero la
-restriccion global heredada impide que dos empresas compartan un codigo. El
-rollout `product_lines_contract.sql` es necesario en staging antes de repetir
-la sincronizacion. No se aplico durante esta validacion.
+Esto confirmo que el indice compuesto y el aislamiento RLS funcionaban, pero la
+restriccion global heredada impedia que dos empresas compartieran un codigo.
+
+Tras la autorizacion, el contract se aplico de forma transaccional solamente en
+staging. La aceptacion se repitio usando el mismo codigo en dos tenants: ambos
+pudieron conservarlo, un duplicado dentro del mismo tenant fue bloqueado y el
+aislamiento RLS siguio pasando en ambos sentidos.
+
+La accion autenticada `Actualizar lineas` se repitio en la interfaz y mostro:
+
+```text
+Lineas actualizadas
+4 lineas disponibles.
+```
+
+El postflight final registro 41 lineas legitimas, cero `tenant_id` nulos, cero
+duplicados `(tenant_id,codigo)`, llave foranea `ON DELETE RESTRICT` y ausencia
+de la antigua restriccion global. Produccion permanecio intacta.

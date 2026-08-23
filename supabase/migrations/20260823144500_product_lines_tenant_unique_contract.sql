@@ -1,7 +1,5 @@
--- REFERENCE ONLY. DO NOT EXECUTE DIRECTLY.
--- Staging was promoted through migration
--- 20260823144500_product_lines_tenant_unique_contract.sql on 2026-08-23.
--- Production requires a new preflight and explicit authorization.
+-- Contract phase: tenant_id becomes the ownership key for product lines.
+-- Promoted after staging expand, two-tenant RLS acceptance and explicit approval.
 
 begin;
 
