@@ -1,7 +1,8 @@
 # Fase 3 — Baseline y aislamiento de lineas de producto
 
-**Fecha:** 23 de agosto de 2026  
-**Rama:** `codex/phase3-baseline-product-lines`  
+**Fecha:** 23 de agosto de 2026
+
+**Rama:** `codex/phase3-baseline-product-lines`
 **Produccion:** sin migraciones, sin deploy y sin cambios de datos.
 
 ## Resultado
@@ -14,6 +15,8 @@
 - Borrado de producto condicionado tambien por `tenant_id`.
 - Fase expand aplicada exclusivamente en Supabase staging
   `vafqcvpzksjlrborxoos`.
+- Frontend desplegado exclusivamente en Vercel staging y verificado en
+  `https://catalogo-b2b-staging-security.vercel.app/catalogo/`.
 - Fase contract preparada fuera de migraciones automaticas y no aplicada.
 
 ## Evidencia de staging
@@ -40,6 +43,15 @@ Postflight:
 - `product_lines_tenant_codigo_uidx`: presente y unico;
 - `product_lines_codigo_key`: conservado;
 - migracion `20260823120000`: registrada remotamente.
+
+## Evidencia de despliegue
+
+- Vercel project: `catalogo-b2b-staging-security`;
+- deployment: `dpl_DnceJ4J9aR2DMxrt3iYUiEr6s5zp`;
+- estado observado: `READY`;
+- alias estable: `https://catalogo-b2b-staging-security.vercel.app`;
+- `HEAD /catalogo/`: `200 OK`;
+- produccion comercial: sin deploy.
 
 ## Verificaciones
 
