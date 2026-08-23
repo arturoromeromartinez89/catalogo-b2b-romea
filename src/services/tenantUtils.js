@@ -6,6 +6,14 @@ export const getTenantId = (profileOrTenantId) => {
   return profileOrTenantId.tenant_id || profileOrTenantId.tenantId || "";
 };
 
+export const requireTenantId = (profileOrTenantId, action = "continuar") => {
+  const tenantId = getTenantId(profileOrTenantId);
+  if (!tenantId) {
+    throw new Error(`No hay empresa activa para ${action}.`);
+  }
+  return tenantId;
+};
+
 export const isAdminRole = (role) => ADMIN_ROLES.includes(role);
 
 export const isSuperAdmin = (profile) => profile?.role === "superadmin";

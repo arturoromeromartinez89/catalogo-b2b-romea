@@ -11,6 +11,24 @@ seguridad. Por eso existen dos ambientes independientes:
 | STAGING / PRUEBAS | Desarrollo, revision y aprobacion | `catalogo-b2b-staging-security` | branch `staging-security` (`vafqcvpzksjlrborxoos`) |
 | PRODUCCION / VIVA | Clientes y datos reales | `catalogo-b2b-romea` | `pyignizeoevafifzfnik` |
 
+Fotografia verificada el 23 de agosto de 2026:
+
+| Ambiente | Tablas `public` | Estado funcional |
+|---|---:|---|
+| STAGING | 66 | Incluye Project Hub, Agenda y comercio por tenant. |
+| PRODUCCION | 44 | Catalogo vivo; 42 tablas funcionales y dos respaldos manuales. |
+
+El enlace local `supabase/.temp/project-ref` apunta deliberadamente a staging.
+Por eso `supabase gen types --linked` describe staging, nunca produccion. Para
+inventariar produccion se debe nombrar el proyecto de forma explicita:
+
+```powershell
+npx supabase gen types typescript --project-id pyignizeoevafifzfnik --schema public
+```
+
+No cambiar el enlace local a produccion como atajo. Las operaciones productivas
+requieren un procedimiento separado y aprobacion explicita.
+
 Paco y los proxies de clientes apuntan solamente a produccion. Staging utiliza
 una URL controlada por Romea y datos ficticios. Una falla en staging no debe
 afectar a un cliente real.

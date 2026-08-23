@@ -1,0 +1,12 @@
+{
+  "captured_on": "2026-08-23",
+  "scope": "production-public-schema-only-functional",
+  "postgres_source": "17.6",
+  "pg_dump": "17.11",
+  "functional_tables": 42,
+  "rls_policies": 90,
+  "public_functions": 17,
+  "contains_data": false,
+  "repository_copy": false,
+  "sha256": "d247b08b9876d626e9a55e0c106dbbd9a2033d70d2b27c2d267444b98b418c50"
+}

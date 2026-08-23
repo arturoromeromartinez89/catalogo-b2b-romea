@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
-import { getTenantId, withTenant } from "./tenantUtils";
+import { getTenantId, requireTenantId, withTenant } from "./tenantUtils";
 
 const emptyMetalPrices = {
   kitco_usd_oz: 0,
@@ -104,7 +104,7 @@ export const fetchLines = async (profileOrTenantId = "") => {
 };
 
 export const saveLine = async (line, profileOrTenantId = "") => {
-  const tenantId = getTenantId(profileOrTenantId);
+  const tenantId = requireTenantId(profileOrTenantId, "guardar la linea de producto");
   const row = {
     ...line,
     codigo: String(line.codigo || "").trim(),
@@ -112,15 +112,15 @@ export const saveLine = async (line, profileOrTenantId = "") => {
     activa: line.activa ?? true,
     updated_at: new Date().toISOString(),
   };
-  if (tenantId) row.tenant_id = tenantId;
+  row.tenant_id = tenantId;
   const { error } = await supabase
     .from("product_lines")
-    .upsert(row, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" });
+    .upsert(row, { onConflict: "tenant_id,codigo" });
   if (error) throw error;
 };
 
 export const syncProductLinesFromProducts = async (products = [], profileOrTenantId = "") => {
-  const tenantId = getTenantId(profileOrTenantId);
+  const tenantId = requireTenantId(profileOrTenantId, "sincronizar las lineas de producto");
   const lineMap = new Map();
 
   products.forEach((product) => {
@@ -144,11 +144,11 @@ export const syncProductLinesFromProducts = async (products = [], profileOrTenan
 
   const rows = [...lineMap.values()];
   if (!rows.length) return [];
-  if (tenantId) rows.forEach((row) => { row.tenant_id = tenantId; });
+  rows.forEach((row) => { row.tenant_id = tenantId; });
 
   const { error } = await supabase
     .from("product_lines")
-    .upsert(rows, { onConflict: tenantId ? "tenant_id,codigo" : "codigo" });
+    .upsert(rows, { onConflict: "tenant_id,codigo" });
   if (error) throw error;
   return fetchLines(tenantId);
 };
