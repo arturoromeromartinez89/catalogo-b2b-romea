@@ -274,6 +274,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [selectedPriceListId, setSelectedPriceListId] = useState("");
   const [productQuery, setProductQuery] = useState("");
   const [searchChips, setSearchChips] = useState([]);
+  const [excludeQuery, setExcludeQuery] = useState("");
+  const [excludeChips, setExcludeChips] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
   const [quickFilters, setQuickFilters] = useState([]);
   const [quickFilterDefs, setQuickFilterDefs] = useState(DEFAULT_QUICK_FILTER_DEFINITIONS);
@@ -281,6 +283,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const reloadQuickFilterDefs = () => fetchCatalogQuickFilters(tenantId).then(setQuickFilterDefs).catch(() => {});
   const deferredProductQuery = useDeferredValue(productQuery);
   const deferredSearchChips = useDeferredValue(searchChips);
+  const deferredExcludeChips = useDeferredValue(excludeChips);
   const deferredFilters = useDeferredValue(filters);
   const deferredQuickFilters = useDeferredValue(quickFilters);
   const [selectedProductCode, setSelectedProductCode] = useState("");
@@ -466,8 +469,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const selectedProduct = useMemo(() => catalogProducts.find((product) => product.codigo === selectedProductCode), [catalogProducts, selectedProductCode]);
   const filterOptions = useMemo(() => buildFilterOptions(products), [products]);
   const filteredProducts = useMemo(
-    () => applyFilters(catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs),
-    [catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs]
+    () => applyFilters(catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs, deferredExcludeChips),
+    [catalogProducts, deferredProductQuery, deferredFilters, deferredQuickFilters, deferredSearchChips, quickFilterDefs, deferredExcludeChips]
   );
   const renderedProducts = useMemo(
     () => filteredProducts.slice(0, visibleProductLimit),
@@ -534,7 +537,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   );
   useEffect(() => {
     setVisibleProductLimit(PRODUCT_RENDER_BATCH);
-  }, [deferredProductQuery, deferredSearchChips, deferredFilters, deferredQuickFilters]);
+  }, [deferredProductQuery, deferredSearchChips, deferredExcludeChips, deferredFilters, deferredQuickFilters]);
 
   useEffect(() => {
     if (!catalogSelectionIds.size && !preorderProducts.length) setSelectionDrawerOpen(false);
@@ -598,6 +601,14 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
     const trimmed = chip.trim();
     if (!trimmed) return;
     setSearchChips((current) =>
+      current.some((item) => normalizeText(item) === normalizeText(trimmed)) ? current : [...current, trimmed]
+    );
+  };
+
+  const addExcludeChip = (chip) => {
+    const trimmed = chip.trim();
+    if (!trimmed) return;
+    setExcludeChips((current) =>
       current.some((item) => normalizeText(item) === normalizeText(trimmed)) ? current : [...current, trimmed]
     );
   };
@@ -1036,6 +1047,8 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const clearCatalogFilters = () => {
     setProductQuery("");
     setSearchChips([]);
+    setExcludeQuery("");
+    setExcludeChips([]);
     setFilters(emptyFilters);
     setQuickFilters([]);
     setSelectedProductCode("");
@@ -1442,10 +1455,15 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
                 loadingProducts={loadingProducts}
                 productQuery={productQuery}
                 searchChips={searchChips}
+                excludeQuery={excludeQuery}
+                excludeChips={excludeChips}
                 products={products}
                 onQueryChange={setProductQuery}
                 onAddChip={addSearchChip}
                 onRemoveChip={(chip) => setSearchChips((c) => c.filter((item) => item !== chip))}
+                onExcludeQueryChange={setExcludeQuery}
+                onAddExcludeChip={addExcludeChip}
+                onRemoveExcludeChip={(chip) => setExcludeChips((c) => c.filter((item) => item !== chip))}
                 filters={filters}
                 filterOptions={filterOptions}
                 onFiltersChange={setFilters}
