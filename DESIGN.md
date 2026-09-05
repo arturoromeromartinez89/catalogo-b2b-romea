@@ -1,6 +1,6 @@
 ---
 name: "NEXOR IA Studio"
-description: "Sistema visual de bóveda clara para accesos, operación y seguimiento seguro de proyectos."
+description: "Sistema visual de bóveda clara para accesos, operación y liberación segura de trabajo."
 colors:
   vault-ink: "#0b1330"
   vault-ink-deep: "#070d22"
@@ -94,6 +94,15 @@ components:
     textColor: "{colors.vault-ink}"
     rounded: "{rounded.lg}"
     padding: "clamp(22px, 2.8vw, 32px)"
+  release-line:
+    backgroundColor: "{colors.vault-ink}"
+    textColor: "{colors.vault-fog}"
+    rounded: "{rounded.lg}"
+    height: "82px"
+  work-ledger:
+    backgroundColor: "{colors.vault-paper}"
+    textColor: "{colors.vault-ink}"
+    rounded: "{rounded.lg}"
 ---
 
 # Design System: NEXOR IA Studio
@@ -106,6 +115,8 @@ Project Hub se siente como una bóveda clara que ha abierto una placa de briefin
 
 La luz fría, el campo de nodos restringido y la asimetría editorial forman el mundo NEXOR sin convertir la superficie en una pieza promocional. Cian, azul y amarillo son señales escasas con funciones distintas; el resto de la interfaz permanece calmado para que progreso, navegación y decisiones no compitan entre sí. La dirección `project-briefing`, semilla `afbec59f`, superó la revisión final con disposición `ship` y es la autoridad durable para futuras superficies cliente del hub.
 
+En superficies internas de operación, la misma bóveda se expresa como una línea de liberación visible seguida por un libro de trabajo denso. Cada etapa declara responsable, volumen y estado; cada registro mantiene una sola acción siguiente hasta quedar completo para su consumidor. Esta extensión conserva el shell de navegación, las superficies blancas de evidencia y la disciplina cromática incumbentes.
+
 **Key Characteristics:**
 
 - Briefing ejecutivo antes que detalle operativo.
@@ -114,6 +125,7 @@ La luz fría, el campo de nodos restringido y la asimetría editorial forman el 
 - Cian para señal viva y acción principal; azul para navegación y progreso; amarillo para atención.
 - Campo de nodos tenue y profundidad ambiental, nunca ornamental.
 - Tipografía de display compacta y datos con numerales tabulares.
+- Flujos operativos con responsables visibles, cola searchable y una sola acción siguiente.
 
 ## Identidad NEXOR IA Studio
 
@@ -182,6 +194,10 @@ El espacio de trabajo usa un campo centrado de hasta 1240px sobre una trama de n
 En anchos intermedios la columna de señales se estrecha sin perder su jerarquía. A 760px o menos, la placa ocupa todo el ancho y progreso/atención forman dos columnas en la fila siguiente; la franja de resumen del cronograma conserva sus tres métricas en una banda desplazable. La navegación lateral colapsa a iconos sin alterar el orden de lectura. No debe existir desbordamiento horizontal de la página en 390×844; solo los datos intrínsecamente panorámicos, como la franja métrica, pueden desplazarse dentro de su propio contenedor.
 
 **The Briefing-Then-Evidence Rule.** La identidad, el estado, el movimiento y la atención se leen antes del detalle del plan; no insertar paneles equivalentes entre ambas capas.
+
+En flujos internos de varias manos, la primera vista conserva el resumen de acción y una línea compacta de etapas antes de la cola. El libro de trabajo se extiende hasta 1440px para sostener densidad; al seleccionar un registro abre un inspector lateral de 320–390px, que baja debajo de la cola a 900px. A 620px la línea se pliega a dos columnas y cada fila reduce su información a identificador, descripción, dato esencial y estado, sin scroll lateral de página.
+
+**The Visible Handoff Rule.** Cada etapa de un flujo compartido muestra secuencia, responsable y volumen antes de la cola; el detalle conserva una sola acción siguiente y no permite publicar mientras falten controles.
 
 ## Elevation & Depth
 
@@ -253,6 +269,14 @@ A 760px o menos el cronograma se transforma en una **lista desplegable vertical*
 - Los seis colores —azul, verde, naranja, rojo, negro y gris— se conservan íntegros en solución y actividades.
 - La jerarquía solución → actividad se conserva por sangría y por el control de desplegar, no por posición temporal.
 
+### Línea de liberación
+
+La línea de liberación es el componente firma para trabajo que pasa entre responsables. Usa una placa continua de tinta, cuatro etapas equivalentes, numerales tabulares y una línea inferior que combina cian, azul y amarillo; seleccionar una etapa filtra la misma cola, no abre un tablero paralelo. La entrada de la línea dura 560ms con una curva de desaceleración marcada y se reduce a 1ms bajo `prefers-reduced-motion`.
+
+### Libro de trabajo e inspector
+
+La cola es una superficie blanca, searchable y de alta densidad. Cada fila comunica identificador, descripción, dato operacional, etapa con palabra y siguiente control; el color refuerza, pero nunca sustituye, esas etiquetas. La selección se marca con un fondo azul tenue y un borde interior, y abre un inspector con encabezado de tinta, hechos tabulares, checklist de liberación y una sola acción primaria contextual. Los formularios se abren en ese mismo inspector para mantener la relación con la cola.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -262,6 +286,8 @@ A 760px o menos el cronograma se transforma en una **lista desplegable vertical*
 - **Do** usar etiquetas, cantidades y formas además del color para todos los estados.
 - **Do** preservar el orden de lectura y los valores de progreso y atención en el primer viewport móvil.
 - **Do** utilizar el lockup oficial de NEXOR cuando exista espacio y mantener clara la jerarquía con la marca del cliente.
+- **Do** mostrar responsable, conteo, etapa escrita y siguiente control en los flujos que atraviesan varias manos.
+- **Do** bloquear la acción de publicación hasta que los requisitos verificables del registro estén completos.
 
 ### Don't:
 
@@ -270,3 +296,4 @@ A 760px o menos el cronograma se transforma en una **lista desplegable vertical*
 - **Don't** usar fondos crema cálidos, grises slate genéricos o un tema oscuro como experiencia cliente predeterminada.
 - **Don't** intercambiar cian, azul y amarillo ni comunicar estado únicamente con color.
 - **Don't** introducir claims, métricas comerciales o ventajas competitivas que no estén confirmadas por el producto.
+- **Don't** sustituir una línea de liberación por un formulario genérico que oculte propiedad, trabajo incompleto o el siguiente responsable.

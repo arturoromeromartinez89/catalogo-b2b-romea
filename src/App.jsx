@@ -6,6 +6,7 @@ import ClientPortalShell from "./components/ClientPortalShell";
 import SuperAdminDashboard from "./components/superadmin/SuperAdminDashboard";
 import QuotePage from "./pages/QuotePage";
 import ProjectHubDemoPage from "./pages/ProjectHubDemoPage";
+import PurchasingDemoPage from "./pages/PurchasingDemoPage";
 import StudioDemoPage from "./pages/StudioDemoPage";
 import { ImpersonationProvider, useImpersonation } from "./contexts/ImpersonationContext";
 import { LanguageProvider } from "./i18n/LanguageContext";
@@ -69,6 +70,7 @@ export default function App() {
   const [language, setLanguageState] = useState(readLanguage);
   const isPublicQuoteRoute = getAppPathname().startsWith("/cotizacion/");
   const isProjectHubDemoRoute = getAppPathname() === "/demo/project-hub";
+  const isPurchasingDemoRoute = getAppPathname() === "/demo/compras";
   const isStudioDemoRoute = getAppPathname() === "/demo/studio";
 
   const setLanguage = (nextLanguage) => {
@@ -84,7 +86,7 @@ export default function App() {
         </div>
       ) : null}
       <ImpersonationProvider>
-        {isStudioDemoRoute && isStaging ? <StudioDemoPage /> : isProjectHubDemoRoute && isStaging ? <ProjectHubDemoPage /> : isPublicQuoteRoute ? <QuotePage /> : <AuthenticatedApp />}
+        {isStudioDemoRoute && isStaging ? <StudioDemoPage /> : isPurchasingDemoRoute && isStaging ? <PurchasingDemoPage /> : isProjectHubDemoRoute && isStaging ? <ProjectHubDemoPage /> : isPublicQuoteRoute ? <QuotePage /> : <AuthenticatedApp />}
       </ImpersonationProvider>
     </LanguageProvider>
   );

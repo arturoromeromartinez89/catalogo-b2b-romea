@@ -16,6 +16,7 @@
     "check:baseline": "node scripts/check-production-baseline.mjs",
     "check:staging-deployment": "node scripts/check-staging-deployment.mjs",
     "test:tenant-isolation": "node supabase/tests/product_lines_tenant_contract.test.mjs",
+    "test:purchasing": "node scripts/test-purchasing-workflow.mjs",
     "seed:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/seed-staging.ps1",
     "deploy:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-staging.ps1",
     "preview": "vite preview"

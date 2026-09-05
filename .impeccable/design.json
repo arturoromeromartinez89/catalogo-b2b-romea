@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-17T04:46:22.2282790Z",
+  "generatedAt": "2026-09-05T21:25:57.972Z",
   "title": "Design System: NEXOR IA Project Hub",
   "extensions": {
     "colorMeta": {
@@ -33,13 +33,17 @@
     ],
     "motion": [
       { "name": "state-standard", "value": "180ms ease", "purpose": "Hover de módulos y controles compactos." },
-      { "name": "evidence-enter", "value": "320ms cubic-bezier(.16, 1, .3, 1)", "purpose": "Cambio direccional entre Cronograma y Tablero." },
+      { "name": "evidence-enter", "value": "320ms cubic-bezier(.16, 1, .3, 1)", "purpose": "Entrada de contenido al desplegar evidencia dentro del cronograma." },
+      { "name": "release-line-enter", "value": "560ms cubic-bezier(.16, 1, .3, 1)", "purpose": "Revela la continuidad de la línea de liberación sin mover sus etapas." },
       { "name": "reduced-motion", "value": ".01ms linear", "purpose": "Sustituye transiciones y animaciones cuando el usuario solicita menos movimiento." }
     ],
     "breakpoints": [
       { "name": "mobile", "value": "760px" },
       { "name": "briefing-compact", "value": "1080px" },
-      { "name": "content-max", "value": "1240px" }
+      { "name": "content-max", "value": "1240px" },
+      { "name": "operational-stack", "value": "900px" },
+      { "name": "operational-mobile", "value": "620px" },
+      { "name": "operational-max", "value": "1440px" }
     ]
   },
   "components": [
@@ -90,12 +94,12 @@
       "css": ".ds-attention { background:#fff4d9; border:0; border-radius:16px; color:#0b1330; cursor:pointer; display:block; min-height:113px; padding:18px; position:relative; text-align:left; transition:background 180ms ease,transform 180ms ease; width:100%; } .ds-attention>span { color:#71809f; display:block; font:800 9px/1.25 Inter,system-ui,sans-serif; letter-spacing:.1em; } .ds-attention>strong { display:block; font:700 32px/1 \"Space Grotesk\",Inter,sans-serif; letter-spacing:-.035em; margin:10px 0; } .ds-attention>small { color:#7583a0; font:400 10px/1.35 Inter,system-ui,sans-serif; } .ds-attention svg { fill:none; height:17px; position:absolute; right:16px; stroke:#4f7bff; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.8; top:16px; width:17px; } .ds-attention:hover { background:#ffedbf; transform:translateY(-2px); } .ds-attention:focus-visible { outline:3px solid rgba(79,123,255,.38); outline-offset:3px; }"
     },
     {
-      "name": "Evidence View Toggle",
-      "kind": "button",
-      "refersTo": "evidence-toggle-active",
-      "description": "Selector binario entre Cronograma y Tablero como vistas de la misma evidencia.",
-      "html": "<div class=\"ds-toggle\" role=\"group\" aria-label=\"Vista del plan maestro\"><button class=\"ds-toggle-active\" aria-pressed=\"true\">CRONOGRAMA</button><button aria-pressed=\"false\">TABLERO</button></div>",
-      "css": ".ds-toggle { background:#eef2f8; border-radius:12px; display:inline-flex; gap:4px; padding:4px; } .ds-toggle button { background:transparent; border:0; border-radius:10px; color:#71809f; cursor:pointer; font:700 13px/1 Inter,system-ui,sans-serif; min-height:38px; padding:9px 13px; } .ds-toggle .ds-toggle-active { background:#4f7bff; box-shadow:0 7px 20px -12px #4f7bff; color:#fff; } .ds-toggle button:hover { color:#0b1330; } .ds-toggle button:focus-visible { outline:3px solid rgba(79,123,255,.38); outline-offset:2px; }"
+      "name": "Release Line",
+      "kind": "nav",
+      "refersTo": "release-line",
+      "description": "Secuencia visible de responsables que filtra una sola cola de liberación.",
+      "html": "<nav class=\"ds-release\" aria-label=\"Etapas de liberación\"><button class=\"ds-release-active\" aria-pressed=\"true\"><span>1</span><div><strong>APROBACIÓN</strong><small>Beto · 3 modelos</small></div></button><button aria-pressed=\"false\"><span>2</span><div><strong>FOTO Y CEDIS</strong><small>Marco · 2 modelos</small></div></button></nav>",
+      "css": ".ds-release { background:#0b1330; border-radius:16px; box-shadow:0 18px 44px -34px rgba(6,12,24,.7); display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); overflow:hidden; position:relative; } .ds-release::after { background:linear-gradient(90deg,#2fe3d0,#4f7bff,#ffcf71); bottom:0; content:\"\"; height:2px; left:0; position:absolute; right:0; } .ds-release button { align-items:center; background:transparent; border:0; border-right:1px solid rgba(255,255,255,.1); color:#cbd8ff; cursor:pointer; display:grid; gap:12px; grid-template-columns:auto minmax(0,1fr); min-height:82px; padding:16px; text-align:left; } .ds-release button>span { border:1px solid rgba(255,255,255,.2); border-radius:9999px; color:#fff; display:grid; font:700 12px/1 Inter,system-ui,sans-serif; height:28px; place-items:center; width:28px; } .ds-release strong,.ds-release small { display:block; } .ds-release strong { font:700 14px/1.2 Inter,system-ui,sans-serif; } .ds-release small { color:#aebbe0; font:400 12px/1.3 Inter,system-ui,sans-serif; margin-top:3px; } .ds-release button:hover { background:rgba(255,255,255,.055); } .ds-release .ds-release-active { background:#132b5c; color:#fff; } .ds-release .ds-release-active>span { background:#2fe3d0; border-color:#2fe3d0; color:#070d22; } .ds-release button:focus-visible { outline:3px solid #2fe3d0; outline-offset:-3px; z-index:2; }"
     },
     {
       "name": "Plan Container",
@@ -111,24 +115,34 @@
       "description": "Campo claro para que el cliente documente una aprobación o rechazo.",
       "html": "<label class=\"ds-field\"><span>COMENTARIO</span><textarea placeholder=\"Añade el contexto de tu decisión\"></textarea></label>",
       "css": ".ds-field { color:#52627f; display:flex; flex-direction:column; font:800 9px/1.25 Inter,system-ui,sans-serif; gap:8px; letter-spacing:.1em; } .ds-field textarea { background:#fff; border:1px solid rgba(120,140,210,.24); border-radius:10px; color:#0b1330; font:400 14px/1.5 Inter,system-ui,sans-serif; min-height:84px; padding:12px; resize:vertical; } .ds-field textarea:hover { border-color:rgba(79,123,255,.36); } .ds-field textarea:focus-visible { border-color:#4f7bff; outline:3px solid rgba(79,123,255,.38); outline-offset:3px; } .ds-field textarea::placeholder { color:#71809f; }"
+    },
+    {
+      "name": "Work Ledger Row",
+      "kind": "custom",
+      "refersTo": "work-ledger",
+      "description": "Registro denso que expone etapa y siguiente control sin abandonar la cola.",
+      "html": "<button class=\"ds-ledger-row\"><i aria-hidden=\"true\"></i><strong>RJDRP257</strong><span><b>Dije religioso</b><small>RAJOI · Línea 010</small></span><em>2.40 g</em><mark>FOTO Y CEDIS</mark><u>COMPLETAR FICHA →</u></button>",
+      "css": ".ds-ledger-row { align-items:center; background:#fff; border:0; border-bottom:1px solid #e6eaf2; color:#0b1330; cursor:pointer; display:grid; gap:12px; grid-template-columns:8px minmax(90px,.7fr) minmax(220px,2fr) minmax(76px,.5fr) minmax(120px,.75fr) minmax(126px,1fr); min-height:64px; padding:12px 16px; text-align:left; width:100%; } .ds-ledger-row i { background:#ffcf71; border-radius:9999px; height:7px; width:7px; } .ds-ledger-row strong,.ds-ledger-row b { font:700 14px/1.25 Inter,system-ui,sans-serif; } .ds-ledger-row span b,.ds-ledger-row span small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .ds-ledger-row small { color:#71809f; font:400 12px/1.3 Inter,system-ui,sans-serif; margin-top:4px; } .ds-ledger-row em { color:#52627f; font:400 14px/1 Inter,system-ui,sans-serif; } .ds-ledger-row mark { background:#fff4d9; border-radius:9999px; color:#805f19; font:700 12px/1 Inter,system-ui,sans-serif; justify-self:start; padding:5px 8px; } .ds-ledger-row u { color:#315dcc; font:700 12px/1 Inter,system-ui,sans-serif; text-decoration:none; } .ds-ledger-row:hover { background:#f5f8ff; } .ds-ledger-row:focus-visible { outline:3px solid #4f7bff; outline-offset:-3px; }"
     }
   ],
   "narrative": {
     "northStar": "La Bóveda de Briefing",
-    "overview": "Project Hub se siente como una bóveda clara que ha abierto una placa de briefing ejecutivo: la información decisiva queda protegida por tinta profunda y aparece antes que la evidencia operativa. La composición modular responde, en este orden, dónde está el proyecto, qué se está moviendo y qué requiere atención del cliente. El resultado debe ser serio, preciso y técnico sin exigir vocabulario de gestión de proyectos.\n\nLa luz fría, el campo de nodos restringido y la asimetría editorial forman el mundo NEXOR sin convertir la superficie en una pieza promocional. Cian, azul y amarillo son señales escasas con funciones distintas; el resto de la interfaz permanece calmado para que progreso, navegación y decisiones no compitan entre sí. La dirección project-briefing, semilla afbec59f, superó la revisión final con disposición ship y es la autoridad durable para futuras superficies cliente del hub.",
+    "overview": "Project Hub se siente como una bóveda clara que ha abierto una placa de briefing ejecutivo: la información decisiva queda protegida por tinta profunda y aparece antes que la evidencia operativa. La composición modular responde, en este orden, dónde está el proyecto, qué se está moviendo y qué requiere atención del cliente. El resultado debe ser serio, preciso y técnico sin exigir vocabulario de gestión de proyectos.\n\nLa luz fría, el campo de nodos restringido y la asimetría editorial forman el mundo NEXOR sin convertir la superficie en una pieza promocional. Cian, azul y amarillo son señales escasas con funciones distintas; el resto de la interfaz permanece calmado para que progreso, navegación y decisiones no compitan entre sí. La dirección project-briefing, semilla afbec59f, superó la revisión final con disposición ship y es la autoridad durable para futuras superficies cliente del hub.\n\nEn superficies internas de operación, la misma bóveda se expresa como una línea de liberación visible seguida por un libro de trabajo denso. Cada etapa declara responsable, volumen y estado; cada registro mantiene una sola acción siguiente hasta quedar completo para su consumidor. Esta extensión conserva el shell de navegación, las superficies blancas de evidencia y la disciplina cromática incumbentes.",
     "keyCharacteristics": [
       "Briefing ejecutivo antes que detalle operativo.",
       "Bóveda luminosa con una placa central de tinta profunda.",
       "Asimetría modular legible, no una cuadrícula de tarjetas equivalentes.",
       "Cian para señal viva y acción principal; azul para navegación y progreso; amarillo para atención.",
       "Campo de nodos tenue y profundidad ambiental, nunca ornamental.",
-      "Tipografía de display compacta y datos con numerales tabulares."
+      "Tipografía de display compacta y datos con numerales tabulares.",
+      "Flujos operativos con responsables visibles, cola searchable y una sola acción siguiente."
     ],
     "rules": [
       { "name": "The Three Signals Rule", "body": "Cian significa actividad o acción principal, azul significa navegación o progreso y amarillo significa atención; no intercambiar sus funciones.", "section": "colors" },
       { "name": "The Signal Rarity Rule", "body": "Mantener los acentos fuera de superficies extensas: su escasez es lo que hace visibles los estados y decisiones.", "section": "colors" },
       { "name": "The Executive Compression Rule", "body": "Reservar Space Grotesk y el tracking negativo para identidad, cifras y títulos; la lectura operativa permanece en Inter.", "section": "typography" },
       { "name": "The Briefing-Then-Evidence Rule", "body": "La identidad, el estado, el movimiento y la atención se leen antes del detalle del plan; no insertar paneles equivalentes entre ambas capas.", "section": "layout" },
+      { "name": "The Visible Handoff Rule", "body": "Cada etapa de un flujo compartido muestra secuencia, responsable y volumen antes de la cola; el detalle conserva una sola acción siguiente y no permite publicar mientras falten controles.", "section": "layout" },
       { "name": "The Ambient Depth Rule", "body": "Las sombras organizan capas y nunca decoran cada elemento; dentro de una superficie, preferir líneas tenues y contraste tonal.", "section": "elevation" }
     ],
     "dos": [
@@ -136,14 +150,17 @@
       "Do hacer que el Plan maestro parezca evidencia de la síntesis ejecutiva, no una aplicación separada.",
       "Do usar etiquetas, cantidades y formas además del color para todos los estados.",
       "Do preservar el orden de lectura y los valores de progreso y atención en el primer viewport móvil.",
-      "Do utilizar el lockup oficial de NEXOR cuando exista espacio y mantener clara la jerarquía con la marca del cliente."
+      "Do utilizar el lockup oficial de NEXOR cuando exista espacio y mantener clara la jerarquía con la marca del cliente.",
+      "Do mostrar responsable, conteo, etapa escrita y siguiente control en los flujos que atraviesan varias manos.",
+      "Do bloquear la acción de publicación hasta que los requisitos verificables del registro estén completos."
     ],
     "donts": [
       "Don't convertir la superficie en una cuadrícula uniforme de tarjetas de dashboard.",
       "Don't ampliar el campo de nodos hasta competir con texto, datos o controles.",
       "Don't usar fondos crema cálidos, grises slate genéricos o un tema oscuro como experiencia cliente predeterminada.",
       "Don't intercambiar cian, azul y amarillo ni comunicar estado únicamente con color.",
-      "Don't introducir claims, métricas comerciales o ventajas competitivas que no estén confirmadas por el producto."
+      "Don't introducir claims, métricas comerciales o ventajas competitivas que no estén confirmadas por el producto.",
+      "Don't sustituir una línea de liberación por un formulario genérico que oculte propiedad, trabajo incompleto o el siguiente responsable."
     ]
   }
 }

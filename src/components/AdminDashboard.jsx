@@ -22,6 +22,7 @@ import CatalogTab from "./tabs/CatalogTab";
 import ClientsTab from "./tabs/ClientsTab";
 import ProspectsTab from "./tabs/ProspectsTab";
 import DatabaseTab from "./tabs/DatabaseTab";
+import PurchasingWorkspace from "./PurchasingWorkspace";
 import ComponentsTab from "./tabs/ComponentsTab";
 import RemisionWorkspace from "./RemisionWorkspace";
 import GastosTab from "./tabs/GastosTab";
@@ -68,6 +69,7 @@ const PRODUCT_RENDER_BATCH = 60;
 const baseTabs = ["inicio", "projectHub", "catalog", "preorders", "orders", "clients", "prospects", "prices", "company", "database"];
 const configurableOnlyTabs = ["components"];
 const adminModuleTabs = ["administracion"];
+const purchasingTabs = ["purchasing"];
 // Navegación organizada por las preguntas del negocio, no por tablas.
 // "Configuración" agrupa los catálogos internos con jerarquía visual menor.
 const ADMIN_SUB_TABS = [
@@ -94,6 +96,7 @@ const tabKeys = {
   prices:        "priceMenu",
   company:       "company",
   database:      "database",
+  purchasing:    "purchasing",
   components:    "components",
   administracion: "administracion",
 };
@@ -109,6 +112,7 @@ const titleKeys = {
   prices:        "priceMenu",
   company:       "company",
   database:      "database",
+  purchasing:    "purchasing",
   components:    "components",
   administracion: "administracion",
 };
@@ -454,8 +458,9 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const selectedClient = useMemo(() => data?.clients.find((client) => client.id === selectedClientId), [data?.clients, selectedClientId]);
   const configurableCatalogEnabled = tenantFeatures?.modulo_configurable === true;
   const adminModuleEnabled = tenantFeatures?.modulo_admin === true;
+  const purchasingEnabled = tenantFeatures?.modulo_compras === true;
   const allTabs = [
-    ...tabs,
+    ...tabs.flatMap((id) => id === "catalog" && purchasingEnabled ? [...purchasingTabs, id] : [id]),
     ...(configurableCatalogEnabled ? configurableOnlyTabs : []),
     ...(adminModuleEnabled ? adminModuleTabs : []),
   ];
@@ -1213,7 +1218,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   }
 
   return (
-    <div className={`admin-catalog-shell${tab === "administracion" && adminModuleEnabled ? " has-secondary-sidebar" : ""}`}>
+    <div className={`admin-catalog-shell${tab === "administracion" && adminModuleEnabled ? " has-secondary-sidebar" : ""}${tab === "purchasing" ? " is-purchasing" : ""}`}>
       <aside className="admin-romea-sidebar">
         <div className="brand-block">
           <BrandLogo company={activeCompany} />
@@ -1596,6 +1601,15 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
             load={load}
             setStatus={setStatus}
             notifyAction={notifyAction}
+          />
+        ) : null}
+
+        {tab === "purchasing" && purchasingEnabled ? (
+          <PurchasingWorkspace
+            tenantId={tenantId}
+            products={products}
+            profile={profile}
+            onNotice={notifyAction}
           />
         ) : null}
 

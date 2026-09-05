@@ -10,6 +10,7 @@ import "./styles.css";
 import "./nexorBrand.css";
 import "./projectHub.css";
 import "./nexorStudio.css";
+import "./purchasing.css";
 
 // Inicializar monitoreo de errores antes del primer render.
 // Solo activo si VITE_SENTRY_DSN está definido en .env
