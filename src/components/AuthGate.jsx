@@ -4,23 +4,24 @@ import { isSupabaseConfigured, supabase } from "../lib/supabaseClient";
 import { isAuthLocked } from "../lib/authLock";
 import { getSessionAndProfile } from "../services/supabaseCatalog";
 import { getAppUrl } from "../utils/basePath";
-import nexorStudioLight from "../assets/nexoria-studio_lockup_transparent.svg";
+
+const VANGUARDIA_LOGO_URL = "https://pyignizeoevafifzfnik.supabase.co/storage/v1/object/public/company-assets/logos/77d5d8e5-9a8b-4e90-a125-06d7d70cc2eb/logo.jpg";
 
 const copy = {
   es: {
-    timeout: "Supabase tardó demasiado en responder. Revisa que el SQL haya corrido completo.",
-    missingProfile: "Tu usuario existe, pero falta crear su perfil. Corre el SQL de reparación que te indiqué.",
-    noConnect: "No se pudo conectar con Supabase.",
-    noRefresh: "No se pudo actualizar la sesión.",
-    accountCreated: "Cuenta creada. Revisa tu correo si Supabase pide confirmación.",
+    timeout: "No fue posible conectarse. Intenta nuevamente.",
+    missingProfile: "Tu cuenta requiere configuración. Contacta al administrador.",
+    noConnect: "No fue posible conectarse. Intenta nuevamente.",
+    noRefresh: "No fue posible actualizar tu sesión. Vuelve a iniciar sesión.",
+    accountCreated: "Cuenta creada. Revisa tu correo si se requiere confirmación.",
     noSignin: "No se pudo iniciar sesión.",
-    missingSupabase: "Falta conectar Supabase",
-    envHelp: "Crea un archivo .env usando .env.example y coloca:",
-    sqlHelp: "Después corre el SQL de supabase/schema.sql en Supabase y reinicia npm run dev.",
+    missingSupabase: "Servicio no disponible",
+    envHelp: "La conexión del sistema no está configurada.",
+    sqlHelp: "Contacta al administrador del sistema.",
     loading: "Cargando...",
-    slowHelp: "Si se tarda más de 10 segundos, hay un problema con Supabase o con las tablas.",
+    slowHelp: "La conexión está tardando más de lo normal.",
     missingUserProfile: "Falta perfil de usuario",
-    repairHelp: "Ejecuta en Supabase el SQL de reparación para crear tu perfil admin.",
+    repairHelp: "Contacta al administrador para activar tu perfil.",
     retry: "Reintentar",
     closeSession: "Cerrar sesión",
     createAccess: "Crear acceso",
@@ -62,21 +63,24 @@ const copy = {
     saving: "Guardando...",
     showPassword: "Mostrar contraseña",
     hidePassword: "Ocultar contraseña",
+    invalidCredentials: "El correo o la contraseña son incorrectos.",
+    emailNotConfirmed: "Confirma tu correo antes de iniciar sesión.",
+    tooManyRequests: "Se realizaron demasiados intentos. Espera un momento y vuelve a intentar.",
   },
   en: {
-    timeout: "Supabase took too long to respond. Check that the SQL ran completely.",
-    missingProfile: "Your user exists, but its profile is missing. Run the repair SQL I gave you.",
-    noConnect: "Could not connect to Supabase.",
-    noRefresh: "Could not refresh the session.",
-    accountCreated: "Account created. Check your email if Supabase requires confirmation.",
+    timeout: "We could not connect. Please try again.",
+    missingProfile: "Your account requires configuration. Contact the administrator.",
+    noConnect: "We could not connect. Please try again.",
+    noRefresh: "We could not refresh your session. Please sign in again.",
+    accountCreated: "Account created. Check your email if confirmation is required.",
     noSignin: "Could not sign in.",
-    missingSupabase: "Supabase connection missing",
-    envHelp: "Create a .env file using .env.example and add:",
-    sqlHelp: "Then run supabase/schema.sql in Supabase and restart npm run dev.",
+    missingSupabase: "Service unavailable",
+    envHelp: "The system connection is not configured.",
+    sqlHelp: "Contact the system administrator.",
     loading: "Loading...",
-    slowHelp: "If this takes more than 10 seconds, there may be a Supabase or table setup issue.",
+    slowHelp: "The connection is taking longer than usual.",
     missingUserProfile: "User profile missing",
-    repairHelp: "Run the repair SQL in Supabase to create your admin profile.",
+    repairHelp: "Contact the administrator to activate your profile.",
     retry: "Retry",
     closeSession: "Sign out",
     createAccess: "Create access",
@@ -118,6 +122,9 @@ const copy = {
     saving: "Saving...",
     showPassword: "Show password",
     hidePassword: "Hide password",
+    invalidCredentials: "The email or password is incorrect.",
+    emailNotConfirmed: "Confirm your email before signing in.",
+    tooManyRequests: "Too many attempts were made. Wait a moment and try again.",
   },
 };
 
@@ -128,6 +135,14 @@ const withTimeout = (promise, ms = 9000, message = copy.es.timeout) =>
       window.setTimeout(() => reject(new Error(message)), ms);
     }),
   ]);
+
+const getAuthErrorMessage = (error, text, fallback) => {
+  const rawMessage = String(error?.message || "").toLowerCase();
+  if (rawMessage.includes("invalid login credentials")) return text.invalidCredentials;
+  if (rawMessage.includes("email not confirmed")) return text.emailNotConfirmed;
+  if (rawMessage.includes("rate limit") || rawMessage.includes("too many requests")) return text.tooManyRequests;
+  return fallback;
+};
 
 const authIcon = (name) => {
   const paths = {
@@ -145,72 +160,31 @@ const authIcon = (name) => {
 
 function AuthBrandPanel() {
   return (
-    <aside className="login-brand-panel login-brand-panel--studio">
-      <div className="login-vault-map" aria-hidden="true">
-        <span className="login-vault-map__line" />
-        <i className="login-vault-map__node login-vault-map__node--one" />
-        <i className="login-vault-map__node login-vault-map__node--two" />
-        <i className="login-vault-map__node login-vault-map__node--three" />
-        <i className="login-vault-map__signal" />
-      </div>
-      <div className="login-brand-content login-brand-content--studio">
-        <img className="login-studio-lockup" src={nexorStudioLight} alt="NEXOR IA Studio" />
-        <div className="login-brand-statement">
-          <h1>Desarrollos creativos, soluciones para ti <span>(usamos IA)</span></h1>
+    <aside className="login-brand-panel login-brand-panel--vanguardia">
+      <div className="login-brand-content login-brand-content--vanguardia">
+        <div className="login-vanguardia-logo-frame">
+          <img className="login-vanguardia-logo" src={VANGUARDIA_LOGO_URL} alt="Vanguardia Joyera" />
         </div>
-        <div className="login-brand-signature" aria-label="Sistemas, software, inteligencia artificial"><i aria-hidden="true" /><span>Sistemas</span><i aria-hidden="true" /><span>Software</span><i aria-hidden="true" /><span>Inteligencia artificial</span></div>
+        <div className="login-vanguardia-product">
+          <h1>Catálogo B2B</h1>
+          <p>Vanguardia Joyera</p>
+        </div>
       </div>
     </aside>
-  );
-}
-
-function NexorInstitutionalMark({ compact = false }) {
-  return (
-    <svg
-      className={`nexor-auth-mark${compact ? " nexor-auth-mark--compact" : ""}`}
-      viewBox="60 60 160 160"
-      focusable="false"
-      aria-hidden="true"
-    >
-      <path
-        className="nexor-auth-mark__links"
-        d="M140 140 88 88M140 140l52-52M140 140l-52 52M140 140l52 52"
-        fill="none"
-        stroke="#8893B8"
-        strokeWidth="10"
-        strokeLinecap="round"
-      />
-      <circle className="nexor-auth-mark__node nexor-auth-mark__node--one" cx="88" cy="88" r="16" fill="#2FE3D0" />
-      <circle className="nexor-auth-mark__node nexor-auth-mark__node--two" cx="192" cy="88" r="16" fill="#4F7BFF" />
-      <circle className="nexor-auth-mark__node nexor-auth-mark__node--three" cx="88" cy="192" r="16" fill="#4F7BFF" />
-      <circle className="nexor-auth-mark__node nexor-auth-mark__node--four" cx="192" cy="192" r="16" fill="#2FE3D0" />
-      <circle className="nexor-auth-mark__core" cx="140" cy="140" r="24" fill="#1F335F" />
-    </svg>
-  );
-}
-
-function AuthIntelligenceSignal() {
-  return (
-    <div className="login-intelligence-signal" aria-hidden="true">
-      <NexorInstitutionalMark />
-    </div>
   );
 }
 
 function AuthFormHeader({ title, help }) {
   return (
     <div className="login-form-heading">
-      <NexorInstitutionalMark compact />
-      <div>
-        <h2>{title}</h2>
-        <p>{help}</p>
-      </div>
+      <h2>{title}</h2>
+      <p>{help}</p>
     </div>
   );
 }
 
 function AuthFooter() {
-  return <small className="login-powered-by">Acceso protegido por NEXOR IA Studio <span aria-hidden="true">·</span> © 2026</small>;
+  return <small className="login-powered-by">Vanguardia Joyera</small>;
 }
 
 export default function AuthGate({ children }) {
@@ -231,7 +205,7 @@ export default function AuthGate({ children }) {
   const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
-    document.title = "NEXOR IA Studio";
+    document.title = "Vanguardia Joyera · Catálogo B2B";
   }, []);
 
   useEffect(() => {
@@ -251,7 +225,7 @@ export default function AuthGate({ children }) {
         setMessage(text.missingProfile);
       }
     } catch (error) {
-      setMessage(error.message || text.noConnect);
+      setMessage(getAuthErrorMessage(error, text, text.noConnect));
     } finally {
       setLoading(false);
     }
@@ -280,7 +254,7 @@ export default function AuthGate({ children }) {
         setSession(next.session);
         setProfile(next.profile);
       } catch (error) {
-        setMessage(error.message || text.noRefresh);
+        setMessage(getAuthErrorMessage(error, text, text.noRefresh));
       } finally {
         setLoading(false);
       }
@@ -300,7 +274,7 @@ export default function AuthGate({ children }) {
       setSession(next.session);
       setProfile(next.profile);
     } catch (error) {
-      setMessage(error.message || text.noSignin);
+      setMessage(getAuthErrorMessage(error, text, text.noSignin));
     } finally {
       setLoading(false);
     }
@@ -329,7 +303,7 @@ export default function AuthGate({ children }) {
       setResetSent(true);
       setMessage(text.resetSent);
     } catch (error) {
-      setMessage(error.message || text.resetError);
+      setMessage(getAuthErrorMessage(error, text, text.resetError));
     } finally {
       setResetLoading(false);
     }
@@ -356,7 +330,7 @@ export default function AuthGate({ children }) {
       await supabase.auth.signOut();
       goToMode("signin");
     } catch (error) {
-      setMessage(error.message || text.resetError);
+      setMessage(getAuthErrorMessage(error, text, text.resetError));
     } finally {
       setSavingPassword(false);
     }
@@ -369,7 +343,6 @@ export default function AuthGate({ children }) {
           <p className="eyebrow">Catálogo B2B</p>
           <h1>{text.missingSupabase}</h1>
           <p>{text.envHelp}</p>
-          <pre>VITE_SUPABASE_URL=...{"\n"}VITE_SUPABASE_ANON_KEY=...</pre>
           <p>{text.sqlHelp}</p>
         </div>
       </section>
@@ -406,7 +379,7 @@ export default function AuthGate({ children }) {
   // Pantalla de nueva contraseña — se activa cuando Supabase emite PASSWORD_RECOVERY
   if (mode === "new-password") {
     return (
-      <section className="login-shell login-shell--nexor">
+      <section className="login-shell login-shell--vanguardia">
         <AuthBrandPanel />
         <main className="login-form-panel">
           <form className="login-form-card" onSubmit={saveNewPassword}>
@@ -468,7 +441,7 @@ export default function AuthGate({ children }) {
 
   if (!session) {
     return (
-      <section className="login-shell login-shell--nexor">
+      <section className="login-shell login-shell--vanguardia">
         <AuthBrandPanel />
 
         <main className="login-form-panel">
@@ -501,9 +474,7 @@ export default function AuthGate({ children }) {
             </form>
           ) : (
             <form className="login-form-card" onSubmit={submit} aria-label="Iniciar sesión">
-              <h2 className="login-visually-hidden">Iniciar sesión</h2>
-              <AuthIntelligenceSignal />
-              <p className="login-form-instruction">Ingresa con la cuenta asignada a tu organización.</p>
+              <AuthFormHeader title={text.signIn} help={text.loginHelp} />
               <label>
                 {text.email}
                 <div className="login-input-wrap">
