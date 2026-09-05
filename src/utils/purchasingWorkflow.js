@@ -1,8 +1,8 @@
 export const PURCHASE_STAGES = [
-  { id: "proposal", label: "Por aprobar", shortLabel: "Aprobación", owner: "Beto" },
-  { id: "registration", label: "Registro ERP", shortLabel: "Registro", owner: "Beto" },
-  { id: "media", label: "Foto y CEDIS", shortLabel: "Foto", owner: "Marco" },
-  { id: "ready", label: "Listos para publicar", shortLabel: "Listos", owner: "Beto" },
+  { id: "proposal", label: "Por aprobar", shortLabel: "Aprobación" },
+  { id: "registration", label: "Registro ERP", shortLabel: "Registro" },
+  { id: "media", label: "Foto y CEDIS", shortLabel: "Foto" },
+  { id: "ready", label: "Listos para publicar", shortLabel: "Listos" },
 ];
 
 export const CODE_MODES = [
@@ -37,8 +37,8 @@ export const emptyPurchaseIntake = {
   family: "",
   groupName: "",
   weightGrams: "",
-  proposalSource: "rafael",
-  proposedByName: "Rafael de la Vega",
+  proposalSource: "other",
+  proposedByName: "",
   notes: "",
 };
 

@@ -40,9 +40,9 @@ const formatDate = (value) => value
   : "Pendiente";
 
 const stageCopy = {
-  proposal: { label: "Por aprobar", help: "Beto revisa la propuesta y asume la decisión operativa.", action: "Aprobar" },
+  proposal: { label: "Por aprobar", help: "Revisa la propuesta antes de continuar.", action: "Aprobar" },
   registration: { label: "Registro ERP", help: "El SKU debe quedar creado individualmente en Pruebas Vanguardia.", action: "Confirmar ERP" },
-  media: { label: "Foto y CEDIS", help: "Marco completa fotografía profesional y ubicación física.", action: "Completar foto" },
+  media: { label: "Foto y CEDIS", help: "Completa la fotografía profesional y la ubicación física.", action: "Completar foto" },
   ready: { label: "Listo", help: "Cumple los controles y puede publicarse al equipo comercial.", action: "Publicar" },
   published: { label: "Publicado", help: "El producto ya está disponible en el catálogo comercial.", action: "Publicado" },
   rejected: { label: "Rechazado", help: "La propuesta fue descartada.", action: "Revisar" },
@@ -146,7 +146,7 @@ export default function PurchasingWorkspace({ tenantId = "", products = [], prof
       }
       setSelectedId(saved.id);
       setEditorOpen(false);
-      announce("success", "Producto formalizado", `${saved.internalSku} quedó en la bandeja de aprobación de Beto.`);
+      announce("success", "Producto formalizado", `${saved.internalSku} quedó en la bandeja de aprobación.`);
     } catch (error) {
       announce("error", "No se pudo guardar", error.message);
     } finally {
@@ -183,7 +183,7 @@ export default function PurchasingWorkspace({ tenantId = "", products = [], prof
     const location = media.location.trim() || selectedItem.cedisLocation;
     const existingPhoto = media.uploaded?.photoUrl || selectedItem.photoUrl;
     if (!location || (!media.file && !existingPhoto)) {
-      announce("warning", "Falta completar CEDIS", "Marco debe registrar ubicación y fotografía profesional.");
+      announce("warning", "Falta completar CEDIS", "Registra la ubicación y la fotografía profesional.");
       return;
     }
     setBusyAction("media");
@@ -221,21 +221,13 @@ export default function PurchasingWorkspace({ tenantId = "", products = [], prof
   return (
     <section className="purchase-workspace" aria-labelledby="purchase-title">
       <header className="purchase-head">
-        <div>
-          <h1 id="purchase-title">Compras · alta de productos</h1>
-          <p>Una sola ruta desde la aprobación de Beto hasta la publicación comercial.</p>
-        </div>
+        <h1 id="purchase-title">Compras · alta de productos</h1>
         <button className="primary-button purchase-new-button" type="button" onClick={openNew}>
           <Icon name="plus" /> Registrar modelo
         </button>
       </header>
 
       {demoMode ? <p className="purchase-demo-note">Vista de ejemplo. Los estados del flujo son simulados y no modifican staging.</p> : null}
-
-      <p className="purchase-open-question">
-        <strong>Definición pendiente</strong>
-        ¿Beto entrega primero una muestra a Marco para fotografía o traspasa el lote completo con bloqueo comercial? Hasta confirmarlo, este flujo controla la publicación, no el movimiento físico.
-      </p>
 
       <nav className="purchase-release-line" aria-label="Etapas de liberación">
         {PURCHASE_STAGES.map((stage, index) => (
@@ -247,7 +239,7 @@ export default function PurchasingWorkspace({ tenantId = "", products = [], prof
             aria-pressed={stageFilter === stage.id}
           >
             <span>{index + 1}</span>
-            <div><strong>{stage.label}</strong><small>{stage.owner} · {counts[stage.id] || 0} {(counts[stage.id] || 0) === 1 ? "modelo" : "modelos"}</small></div>
+            <div><strong>{stage.label}</strong><small>{counts[stage.id] || 0} {(counts[stage.id] || 0) === 1 ? "modelo" : "modelos"}</small></div>
             {index < PURCHASE_STAGES.length - 1 ? <Icon name="arrow" size={16} /> : null}
           </button>
         ))}
@@ -306,7 +298,7 @@ export default function PurchasingWorkspace({ tenantId = "", products = [], prof
         {editorOpen ? (
           <aside className="purchase-inspector purchase-editor" aria-label="Registrar modelo nuevo">
             <div className="purchase-inspector-head">
-              <div><strong>Registrar modelo</strong><span>Los datos que realmente captura Compras.</span></div>
+              <strong>Registrar modelo</strong>
               <button type="button" onClick={() => setEditorOpen(false)} aria-label="Cerrar formulario"><Icon name="close" /></button>
             </div>
             <form onSubmit={handleSave}>
@@ -330,8 +322,8 @@ export default function PurchasingWorkspace({ tenantId = "", products = [], prof
                 <label>Peso medido<input type="number" min="0.01" step="0.01" value={form.weightGrams} onChange={(event) => updateForm("weightGrams", event.target.value)} placeholder="0.00" /></label>
                 <label>Familia<input value={form.family} onChange={(event) => updateForm("family", event.target.value)} placeholder="DIJE RELIGIOSO…" /></label>
               </div>
-              <label>Origen de la propuesta<select value={form.proposalSource} onChange={(event) => updateForm("proposalSource", event.target.value)}><option value="rafael">Rafael</option><option value="sales">Vendedores</option><option value="supplier">Proveedor</option><option value="other">Otro</option></select></label>
-              <label>Quién lo propuso<input value={form.proposedByName} onChange={(event) => updateForm("proposedByName", event.target.value)} /></label>
+              <label>Origen de la propuesta<select value={form.proposalSource} onChange={(event) => updateForm("proposalSource", event.target.value)}><option value="rafael">Dirección</option><option value="sales">Ventas</option><option value="supplier">Proveedor</option><option value="other">Otro</option></select></label>
+              <label>Propuesto por<input value={form.proposedByName} onChange={(event) => updateForm("proposedByName", event.target.value)} /></label>
               <label>Observaciones<textarea rows="3" value={form.notes} onChange={(event) => updateForm("notes", event.target.value)} placeholder="Entrega de muestra, lote recibido o contexto de aprobación" /></label>
               <div className="purchase-editor-actions"><button className="secondary-button" type="button" onClick={() => setEditorOpen(false)}>Cancelar</button><button className="primary-button" type="submit" disabled={saving}>{saving ? "Guardando…" : "Guardar propuesta"}</button></div>
             </form>
@@ -360,8 +352,8 @@ export default function PurchasingWorkspace({ tenantId = "", products = [], prof
               {requirements.map((requirement) => <div key={requirement.id} className={requirement.complete ? "complete" : ""}><span><Icon name="check" size={13} /></span>{requirement.label}</div>)}
             </div>
 
-            {selectedStage === "proposal" ? <button className="primary-button purchase-next-button" type="button" disabled={Boolean(busyAction)} onClick={() => runTransition({ name: "approve", run: approvePurchaseIntake }, "Producto aprobado", (item) => `${item.internalSku} pasa a registro individual en ERP.`)}>{busyAction === "approve" ? "Aprobando…" : "Aprobar como Beto"}</button> : null}
-            {selectedStage === "registration" ? <button className="primary-button purchase-next-button" type="button" disabled={Boolean(busyAction)} onClick={() => runTransition({ name: "erp", run: confirmPurchaseErpRegistration }, "Registro confirmado", (item) => `${item.internalSku} queda bajo seguimiento de Marco.`)}>{busyAction === "erp" ? "Confirmando…" : "Confirmar registro en ERP"}</button> : null}
+            {selectedStage === "proposal" ? <button className="primary-button purchase-next-button" type="button" disabled={Boolean(busyAction)} onClick={() => runTransition({ name: "approve", run: approvePurchaseIntake }, "Producto aprobado", (item) => `${item.internalSku} pasa a registro individual en ERP.`)}>{busyAction === "approve" ? "Aprobando…" : "Aprobar producto"}</button> : null}
+            {selectedStage === "registration" ? <button className="primary-button purchase-next-button" type="button" disabled={Boolean(busyAction)} onClick={() => runTransition({ name: "erp", run: confirmPurchaseErpRegistration }, "Registro confirmado", (item) => `${item.internalSku} pasa al control de fotografía y ubicación.`)}>{busyAction === "erp" ? "Confirmando…" : "Confirmar registro en ERP"}</button> : null}
             {selectedStage === "media" ? (
               <div className="purchase-media-form">
                 <label>Ubicación CEDIS<input value={media.location} onChange={(event) => setMedia((current) => ({ ...current, location: event.target.value }))} placeholder="Ej. 010-A-03" /></label>

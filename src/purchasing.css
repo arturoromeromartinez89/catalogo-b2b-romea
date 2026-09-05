@@ -3,7 +3,7 @@
   --purchase-blue: var(--brand-500);
   --purchase-cyan: var(--brand-300);
   --purchase-amber: var(--color-warning);
-  min-height: calc(100vh - 58px);
+  min-height: 100%;
   padding: var(--sp-8);
   color: var(--color-text-primary);
   background:
@@ -42,20 +42,12 @@
   margin: 0 auto var(--sp-6);
 }
 
-.purchase-head > div { max-width: 720px; }
 .purchase-head h1 {
   margin: 0;
   color: var(--purchase-ink);
   font-size: clamp(26px, 3vw, 38px);
   letter-spacing: -0.03em;
   line-height: 1.08;
-}
-
-.purchase-head p:not(.purchase-context) {
-  max-width: 68ch;
-  margin: var(--sp-2) 0 0;
-  color: var(--color-text-secondary);
-  font-size: var(--text-md);
 }
 
 .purchase-new-button,
@@ -75,23 +67,6 @@
   color: var(--color-warning-text);
   background: var(--color-warning-light);
   font-size: var(--text-sm);
-}
-
-.purchase-open-question {
-  display: flex;
-  gap: var(--sp-2);
-  max-width: 1440px;
-  margin: 0 auto var(--sp-4);
-  padding: var(--sp-3) var(--sp-4);
-  border-left: 3px solid var(--color-warning);
-  color: var(--color-text-secondary);
-  background: color-mix(in srgb, var(--color-warning-light) 68%, var(--neutral-0));
-  font-size: var(--text-sm);
-}
-
-.purchase-open-question strong {
-  flex: none;
-  color: var(--color-warning-text);
 }
 
 .purchase-release-line {
@@ -268,9 +243,25 @@
 .purchase-inspector {
   position: sticky;
   top: 72px;
-  overflow: hidden;
+  max-height: calc(100vh - 96px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
   box-shadow: 0 18px 42px -36px rgba(15, 23, 42, .55);
 }
+
+.admin-catalog-shell.is-purchasing .admin-catalog-main {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+
+.purchase-inspector::-webkit-scrollbar,
+.admin-catalog-shell.is-purchasing .admin-catalog-main::-webkit-scrollbar { width: 10px; }
+.purchase-inspector::-webkit-scrollbar-thumb,
+.admin-catalog-shell.is-purchasing .admin-catalog-main::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: var(--radius-full); background: var(--neutral-400); background-clip: padding-box; }
 
 .purchase-inspector-head {
   display: flex;
@@ -341,7 +332,7 @@
 @media (max-width: 900px) {
   .purchase-workspace { padding: var(--sp-4); }
   .purchase-body.has-inspector { grid-template-columns: minmax(0, 1fr); }
-  .purchase-inspector { position: static; }
+  .purchase-inspector { position: static; max-height: none; overflow: visible; }
   .purchase-release-line { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .purchase-release-line button:nth-child(2) { border-right: 0; }
   .purchase-release-line button:nth-child(-n+2) { border-bottom: 1px solid rgba(255,255,255,.1); }
@@ -411,7 +402,6 @@
 
   .purchase-head { align-items: stretch; flex-direction: column; }
   .purchase-new-button { width: 100%; }
-  .purchase-open-question { align-items: flex-start; flex-direction: column; }
   .purchase-release-line { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .purchase-release-line button { min-height: 62px; padding: var(--sp-3); border-bottom: 1px solid rgba(255,255,255,.1); }
   .purchase-release-line button:nth-child(odd) { border-right: 1px solid rgba(255,255,255,.1); }

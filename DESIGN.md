@@ -115,7 +115,7 @@ Project Hub se siente como una bóveda clara que ha abierto una placa de briefin
 
 La luz fría, el campo de nodos restringido y la asimetría editorial forman el mundo NEXOR sin convertir la superficie en una pieza promocional. Cian, azul y amarillo son señales escasas con funciones distintas; el resto de la interfaz permanece calmado para que progreso, navegación y decisiones no compitan entre sí. La dirección `project-briefing`, semilla `afbec59f`, superó la revisión final con disposición `ship` y es la autoridad durable para futuras superficies cliente del hub.
 
-En superficies internas de operación, la misma bóveda se expresa como una línea de liberación visible seguida por un libro de trabajo denso. Cada etapa declara responsable, volumen y estado; cada registro mantiene una sola acción siguiente hasta quedar completo para su consumidor. Esta extensión conserva el shell de navegación, las superficies blancas de evidencia y la disciplina cromática incumbentes.
+En superficies internas de operación, la misma bóveda se expresa como una línea de liberación visible seguida por un libro de trabajo denso. Cada etapa declara secuencia, volumen y estado; cada registro mantiene una sola acción siguiente hasta quedar completo para su consumidor. Esta extensión conserva el shell de navegación, las superficies blancas de evidencia y la disciplina cromática incumbentes.
 
 **Key Characteristics:**
 
@@ -125,7 +125,7 @@ En superficies internas de operación, la misma bóveda se expresa como una lín
 - Cian para señal viva y acción principal; azul para navegación y progreso; amarillo para atención.
 - Campo de nodos tenue y profundidad ambiental, nunca ornamental.
 - Tipografía de display compacta y datos con numerales tabulares.
-- Flujos operativos con responsables visibles, cola searchable y una sola acción siguiente.
+- Flujos operativos con etapas visibles, cola searchable y una sola acción siguiente.
 
 ## Identidad NEXOR IA Studio
 
@@ -197,7 +197,7 @@ En anchos intermedios la columna de señales se estrecha sin perder su jerarquí
 
 En flujos internos de varias manos, la primera vista conserva el resumen de acción y una línea compacta de etapas antes de la cola. El libro de trabajo se extiende hasta 1440px para sostener densidad; al seleccionar un registro abre un inspector lateral de 320–390px, que baja debajo de la cola a 900px. A 620px la línea se pliega a dos columnas y cada fila reduce su información a identificador, descripción, dato esencial y estado, sin scroll lateral de página.
 
-**The Visible Handoff Rule.** Cada etapa de un flujo compartido muestra secuencia, responsable y volumen antes de la cola; el detalle conserva una sola acción siguiente y no permite publicar mientras falten controles.
+**The Visible Handoff Rule.** Cada etapa de un flujo compartido muestra secuencia y volumen antes de la cola; el detalle conserva una sola acción siguiente y no permite publicar mientras falten controles.
 
 ## Elevation & Depth
 
@@ -286,7 +286,7 @@ La cola es una superficie blanca, searchable y de alta densidad. Cada fila comun
 - **Do** usar etiquetas, cantidades y formas además del color para todos los estados.
 - **Do** preservar el orden de lectura y los valores de progreso y atención en el primer viewport móvil.
 - **Do** utilizar el lockup oficial de NEXOR cuando exista espacio y mantener clara la jerarquía con la marca del cliente.
-- **Do** mostrar responsable, conteo, etapa escrita y siguiente control en los flujos que atraviesan varias manos.
+- **Do** mostrar conteo, etapa escrita y siguiente control en los flujos que atraviesan varias manos.
 - **Do** bloquear la acción de publicación hasta que los requisitos verificables del registro estén completos.
 
 ### Don't:
@@ -296,4 +296,4 @@ La cola es una superficie blanca, searchable y de alta densidad. Cada fila comun
 - **Don't** usar fondos crema cálidos, grises slate genéricos o un tema oscuro como experiencia cliente predeterminada.
 - **Don't** intercambiar cian, azul y amarillo ni comunicar estado únicamente con color.
 - **Don't** introducir claims, métricas comerciales o ventajas competitivas que no estén confirmadas por el producto.
-- **Don't** sustituir una línea de liberación por un formulario genérico que oculte propiedad, trabajo incompleto o el siguiente responsable.
+- **Don't** sustituir una línea de liberación por un formulario genérico que oculte trabajo incompleto o la siguiente acción.
