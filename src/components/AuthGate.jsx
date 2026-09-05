@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient";
 import { isAuthLocked } from "../lib/authLock";
@@ -6,6 +6,7 @@ import { getSessionAndProfile } from "../services/supabaseCatalog";
 import { getAppUrl } from "../utils/basePath";
 
 const VANGUARDIA_LOGO_URL = "https://pyignizeoevafifzfnik.supabase.co/storage/v1/object/public/company-assets/logos/77d5d8e5-9a8b-4e90-a125-06d7d70cc2eb/logo.jpg";
+const AUTH_TIMEOUT_MS = 20000;
 
 const copy = {
   es: {
@@ -128,13 +129,25 @@ const copy = {
   },
 };
 
-const withTimeout = (promise, ms = 9000, message = copy.es.timeout) =>
-  Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      window.setTimeout(() => reject(new Error(message)), ms);
-    }),
-  ]);
+const withTimeout = (promise, ms = AUTH_TIMEOUT_MS, message = copy.es.timeout) => new Promise((resolve, reject) => {
+  const timer = window.setTimeout(() => reject(new Error(message)), ms);
+  Promise.resolve(promise).then(
+    (value) => {
+      window.clearTimeout(timer);
+      resolve(value);
+    },
+    (error) => {
+      window.clearTimeout(timer);
+      reject(error);
+    },
+  );
+});
+
+const getProfileForSession = async (session) => {
+  if (!session) return { session: null, profile: null };
+  const { data: profile, error } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+  return { session, profile: error ? null : profile };
+};
 
 const getAuthErrorMessage = (error, text, fallback) => {
   const rawMessage = String(error?.message || "").toLowerCase();
@@ -203,6 +216,7 @@ export default function AuthGate({ children }) {
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const signInInFlight = useRef(false);
 
   useEffect(() => {
     document.title = "Vanguardia Joyera · Catálogo B2B";
@@ -218,7 +232,7 @@ export default function AuthGate({ children }) {
     setLoading(true);
     setMessage("");
     try {
-      const next = await withTimeout(getSessionAndProfile(), 9000, text.timeout);
+      const next = await withTimeout(getSessionAndProfile(), AUTH_TIMEOUT_MS, text.timeout);
       setSession(next.session);
       setProfile(next.profile);
       if (next.session && !next.profile) {
@@ -239,7 +253,7 @@ export default function AuthGate({ children }) {
 
     refreshSession();
 
-    const { data } = supabase.auth.onAuthStateChange(async (event) => {
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
       // Ignorar eventos mientras el admin crea una cuenta de cliente
       if (isAuthLocked()) return;
       // Supabase emite PASSWORD_RECOVERY cuando el usuario vuelve desde el link de restablecimiento.
@@ -249,15 +263,26 @@ export default function AuthGate({ children }) {
         setLoading(false);
         return;
       }
-      try {
-        const next = await withTimeout(getSessionAndProfile(), 9000, text.timeout);
-        setSession(next.session);
-        setProfile(next.profile);
-      } catch (error) {
-        setMessage(getAuthErrorMessage(error, text, text.noRefresh));
-      } finally {
+      if (event === "SIGNED_IN" && signInInFlight.current) return;
+      if (!nextSession) {
+        setSession(null);
+        setProfile(null);
         setLoading(false);
+        return;
       }
+      setLoading(true);
+      window.setTimeout(async () => {
+        try {
+          const next = await withTimeout(getProfileForSession(nextSession), AUTH_TIMEOUT_MS, text.timeout);
+          setSession(next.session);
+          setProfile(next.profile);
+          if (!next.profile) setMessage(text.missingProfile);
+        } catch (error) {
+          setMessage(getAuthErrorMessage(error, text, text.noRefresh));
+        } finally {
+          setLoading(false);
+        }
+      }, 0);
     });
     return () => data.subscription.unsubscribe();
   }, []);
@@ -266,16 +291,19 @@ export default function AuthGate({ children }) {
     event.preventDefault();
     setMessage("");
     setLoading(true);
+    signInInFlight.current = true;
     try {
       const action = supabase.auth.signInWithPassword({ email: form.email, password: form.password });
-      const { error } = await withTimeout(action, 9000, text.timeout);
+      const { data, error } = await withTimeout(action, AUTH_TIMEOUT_MS, text.timeout);
       if (error) throw error;
-      const next = await withTimeout(getSessionAndProfile(), 9000, text.timeout);
+      const next = await withTimeout(getProfileForSession(data.session), AUTH_TIMEOUT_MS, text.timeout);
       setSession(next.session);
       setProfile(next.profile);
+      if (next.session && !next.profile) setMessage(text.missingProfile);
     } catch (error) {
       setMessage(getAuthErrorMessage(error, text, text.noSignin));
     } finally {
+      signInInFlight.current = false;
       setLoading(false);
     }
   };
