@@ -5,6 +5,7 @@ import { normalizeText } from "../utils/textNormalizer";
 import { getAppUrl } from "../utils/basePath";
 
 const PAGE_SIZE = 500;
+const PAGE_CONCURRENCY = 4;
 const UPSERT_BATCH_SIZE = 500;
 const PUBLIC_PRODUCT_COLUMNS = [
   "id",
@@ -56,10 +57,10 @@ const toDbBoolean = (...values) => {
 };
 
 export const fetchAllProducts = async ({ visibleOnly = false, tenantId = "", columns = "*" } = {}) => {
-  const buildPageQuery = (from, includeCount = false) => {
+  const buildPageQuery = (from) => {
     let query = supabase
       .from("products")
-      .select(columns, includeCount ? { count: "exact" } : undefined)
+      .select(columns)
       .order("codigo")
       .range(from, from + PAGE_SIZE - 1);
 
@@ -67,38 +68,22 @@ export const fetchAllProducts = async ({ visibleOnly = false, tenantId = "", col
     return withTenant(query, tenantId);
   };
 
-  // La primera página también obtiene el total. Con ese dato, las páginas
-  // restantes se solicitan en paralelo en vez de bloquear el panel con una
-  // cadena de consultas consecutivas (el catálogo actual supera 7,800 SKUs).
-  const firstPage = await buildPageQuery(0, true);
-  throwIfError(firstPage);
+  // Carga páginas en grupos pequeños. Evita tanto la cadena de 16 consultas
+  // consecutivas como el COUNT exacto, que supera el timeout del catálogo real.
+  const rows = [];
+  let from = 0;
+  while (true) {
+    const results = await Promise.all(
+      Array.from({ length: PAGE_CONCURRENCY }, (_, pageIndex) =>
+        buildPageQuery(from + pageIndex * PAGE_SIZE)
+      )
+    );
+    results.forEach(throwIfError);
+    results.forEach((result) => rows.push(...(result.data || [])));
 
-  const rows = [...(firstPage.data || [])];
-  const total = Number(firstPage.count);
-  if (!Number.isFinite(total)) {
-    let from = PAGE_SIZE;
-    let page = firstPage.data || [];
-    while (page.length === PAGE_SIZE) {
-      const result = await buildPageQuery(from);
-      throwIfError(result);
-      page = result.data || [];
-      rows.push(...page);
-      from += PAGE_SIZE;
-    }
-    return rows;
+    if (results.some((result) => (result.data || []).length < PAGE_SIZE)) break;
+    from += PAGE_SIZE * PAGE_CONCURRENCY;
   }
-  if (total <= rows.length) return rows;
-
-  const pendingPages = [];
-  for (let from = PAGE_SIZE; from < total; from += PAGE_SIZE) {
-    pendingPages.push(buildPageQuery(from));
-  }
-
-  const results = await Promise.all(pendingPages);
-  results.forEach((result) => {
-    throwIfError(result);
-    rows.push(...(result.data || []));
-  });
 
   return rows;
 };
