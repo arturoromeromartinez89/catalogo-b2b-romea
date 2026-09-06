@@ -217,6 +217,11 @@ export default function AuthGate({ children }) {
   const [resetLoading, setResetLoading] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const signInInFlight = useRef(false);
+  const activeUserIdRef = useRef("");
+
+  useEffect(() => {
+    activeUserIdRef.current = session && profile ? session.user?.id || "" : "";
+  }, [session, profile]);
 
   useEffect(() => {
     document.title = "Vanguardia Joyera · Catálogo B2B";
@@ -270,7 +275,10 @@ export default function AuthGate({ children }) {
         setLoading(false);
         return;
       }
-      setLoading(true);
+      // La renovación automática del mismo usuario se resuelve en segundo
+      // plano. Así no desmontamos el panel ni reiniciamos sus cargas activas.
+      const refreshInBackground = activeUserIdRef.current === nextSession.user?.id;
+      if (!refreshInBackground) setLoading(true);
       window.setTimeout(async () => {
         try {
           const next = await withTimeout(getProfileForSession(nextSession), AUTH_TIMEOUT_MS, text.timeout);
@@ -280,7 +288,7 @@ export default function AuthGate({ children }) {
         } catch (error) {
           setMessage(getAuthErrorMessage(error, text, text.noRefresh));
         } finally {
-          setLoading(false);
+          if (!refreshInBackground) setLoading(false);
         }
       }, 0);
     });
