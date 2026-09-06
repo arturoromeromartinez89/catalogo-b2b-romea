@@ -66,6 +66,17 @@ const blankProspect = { name: "", company: "", email: "", phone: "", rfc: "", ci
 const blankPriceList = { name: "", currency: "MXN", active: true };
 const blankPriceItem = { metal: "", kilataje: "", price_per_gram: 0, labor_markup: 0 };
 const PRODUCT_RENDER_BATCH = 60;
+const createEmptyAdminData = () => ({
+  products: [],
+  clients: [],
+  catalogs: [],
+  catalogProducts: [],
+  priceLists: [],
+  priceItems: [],
+  clientCatalogs: [],
+  clientPriceLists: [],
+  laborLists: [],
+});
 const baseTabs = ["inicio", "projectHub", "catalog", "preorders", "orders", "clients", "prospects", "prices", "company", "database"];
 const configurableOnlyTabs = ["components"];
 const adminModuleTabs = ["administracion"];
@@ -250,7 +261,9 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
   const [tab, setTab] = useState("inicio");
   const [adminSubTab, setAdminSubTab] = useState("inicio");
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [data, setData] = useState(null);
+  // La navegación debe estar disponible aunque el catálogo grande siga
+  // descargándose. Cada módulo muestra datos reales apenas termina la carga.
+  const [data, setData] = useState(createEmptyAdminData);
   const [status, setStatus] = useState("");
   const [actionNotice, setActionNotice] = useState(null);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -360,16 +373,7 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
 
   const load = async () => {
     if (!tenantId) {
-      setData({
-        products: [],
-        clients: [],
-        catalogs: [],
-        catalogProducts: [],
-        priceLists: [],
-        priceItems: [],
-        clientCatalogs: [],
-        clientPriceLists: [],
-      });
+      setData(createEmptyAdminData());
       setStatus("Sin empresa asignada. Contacta al superadmin para asignarte una empresa.");
       return;
     }
@@ -1203,19 +1207,6 @@ export default function AdminDashboard({ profile, tenantOverride = "", supportMo
       setStatus(`Error creando empresa: ${error.message}`);
     }
   };
-
-  if (!data) {
-    return (
-      <section className="setup-screen">
-        <div className="setup-card">
-          {status && status !== "Cargando catálogo..." ? (
-            <p style={{ color: "var(--romea-danger, #c0392b)", marginBottom: "0.5rem" }}>{status}</p>
-          ) : null}
-          {t("loadingAdmin")}
-        </div>
-      </section>
-    );
-  }
 
   return (
     <div className={`admin-catalog-shell${tab === "administracion" && adminModuleEnabled ? " has-secondary-sidebar" : ""}${tab === "purchasing" ? " is-purchasing" : ""}`}>

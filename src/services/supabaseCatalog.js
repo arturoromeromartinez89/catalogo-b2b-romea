@@ -56,26 +56,49 @@ const toDbBoolean = (...values) => {
 };
 
 export const fetchAllProducts = async ({ visibleOnly = false, tenantId = "", columns = "*" } = {}) => {
-  const rows = [];
-  let from = 0;
-
-  while (true) {
+  const buildPageQuery = (from, includeCount = false) => {
     let query = supabase
       .from("products")
-      .select(columns)
+      .select(columns, includeCount ? { count: "exact" } : undefined)
       .order("codigo")
       .range(from, from + PAGE_SIZE - 1);
 
     if (visibleOnly) query = query.eq("visible_web", true);
-    query = withTenant(query, tenantId);
+    return withTenant(query, tenantId);
+  };
 
-    const result = await query;
-    throwIfError(result);
-    rows.push(...result.data);
+  // La primera página también obtiene el total. Con ese dato, las páginas
+  // restantes se solicitan en paralelo en vez de bloquear el panel con una
+  // cadena de consultas consecutivas (el catálogo actual supera 7,800 SKUs).
+  const firstPage = await buildPageQuery(0, true);
+  throwIfError(firstPage);
 
-    if (result.data.length < PAGE_SIZE) break;
-    from += PAGE_SIZE;
+  const rows = [...(firstPage.data || [])];
+  const total = Number(firstPage.count);
+  if (!Number.isFinite(total)) {
+    let from = PAGE_SIZE;
+    let page = firstPage.data || [];
+    while (page.length === PAGE_SIZE) {
+      const result = await buildPageQuery(from);
+      throwIfError(result);
+      page = result.data || [];
+      rows.push(...page);
+      from += PAGE_SIZE;
+    }
+    return rows;
   }
+  if (total <= rows.length) return rows;
+
+  const pendingPages = [];
+  for (let from = PAGE_SIZE; from < total; from += PAGE_SIZE) {
+    pendingPages.push(buildPageQuery(from));
+  }
+
+  const results = await Promise.all(pendingPages);
+  results.forEach((result) => {
+    throwIfError(result);
+    rows.push(...(result.data || []));
+  });
 
   return rows;
 };
@@ -254,7 +277,7 @@ export const getSessionAndProfile = async () => {
 
 export const fetchAdminData = async (profile) => {
   const tenantId = getTenantId(profile);
-  const allProducts = await fetchAllProducts({ tenantId });
+  const productsQuery     = fetchAllProducts({ tenantId });
   const clientsQuery      = withTenant(supabase.from("clients").select("*").order("company"), tenantId);
   const catalogsQuery     = withTenant(supabase.from("catalogs").select("*").order("name"), tenantId);
   const priceListsQuery   = withTenant(supabase.from("price_lists").select("*").order("name"), tenantId);
@@ -264,7 +287,7 @@ export const fetchAdminData = async (profile) => {
   );
   const [products, clients, catalogs, catalogProducts, priceLists, priceItems, clientCatalogs, clientPriceLists, laborLists] =
     await Promise.all([
-      { data: allProducts, error: null },
+      productsQuery.then((data) => ({ data, error: null })),
       clientsQuery,
       catalogsQuery,
       supabase.from("catalog_products").select("*"),
