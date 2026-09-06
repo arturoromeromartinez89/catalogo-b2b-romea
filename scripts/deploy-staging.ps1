@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 
+throw "BLOQUEADO: esta copia fue retirada para despliegues. Publica staging únicamente desde el repositorio canónico de Vanguardia, que valida el contrato de la versión vigente."
+
 $expectedVercelProject = "catalogo-b2b-staging-security"
 $expectedVercelScope = "arturo-romeros-projects-20546c64"
 $expectedSupabaseRef = "vafqcvpzksjlrborxoos"
